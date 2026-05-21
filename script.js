@@ -60,56 +60,56 @@ function atualizarNumeracao() {
     
     materialItems.forEach((item, index) => {
         const novoNumero = index + 1;
-        const materialNumber = item.querySelector('.material-number');
         
+        // Atualizar número visível
+        const materialNumber = item.querySelector('.material-number');
         if (materialNumber) {
-            materialNumber.textContent = `Material #${novoNumero}`;
+            materialNumber.textContent = `${novoNumero}`;
         }
         
+        // Atualizar ID do item
         const novoId = `material-${novoNumero}`;
         item.id = novoId;
         
-        // Atualizar IDs dos inputs
-        const inputs = item.querySelectorAll('input');
-        inputs.forEach(input => {
-            if (input.id.includes('codigo-')) input.id = `codigo-${novoNumero}`;
-            else if (input.id.includes('descricao-')) {
-                input.id = `descricao-${novoNumero}`;
-                input.setAttribute('onclick', `mostrarDescricaoCompleta(this)`); // 👈 ADICIONE ISSO
-            }
-            else if (input.id.includes('und-')) input.id = `und-${novoNumero}`;
-            else if (input.id.includes('qtd-')) input.id = `qtd-${novoNumero}`;
-        });
+        // Atualizar todos os inputs pelo tipo
+        const codigoInput = item.querySelector('.input-codigo');
+        const descricaoInput = item.querySelector('.input-descricao');
+        const undInput = item.querySelector('.input-und');
+        const qtdInput = item.querySelector('.input-qtd');
         
-        // Atualizar labels (for)
+        if (codigoInput) {
+            codigoInput.id = `codigo-${novoNumero}`;
+            codigoInput.setAttribute('onchange', `buscarMaterial('${novoNumero}')`);
+        }
+        if (descricaoInput) {
+            descricaoInput.id = `descricao-${novoNumero}`;
+            descricaoInput.setAttribute('onclick', `mostrarDescricaoCompleta(this)`);
+        }
+        if (undInput) {
+            undInput.id = `und-${novoNumero}`;
+        }
+        if (qtdInput) {
+            qtdInput.id = `qtd-${novoNumero}`;
+        }
+        
+        // Atualizar labels
         const labels = item.querySelectorAll('label');
         labels.forEach(label => {
             const forAttr = label.getAttribute('for');
-            if (forAttr && forAttr.includes('codigo-')) {
-                label.setAttribute('for', `codigo-${novoNumero}`);
-            } else if (forAttr && forAttr.includes('descricao-')) {
-                label.setAttribute('for', `descricao-${novoNumero}`);
-            } else if (forAttr && forAttr.includes('und-')) {
-                label.setAttribute('for', `und-${novoNumero}`);
-            } else if (forAttr && forAttr.includes('qtd-')) {
-                label.setAttribute('for', `qtd-${novoNumero}`);
+            if (forAttr) {
+                if (forAttr.includes('codigo-')) label.setAttribute('for', `codigo-${novoNumero}`);
+                else if (forAttr.includes('descricao-')) label.setAttribute('for', `descricao-${novoNumero}`);
+                else if (forAttr.includes('und-')) label.setAttribute('for', `und-${novoNumero}`);
+                else if (forAttr.includes('qtd-')) label.setAttribute('for', `qtd-${novoNumero}`);
             }
         });
         
-        // Atualizar onclick do botão remover
+        // Atualizar botão remover
         const btnRemover = item.querySelector('.btn-remove-material');
         if (btnRemover) {
             btnRemover.setAttribute('onclick', `removerMaterial('${novoId}')`);
         }
-        
-        // Atualizar onchange do input de código
-        const inputCodigo = item.querySelector('.input-codigo');
-        if (inputCodigo) {
-            inputCodigo.setAttribute('onchange', `buscarMaterial('${novoNumero}')`);
-        }
     });
-    
-    console.log('🔄 Numeração atualizada');
 }
 
 // Função para consultar material pelo código
@@ -127,7 +127,7 @@ function criarMaterialItem() {
     
     materialItem.innerHTML = `
         <div class="material-header">
-            <span class="material-number">Material #${novoNumero}</span>
+            <span class="material-number">${novoNumero}</span>
             <button type="button" class="btn-remove-material" onclick="removerMaterial('material-${novoNumero}')">
                 ✕
             </button>
@@ -198,85 +198,103 @@ function removerMaterial(id) {
     }
 }
 
-// Função para buscar material pelo código
 function buscarMaterial(id) {
     const codigoInput = document.getElementById(`codigo-${id}`);
     const descricaoInput = document.getElementById(`descricao-${id}`);
     const undInput = document.getElementById(`und-${id}`);
     const qtdInput = document.getElementById(`qtd-${id}`);
     
-    if (!codigoInput || !descricaoInput || !undInput) {
-        console.error('❌ Campos não encontrados para o material #' + id);
-        return;
-    }
+    if (!codigoInput || !descricaoInput || !undInput) return;
     
     const codigo = codigoInput.value.trim();
     
     if (codigo === '') {
-        // Limpar e destravar campos se código estiver vazio
+        // LIMPAR TUDO e voltar ao normal
         descricaoInput.value = '';
         undInput.value = '';
         descricaoInput.readOnly = false;
         undInput.readOnly = false;
+        
+        // Voltar cores normais
         descricaoInput.style.backgroundColor = '#FFFFFF';
         undInput.style.backgroundColor = '#FFFFFF';
         descricaoInput.style.borderColor = '#E2E8F0';
         undInput.style.borderColor = '#E2E8F0';
-        codigoInput.style.borderColor = '#E2E8F0';
+        codigoInput.style.borderColor = '#E2E8F0';       // 👈 CORRIGIDO
+        codigoInput.style.backgroundColor = '#FFFFFF';    // 👈 CORRIGIDO
+        
+        // Remover classes de erro e sucesso
+        codigoInput.classList.remove('input-error');
+        codigoInput.classList.remove('input-success');
+        descricaoInput.classList.remove('input-error');
+        undInput.classList.remove('input-error');
+        
+        // Resetar placeholder
+        descricaoInput.placeholder = 'Descrição';
+        undInput.placeholder = 'UND';
+        
         return;
     }
     
-    // Verificar se a base de dados está carregada
     if (databaseMateriais.length === 0) {
-        console.warn('⚠️ Base de dados ainda não carregada');
-        alert('Base de dados ainda está carregando. Tente novamente em instantes.');
+        alert('Base de dados ainda está carregando...');
         return;
     }
     
-    // Consultar na base de dados
     const material = consultarMaterial(codigo);
     
     if (material) {
         // Material encontrado - preencher e BLOQUEAR
         descricaoInput.value = material.descricao;
         undInput.value = material.und;
-        
-        // Bloquear edição
         descricaoInput.readOnly = true;
         undInput.readOnly = true;
+    
+        descricaoInput.style.backgroundColor = '#CBD5E0'; 
+        undInput.style.backgroundColor = '#CBD5E0';      
         
-        // Estilo visual de bloqueado
-        descricaoInput.style.backgroundColor = '#F7FAFC';
-        undInput.style.backgroundColor = '#F7FAFC';
-        descricaoInput.style.borderColor = '#48BB78'; // Verde
+        descricaoInput.style.borderColor = '#48BB78';
         undInput.style.borderColor = '#48BB78';
         codigoInput.style.borderColor = '#48BB78';
         
-        // Focar no campo de quantidade
-        if (qtdInput) {
-            setTimeout(() => qtdInput.focus(), 100);
-        }
-        
-        console.log('✅ Material encontrado:', material.descricao);
-        
+        // Remover classes de erro
+        codigoInput.classList.remove('input-error');
+        descricaoInput.classList.remove('input-error');
+        undInput.classList.remove('input-error'); 
+
+         // Adicionar classe de sucesso
+    codigoInput.classList.add('input-success');
+    
+    if (qtdInput) setTimeout(() => qtdInput.focus(), 100);
+    
     } else {
-        // Material não encontrado
-        descricaoInput.value = 'Material não encontrado';
-        undInput.value = '---';
+        // ❌ Material NÃO encontrado - NÃO PERMITIR
+        descricaoInput.value = '';
+        undInput.value = '';
+        descricaoInput.readOnly = true;
+        undInput.readOnly = true;
         
-        // Destravar para edição manual
-        descricaoInput.readOnly = false;
-        undInput.readOnly = false;
-        descricaoInput.style.backgroundColor = '#FFFFFF';
-        undInput.style.backgroundColor = '#FFFFFF';
-        descricaoInput.style.borderColor = '#FC8181'; // Vermelho
-        undInput.style.borderColor = '#FC8181';
+        // Marcar como erro
         codigoInput.style.borderColor = '#FC8181';
+        descricaoInput.style.borderColor = '#FC8181';
+        undInput.style.borderColor = '#FC8181';
         
-        // Focar na descrição
-        setTimeout(() => descricaoInput.focus(), 100);
+        codigoInput.classList.add('input-error');
+        descricaoInput.classList.add('input-error');
+        undInput.classList.add('input-error');
         
-        console.warn('⚠️ Material não encontrado:', codigo);
+        // Mostrar mensagem de erro no placeholder
+        descricaoInput.placeholder = 'CÓDIGO NÃO CADASTRADO';
+        undInput.placeholder = '---';
+        
+        // Focar de volta no código para corrigir
+        setTimeout(() => {
+            codigoInput.focus();
+            codigoInput.select();
+        }, 100);
+        
+        // Alerta visual
+        mostrarAlertaMaterialNaoCadastrado(codigo);
     }
 }
 
@@ -450,41 +468,154 @@ window.addEventListener('resize', function() {
     fecharPopupDescricao();
 });
 
+// Função para mostrar alerta de material não cadastrado
+function mostrarAlertaMaterialNaoCadastrado(codigo) {
+    // Criar elemento de alerta se não existir
+    let alertaExistente = document.querySelector('.alerta-material');
+    if (alertaExistente) {
+        alertaExistente.remove();
+    }
+    
+    const alerta = document.createElement('div');
+    alerta.className = 'alerta-material';
+    alerta.innerHTML = `
+        <div class="alerta-conteudo">
+            <span class="alerta-icone">⚠️</span>
+            <span>Código <strong>"${codigo}"</strong> não cadastrado!</span>
+        </div>
+    `;
+    
+    // Inserir após o botão de adicionar material
+    const btnAdd = document.getElementById('btn-add-material');
+    btnAdd.parentNode.insertBefore(alerta, btnAdd.nextSibling);
+    
+    // Remover após 4 segundos
+    setTimeout(() => {
+        if (alerta.parentNode) {
+            alerta.style.animation = 'fadeOut 0.3s ease-out';
+            setTimeout(() => alerta.remove(), 300);
+        }
+    }, 4000);
+}
+
+// Função para validar se todos os materiais estão cadastrados
+function validarMateriais() {
+    const materialItems = document.querySelectorAll('.material-item');
+    const materiaisInvalidos = [];
+    
+    materialItems.forEach(item => {
+        const id = item.id.split('-')[1];
+        const codigoInput = document.getElementById(`codigo-${id}`);
+        const descricaoInput = document.getElementById(`descricao-${id}`);
+        
+        if (!codigoInput || !descricaoInput) return;
+        
+        const codigo = codigoInput.value.trim();
+        
+        // Verificar se o código está vazio
+        if (codigo === '') {
+            materiaisInvalidos.push({
+                id: id,
+                codigo: '(vazio)',
+                motivo: 'Código não preenchido'
+            });
+            codigoInput.style.borderColor = '#FC8181';
+            codigoInput.classList.add('input-error');
+            return;
+        }
+        
+        // Verificar se o material existe na base
+        const material = consultarMaterial(codigo);
+        if (!material) {
+            materiaisInvalidos.push({
+                id: id,
+                codigo: codigo,
+                motivo: 'Código não cadastrado'
+            });
+            codigoInput.style.borderColor = '#FC8181';
+            codigoInput.classList.add('input-error');
+        }
+    });
+    
+    return materiaisInvalidos;
+}
+
+// Função para destacar campos inválidos
+function destacarCamposInvalidos(materiaisInvalidos) {
+    // Remover destaques anteriores
+    document.querySelectorAll('.input-error').forEach(input => {
+        input.classList.remove('input-error');
+        input.style.borderColor = '#E2E8F0';
+    });
+    
+    // Destacar campos inválidos
+    materiaisInvalidos.forEach(material => {
+        const codigoInput = document.getElementById(`codigo-${material.id}`);
+        if (codigoInput) {
+            codigoInput.style.borderColor = '#FC8181';
+            codigoInput.classList.add('input-error');
+            codigoInput.focus();
+        }
+    });
+}
+
 
 // ============================================
-// INICIALIZAÇÃO - APENAS UM EVENT LISTENER!
+// INICIALIZAÇÃO - EVENT LISTENER
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Iniciando aplicação...');
     
-    // 1. Carregar base de dados
     await carregarMateriais();
     
-    // 2. Configurar botão Adicionar Material
     const btnAddMaterial = document.getElementById('btn-add-material');
     if (btnAddMaterial) {
         btnAddMaterial.addEventListener('click', adicionarMaterial);
-        console.log('✅ Botão "Adicionar Material" configurado');
-    } else {
-        console.error('❌ Botão "btn-add-material" não encontrado!');
     }
     
-    // 3. Configurar envio do formulário
     const form = document.getElementById('mgmForm');
     if (form) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             
+            // 🔍 Validar materiais antes de enviar
+            const materiaisInvalidos = validarMateriais();
+            
+            if (materiaisInvalidos.length > 0) {
+                // ❌ Existem materiais não cadastrados
+                destacarCamposInvalidos(materiaisInvalidos);
+                
+                const listaCodigos = materiaisInvalidos
+                    .map(m => `• ${m.codigo} (Material #${m.id})`)
+                    .join('\n');
+                
+                alert(
+                    `⚠️ NÃO É POSSÍVEL SALVAR O FORMULÁRIO!\n\n` +
+                    `Os seguintes códigos não estão cadastrados:\n\n` +
+                    `${listaCodigos}\n\n` +
+                    `Por favor, corrija os códigos ou remova os materiais não cadastrados.`
+                );
+                
+                // Rolar até o primeiro material inválido
+                const primeiroInvalido = document.getElementById(`codigo-${materiaisInvalidos[0].id}`);
+                if (primeiroInvalido) {
+                    primeiroInvalido.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    primeiroInvalido.focus();
+                }
+                
+                return false; // Impede o envio
+            }
+            
+            // ✅ Todos os materiais são válidos
             const dados = coletarDadosFormulario();
             console.log('📤 Dados do formulário:', dados);
+            alert(`✅ Formulário salvo com sucesso!\nTotal de materiais: ${dados.totalMateriais}`);
             
-            alert('Formulário enviado com sucesso!\nVerifique o console para ver os dados.');
+            // Aqui você pode enviar os dados para um servidor
+            // this.submit(); // Descomente para enviar de verdade
         });
-        console.log('✅ Formulário configurado');
-    } else {
-        console.error('❌ Formulário "mgmForm" não encontrado!');
     }
     
-    console.log('✅ Aplicação iniciada com sucesso!');
+    console.log('✅ Aplicação iniciada!');
 });

@@ -9,9 +9,40 @@
 <body>
     <div class="container">
         <div class="form-card">
-            <h1 class="title">MGM</h1>
+            
+            <!-- Logo e Título DENTRO do card -->
+            <div class="header-container">
+                <img src="logo-control.png" alt="Logo MGM" class="logo-empresa">
+                <h1 class="title">MGM</h1>
+            </div>
             
             <form id="mgmForm">
+
+                <!-- Seção Obra e Data lado a lado -->
+                <div class="obra-data-row">
+                    <!-- Número da Obra -->
+                    <div class="obra-field">
+                        <label for="numero-obra">Número da Obra</label>
+                        <input 
+                            type="text" 
+                            id="numero-obra" 
+                            name="numero-obra" 
+                            placeholder="Digite o número da obra"
+                            required
+                        >
+                    </div>
+
+                    <!-- Data -->
+                    <div class="data-field">
+                        <label for="data">Data</label>
+                        <input 
+                            type="date" 
+                            id="data" 
+                            name="data" 
+                            required
+                        >
+                    </div>
+                </div>
 
                 <div class="form-row">
                     <!-- Separador -->
@@ -80,31 +111,7 @@
                         </div>
                     </div>
                 </div>
-<!-- Seção Obra e Data lado a lado -->
-<div class="obra-data-row">
-    <!-- Número da Obra -->
-    <div class="obra-field">
-        <label for="numero-obra">Número da Obra</label>
-        <input 
-            type="text" 
-            id="numero-obra" 
-            name="numero-obra" 
-            placeholder="Digite o número da obra"
-            required
-        >
-    </div>
 
-    <!-- Data -->
-    <div class="data-field">
-        <label for="data">Data</label>
-        <input 
-            type="date" 
-            id="data" 
-            name="data" 
-            required
-        >
-    </div>
-</div>
                 <!-- Seção de Materiais -->
                 <div class="materiais-section">
                     <h2 class="section-title">Materiais</h2>
@@ -122,8 +129,9 @@
 
                 <button type="submit" class="submit-btn">Enviar</button>
             </form>
-        </div>
-    </div>
+            
+        </div><!-- Fecha form-card -->
+    </div><!-- Fecha container -->
 
     <script src="script.js"></script>
 </body>

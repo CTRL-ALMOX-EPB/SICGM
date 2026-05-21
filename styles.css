@@ -27,27 +27,55 @@ body {
     border: 1px solid #E8EDF2;
 }
 
+/* ============================================ */
+/* CABEÇALHO - LOGO + TÍTULO                    */
+/* ============================================ */
+
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 40px;
+    padding: 10px 0;
+    position: relative;
+}
+
+.logo-empresa {
+    height: 120px;
+    width: 120px;
+    object-fit: contain;
+    flex-shrink: 0;
+    position: absolute;
+    left: 150px;           
+}
+
+.header-container .title {
+    margin-bottom: 0;
+}
+
 .title {
     text-align: center;
     color: #2C3E50;
     font-size: 2.5em;
-    margin-bottom: 40px;
     font-weight: 700;
     letter-spacing: 3px;
     text-transform: uppercase;
 }
 
-/* Container que alinha Obra e Data lado a lado */
+/* ============================================ */
+/* SEÇÃO OBRA E DATA LADO A LADO                */
+/* ============================================ */
+
 .obra-data-row {
     display: flex;
     gap: 25px;
     margin-bottom: 30px;
-    align-items: flex-end; /* Alinha os campos pela parte de baixo */
+    align-items: flex-end;
 }
 
-/* Campo Número da Obra - Agora divide espaço */
 .obra-field {
-    flex: 1; /* Divide o espaço igualmente */
+    flex: 1;
     background-color: #F8FAFC;
     padding: 20px;
     border-radius: 8px;
@@ -78,9 +106,8 @@ body {
     box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
 
-/* Campo Data - Mesmo estilo da obra */
 .data-field {
-    flex: 1; /* Divide o espaço igualmente */
+    flex: 1;
     background-color: #F8FAFC;
     padding: 20px;
     border-radius: 8px;
@@ -111,34 +138,14 @@ body {
     box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
 
-.obra-field label {
-    font-size: 1.1em;
-    font-weight: 600;
-    color: #4A5568;
-    margin-bottom: 10px;
-    display: block;
-}
-
-.obra-field input {
-    padding: 12px 15px;
-    border: 2px solid #E2E8F0;
-    border-radius: 6px;
-    font-size: 1em;
-    width: 100%;
-    transition: all 0.3s ease;
-    outline: none;
-    background-color: #FFFFFF;
-}
-
-.obra-field input:focus {
-    border-color: #4299E1;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
-}
+/* ============================================ */
+/* SEÇÃO SEPARADOR / ENCARREGADO / CONFERENTE   */
+/* ============================================ */
 
 .form-row {
     display: flex;
     gap: 25px;
-    margin-bottom: 25px;
+    margin-bottom: 35px;
 }
 
 .form-group {
@@ -174,6 +181,11 @@ body {
     box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
 
+/* Campo Matrícula */
+.matricula-field {
+    /* Container sem estilo visual extra */
+}
+
 .matricula-field label {
     font-size: 1.1em;
     font-weight: 600;
@@ -183,10 +195,10 @@ body {
 }
 
 .matricula-field input {
-    padding: 10px 12px;
+    padding: 12px 15px;
     border: 2px solid #E2E8F0;
     border-radius: 6px;
-    font-size: 0.95em;
+    font-size: 1em;
     width: 100%;
     transition: all 0.3s ease;
     outline: none;
@@ -198,59 +210,10 @@ body {
     box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
 
-.submit-btn {
-    width: 100%;
-    padding: 15px;
-    background-color: #4299E1;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1em;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
+/* ============================================ */
+/* SEÇÃO DE MATERIAIS                           */
+/* ============================================ */
 
-.submit-btn:hover {
-    background-color: #3182CE;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(66, 153, 225, 0.3);
-}
-
-.submit-btn:active {
-    transform: translateY(0);
-}
-
-/* Responsividade */
-@media (max-width: 768px) {
-    .form-row {
-        flex-direction: column;
-        gap: 20px;
-    }
-    
-    .form-card {
-        padding: 25px;
-    }
-    
-    .title {
-        font-size: 2em;
-        margin-bottom: 30px;
-    }
-    
-    .obra-data-row {
-        flex-direction: column;
-    }
-    
-    .obra-field,
-    .data-field {
-        flex: 1;
-    }
-}
-/* Adicione estas classes ao seu CSS existente */
-
-/* Seção de Materiais */
 .materiais-section {
     margin: 30px 0;
     padding: 20px;
@@ -278,7 +241,6 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     margin-top: 15px;
-    align-self: flex-start;
 }
 
 .btn-add-material:hover {
@@ -341,6 +303,10 @@ body {
     gap: 15px;
 }
 
+.material-field {
+    position: relative;
+}
+
 .material-field label {
     font-size: 0.9em;
     font-weight: 500;
@@ -366,13 +332,10 @@ body {
 }
 
 .material-field input[readonly] {
-    background-color: #F7FAFC;
-}
-/* Tooltip para descrição completa */
-.material-field {
-    position: relative;
+    cursor: pointer;
 }
 
+/* Input de descrição (clique para pop-up) */
 .input-descricao {
     cursor: pointer;
 }
@@ -381,10 +344,13 @@ body {
     cursor: pointer;
 }
 
-/* Pop-up da descrição */
+/* ============================================ */
+/* POP-UP DE DESCRIÇÃO COMPLETA                 */
+/* ============================================ */
+
 .descricao-popup {
     display: none;
-    position: fixed; /* Alterado de absolute para fixed */
+    position: fixed;
     background-color: #2D3748;
     color: white;
     padding: 12px 16px;
@@ -397,10 +363,9 @@ body {
     z-index: 1000;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
     line-height: 1.4;
-    pointer-events: none; /* Para não interferir nos cliques */
+    pointer-events: none;
 }
 
-/* Seta do pop-up */
 .descricao-popup::after {
     content: '';
     position: absolute;
@@ -408,13 +373,6 @@ body {
     transform: translateX(-50%);
     border-width: 8px;
     border-style: solid;
-    border-color: #2D3748 transparent transparent transparent;
-}
-
-/* Quando não cabe em cima, mostra embaixo */
-.descricao-popup.popup-bottom {
-    bottom: auto;
-    top: calc(100% + 10px);
 }
 
 /* Seta para baixo (pop-up acima do input) */
@@ -429,7 +387,7 @@ body {
     border-color: transparent transparent #2D3748 transparent;
 }
 
-/* Animação de entrada */
+/* Animação do pop-up */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -446,11 +404,7 @@ body {
     animation: fadeIn 0.2s ease-out;
 }
 
-.descricao-popup.popup-bottom.show {
-    animation: fadeIn 0.2s ease-out;
-}
-
-/* Overlay para fechar ao clicar fora */
+/* Overlay para fechar pop-up ao clicar fora */
 .popup-overlay {
     display: none;
     position: fixed;
@@ -465,15 +419,110 @@ body {
     display: block;
 }
 
-/* Responsividade */
+/* ============================================ */
+/* ALERTA DE MATERIAL NÃO CADASTRADO            */
+/* ============================================ */
+
+.alerta-material {
+    background-color: #FFF5F5;
+    border: 1px solid #FC8181;
+    border-left: 4px solid #F56565;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 15px;
+    animation: fadeInAlerta 0.3s ease-out;
+}
+
+.alerta-conteudo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #C53030;
+    font-size: 0.95em;
+}
+
+.alerta-icone {
+    font-size: 1.2em;
+}
+
+@keyframes fadeInAlerta {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* ============================================ */
+/* ESTADOS DOS INPUTS                           */
+/* ============================================ */
+
+/* Input com erro */
+.input-error {
+    border-color: #FC8181 !important;
+    background-color: #FFF5F5 !important;
+    animation: shake 0.5s ease-in-out;
+}
+
+/* Input com sucesso */
+.input-success {
+    border-color: #48BB78 !important;
+    background-color: #F0FFF4 !important;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* ============================================ */
+/* BOTÃO ENVIAR                                 */
+/* ============================================ */
+
+.submit-btn {
+    width: 100%;
+    padding: 15px;
+    background-color: #4299E1;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.submit-btn:hover {
+    background-color: #3182CE;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(66, 153, 225, 0.3);
+}
+
+.submit-btn:active {
+    transform: translateY(0);
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE - TABLET                      */
+/* ============================================ */
+
 @media (max-width: 768px) {
-    .form-row {
-        flex-direction: column;
-        gap: 20px;
+    .header-container {
+        gap: 15px;
+        margin-bottom: 30px;
     }
     
-    .form-card {
-        padding: 25px;
+    .logo-empresa {
+        height: 45px;
+    }
+    
+    .header-container .title {
+        font-size: 2em;
     }
     
     .title {
@@ -481,12 +530,11 @@ body {
         margin-bottom: 30px;
     }
     
-    .obra-field,
-    .form-group {
-        padding: 15px;
+    .form-card {
+        padding: 25px;
     }
     
-    /* Corrigir Data e Obra lado a lado */
+    /* Obra e Data empilhados */
     .obra-data-row {
         flex-direction: column;
         gap: 20px;
@@ -499,6 +547,18 @@ body {
         max-width: 100%;
     }
     
+    /* Separador/Encarregado/Conferente empilhados */
+    .form-row {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .obra-field,
+    .form-group {
+        padding: 15px;
+    }
+    
+    /* Materiais */
     .material-row {
         grid-template-columns: 1fr 1fr;
         gap: 10px;
@@ -515,8 +575,24 @@ body {
     }
 }
 
-/* Ajuste extra para telas muito pequenas (celulares) */
+/* ============================================ */
+/* RESPONSIVIDADE - CELULAR                     */
+/* ============================================ */
+
 @media (max-width: 480px) {
+    .header-container {
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .logo-empresa {
+        height: 35px;
+    }
+    
+    .header-container .title {
+        font-size: 1.5em;
+    }
+    
     .form-card {
         padding: 15px;
     }
@@ -546,11 +622,6 @@ body {
         font-size: 0.9em;
     }
     
-    .material-row {
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-    
     .form-row {
         gap: 15px;
     }
@@ -559,8 +630,19 @@ body {
         padding: 12px;
     }
     
+    /* Materiais em coluna única */
+    .material-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
     .submit-btn {
         padding: 12px;
         font-size: 1em;
+    }
+    
+    .descricao-popup {
+        max-width: 220px;
+        font-size: 0.8em;
     }
 }
