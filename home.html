@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home - SICGM</title>
-    <link rel="stylesheet" href="CSS/STYLES.css">
+    <link rel="stylesheet" href="css/styles.css">
     <style>
         /* Estilos adicionais para a página home */
         .home-container {
@@ -185,12 +185,12 @@
         </div>
 
         <div class="grid-menu">
-            <div class="menu-card" onclick="window.location.href='CONTAGEM-DIARIA/INDEX.HTML'">
+            <div class="menu-card" onclick="window.location.href='contagem-diaria/index.html'">
                 <div class="icon">📊</div>
                 <h3>Contagem Diária</h3>
                 <p>Registre e visualize as contagens diárias de materiais</p>
             </div>
-            <div class="menu-card" onclick="window.location.href='MGM-LIST/INDEX.HTML'">
+            <div class="menu-card" onclick="window.location.href='mgm-list/index.html'">
                 <div class="icon">📋</div>
                 <h3>Lista MGM</h3>
                 <p>Gerencie a lista de materiais MGM</p>
@@ -242,7 +242,7 @@
                     `👋 Olá, ${sessao.nome}! Seja bem-vindo ao sistema.`;
             } catch (e) {
                 console.error('Erro ao carregar dados do usuário:', e);
-                window.location.href = 'INDEX.HTML';
+                window.location.href = 'index.html';
                 return;
             }
 
@@ -284,7 +284,7 @@
             const sessao = verificarSessao();
             if (!sessao) {
                 console.log('🔒 Sessão expirada - Redirecionando para login');
-                window.location.href = 'INDEX.HTML';
+                window.location.href = 'index.html';
             }
         }, 5 * 60 * 1000); // 5 minutos
     </script>
