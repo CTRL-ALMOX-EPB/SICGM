@@ -1,4 +1,4 @@
-/// ============================================
+// ============================================
 // VARIÁVEIS GLOBAIS
 // ============================================
 
@@ -114,18 +114,7 @@ function verificarSessao() {
 // Função para fazer logout (encerrar sessão)
 function logout() {
     sessionStorage.removeItem('sessaoSICGM');
-    window.location.href = 'INDEX.HTML';
-}
-
-// Função para validar acesso à página home
-function validarAcessoHome() {
-    const sessao = verificarSessao();
-    if (!sessao) {
-        console.log('🔒 Sessão inválida ou expirada - Redirecionando para login');
-        window.location.href = 'index.html';
-        return false;
-    }
-    return true;
+    window.location.href = 'index.html';
 }
 
 // ============================================
@@ -135,14 +124,8 @@ function validarAcessoHome() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Iniciando sistema de login...');
     
-    // Verificar se já existe uma sessão ativa
-    const sessao = verificarSessao();
-    if (sessao) {
-        console.log('👤 Sessão ativa encontrada para:', sessao.nome);
-        // Redirecionar para home se já estiver logado
-        window.location.href = 'home.html';
-        return;
-    }
+    // ✅ REMOVIDO: Não redirecionar automaticamente para HOME
+    // Deixe o usuário fazer login manualmente
     
     // Carregar colaboradores
     carregarColaboradores().then(() => {
@@ -221,8 +204,8 @@ window.sair = function() {
 };
 
 // ============================================
-// VALIDAÇÃO AUTOMÁTICA PARA A PÁGINA HOME
+// EXPOR FUNÇÕES GLOBAIS
 // ============================================
 
-// Função que será chamada automaticamente quando a home carregar
-window.validarAcessoHome = validarAcessoHome;
+window.verificarSessao = verificarSessao;
+window.logout = logout;
