@@ -111,7 +111,7 @@
         };
         
         // ============================================
-        // PREENCHER DATA E DADOS DO USUÁRIO
+        // PREENCHER DATA AUTOMATICAMENTE
         // ============================================
         
         const dataInput = document.getElementById('data');
@@ -119,64 +119,110 @@
         const dataFormatada = hoje.toISOString().split('T')[0];
         dataInput.value = dataFormatada;
         
-        // Carregar dados do usuário logado
-        function carregarDadosUsuario() {
+        // ============================================
+        // CARREGAR DADOS DO USUÁRIO DA SESSÃO
+        // ============================================
+        
+        function carregarDadosUsuarioSessao() {
             try {
-                const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
-                if (usuarioLogado) {
-                    document.getElementById('nome').value = usuarioLogado.nome || '';
-                    document.getElementById('matricula').value = usuarioLogado.matricula || '';
+                // Tentar carregar da sessão
+                const sessao = sessionStorage.getItem('sessaoSICGM');
+                
+                if (sessao) {
+                    const dadosSessao = JSON.parse(sessao);
+                    
+                    // Verificar se a sessão é válida (menos de 30 minutos)
+                    const tempoDecorrido = Date.now() - dadosSessao.timestamp;
+                    if (tempoDecorrido > 30 * 60 * 1000) {
+                        // Sessão expirada
+                        console.warn('⏰ Sessão expirada, redirecionando para login...');
+                        window.location.href = '../index.html';
+                        return false;
+                    }
+                    
+                    // Preencher campos com dados da sessão
+                    document.getElementById('nome').value = dadosSessao.nome || '';
+                    document.getElementById('matricula').value = dadosSessao.matricula || '';
+                    
+                    console.log('✅ Dados do usuário carregados da sessão:', dadosSessao.nome);
+                    return true;
                 } else {
-                    // Fallback: tentar carregar do arquivo de colaboradores
-                    carregarColaboradores();
+                    // Se não tiver sessão, tentar carregar do arquivo colaboradores.txt
+                    console.warn('⚠️ Sessão não encontrada, tentando carregar do arquivo...');
+                    return carregarColaboradoresArquivo();
                 }
+                
             } catch (error) {
-                console.error('Erro ao carregar dados do usuário:', error);
-                carregarColaboradores();
+                console.error('❌ Erro ao carregar dados da sessão:', error);
+                return carregarColaboradoresArquivo();
             }
         }
 
-        async function carregarColaboradores() {
+        async function carregarColaboradoresArquivo() {
             try {
                 const response = await fetch('../data/colaboradores.txt');
+                
+                if (!response.ok) {
+                    throw new Error('Arquivo de colaboradores não encontrado');
+                }
+                
                 const texto = await response.text();
                 const linhas = texto.trim().split('\n');
                 
-                // Procura pelo colaborador ativo (último login ou marcado como ativo)
+                // Procurar pelo usuário marcado como ativo (* no início da linha)
+                let usuarioEncontrado = null;
+                
                 for (let i = 0; i < linhas.length; i++) {
                     const linha = linhas[i].trim();
                     if (linha) {
-                        const partes = linha.split('\t');
-                        if (partes.length >= 2) {
-                            // Se o arquivo tiver um marcador de ativo (ex: * no início)
-                            if (linha.startsWith('*')) {
-                                const nome = partes[0].replace('*', '').trim();
-                                const matricula = partes[1].trim();
-                                document.getElementById('nome').value = nome;
-                                document.getElementById('matricula').value = matricula;
-                                return;
+                        // Verificar se tem marcador de ativo
+                        if (linha.startsWith('*')) {
+                            const partes = linha.replace('*', '').trim().split('\t');
+                            if (partes.length >= 2) {
+                                usuarioEncontrado = {
+                                    matricula: partes[0].trim(),
+                                    nome: partes[1].trim()
+                                };
+                                break;
                             }
                         }
                     }
                 }
                 
                 // Se não encontrou marcador, pega o primeiro
-                if (linhas.length > 0) {
-                    const primeiraLinha = linhas[0].trim();
+                if (!usuarioEncontrado && linhas.length > 0) {
+                    const primeiraLinha = linhas[0].trim().replace('*', '').trim();
                     const partes = primeiraLinha.split('\t');
                     if (partes.length >= 2) {
-                        document.getElementById('nome').value = partes[0].trim();
-                        document.getElementById('matricula').value = partes[1].trim();
+                        usuarioEncontrado = {
+                            matricula: partes[0].trim(),
+                            nome: partes[1].trim()
+                        };
                     }
                 }
+                
+                if (usuarioEncontrado) {
+                    document.getElementById('nome').value = usuarioEncontrado.nome;
+                    document.getElementById('matricula').value = usuarioEncontrado.matricula;
+                    console.log('✅ Dados do usuário carregados do arquivo:', usuarioEncontrado.nome);
+                    return true;
+                } else {
+                    // Se ainda não encontrou, permitir edição manual
+                    document.getElementById('nome').removeAttribute('readonly');
+                    document.getElementById('matricula').removeAttribute('readonly');
+                    console.warn('⚠️ Nenhum colaborador encontrado. Campos liberados para edição.');
+                    return false;
+                }
+                
             } catch (error) {
-                console.error('Erro ao carregar colaboradores:', error);
-                // Deixar campos vazios para o usuário preencher manualmente
+                console.error('❌ Erro ao carregar colaboradores:', error);
+                // Permitir edição manual em caso de erro
                 document.getElementById('nome').removeAttribute('readonly');
                 document.getElementById('matricula').removeAttribute('readonly');
+                return false;
             }
         }
-
+        
         // ============================================
         // VARIÁVEIS GLOBAIS
         // ============================================
@@ -187,6 +233,7 @@
         let bobinasManuais = [];
         let categoriaAtiva = null;
         let codigosExistentesDB = new Set();
+        let cacheQuantidades = {};
         
         // ============================================
         // CARREGAR MATERIAIS DO ARQUIVO
@@ -1124,8 +1171,12 @@
             return material || null;
         }
         
-        // Carregar dados ao iniciar
-        carregarDadosUsuario();
+        // ============================================
+        // INICIALIZAR
+        // ============================================
+        
+        // Primeiro carregar dados do usuário, depois os materiais
+        const usuarioCarregado = carregarDadosUsuarioSessao();
         carregarMateriais();
         
         // ============================================
@@ -1445,6 +1496,15 @@
             const inputAnterior = document.getElementById(`qtd-anterior-${idUnico}`);
             if (!inputAnterior || !codigo) return;
             
+            // Verificar cache primeiro
+            if (cacheQuantidades[codigo]) {
+                const dados = cacheQuantidades[codigo];
+                inputAnterior.value = dados.qtd || '0';
+                inputAnterior.title = dados.data ? `Última contagem: ${formatarData(dados.data)}` : 'Nenhuma contagem anterior';
+                inputAnterior.classList.add(dados.qtd ? 'tem-dado-anterior' : 'sem-dado-anterior');
+                return;
+            }
+            
             try {
                 const response = await fetch(`${API_URL}/api/contagem-anterior`, {
                     method: 'POST',
@@ -1453,6 +1513,12 @@
                 });
                 
                 const resultado = await response.json();
+                
+                // Salvar no cache
+                cacheQuantidades[codigo] = {
+                    qtd: resultado.encontrado ? resultado.qtd_anterior : '0',
+                    data: resultado.encontrado ? resultado.data_anterior : null
+                };
                 
                 if (resultado.encontrado) {
                     inputAnterior.value = resultado.qtd_anterior;
