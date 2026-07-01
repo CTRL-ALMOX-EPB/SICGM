@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SICGM - Contagem Diária</title>
+    <title>SITA - Contagem Diária</title>
     <link rel="stylesheet" href="../css/styles.css">
 </head>
 <body>
@@ -550,6 +550,9 @@
                 const existeNoBanco = codigoBobina ? codigoExisteNoBanco(codigoBobina) : false;
                 const temDescricao = material.descricao && material.descricao.trim() !== '';
                 
+                // Recuperar quantidade salva
+                const qtdSalva = material._qtd || '';
+                
                 html += `
                     <div class="material-item bobina-item" data-codigo="${codigoBobina}" data-categoria="bobinas" data-index="${index}">
                         <div class="material-header">
@@ -609,7 +612,8 @@
                             <div class="material-field">
                                 <label for="qtd-${idUnico}">QTD *</label>
                                 <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
-                                    class="input-qtd" onchange="calcularDiferencaBobina('${idUnico}', '${codigoBobina}')">
+                                    class="input-qtd" value="${qtdSalva}" 
+                                    onchange="calcularDiferencaBobina('${idUnico}', '${codigoBobina}')">
                             </div>
                             <div class="material-field">
                                 <label>Últ. Cont.</label>
@@ -624,6 +628,7 @@
                             <div class="material-field justificativa-field">
                                 <label for="justificativa-${idUnico}">Justificativa</label>
                                 <input type="text" id="justificativa-${idUnico}" 
+                                    value="${material._justificativa || ''}"
                                     placeholder="${existeNoBanco ? 'Justificativa para esta bobina...' : 'Justificativa...'}" 
                                     class="input-justificativa"
                                     ${existeNoBanco ? `oninput="verificarJustificativaBobina(${index})"` : ''}>
@@ -673,6 +678,9 @@
                 const codigoTrafo = material.codigo || '';
                 const existeNoBanco = codigoTrafo ? codigoExisteNoBanco(codigoTrafo) : false;
                 const temDescricao = material.descricao && material.descricao.trim() !== '';
+                
+                // Recuperar quantidade salva
+                const qtdSalva = material._qtd || '';
                 
                 html += `
                     <div class="material-item trafo-item" data-codigo="${codigoTrafo}" data-categoria="trafos" data-index="${index}">
@@ -748,7 +756,8 @@
                             <div class="material-field">
                                 <label for="qtd-${idUnico}">QTD *</label>
                                 <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
-                                    class="input-qtd" onchange="calcularDiferencaTrafo('${idUnico}', '${codigoTrafo}')">
+                                    class="input-qtd" value="${qtdSalva}" 
+                                    onchange="calcularDiferencaTrafo('${idUnico}', '${codigoTrafo}')">
                             </div>
                             <div class="material-field">
                                 <label>Últ. Cont.</label>
@@ -763,6 +772,7 @@
                             <div class="material-field justificativa-field">
                                 <label for="justificativa-${idUnico}">Justificativa</label>
                                 <input type="text" id="justificativa-${idUnico}" 
+                                    value="${material._justificativa || ''}"
                                     placeholder="${existeNoBanco ? 'Justificativa para este material...' : 'Justificativa...'}" 
                                     class="input-justificativa"
                                     ${existeNoBanco ? `oninput="verificarJustificativaTrafo(${index})"` : ''}>
@@ -803,7 +813,9 @@
                 und: '',
                 tombamento: '',
                 ativo: true,
-                isNew: true
+                isNew: true,
+                _qtd: '',
+                _justificativa: ''
             };
             
             bobinasManuais.push(novaBobina);
@@ -814,11 +826,16 @@
             tabsContent.innerHTML = renderizarBobinas(bobinasManuais);
             atualizarContadorBobinas();
             
-            // Restaurar quantidades anteriores
+            // Restaurar quantidades anteriores e diferenças
             setTimeout(() => {
                 bobinasManuais.forEach((material, index) => {
                     if (material.codigo) {
                         buscarQuantidadeAnterior(material.codigo, `bobinas-${index}`);
+                    }
+                    // Restaurar diferença se houver quantidade
+                    if (material._qtd) {
+                        const idUnico = `bobinas-${index}`;
+                        calcularDiferencaBobina(idUnico, material.codigo);
                     }
                 });
             }, 100);
@@ -1152,7 +1169,9 @@
                 oleo: '',
                 cor: '',
                 ativo: true,
-                isNew: true
+                isNew: true,
+                _qtd: '',
+                _justificativa: ''
             };
             
             materiaisManuais.push(novoTrafo);
@@ -1162,11 +1181,16 @@
             tabsContent.innerHTML = renderizarTrafos(materiaisManuais);
             atualizarContadorTrafos();
             
-            // Restaurar quantidades anteriores
+            // Restaurar quantidades anteriores e diferenças
             setTimeout(() => {
                 materiaisManuais.forEach((material, index) => {
                     if (material.codigo) {
                         buscarQuantidadeAnterior(material.codigo, `trafos-${index}`);
+                    }
+                    // Restaurar diferença se houver quantidade
+                    if (material._qtd) {
+                        const idUnico = `trafos-${index}`;
+                        calcularDiferencaTrafo(idUnico, material.codigo);
                     }
                 });
             }, 100);
