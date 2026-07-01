@@ -101,14 +101,14 @@
                 icone: '🧵',
                 tipo: 'manual',
                 codigos: [],
-                validacao: 'cabo' // Palavra obrigatória na descrição
+                validacao: 'cabo'
             },
             'trafos': {
                 nome: 'Trafos',
                 icone: '⚡',
                 tipo: 'manual',
                 codigos: [],
-                validacao: 'transf' // Palavra obrigatória na descrição
+                validacao: 'transf'
             }
         };
         
@@ -527,7 +527,7 @@
         }
         
         // ============================================
-        // RENDERIZAR BOBINAS
+        // RENDERIZAR BOBINAS (PRESERVANDO DADOS)
         // ============================================
 
         function renderizarBobinas(materiais) {
@@ -647,19 +647,11 @@
                 </button>
             `;
             
-            setTimeout(() => {
-                bobinasAtivas.forEach((material, index) => {
-                    if (material.codigo) {
-                        buscarQuantidadeAnterior(material.codigo, `bobinas-${index}`);
-                    }
-                });
-            }, 100);
-            
             return html;
         }
         
         // ============================================
-        // RENDERIZAR TRAFOS
+        // RENDERIZAR TRAFOS (PRESERVANDO DADOS)
         // ============================================
 
         function renderizarTrafos(materiais) {
@@ -794,22 +786,17 @@
                 </button>
             `;
             
-            setTimeout(() => {
-                trafosAtivos.forEach((material, index) => {
-                    if (material.codigo) {
-                        buscarQuantidadeAnterior(material.codigo, `trafos-${index}`);
-                    }
-                });
-            }, 100);
-            
             return html;
         }
         
         // ============================================
-        // ADICIONAR BOBINA
+        // ADICIONAR BOBINA (PRESERVANDO DADOS EXISTENTES)
         // ============================================
         
         function adicionarBobina() {
+            // Salvar os dados atuais das bobinas antes de adicionar
+            salvarDadosBobinasAtuais();
+            
             const novaBobina = {
                 codigo: '',
                 descricao: '',
@@ -822,9 +809,19 @@
             bobinasManuais.push(novaBobina);
             materiaisPorCategoria['bobinas'] = bobinasManuais;
             
+            // Renderizar novamente com todos os dados preservados
             const tabsContent = document.getElementById('tab-bobinas');
             tabsContent.innerHTML = renderizarBobinas(bobinasManuais);
             atualizarContadorBobinas();
+            
+            // Restaurar quantidades anteriores
+            setTimeout(() => {
+                bobinasManuais.forEach((material, index) => {
+                    if (material.codigo) {
+                        buscarQuantidadeAnterior(material.codigo, `bobinas-${index}`);
+                    }
+                });
+            }, 100);
             
             const ultimoItem = tabsContent.querySelector('.bobina-item:last-child');
             if (ultimoItem) {
@@ -834,6 +831,64 @@
                     setTimeout(() => novoCodigoInput.focus(), 300);
                 }
             }
+        }
+        
+        // ============================================
+        // SALVAR DADOS ATUAIS DAS BOBINAS
+        // ============================================
+        
+        function salvarDadosBobinasAtuais() {
+            const bobinaItems = document.querySelectorAll('.bobina-item');
+            bobinaItems.forEach((item) => {
+                const index = parseInt(item.dataset.index);
+                if (!isNaN(index) && index < bobinasManuais.length) {
+                    const codigo = document.getElementById(`bobina-codigo-${index}`)?.value || '';
+                    const descricao = document.getElementById(`bobina-descricao-${index}`)?.value || '';
+                    const und = document.getElementById(`bobina-und-${index}`)?.value || '';
+                    const tombamento = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
+                    const qtd = document.getElementById(`qtd-bobinas-${index}`)?.value || '';
+                    const justificativa = document.getElementById(`justificativa-bobinas-${index}`)?.value || '';
+                    
+                    bobinasManuais[index].codigo = codigo;
+                    bobinasManuais[index].descricao = descricao;
+                    bobinasManuais[index].und = und;
+                    bobinasManuais[index].tombamento = tombamento;
+                    bobinasManuais[index]._qtd = qtd;
+                    bobinasManuais[index]._justificativa = justificativa;
+                }
+            });
+        }
+        
+        // ============================================
+        // SALVAR DADOS ATUAIS DOS TRAFOS
+        // ============================================
+        
+        function salvarDadosTrafosAtuais() {
+            const trafoItems = document.querySelectorAll('.trafo-item');
+            trafoItems.forEach((item) => {
+                const index = parseInt(item.dataset.index);
+                if (!isNaN(index) && index < materiaisManuais.length) {
+                    const codigo = document.getElementById(`trafo-codigo-${index}`)?.value || '';
+                    const descricao = document.getElementById(`trafo-descricao-${index}`)?.value || '';
+                    const und = document.getElementById(`trafo-und-${index}`)?.value || '';
+                    const serie = document.getElementById(`trafo-serie-${index}`)?.value || '';
+                    const tombamento = document.getElementById(`trafo-tombamento-${index}`)?.value || '';
+                    const oleo = document.getElementById(`trafo-oleo-${index}`)?.value || '';
+                    const cor = document.getElementById(`trafo-cor-${index}`)?.value || '';
+                    const qtd = document.getElementById(`qtd-trafos-${index}`)?.value || '';
+                    const justificativa = document.getElementById(`justificativa-trafos-${index}`)?.value || '';
+                    
+                    materiaisManuais[index].codigo = codigo;
+                    materiaisManuais[index].descricao = descricao;
+                    materiaisManuais[index].und = und;
+                    materiaisManuais[index].numero_serie = serie;
+                    materiaisManuais[index].tombamento = tombamento;
+                    materiaisManuais[index].oleo = oleo;
+                    materiaisManuais[index].cor = cor;
+                    materiaisManuais[index]._qtd = qtd;
+                    materiaisManuais[index]._justificativa = justificativa;
+                }
+            });
         }
         
         // ============================================
@@ -862,7 +917,7 @@
         }
         
         // ============================================
-        // VALIDAR CÓDIGO DA BOBINA (COM VALIDAÇÃO DE DESCRIÇÃO)
+        // VALIDAR CÓDIGO DA BOBINA
         // ============================================
 
         function validarCodigoBobina(index, codigo) {
@@ -888,7 +943,6 @@
                 return;
             }
             
-            // Validar código com a regra da categoria
             const validacao = validarCodigoPorCategoria(codigo.trim(), 'bobinas');
             
             if (!validacao.valido) {
@@ -1007,7 +1061,7 @@
         }
         
         // ============================================
-        // FUNÇÕES DE TRAFO (ATUALIZADAS)
+        // FUNÇÕES DE TRAFO
         // ============================================
         
         function validarTrafoCompleto(index) {
@@ -1082,10 +1136,13 @@
         }
         
         // ============================================
-        // ADICIONAR TRAFO (ATUALIZADO)
+        // ADICIONAR TRAFO (PRESERVANDO DADOS EXISTENTES)
         // ============================================
         
         function adicionarTrafo() {
+            // Salvar os dados atuais dos trafos antes de adicionar
+            salvarDadosTrafosAtuais();
+            
             const novoTrafo = {
                 codigo: '',
                 descricao: '',
@@ -1104,6 +1161,15 @@
             const tabsContent = document.getElementById('tab-trafos');
             tabsContent.innerHTML = renderizarTrafos(materiaisManuais);
             atualizarContadorTrafos();
+            
+            // Restaurar quantidades anteriores
+            setTimeout(() => {
+                materiaisManuais.forEach((material, index) => {
+                    if (material.codigo) {
+                        buscarQuantidadeAnterior(material.codigo, `trafos-${index}`);
+                    }
+                });
+            }, 100);
             
             const ultimoItem = tabsContent.querySelector('.trafo-item:last-child');
             if (ultimoItem) {
@@ -1145,7 +1211,7 @@
         }
         
         // ============================================
-        // VALIDAR CÓDIGO DO TRAFO (COM VALIDAÇÃO DE DESCRIÇÃO)
+        // VALIDAR CÓDIGO DO TRAFO
         // ============================================
 
         function validarCodigoTrafo(index, codigo) {
@@ -1171,7 +1237,6 @@
                 return;
             }
             
-            // Validar código com a regra da categoria
             const validacao = validarCodigoPorCategoria(codigo.trim(), 'trafos');
             
             if (!validacao.valido) {
@@ -1310,6 +1375,10 @@
         document.getElementById('contagemForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            // Salvar dados atuais antes de validar
+            salvarDadosTrafosAtuais();
+            salvarDadosBobinasAtuais();
+            
             const mensagemDiv = document.getElementById('mensagem');
             const botaoSubmit = e.target.querySelector('.submit-btn');
             
@@ -1379,7 +1448,6 @@
                         const descricaoTrafo = document.getElementById(`trafo-descricao-${index}`)?.value || '';
                         const undTrafo = document.getElementById(`trafo-und-${index}`)?.value || '';
                         
-                        // Validar novamente antes de enviar
                         const validacao = validarCodigoPorCategoria(codigoTrafo, 'trafos');
                         if (!validacao.valido) {
                             mostrarMensagem('❌ Trafo #' + (parseInt(index) + 1) + ': ' + validacao.motivo, 'erro');
@@ -1448,7 +1516,6 @@
                         const undBobina = document.getElementById(`bobina-und-${index}`)?.value || '';
                         const tombamento = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
                         
-                        // Validar novamente antes de enviar
                         const validacao = validarCodigoPorCategoria(codigoBobina, 'bobinas');
                         if (!validacao.valido) {
                             mostrarMensagem('❌ Bobina #' + (parseInt(index) + 1) + ': ' + validacao.motivo, 'erro');
