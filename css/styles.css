@@ -1197,3 +1197,50 @@ body {
         font-size: 14px;
     }
 }
+
+/* ============================================
+   BOTÃO VOLTAR HOME
+   ============================================ */
+
+.btn-voltar-home {
+    background: #4299E1;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-voltar-home:hover {
+    background: #3182CE;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+}
+
+.btn-voltar-home:active {
+    transform: translateY(0);
+}
+
+/* Versão pequena */
+.btn-voltar-home.small {
+    padding: 6px 15px;
+    font-size: 12px;
+}
+
+/* Versão outline */
+.btn-voltar-home.outline {
+    background: transparent;
+    color: #4299E1;
+    border: 2px solid #4299E1;
+}
+
+.btn-voltar-home.outline:hover {
+    background: #4299E1;
+    color: white;
+}

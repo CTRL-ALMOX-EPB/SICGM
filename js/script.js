@@ -139,25 +139,154 @@ function logout() {
 }
 
 // ============================================
+// MAPEAMENTO DE PERFIS PARA PÁGINAS HOME
+// ============================================
+
+const HOME_PAGES = {
+    'OPERACIONAL': 'home-operacional.html',
+    'GESTAO': 'home-gestao.html',
+    'VISUALIZACAO': 'home-visualizacao.html'
+};
+
+// ============================================
 // FUNÇÃO CORRIGIDA PARA REDIRECIONAR SEGUNDO PERFIL
 // ============================================
 
 function redirecionarPorPerfil(perfil) {
-    // Mapeamento de perfil para página home (nomes SEM ESPAÇOS)
-    const homeMap = {
-        'OPERACIONAL': 'home-operacional.html',
-        'GESTAO': 'home-gestao.html',
-        'VISUALIZACAO': 'home-visualizacao.html'
-    };
-    
     // Normalizar perfil (maiúsculo e sem espaços)
     const perfilNormalizado = perfil.toUpperCase().trim();
-    const homePage = homeMap[perfilNormalizado] || 'index.html';
+    const homePage = HOME_PAGES[perfilNormalizado] || 'index.html';
     
     console.log(`🔀 Redirecionando para: ${homePage} (Perfil: ${perfilNormalizado})`);
     
     // Redirecionar para a página correta
     window.location.href = homePage;
+}
+
+// ============================================
+// FUNÇÃO PARA REDIRECIONAR PARA HOME BASEADO NO PERFIL ATUAL
+// ============================================
+
+function redirecionarParaHome() {
+    // Verificar sessão atual
+    const sessao = verificarSessao();
+    
+    if (!sessao) {
+        console.log('🔒 Sessão inválida - Redirecionando para login');
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    // Redirecionar baseado no perfil
+    redirecionarPorPerfil(sessao.perfil);
+}
+
+// ============================================
+// FUNÇÃO PARA OBTER O PERFIL ATUAL
+// ============================================
+
+function getPerfilAtual() {
+    const sessao = verificarSessao();
+    return sessao ? sessao.perfil : null;
+}
+
+// ============================================
+// FUNÇÃO PARA OBTER A PÁGINA HOME DO PERFIL ATUAL
+// ============================================
+
+function getHomePageAtual() {
+    const sessao = verificarSessao();
+    if (!sessao) return 'index.html';
+    const perfilNormalizado = sessao.perfil.toUpperCase().trim();
+    return HOME_PAGES[perfilNormalizado] || 'index.html';
+}
+
+// ============================================
+// FUNÇÃO PARA CRIAR BOTÃO DE VOLTAR DINÂMICO
+// ============================================
+
+function criarBotaoVoltarHome(estilo = 'padrao') {
+    const botao = document.createElement('button');
+    botao.innerHTML = '🏠 Voltar ao Início';
+    botao.onclick = redirecionarParaHome;
+    botao.className = 'btn-voltar-home';
+    
+    // Estilos diferentes conforme necessário
+    const estilos = {
+        'padrao': {
+            background: '#4299E1',
+            color: 'white',
+            border: 'none',
+            padding: '10px 25px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '600',
+            fontSize: '14px',
+            transition: 'all 0.3s ease',
+            margin: '10px 0'
+        },
+        'pequeno': {
+            background: '#4299E1',
+            color: 'white',
+            border: 'none',
+            padding: '6px 15px',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontWeight: '500',
+            fontSize: '12px',
+            transition: 'all 0.3s ease',
+            margin: '5px 0'
+        },
+        'outline': {
+            background: 'transparent',
+            color: '#4299E1',
+            border: '2px solid #4299E1',
+            padding: '8px 20px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '600',
+            fontSize: '14px',
+            transition: 'all 0.3s ease',
+            margin: '10px 0'
+        }
+    };
+    
+    const estiloEscolhido = estilos[estilo] || estilos.padrao;
+    Object.assign(botao.style, estiloEscolhido);
+    
+    // Efeitos hover
+    botao.onmouseover = function() {
+        if (estilo === 'outline') {
+            this.style.background = '#4299E1';
+            this.style.color = 'white';
+        } else {
+            this.style.background = '#3182CE';
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 4px 12px rgba(66, 153, 225, 0.3)';
+        }
+    };
+    
+    botao.onmouseout = function() {
+        if (estilo === 'outline') {
+            this.style.background = 'transparent';
+            this.style.color = '#4299E1';
+        } else {
+            this.style.background = estiloEscolhido.background;
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = 'none';
+        }
+    };
+    
+    return botao;
+}
+
+// ============================================
+// FUNÇÃO PARA OBTER O NOME DA PÁGINA HOME POR PERFIL (UTILITÁRIA)
+// ============================================
+
+function getPaginaHomePorPerfil(perfil) {
+    const perfilNormalizado = perfil.toUpperCase().trim();
+    return HOME_PAGES[perfilNormalizado] || 'index.html';
 }
 
 // ============================================
@@ -251,6 +380,11 @@ window.sair = function() {
 window.verificarSessao = verificarSessao;
 window.logout = logout;
 window.redirecionarPorPerfil = redirecionarPorPerfil;
+window.redirecionarParaHome = redirecionarParaHome;
+window.getPerfilAtual = getPerfilAtual;
+window.getHomePageAtual = getHomePageAtual;
+window.criarBotaoVoltarHome = criarBotaoVoltarHome;
+window.getPaginaHomePorPerfil = getPaginaHomePorPerfil;
 
 // ============================================
 // FUNÇÕES PARA PÁGINA DE CONTAGEM DIÁRIA
