@@ -16,6 +16,26 @@
                 <h1 class="title">SICGM - Contagem Diária</h1>
             </div>
             
+            <!-- Botão Voltar ao Início Baseado no Perfil -->
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
+                <button onclick="redirecionarParaHome()" style="
+                    background: #4299E1;
+                    color: white;
+                    border: none;
+                    padding: 10px 25px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    font-size: 14px;
+                    transition: all 0.3s ease;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                " onmouseover="this.style.background='#3182CE'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#4299E1'; this.style.transform='translateY(0)'">
+                    🏠 Voltar ao Início
+                </button>
+            </div>
+            
             <form id="contagemForm">
                 
                 <!-- Nome, Matrícula e Data lado a lado -->
@@ -58,14 +78,28 @@
             
         </div>
         
+        <!-- Rodapé com link de voltar (fallback) -->
         <div style="text-align: center; margin-top: 1rem;">
-            <a href="../home.html" style="color: #4299E1; text-decoration: none; font-weight: 500;">← Voltar para Home</a>
+            <button onclick="redirecionarParaHome()" style="
+                background: transparent;
+                color: #4299E1;
+                border: none;
+                cursor: pointer;
+                font-weight: 500;
+                font-size: 14px;
+                text-decoration: underline;
+            ">
+                ← Voltar para Home
+            </button>
         </div>
     </div>
 
     <!-- Pop-up para descrição completa -->
     <div id="descricao-popup" class="descricao-popup"></div>
     <div id="popup-overlay" class="popup-overlay"></div>
+
+    <!-- Importar script.js com todas as funções -->
+    <script src="../js/script.js"></script>
 
     <script>
         // ============================================
@@ -120,6 +154,35 @@
         const hoje = new Date();
         const dataFormatada = hoje.toISOString().split('T')[0];
         dataInput.value = dataFormatada;
+        
+        // ============================================
+        // FUNÇÃO PARA REDIRECIONAR PARA HOME (USANDO O SCRIPT.JS)
+        // ============================================
+        
+        // A função redirecionarParaHome já está definida no script.js
+        // Mas vamos garantir que ela existe, senão criamos um fallback
+        if (typeof redirecionarParaHome === 'undefined') {
+            window.redirecionarParaHome = function() {
+                // Fallback: verificar sessão manualmente
+                const sessao = sessionStorage.getItem('sessaoSICGM');
+                if (sessao) {
+                    try {
+                        const dados = JSON.parse(sessao);
+                        const homeMap = {
+                            'OPERACIONAL': '../home-operacional.html',
+                            'GESTAO': '../home-gestao.html',
+                            'VISUALIZACAO': '../home-visualizacao.html'
+                        };
+                        const homePage = homeMap[dados.perfil] || '../index.html';
+                        window.location.href = homePage;
+                    } catch (e) {
+                        window.location.href = '../index.html';
+                    }
+                } else {
+                    window.location.href = '../index.html';
+                }
+            };
+        }
         
         // ============================================
         // CARREGAR DADOS DO USUÁRIO DA SESSÃO
