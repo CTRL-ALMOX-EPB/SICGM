@@ -136,7 +136,7 @@
         
         async function carregarMateriais() {
             try {
-                const response = await fetch('../data/materiais_filtrados.txt');
+                const response = await fetch('../data/materiais.txt');
                 const texto = await response.text();
                 
                 const linhas = texto.trim().split('\n');
@@ -167,7 +167,7 @@
             } catch (error) {
                 console.error('Erro ao carregar materiais:', error);
                 document.getElementById('loading-materiais').innerHTML = 
-                    '❌ Erro ao carregar materiais. Verifique o arquivo materiais_filtrados.txt';
+                    '❌ Erro ao carregar materiais. Verifique o arquivo materiais.txt';
             }
         }
         
