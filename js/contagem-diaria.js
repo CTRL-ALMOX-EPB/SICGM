@@ -567,7 +567,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR BOBINAS
+    // RENDERIZAR BOBINAS (CORRIGIDO)
     // ============================================
 
     function renderizarBobinas(materiais) {
@@ -593,25 +593,32 @@ if (document.getElementById('contagemForm')) {
             const temDescricao = material.descricao && material.descricao.trim() !== '';
             const qtdSalva = material._qtd || '';
             const idRegistro = material.id || null;
+            const idx = index;
             
             html += `
-                <div class="material-item bobina-item" data-codigo="${codigoBobina}" data-categoria="bobinas" data-tipo="bobina" data-id="${idRegistro}" data-tombamento="${material.tombamento || ''}">
+                <div class="material-item bobina-item" 
+                     data-codigo="${codigoBobina}" 
+                     data-categoria="bobinas" 
+                     data-tipo="bobina" 
+                     data-id="${idRegistro}" 
+                     data-tombamento="${material.tombamento || ''}"
+                     data-index="${idx}">
                     <div class="material-header">
-                        <span class="material-number">Bobina #${index + 1}</span>
+                        <span class="material-number">Bobina #${idx + 1}</span>
                         <div class="trafo-header-actions">
                             ${existeNoBanco ? `
                             <label class="checkbox-baixa-label">
                                 <input type="checkbox" 
                                     class="checkbox-baixa-bobina" 
-                                    data-index="${index}"
-                                    onchange="toggleBaixaBobina(${index}, this)">
+                                    data-index="${idx}"
+                                    onchange="toggleBaixaBobina(${idx}, this)">
                                 Dar baixa
                             </label>
                             ` : `
                             <button type="button" 
                                 class="btn-remover-trafo-x" 
-                                data-index="${index}"
-                                onclick="removerBobina(${index})"
+                                data-index="${idx}"
+                                onclick="removerBobina(${idx})"
                                 title="Remover esta bobina">
                                 ✕
                             </button>
@@ -621,21 +628,21 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="material-row">
                         <div class="material-field">
-                            <label for="bobina-codigo-${index}">Código *</label>
-                            <input type="text" id="bobina-codigo-${index}" value="${codigoBobina}" 
+                            <label for="bobina-codigo-${idx}">Código *</label>
+                            <input type="text" id="bobina-codigo-${idx}" value="${codigoBobina}" 
                                 placeholder="Código" class="input-trafo" required
-                                onchange="validarCodigoBobina(${index}, this.value)">
-                            <div id="bobina-codigo-status-${index}" class="codigo-status"></div>
+                                onchange="validarCodigoBobina(${idx}, this.value)">
+                            <div id="bobina-codigo-status-${idx}" class="codigo-status"></div>
                         </div>
                         <div class="material-field">
-                            <label for="bobina-descricao-${index}">Descrição *</label>
-                            <input type="text" id="bobina-descricao-${index}" value="${material.descricao || ''}" 
+                            <label for="bobina-descricao-${idx}">Descrição *</label>
+                            <input type="text" id="bobina-descricao-${idx}" value="${material.descricao || ''}" 
                                 placeholder="Descrição" class="input-descricao" 
                                 ${temDescricao ? 'readonly' : ''} required>
                         </div>
                         <div class="material-field">
-                            <label for="bobina-und-${index}">UND *</label>
-                            <input type="text" id="bobina-und-${index}" value="${material.und || ''}" 
+                            <label for="bobina-und-${idx}">UND *</label>
+                            <input type="text" id="bobina-und-${idx}" value="${material.und || ''}" 
                                 placeholder="UND" class="input-readonly" 
                                 ${temDescricao ? 'readonly' : ''} required>
                         </div>
@@ -643,8 +650,8 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="material-row material-row-extras">
                         <div class="material-field">
-                            <label for="bobina-tombamento-${index}">Tombamento *</label>
-                            <input type="text" id="bobina-tombamento-${index}" value="${material.tombamento || ''}" 
+                            <label for="bobina-tombamento-${idx}">Tombamento *</label>
+                            <input type="text" id="bobina-tombamento-${idx}" value="${material.tombamento || ''}" 
                                 placeholder="Tombamento" class="input-extra" required>
                         </div>
                     </div>
@@ -672,12 +679,12 @@ if (document.getElementById('contagemForm')) {
                                 value="${material._justificativa || ''}"
                                 placeholder="${existeNoBanco ? 'Justificativa para esta bobina...' : 'Justificativa...'}" 
                                 class="input-justificativa"
-                                ${existeNoBanco ? `oninput="verificarJustificativaBobina(${index})"` : ''}>
+                                ${existeNoBanco ? `oninput="verificarJustificativaBobina(${idx})"` : ''}>
                         </div>
                     </div>
                     
                     ${existeNoBanco ? `
-                    <div id="alerta-baixa-bobina-${index}" class="alerta-baixa" style="display: none;">
+                    <div id="alerta-baixa-bobina-${idx}" class="alerta-baixa" style="display: none;">
                         ⚠️ Para dar baixa, preencha a justificativa.
                     </div>
                     ` : ''}
@@ -697,7 +704,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR TRAFOS
+    // RENDERIZAR TRAFOS (CORRIGIDO)
     // ============================================
 
     function renderizarTrafos(materiais) {
@@ -723,25 +730,32 @@ if (document.getElementById('contagemForm')) {
             const temDescricao = material.descricao && material.descricao.trim() !== '';
             const qtdSalva = material._qtd || '';
             const idRegistro = material.id || null;
+            const idx = index;
             
             html += `
-                <div class="material-item trafo-item" data-codigo="${codigoTrafo}" data-categoria="trafos" data-tipo="trafo" data-id="${idRegistro}" data-tombamento="${material.tombamento || ''}">
+                <div class="material-item trafo-item" 
+                     data-codigo="${codigoTrafo}" 
+                     data-categoria="trafos" 
+                     data-tipo="trafo" 
+                     data-id="${idRegistro}" 
+                     data-tombamento="${material.tombamento || ''}"
+                     data-index="${idx}">
                     <div class="material-header">
-                        <span class="material-number">Trafo #${index + 1}</span>
+                        <span class="material-number">Trafo #${idx + 1}</span>
                         <div class="trafo-header-actions">
                             ${existeNoBanco ? `
                             <label class="checkbox-baixa-label">
                                 <input type="checkbox" 
                                     class="checkbox-baixa-trafo" 
-                                    data-index="${index}"
-                                    onchange="toggleBaixaTrafo(${index}, this)">
+                                    data-index="${idx}"
+                                    onchange="toggleBaixaTrafo(${idx}, this)">
                                 Dar baixa
                             </label>
                             ` : `
                             <button type="button" 
                                 class="btn-remover-trafo-x" 
-                                data-index="${index}"
-                                onclick="removerTrafo(${index})"
+                                data-index="${idx}"
+                                onclick="removerTrafo(${idx})"
                                 title="Remover este trafo">
                                 ✕
                             </button>
@@ -751,21 +765,21 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="material-row">
                         <div class="material-field">
-                            <label for="trafo-codigo-${index}">Código *</label>
-                            <input type="text" id="trafo-codigo-${index}" value="${codigoTrafo}" 
+                            <label for="trafo-codigo-${idx}">Código *</label>
+                            <input type="text" id="trafo-codigo-${idx}" value="${codigoTrafo}" 
                                 placeholder="Código" class="input-trafo" required
-                                onchange="validarCodigoTrafo(${index}, this.value)">
-                            <div id="codigo-status-${index}" class="codigo-status"></div>
+                                onchange="validarCodigoTrafo(${idx}, this.value)">
+                            <div id="codigo-status-${idx}" class="codigo-status"></div>
                         </div>
                         <div class="material-field">
-                            <label for="trafo-descricao-${index}">Descrição *</label>
-                            <input type="text" id="trafo-descricao-${index}" value="${material.descricao || ''}" 
+                            <label for="trafo-descricao-${idx}">Descrição *</label>
+                            <input type="text" id="trafo-descricao-${idx}" value="${material.descricao || ''}" 
                                 placeholder="Descrição" class="input-descricao" 
                                 ${temDescricao ? 'readonly' : ''} required>
                         </div>
                         <div class="material-field">
-                            <label for="trafo-und-${index}">UND *</label>
-                            <input type="text" id="trafo-und-${index}" value="${material.und || ''}" 
+                            <label for="trafo-und-${idx}">UND *</label>
+                            <input type="text" id="trafo-und-${idx}" value="${material.und || ''}" 
                                 placeholder="UND" class="input-readonly" 
                                 ${temDescricao ? 'readonly' : ''} required>
                         </div>
@@ -773,23 +787,23 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="material-row material-row-extras">
                         <div class="material-field">
-                            <label for="trafo-serie-${index}">Nº Série *</label>
-                            <input type="text" id="trafo-serie-${index}" value="${material.numero_serie || ''}" 
+                            <label for="trafo-serie-${idx}">Nº Série *</label>
+                            <input type="text" id="trafo-serie-${idx}" value="${material.numero_serie || ''}" 
                                 placeholder="Nº de série" class="input-extra" required>
                         </div>
                         <div class="material-field">
-                            <label for="trafo-tombamento-${index}">Tombamento *</label>
-                            <input type="text" id="trafo-tombamento-${index}" value="${material.tombamento || ''}" 
+                            <label for="trafo-tombamento-${idx}">Tombamento *</label>
+                            <input type="text" id="trafo-tombamento-${idx}" value="${material.tombamento || ''}" 
                                 placeholder="Tombamento" class="input-extra" required>
                         </div>
                         <div class="material-field">
-                            <label for="trafo-oleo-${index}">Óleo *</label>
-                            <input type="text" id="trafo-oleo-${index}" value="${material.oleo || ''}" 
+                            <label for="trafo-oleo-${idx}">Óleo *</label>
+                            <input type="text" id="trafo-oleo-${idx}" value="${material.oleo || ''}" 
                                 placeholder="Tipo de óleo" class="input-extra" required>
                         </div>
                         <div class="material-field">
-                            <label for="trafo-cor-${index}">Cor *</label>
-                            <input type="text" id="trafo-cor-${index}" value="${material.cor || ''}" 
+                            <label for="trafo-cor-${idx}">Cor *</label>
+                            <input type="text" id="trafo-cor-${idx}" value="${material.cor || ''}" 
                                 placeholder="Cor" class="input-extra" required>
                         </div>
                     </div>
@@ -817,12 +831,12 @@ if (document.getElementById('contagemForm')) {
                                 value="${material._justificativa || ''}"
                                 placeholder="${existeNoBanco ? 'Justificativa para este material...' : 'Justificativa...'}" 
                                 class="input-justificativa"
-                                ${existeNoBanco ? `oninput="verificarJustificativaTrafo(${index})"` : ''}>
+                                ${existeNoBanco ? `oninput="verificarJustificativaTrafo(${idx})"` : ''}>
                         </div>
                     </div>
                     
                     ${existeNoBanco ? `
-                    <div id="alerta-baixa-trafo-${index}" class="alerta-baixa" style="display: none;">
+                    <div id="alerta-baixa-trafo-${idx}" class="alerta-baixa" style="display: none;">
                         ⚠️ Para dar baixa, preencha a justificativa.
                     </div>
                     ` : ''}
@@ -898,64 +912,70 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // SALVAR DADOS ATUAIS DAS BOBINAS
+    // SALVAR DADOS ATUAIS DAS BOBINAS (CORRIGIDO)
     // ============================================
     
     function salvarDadosBobinasAtuais() {
         const bobinaItems = document.querySelectorAll('.bobina-item');
         bobinaItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
-            if (!isNaN(index) && index < bobinasManuais.length) {
-                const codigo = document.getElementById(`bobina-codigo-${index}`)?.value || '';
-                const descricao = document.getElementById(`bobina-descricao-${index}`)?.value || '';
-                const und = document.getElementById(`bobina-und-${index}`)?.value || '';
-                const tombamento = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
-                const qtd = document.getElementById(`qtd-bobinas-${index}`)?.value || '';
-                const justificativa = document.getElementById(`justificativa-bobinas-${index}`)?.value || '';
-                
-                bobinasManuais[index].codigo = codigo;
-                bobinasManuais[index].descricao = descricao;
-                bobinasManuais[index].und = und;
-                bobinasManuais[index].tombamento = tombamento;
-                bobinasManuais[index]._qtd = qtd;
-                bobinasManuais[index]._justificativa = justificativa;
-                bobinasManuais[index].tipo_material = 'bobina';
-                bobinasManuais[index].id = item.dataset.id || null;
+            if (isNaN(index) || index < 0 || index >= bobinasManuais.length) {
+                console.warn('⚠️ Índice inválido em salvarDadosBobinasAtuais:', item.dataset.index);
+                return;
             }
+            
+            const codigo = document.getElementById(`bobina-codigo-${index}`)?.value || '';
+            const descricao = document.getElementById(`bobina-descricao-${index}`)?.value || '';
+            const und = document.getElementById(`bobina-und-${index}`)?.value || '';
+            const tombamento = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
+            const qtd = document.getElementById(`qtd-bobinas-${index}`)?.value || '';
+            const justificativa = document.getElementById(`justificativa-bobinas-${index}`)?.value || '';
+            
+            bobinasManuais[index].codigo = codigo;
+            bobinasManuais[index].descricao = descricao;
+            bobinasManuais[index].und = und;
+            bobinasManuais[index].tombamento = tombamento;
+            bobinasManuais[index]._qtd = qtd;
+            bobinasManuais[index]._justificativa = justificativa;
+            bobinasManuais[index].tipo_material = 'bobina';
+            bobinasManuais[index].id = item.dataset.id || null;
         });
     }
     
     // ============================================
-    // SALVAR DADOS ATUAIS DOS TRAFOS
+    // SALVAR DADOS ATUAIS DOS TRAFOS (CORRIGIDO)
     // ============================================
     
     function salvarDadosTrafosAtuais() {
         const trafoItems = document.querySelectorAll('.trafo-item');
         trafoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
-            if (!isNaN(index) && index < materiaisManuais.length) {
-                const codigo = document.getElementById(`trafo-codigo-${index}`)?.value || '';
-                const descricao = document.getElementById(`trafo-descricao-${index}`)?.value || '';
-                const und = document.getElementById(`trafo-und-${index}`)?.value || '';
-                const serie = document.getElementById(`trafo-serie-${index}`)?.value || '';
-                const tombamento = document.getElementById(`trafo-tombamento-${index}`)?.value || '';
-                const oleo = document.getElementById(`trafo-oleo-${index}`)?.value || '';
-                const cor = document.getElementById(`trafo-cor-${index}`)?.value || '';
-                const qtd = document.getElementById(`qtd-trafos-${index}`)?.value || '';
-                const justificativa = document.getElementById(`justificativa-trafos-${index}`)?.value || '';
-                
-                materiaisManuais[index].codigo = codigo;
-                materiaisManuais[index].descricao = descricao;
-                materiaisManuais[index].und = und;
-                materiaisManuais[index].numero_serie = serie;
-                materiaisManuais[index].tombamento = tombamento;
-                materiaisManuais[index].oleo = oleo;
-                materiaisManuais[index].cor = cor;
-                materiaisManuais[index]._qtd = qtd;
-                materiaisManuais[index]._justificativa = justificativa;
-                materiaisManuais[index].tipo_material = 'trafo';
-                materiaisManuais[index].id = item.dataset.id || null;
+            if (isNaN(index) || index < 0 || index >= materiaisManuais.length) {
+                console.warn('⚠️ Índice inválido em salvarDadosTrafosAtuais:', item.dataset.index);
+                return;
             }
+            
+            const codigo = document.getElementById(`trafo-codigo-${index}`)?.value || '';
+            const descricao = document.getElementById(`trafo-descricao-${index}`)?.value || '';
+            const und = document.getElementById(`trafo-und-${index}`)?.value || '';
+            const serie = document.getElementById(`trafo-serie-${index}`)?.value || '';
+            const tombamento = document.getElementById(`trafo-tombamento-${index}`)?.value || '';
+            const oleo = document.getElementById(`trafo-oleo-${index}`)?.value || '';
+            const cor = document.getElementById(`trafo-cor-${index}`)?.value || '';
+            const qtd = document.getElementById(`qtd-trafos-${index}`)?.value || '';
+            const justificativa = document.getElementById(`justificativa-trafos-${index}`)?.value || '';
+            
+            materiaisManuais[index].codigo = codigo;
+            materiaisManuais[index].descricao = descricao;
+            materiaisManuais[index].und = und;
+            materiaisManuais[index].numero_serie = serie;
+            materiaisManuais[index].tombamento = tombamento;
+            materiaisManuais[index].oleo = oleo;
+            materiaisManuais[index].cor = cor;
+            materiaisManuais[index]._qtd = qtd;
+            materiaisManuais[index]._justificativa = justificativa;
+            materiaisManuais[index].tipo_material = 'trafo';
+            materiaisManuais[index].id = item.dataset.id || null;
         });
     }
     
@@ -1137,6 +1157,11 @@ if (document.getElementById('contagemForm')) {
     // ============================================
     
     function validarTrafoCompleto(index) {
+        if (index === undefined || index === null || isNaN(index) || index < 0) {
+            console.error('❌ Index inválido em validarTrafoCompleto:', index);
+            return false;
+        }
+        
         const codigo = document.getElementById(`trafo-codigo-${index}`)?.value || '';
         const descricao = document.getElementById(`trafo-descricao-${index}`)?.value || '';
         const und = document.getElementById(`trafo-und-${index}`)?.value || '';
@@ -1152,6 +1177,11 @@ if (document.getElementById('contagemForm')) {
     }
     
     function validarBobinaCompleta(index) {
+        if (index === undefined || index === null || isNaN(index) || index < 0) {
+            console.error('❌ Index inválido em validarBobinaCompleta:', index);
+            return false;
+        }
+        
         const codigo = document.getElementById(`bobina-codigo-${index}`)?.value || '';
         const descricao = document.getElementById(`bobina-descricao-${index}`)?.value || '';
         const und = document.getElementById(`bobina-und-${index}`)?.value || '';
@@ -1455,7 +1485,7 @@ if (document.getElementById('contagemForm')) {
     }, true);
     
     // ============================================
-    // ENVIAR FORMULÁRIO (CORRIGIDO)
+    // ENVIAR FORMULÁRIO
     // ============================================
     
     document.getElementById('contagemForm').addEventListener('submit', async (e) => {
@@ -1479,7 +1509,12 @@ if (document.getElementById('contagemForm')) {
         // Validar trafos obrigatórios
         const trafoItems = document.querySelectorAll('.trafo-item');
         let trafoIncompleto = false;
-        trafoItems.forEach((item, index) => {
+        trafoItems.forEach((item) => {
+            const index = parseInt(item.dataset.index);
+            if (isNaN(index)) {
+                console.warn('⚠️ Índice inválido no trafo:', item);
+                return;
+            }
             if (!validarTrafoCompleto(index)) {
                 trafoIncompleto = true;
                 item.style.borderColor = '#FC8181';
@@ -1496,7 +1531,12 @@ if (document.getElementById('contagemForm')) {
         // Validar bobinas obrigatórias
         const bobinaItems = document.querySelectorAll('.bobina-item');
         let bobinaIncompleta = false;
-        bobinaItems.forEach((item, index) => {
+        bobinaItems.forEach((item) => {
+            const index = parseInt(item.dataset.index);
+            if (isNaN(index)) {
+                console.warn('⚠️ Índice inválido na bobina:', item);
+                return;
+            }
             if (!validarBobinaCompleta(index)) {
                 bobinaIncompleta = true;
                 item.style.borderColor = '#FC8181';
@@ -1553,7 +1593,11 @@ if (document.getElementById('contagemForm')) {
                 
                 // Se NÃO for baixa, criar novo registro
                 if (categoria === 'trafos') {
-                    const index = materialItem.dataset.index;
+                    const index = parseInt(materialItem.dataset.index);
+                    if (isNaN(index)) {
+                        console.warn('⚠️ Índice inválido no trafo para envio:', materialItem);
+                        return;
+                    }
                     
                     const codigoTrafo = document.getElementById(`trafo-codigo-${index}`)?.value || codigo;
                     const descricaoTrafo = document.getElementById(`trafo-descricao-${index}`)?.value || '';
@@ -1606,7 +1650,11 @@ if (document.getElementById('contagemForm')) {
                     });
                     
                 } else if (categoria === 'bobinas') {
-                    const index = materialItem.dataset.index;
+                    const index = parseInt(materialItem.dataset.index);
+                    if (isNaN(index)) {
+                        console.warn('⚠️ Índice inválido na bobina para envio:', materialItem);
+                        return;
+                    }
                     
                     const codigoBobina = document.getElementById(`bobina-codigo-${index}`)?.value || codigo;
                     const descricaoBobina = document.getElementById(`bobina-descricao-${index}`)?.value || '';
