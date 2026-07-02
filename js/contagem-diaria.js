@@ -287,14 +287,13 @@ if (document.getElementById('contagemForm')) {
             const bobinasMap = new Map();
             
             resultados.forEach(item => {
-                // Verifica se é um trafo (tem campos específicos de trafo)
-                const isTrafo = item.numero_serie || item.tombamento || item.oleo || item.cor;
                 // Verifica se é uma bobina (campo bobina = true)
                 const isBobina = item.bobina === true || item.bobina === 1;
+                // Verifica se é um trafo (tem campos específicos de trafo)
+                const isTrafo = item.numero_serie || item.oleo || item.cor;
                 const isAtivo = item.ativo === undefined || item.ativo === 1 || item.ativo === true;
                 
-                // IMPORTANTE: Um item NÃO pode ser trafo E bobina ao mesmo tempo
-                // Prioridade: se for bobina, não é trafo
+                // PRIORIDADE: Se for bobina, vai para bobinas
                 if (isBobina && isAtivo) {
                     // É uma bobina
                     codigosExistentesDB.add(item.codigo);
@@ -304,11 +303,14 @@ if (document.getElementById('contagemForm')) {
                             descricao: item.descricao,
                             und: item.und,
                             tombamento: item.tombamento,
-                            ativo: true
+                            ativo: true,
+                            bobina: true
                         });
                     }
-                } else if (isTrafo && isAtivo && !isBobina) {
-                    // É um trafo (e não é bobina)
+                } 
+                // Se NÃO for bobina, mas tiver características de trafo
+                else if (isTrafo && isAtivo) {
+                    // É um trafo
                     codigosExistentesDB.add(item.codigo);
                     if (!trafosMap.has(item.codigo)) {
                         trafosMap.set(item.codigo, {
@@ -319,7 +321,8 @@ if (document.getElementById('contagemForm')) {
                             tombamento: item.tombamento,
                             oleo: item.oleo,
                             cor: item.cor,
-                            ativo: true
+                            ativo: true,
+                            bobina: false
                         });
                     }
                 }
@@ -505,8 +508,10 @@ if (document.getElementById('contagemForm')) {
         
         html += `<div id="bobinas-container">`;
         
-        // Filtra apenas itens que são bobinas (não trafos)
-        const bobinasAtivas = materiais.filter(b => b.ativo !== false && !b.numero_serie && !b.oleo && !b.cor);
+        // Filtra apenas itens que são bobinas (marcados como bobina ou que não têm campos de trafo)
+        const bobinasAtivas = materiais.filter(b => {
+            return b.ativo !== false && (b.bobina === true || (!b.numero_serie && !b.oleo && !b.cor));
+        });
         
         if (bobinasAtivas.length === 0) {
             html += `<div id="bobinas-vazio" style="text-align: center; padding: 20px; color: #A0AEC0;">
@@ -635,8 +640,10 @@ if (document.getElementById('contagemForm')) {
         
         html += `<div id="trafos-container">`;
         
-        // Filtra apenas itens que são trafos (não bobinas)
-        const trafosAtivos = materiais.filter(t => t.ativo !== false && (t.numero_serie || t.oleo || t.cor));
+        // Filtra apenas itens que são trafos (marcados como não bobina e com campos de trafo)
+        const trafosAtivos = materiais.filter(t => {
+            return t.ativo !== false && t.bobina !== true && (t.numero_serie || t.oleo || t.cor);
+        });
         
         if (trafosAtivos.length === 0) {
             html += `<div id="trafos-vazio" style="text-align: center; padding: 20px; color: #A0AEC0;">
@@ -788,10 +795,10 @@ if (document.getElementById('contagemForm')) {
             isNew: true,
             _qtd: '',
             _justificativa: '',
-            // IMPORTANTE: Não incluir campos de trafo
-            numero_serie: undefined,
-            oleo: undefined,
-            cor: undefined
+            bobina: true, // Marca como bobina
+            numero_serie: null,
+            oleo: null,
+            cor: null
         };
         
         bobinasManuais.push(novaBobina);
@@ -848,6 +855,7 @@ if (document.getElementById('contagemForm')) {
                 bobinasManuais[index].tombamento = tombamento;
                 bobinasManuais[index]._qtd = qtd;
                 bobinasManuais[index]._justificativa = justificativa;
+                bobinasManuais[index].bobina = true;
             }
         });
     }
@@ -880,6 +888,7 @@ if (document.getElementById('contagemForm')) {
                 materiaisManuais[index].cor = cor;
                 materiaisManuais[index]._qtd = qtd;
                 materiaisManuais[index]._justificativa = justificativa;
+                materiaisManuais[index].bobina = false;
             }
         });
     }
@@ -977,6 +986,7 @@ if (document.getElementById('contagemForm')) {
                 bobinasManuais[index].codigo = codigo.trim();
                 bobinasManuais[index].descricao = dados.descricao;
                 bobinasManuais[index].und = dados.und;
+                bobinasManuais[index].bobina = true;
             }
             
             if (statusDiv) {
@@ -1000,6 +1010,7 @@ if (document.getElementById('contagemForm')) {
                 bobinasManuais[index].codigo = codigo.trim();
                 bobinasManuais[index].descricao = '';
                 bobinasManuais[index].und = '';
+                bobinasManuais[index].bobina = true;
             }
             
             if (statusDiv) {
@@ -1048,7 +1059,9 @@ if (document.getElementById('contagemForm')) {
     function atualizarContadorBobinas() {
         const btnBobina = document.querySelector('.tab-btn[data-categoria="bobinas"] .tab-contador');
         if (btnBobina) {
-            const ativas = bobinasManuais.filter(b => b.ativo !== false && !b.numero_serie && !b.oleo && !b.cor);
+            const ativas = bobinasManuais.filter(b => {
+                return b.ativo !== false && (b.bobina === true || (!b.numero_serie && !b.oleo && !b.cor));
+            });
             btnBobina.textContent = ativas.length;
         }
     }
@@ -1148,8 +1161,7 @@ if (document.getElementById('contagemForm')) {
             isNew: true,
             _qtd: '',
             _justificativa: '',
-            // IMPORTANTE: Não incluir campo bobina
-            bobina: false
+            bobina: false // Marca como não bobina
         };
         
         materiaisManuais.push(novoTrafo);
@@ -1207,7 +1219,9 @@ if (document.getElementById('contagemForm')) {
     function atualizarContadorTrafos() {
         const btnTrafo = document.querySelector('.tab-btn[data-categoria="trafos"] .tab-contador');
         if (btnTrafo) {
-            const ativos = materiaisManuais.filter(t => t.ativo !== false && (t.numero_serie || t.oleo || t.cor));
+            const ativos = materiaisManuais.filter(t => {
+                return t.ativo !== false && t.bobina !== true && (t.numero_serie || t.oleo || t.cor);
+            });
             btnTrafo.textContent = ativos.length;
         }
     }
@@ -1280,6 +1294,7 @@ if (document.getElementById('contagemForm')) {
                 materiaisManuais[index].codigo = codigo.trim();
                 materiaisManuais[index].descricao = dados.descricao;
                 materiaisManuais[index].und = dados.und;
+                materiaisManuais[index].bobina = false;
             }
             
             if (statusDiv) {
@@ -1303,6 +1318,7 @@ if (document.getElementById('contagemForm')) {
                 materiaisManuais[index].codigo = codigo.trim();
                 materiaisManuais[index].descricao = '';
                 materiaisManuais[index].und = '';
+                materiaisManuais[index].bobina = false;
             }
             
             if (statusDiv) {
@@ -1492,6 +1508,7 @@ if (document.getElementById('contagemForm')) {
                         materiaisManuais[index].oleo = oleo;
                         materiaisManuais[index].cor = cor;
                         materiaisManuais[index].ativo = !darBaixa;
+                        materiaisManuais[index].bobina = false;
                     }
                     
                     materiaisEnviar.push({
@@ -1553,6 +1570,7 @@ if (document.getElementById('contagemForm')) {
                         bobinasManuais[index].und = undBobina;
                         bobinasManuais[index].tombamento = tombamento;
                         bobinasManuais[index].ativo = !darBaixa;
+                        bobinasManuais[index].bobina = true;
                     }
                     
                     materiaisEnviar.push({
