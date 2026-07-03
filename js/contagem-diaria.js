@@ -40,7 +40,7 @@ if (document.getElementById('contagemForm')) {
             tipo: 'manual',
             tipo_material: 'bobina',
             codigos: [],
-            validacao: 'cabo'
+            validacao: 'cabo_cordoalha' // Alterado para refletir a mudança
         },
         'trafos': {
             nome: 'Trafos',
@@ -203,9 +203,9 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÃO DE VALIDAÇÃO POR CATEGORIA
+    // FUNÇÃO DE VALIDAÇÃO POR CATEGORIA (CORRIGIDA - ACEITA CABO E CORDOALHA)
     // ============================================
-    
+
     function validarCodigoPorCategoria(codigo, categoria) {
         const dados = buscarDadosCodigo(codigo);
         
@@ -216,23 +216,26 @@ if (document.getElementById('contagemForm')) {
             };
         }
         
-        const descricao = dados.descricao.toLowerCase();
+        const descricao = dados.descricao.toUpperCase();
         const categoriaConfig = CATEGORIAS[categoria];
         
         if (!categoriaConfig || !categoriaConfig.validacao) {
             return { valido: true };
         }
         
-        const palavraChave = categoriaConfig.validacao.toLowerCase();
-        
         if (categoria === 'bobinas') {
-            if (!descricao.startsWith(palavraChave)) {
+            // Aceita tanto CABO quanto CORDOALHA
+            const palavrasValidas = ['CABO', 'CORDOALHA'];
+            const valido = palavrasValidas.some(palavra => descricao.startsWith(palavra));
+            
+            if (!valido) {
                 return {
                     valido: false,
-                    motivo: `A descrição deve começar com "${palavraChave}" para esta categoria`
+                    motivo: 'A descrição deve começar com "CABO" ou "CORDOALHA" para esta categoria'
                 };
             }
         } else if (categoria === 'trafos') {
+            const palavraChave = categoriaConfig.validacao.toUpperCase();
             if (!descricao.includes(palavraChave)) {
                 return {
                     valido: false,
@@ -1338,7 +1341,7 @@ if (document.getElementById('contagemForm')) {
             }
             
             if (statusDiv) {
-                statusDiv.innerHTML = '✅ Código válido para bobina';
+                statusDiv.innerHTML = '✅ Código válido para bobina (CABO ou CORDOALHA)';
                 statusDiv.className = 'codigo-status codigo-ok';
             }
             
