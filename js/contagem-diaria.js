@@ -568,7 +568,7 @@ if (document.getElementById('contagemForm')) {
             const idUnico = `${categoria}-${index}`;
             
             html += `
-                <div class="material-item" data-codigo="${material.codigo}" data-categoria="${categoria}" data-tipo="${tipoMaterial}">
+                <div class="material-item" data-codigo="${material.codigo}" data-categoria="${categoria}" data-tipo="${tipoMaterial}" data-index="${index}">
                     <div class="material-row">
                         <div class="material-field">
                             <label>Código</label>
@@ -953,13 +953,12 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="justificativa-row">
                         <div class="material-field justificativa-field">
-                            <label>N Obra *</label>
+                            <label>N Obra</label>
                             <input type="text" id="n-obra-${idUnico}" 
                                 value="${material._n_obra || ''}"
                                 placeholder="Número da obra..." 
                                 class="input-justificativa"
-                                ${existeNoBanco ? `oninput="verificarNObraBobina(${idx})"` : ''}
-                                required>
+                                ${existeNoBanco ? `oninput="verificarNObraBobina(${idx})"` : ''}>
                         </div>
                     </div>
                     
@@ -1138,13 +1137,12 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="justificativa-row">
                         <div class="material-field justificativa-field">
-                            <label>N Obra *</label>
+                            <label>N Obra</label>
                             <input type="text" id="n-obra-${idUnico}" 
                                 value="${material._n_obra || ''}"
                                 placeholder="Número da obra..." 
                                 class="input-justificativa"
-                                ${existeNoBanco ? `oninput="verificarNObraTrafo(${idx})"` : ''}
-                                required>
+                                ${existeNoBanco ? `oninput="verificarNObraTrafo(${idx})"` : ''}>
                         </div>
                     </div>
                     
@@ -1351,13 +1349,20 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÕES DE TRAFO
+    // FUNÇÕES DE VALIDAÇÃO CORRIGIDAS
     // ============================================
     
     function validarTrafoCompleto(index) {
         if (index === undefined || index === null || isNaN(index) || index < 0) {
             console.error('❌ Index inválido em validarTrafoCompleto:', index);
             return false;
+        }
+        
+        const qtd = parseFloat(document.getElementById(`qtd-trafos-${index}`)?.value) || 0;
+        
+        // Se não tem quantidade, não precisa validar os outros campos
+        if (qtd === 0) {
+            return true;
         }
         
         const codigo = document.getElementById(`trafo-codigo-${index}`)?.value || '';
@@ -1379,6 +1384,13 @@ if (document.getElementById('contagemForm')) {
         if (index === undefined || index === null || isNaN(index) || index < 0) {
             console.error('❌ Index inválido em validarBobinaCompleta:', index);
             return false;
+        }
+        
+        const qtd = parseFloat(document.getElementById(`qtd-bobinas-${index}`)?.value) || 0;
+        
+        // Se não tem quantidade, não precisa validar os outros campos
+        if (qtd === 0) {
+            return true;
         }
         
         const codigo = document.getElementById(`bobina-codigo-${index}`)?.value || '';
@@ -1917,6 +1929,11 @@ if (document.getElementById('contagemForm')) {
             inputAnterior.value = dados.qtd || '0';
             inputAnterior.title = dados.data ? `Última contagem: ${formatarData(dados.data)}` : 'Nenhuma contagem anterior';
             inputAnterior.classList.add(dados.qtd ? 'tem-dado-anterior' : 'sem-dado-anterior');
+            
+            const materialItem = inputAnterior.closest('.material-item');
+            if (materialItem) {
+                materialItem.dataset.temContagemAnterior = dados.qtd ? 'true' : 'false';
+            }
             return;
         }
         
@@ -1939,6 +1956,8 @@ if (document.getElementById('contagemForm')) {
             
             const resultado = await response.json();
             
+            const materialItem = inputAnterior.closest('.material-item');
+            
             if (resultado.encontrado) {
                 const qtdAnterior = resultado.qtd_anterior || '0';
                 cacheQuantidades[cacheKey] = {
@@ -1948,6 +1967,10 @@ if (document.getElementById('contagemForm')) {
                 inputAnterior.value = qtdAnterior;
                 inputAnterior.title = `Última contagem: ${formatarData(resultado.data_anterior)}`;
                 inputAnterior.classList.add('tem-dado-anterior');
+                
+                if (materialItem) {
+                    materialItem.dataset.temContagemAnterior = 'true';
+                }
                 console.log(`📊 Contagem anterior para ${cacheKey}: ${qtdAnterior}`);
             } else {
                 cacheQuantidades[cacheKey] = {
@@ -1957,6 +1980,10 @@ if (document.getElementById('contagemForm')) {
                 inputAnterior.value = '0';
                 inputAnterior.title = 'Nenhuma contagem anterior encontrada';
                 inputAnterior.classList.add('sem-dado-anterior');
+                
+                if (materialItem) {
+                    materialItem.dataset.temContagemAnterior = 'false';
+                }
             }
             
         } catch (error) {
@@ -1964,6 +1991,11 @@ if (document.getElementById('contagemForm')) {
             inputAnterior.value = '0';
             inputAnterior.title = 'Erro ao carregar';
             inputAnterior.classList.add('sem-dado-anterior');
+            
+            const materialItem = inputAnterior.closest('.material-item');
+            if (materialItem) {
+                materialItem.dataset.temContagemAnterior = 'false';
+            }
         }
     }
     
@@ -1987,6 +2019,11 @@ if (document.getElementById('contagemForm')) {
         }
         
         const diferenca = qtdAtual - qtdAnterior;
+        
+        const materialItem = inputQtd.closest('.material-item');
+        if (materialItem) {
+            materialItem.dataset.temContagemAnterior = qtdAnterior > 0 ? 'true' : 'false';
+        }
         
         if (diferenca === 0) {
             diferencaDiv.style.display = 'flex';
@@ -2051,11 +2088,19 @@ if (document.getElementById('contagemForm')) {
                 console.warn('⚠️ Índice inválido no trafo:', item);
                 return;
             }
-            if (!validarTrafoCompleto(index)) {
-                trafoIncompleto = true;
-                item.style.borderColor = '#FC8181';
-                item.style.borderWidth = '2px';
-                item.style.borderStyle = 'solid';
+            
+            // Verificar se tem quantidade
+            const qtdInput = document.getElementById(`qtd-trafos-${index}`);
+            const qtd = parseFloat(qtdInput?.value) || 0;
+            
+            // Só validar se tiver quantidade > 0
+            if (qtd > 0) {
+                if (!validarTrafoCompleto(index)) {
+                    trafoIncompleto = true;
+                    item.style.borderColor = '#FC8181';
+                    item.style.borderWidth = '2px';
+                    item.style.borderStyle = 'solid';
+                }
             }
         });
         
@@ -2072,11 +2117,19 @@ if (document.getElementById('contagemForm')) {
                 console.warn('⚠️ Índice inválido na bobina:', item);
                 return;
             }
-            if (!validarBobinaCompleta(index)) {
-                bobinaIncompleta = true;
-                item.style.borderColor = '#FC8181';
-                item.style.borderWidth = '2px';
-                item.style.borderStyle = 'solid';
+            
+            // Verificar se tem quantidade
+            const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
+            const qtd = parseFloat(qtdInput?.value) || 0;
+            
+            // Só validar se tiver quantidade > 0
+            if (qtd > 0) {
+                if (!validarBobinaCompleta(index)) {
+                    bobinaIncompleta = true;
+                    item.style.borderColor = '#FC8181';
+                    item.style.borderWidth = '2px';
+                    item.style.borderStyle = 'solid';
+                }
             }
         });
         
@@ -2259,6 +2312,28 @@ if (document.getElementById('contagemForm')) {
                     const index = parseInt(materialItem.dataset.index);
                     const idUnico = `${categoria}-${index}`;
                     
+                    // Verificar se tem contagem anterior
+                    const temContagemAnterior = materialItem.dataset.temContagemAnterior === 'true';
+                    
+                    // Se NÃO tem contagem anterior, a justificativa é opcional
+                    // Se tem contagem anterior, a justificativa é obrigatória
+                    if (temContagemAnterior) {
+                        const justificativa = document.getElementById(`justificativa-${idUnico}`)?.value || '';
+                        if (!justificativa.trim()) {
+                            const descricaoMaterial = materialItem.querySelector('.input-descricao')?.value || materialItem.dataset.codigo;
+                            mostrarToast(`❌ Justificativa é obrigatória para ${descricaoMaterial} pois tem contagem anterior!`, 'erro');
+                            const justificativaInput = document.getElementById(`justificativa-${idUnico}`);
+                            if (justificativaInput) {
+                                justificativaInput.classList.add('input-error');
+                                justificativaInput.focus();
+                                setTimeout(() => justificativaInput.classList.remove('input-error'), 3000);
+                            }
+                            temErroValidacao = true;
+                            return;
+                        }
+                    }
+                    
+                    // Coletar entradas de concreto
                     const entradas = [];
                     const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
                     entradaItems.forEach(entradaItem => {
@@ -2279,6 +2354,7 @@ if (document.getElementById('contagemForm')) {
                     const material = materiaisDaCategoria.find(m => m.codigo === codigo);
                     
                     if (material) {
+                        const justificativa = document.getElementById(`justificativa-${idUnico}`)?.value || '';
                         materiaisParaEnviar.push({
                             nome, matricula, data,
                             codigo: material.codigo,
@@ -2292,7 +2368,8 @@ if (document.getElementById('contagemForm')) {
                             n_obra: '',
                             ativo: 1,
                             tipo_material: 'concreto',
-                            entradas_concreto: entradas
+                            entradas_concreto: entradas,
+                            obs: justificativa || (temContagemAnterior ? '' : 'Primeira contagem - sem justificativa')
                         });
                     }
                 }

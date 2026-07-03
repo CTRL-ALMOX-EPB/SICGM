@@ -1412,10 +1412,9 @@ body {
 }
 
 /* ============================================ */
-/* RESPONSIVIDADE - TODAS AS REGRAS ABAIXO     */
+/* RESPONSIVIDADE - TABLET                      */
 /* ============================================ */
 
-/* Tablet */
 @media (max-width: 768px) {
     .form-row {
         grid-template-columns: 1fr 1fr;
@@ -1515,7 +1514,10 @@ body {
     }
 }
 
-/* Celular */
+/* ============================================ */
+/* RESPONSIVIDADE - CELULAR                     */
+/* ============================================ */
+
 @media (max-width: 480px) {
     body {
         padding: 10px;
@@ -1847,7 +1849,10 @@ body {
     }
 }
 
-/* Celular muito pequeno */
+/* ============================================ */
+/* CELULAR MUITO PEQUENO                       */
+/* ============================================ */
+
 @media (max-width: 360px) {
     .form-card {
         padding: 10px 8px;
