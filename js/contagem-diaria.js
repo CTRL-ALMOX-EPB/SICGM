@@ -304,7 +304,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CARREGAR ITENS MANUAIS DO D1 (CORRIGIDO)
+    // CARREGAR ITENS MANUAIS DO D1
     // ============================================
     
     async function carregarItensManuais() {
@@ -316,12 +316,10 @@ if (document.getElementById('contagemForm')) {
             const trafosMap = new Map();
             const bobinasMap = new Map();
             
-            // Buscar as últimas quantidades para cada código + tombamento (para bobinas/trafos)
             const ultimasQuantidades = {};
             for (const item of resultados) {
                 if (item.ativo === 1 || item.ativo === undefined) {
                     let key;
-                    // Para concretos, chave é apenas o código
                     if (item.tipo_material === 'concreto' || (!item.tipo_material && !item.tombamento)) {
                         key = item.codigo;
                     } else {
@@ -343,7 +341,6 @@ if (document.getElementById('contagemForm')) {
                 const isAtivo = item.ativo === undefined || item.ativo === 1 || item.ativo === true;
                 const tipoMaterial = item.tipo_material || '';
                 
-                // Determinar a chave correta para buscar a quantidade
                 let key;
                 if (tipoMaterial === 'concreto' || (!tipoMaterial && !item.tombamento)) {
                     key = item.codigo;
@@ -394,7 +391,6 @@ if (document.getElementById('contagemForm')) {
                         });
                     }
                 }
-                // Fallback para dados antigos
                 else if (isAtivo) {
                     const isBobina = item.descricao && item.descricao.toUpperCase().startsWith('CABO');
                     const isTrafo = item.numero_serie || item.oleo || item.cor;
@@ -548,7 +544,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR MATERIAIS PREDEFINIDOS (CORRIGIDO)
+    // RENDERIZAR MATERIAIS PREDEFINIDOS
     // ============================================
     
     function renderizarMateriaisCategoria(materiais, categoria) {
@@ -661,7 +657,6 @@ if (document.getElementById('contagemForm')) {
                     </div>
                     <div id="diferenca-${idUnico}" class="diferenca-indicador" style="display: none;"></div>
                     
-                    <!-- Área de entradas de concreto -->
                     <div class="concreto-entradas-container" id="concreto-entradas-${idUnico}">
                         <div class="concreto-entradas-header">
                             <label>Entradas de Concreto</label>
@@ -670,7 +665,6 @@ if (document.getElementById('contagemForm')) {
                             </button>
                         </div>
                         <div class="concreto-entradas-list" id="concreto-entradas-list-${idUnico}">
-                            <!-- As entradas serão adicionadas aqui dinamicamente -->
                         </div>
                         <div class="concreto-total" id="concreto-total-${idUnico}">
                             Total: <span id="concreto-total-valor-${idUnico}">0.00</span>
@@ -683,7 +677,6 @@ if (document.getElementById('contagemForm')) {
         setTimeout(() => {
             materiais.forEach((material, index) => {
                 buscarQuantidadeAnterior(material.codigo, `${categoria}-${index}`, null, 'concreto');
-                // Inicializar com uma entrada padrão
                 const idUnico = `${categoria}-${index}`;
                 adicionarEntradaConcreto(idUnico);
             });
@@ -701,7 +694,6 @@ if (document.getElementById('contagemForm')) {
         if (!listDiv) return;
         
         const entradaId = `entrada-${idUnico}-${Date.now()}`;
-        const index = listDiv.children.length;
         
         const entradaDiv = document.createElement('div');
         entradaDiv.className = 'concreto-entrada-item';
@@ -776,21 +768,18 @@ if (document.getElementById('contagemForm')) {
         const valorInput = entradaDiv.querySelector('.concreto-entrada-valor');
         const qtdInput = entradaDiv.querySelector('.concreto-entrada-qtd');
         
-        // Validar que o valor está preenchido
         if (!valorInput.value.trim()) {
             valorInput.classList.add('input-error');
             setTimeout(() => valorInput.classList.remove('input-error'), 2000);
             return;
         }
         
-        // Validar quantidade
         if (!qtdInput.value || parseFloat(qtdInput.value) === 0) {
             qtdInput.classList.add('input-error');
             setTimeout(() => qtdInput.classList.remove('input-error'), 2000);
             return;
         }
         
-        // Ajustar sinal da quantidade baseado no tipo
         const qtd = parseFloat(qtdInput.value);
         if (tipoSelect.value === 'n_obra' && qtd > 0) {
             qtdInput.value = -qtd;
@@ -818,7 +807,6 @@ if (document.getElementById('contagemForm')) {
         
         totalSpan.textContent = total.toFixed(2);
         
-        // Verificar se total é igual à diferença
         const qtdAtual = parseFloat(document.getElementById(`qtd-${idUnico}`)?.value) || 0;
         const qtdAnterior = parseFloat(document.getElementById(`qtd-anterior-${idUnico}`)?.value) || 0;
         const diferenca = qtdAtual - qtdAnterior;
@@ -843,7 +831,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR BOBINAS (CORRIGIDO)
+    // RENDERIZAR BOBINAS (COM TRAVAS)
     // ============================================
 
     function renderizarBobinas(materiais) {
@@ -871,8 +859,11 @@ if (document.getElementById('contagemForm')) {
             const idRegistro = material.id || null;
             const idx = index;
             
+            const lockedClass = existeNoBanco ? 'input-locked' : '';
+            const itemBloqueado = existeNoBanco ? 'material-bloqueado' : '';
+            
             html += `
-                <div class="material-item bobina-item" 
+                <div class="material-item bobina-item ${itemBloqueado}" 
                      data-codigo="${codigoBobina}" 
                      data-categoria="bobinas" 
                      data-tipo="bobina" 
@@ -904,20 +895,21 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="material-row">
                         <div class="material-field">
-                            <label for="bobina-codigo-${idx}">Código *</label>
+                            <label>Código *</label>
                             <input type="text" id="bobina-codigo-${idx}" value="${codigoBobina}" 
                                 placeholder="Código" class="input-trafo" required
+                                ${temDescricao ? 'readonly' : ''}
                                 onchange="validarCodigoBobina(${idx}, this.value)">
                             <div id="bobina-codigo-status-${idx}" class="codigo-status"></div>
                         </div>
                         <div class="material-field">
-                            <label for="bobina-descricao-${idx}">Descrição *</label>
+                            <label>Descrição *</label>
                             <input type="text" id="bobina-descricao-${idx}" value="${material.descricao || ''}" 
                                 placeholder="Descrição" class="input-descricao" 
                                 ${temDescricao ? 'readonly' : ''} required>
                         </div>
                         <div class="material-field">
-                            <label for="bobina-und-${idx}">UND *</label>
+                            <label>UND *</label>
                             <input type="text" id="bobina-und-${idx}" value="${material.und || ''}" 
                                 placeholder="UND" class="input-readonly" 
                                 ${temDescricao ? 'readonly' : ''} required>
@@ -926,20 +918,23 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="material-row material-row-extras">
                         <div class="material-field">
-                            <label for="bobina-tombamento-${idx}">Tombamento *</label>
+                            <label>Tombamento *</label>
                             <input type="text" id="bobina-tombamento-${idx}" value="${material.tombamento || ''}" 
-                                placeholder="Tombamento" class="input-extra" required>
+                                placeholder="Tombamento" class="input-extra ${lockedClass}" 
+                                ${existeNoBanco ? 'readonly' : ''} required>
                         </div>
                         <div class="material-field">
-                            <label for="bobina-cor-${idx}">Cor *</label>
-                            <select id="bobina-cor-${idx}" class="input-extra" required>
+                            <label>Cor *</label>
+                            <select id="bobina-cor-${idx}" class="input-extra ${lockedClass}" 
+                                ${existeNoBanco ? 'disabled' : ''} required>
                                 <option value="">Selecione...</option>
                                 ${CORES.map(cor => `<option value="${cor}" ${material.cor === cor ? 'selected' : ''}>${cor}</option>`).join('')}
                             </select>
                         </div>
                         <div class="material-field">
-                            <label for="bobina-oleo-${idx}">Óleo *</label>
-                            <select id="bobina-oleo-${idx}" class="input-extra" required>
+                            <label>Óleo *</label>
+                            <select id="bobina-oleo-${idx}" class="input-extra ${lockedClass}" 
+                                ${existeNoBanco ? 'disabled' : ''} required>
                                 <option value="">Selecione...</option>
                                 ${OLEOS.map(oleo => `<option value="${oleo}" ${material.oleo === oleo ? 'selected' : ''}>${oleo}</option>`).join('')}
                             </select>
@@ -948,7 +943,7 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="material-row material-row-qtd">
                         <div class="material-field">
-                            <label for="qtd-${idUnico}">QTD *</label>
+                            <label>QTD *</label>
                             <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
                                 class="input-qtd" value="${qtdSalva}" 
                                 onchange="calcularDiferencaBobina('${idUnico}', '${codigoBobina}')">
@@ -964,7 +959,7 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="justificativa-row">
                         <div class="material-field justificativa-field">
-                            <label for="n-obra-${idUnico}">N Obra *</label>
+                            <label>N Obra *</label>
                             <input type="text" id="n-obra-${idUnico}" 
                                 value="${material._n_obra || ''}"
                                 placeholder="Número da obra..." 
@@ -991,7 +986,6 @@ if (document.getElementById('contagemForm')) {
             </button>
         `;
         
-        // Buscar quantidades anteriores após renderizar
         setTimeout(() => {
             const items = document.querySelectorAll('.bobina-item');
             items.forEach((item) => {
@@ -1008,7 +1002,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR TRAFOS (CORRIGIDO)
+    // RENDERIZAR TRAFOS (COM TRAVAS)
     // ============================================
 
     function renderizarTrafos(materiais) {
@@ -1036,8 +1030,11 @@ if (document.getElementById('contagemForm')) {
             const idRegistro = material.id || null;
             const idx = index;
             
+            const lockedClass = existeNoBanco ? 'input-locked' : '';
+            const itemBloqueado = existeNoBanco ? 'material-bloqueado' : '';
+            
             html += `
-                <div class="material-item trafo-item" 
+                <div class="material-item trafo-item ${itemBloqueado}" 
                      data-codigo="${codigoTrafo}" 
                      data-categoria="trafos" 
                      data-tipo="trafo" 
@@ -1069,20 +1066,21 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="material-row">
                         <div class="material-field">
-                            <label for="trafo-codigo-${idx}">Código *</label>
+                            <label>Código *</label>
                             <input type="text" id="trafo-codigo-${idx}" value="${codigoTrafo}" 
                                 placeholder="Código" class="input-trafo" required
+                                ${temDescricao ? 'readonly' : ''}
                                 onchange="validarCodigoTrafo(${idx}, this.value)">
                             <div id="codigo-status-${idx}" class="codigo-status"></div>
                         </div>
                         <div class="material-field">
-                            <label for="trafo-descricao-${idx}">Descrição *</label>
+                            <label>Descrição *</label>
                             <input type="text" id="trafo-descricao-${idx}" value="${material.descricao || ''}" 
                                 placeholder="Descrição" class="input-descricao" 
                                 ${temDescricao ? 'readonly' : ''} required>
                         </div>
                         <div class="material-field">
-                            <label for="trafo-und-${idx}">UND *</label>
+                            <label>UND *</label>
                             <input type="text" id="trafo-und-${idx}" value="${material.und || ''}" 
                                 placeholder="UND" class="input-readonly" 
                                 ${temDescricao ? 'readonly' : ''} required>
@@ -1091,25 +1089,29 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="material-row material-row-extras">
                         <div class="material-field">
-                            <label for="trafo-serie-${idx}">Nº Série *</label>
+                            <label>Nº Série *</label>
                             <input type="text" id="trafo-serie-${idx}" value="${material.numero_serie || ''}" 
-                                placeholder="Nº de série" class="input-extra" required>
+                                placeholder="Nº de série" class="input-extra ${lockedClass}" 
+                                ${existeNoBanco ? 'readonly' : ''} required>
                         </div>
                         <div class="material-field">
-                            <label for="trafo-tombamento-${idx}">Tombamento *</label>
+                            <label>Tombamento *</label>
                             <input type="text" id="trafo-tombamento-${idx}" value="${material.tombamento || ''}" 
-                                placeholder="Tombamento" class="input-extra" required>
+                                placeholder="Tombamento" class="input-extra ${lockedClass}" 
+                                ${existeNoBanco ? 'readonly' : ''} required>
                         </div>
                         <div class="material-field">
-                            <label for="trafo-oleo-${idx}">Óleo *</label>
-                            <select id="trafo-oleo-${idx}" class="input-extra" required>
+                            <label>Óleo *</label>
+                            <select id="trafo-oleo-${idx}" class="input-extra ${lockedClass}" 
+                                ${existeNoBanco ? 'disabled' : ''} required>
                                 <option value="">Selecione...</option>
                                 ${OLEOS.map(oleo => `<option value="${oleo}" ${material.oleo === oleo ? 'selected' : ''}>${oleo}</option>`).join('')}
                             </select>
                         </div>
                         <div class="material-field">
-                            <label for="trafo-cor-${idx}">Cor *</label>
-                            <select id="trafo-cor-${idx}" class="input-extra" required>
+                            <label>Cor *</label>
+                            <select id="trafo-cor-${idx}" class="input-extra ${lockedClass}" 
+                                ${existeNoBanco ? 'disabled' : ''} required>
                                 <option value="">Selecione...</option>
                                 ${CORES.map(cor => `<option value="${cor}" ${material.cor === cor ? 'selected' : ''}>${cor}</option>`).join('')}
                             </select>
@@ -1118,7 +1120,7 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="material-row material-row-qtd">
                         <div class="material-field">
-                            <label for="qtd-${idUnico}">QTD *</label>
+                            <label>QTD *</label>
                             <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
                                 class="input-qtd" value="${qtdSalva}" 
                                 onchange="calcularDiferencaTrafo('${idUnico}', '${codigoTrafo}')">
@@ -1134,7 +1136,7 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="justificativa-row">
                         <div class="material-field justificativa-field">
-                            <label for="n-obra-${idUnico}">N Obra *</label>
+                            <label>N Obra *</label>
                             <input type="text" id="n-obra-${idUnico}" 
                                 value="${material._n_obra || ''}"
                                 placeholder="Número da obra..." 
@@ -1161,7 +1163,6 @@ if (document.getElementById('contagemForm')) {
             </button>
         `;
         
-        // Buscar quantidades anteriores após renderizar
         setTimeout(() => {
             const items = document.querySelectorAll('.trafo-item');
             items.forEach((item) => {
@@ -1405,7 +1406,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ADICIONAR BOBINA (CORRIGIDO - ORDEM)
+    // ADICIONAR BOBINA (ORDEM CORRETA)
     // ============================================
     
     function adicionarBobina() {
@@ -1429,7 +1430,6 @@ if (document.getElementById('contagemForm')) {
             id: null
         };
         
-        // ADICIONAR NO INÍCIO (para manter ordem correta)
         bobinasManuais.unshift(novaBobina);
         materiaisPorCategoria['bobinas'] = bobinasManuais;
         
@@ -1450,7 +1450,6 @@ if (document.getElementById('contagemForm')) {
                 });
             }, 100);
             
-            // Focar no primeiro item (o novo)
             const primeiroItem = tabsContent.querySelector('.bobina-item:first-child');
             if (primeiroItem) {
                 primeiroItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1463,7 +1462,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // SALVAR DADOS ATUAIS DAS BOBINAS (CORRIGIDO)
+    // SALVAR DADOS ATUAIS DAS BOBINAS
     // ============================================
     
     function salvarDadosBobinasAtuais() {
@@ -1471,7 +1470,6 @@ if (document.getElementById('contagemForm')) {
         bobinaItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index) || index < 0 || index >= bobinasManuais.length) {
-                console.warn('⚠️ Índice inválido em salvarDadosBobinasAtuais:', item.dataset.index);
                 return;
             }
             
@@ -1498,7 +1496,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // SALVAR DADOS ATUAIS DOS TRAFOS (CORRIGIDO)
+    // SALVAR DADOS ATUAIS DOS TRAFOS
     // ============================================
     
     function salvarDadosTrafosAtuais() {
@@ -1506,7 +1504,6 @@ if (document.getElementById('contagemForm')) {
         trafoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index) || index < 0 || index >= materiaisManuais.length) {
-                console.warn('⚠️ Índice inválido em salvarDadosTrafosAtuais:', item.dataset.index);
                 return;
             }
             
@@ -1560,7 +1557,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ADICIONAR TRAFO (CORRIGIDO - ORDEM)
+    // ADICIONAR TRAFO (ORDEM CORRETA)
     // ============================================
     
     function adicionarTrafo() {
@@ -1584,7 +1581,6 @@ if (document.getElementById('contagemForm')) {
             id: null
         };
         
-        // ADICIONAR NO INÍCIO (para manter ordem correta)
         materiaisManuais.unshift(novoTrafo);
         materiaisPorCategoria['trafos'] = materiaisManuais;
         
@@ -1818,20 +1814,18 @@ if (document.getElementById('contagemForm')) {
     }, true);
     
     // ============================================
-    // BUSCAR QUANTIDADE DO DIA ANTERIOR (CORRIGIDO)
+    // BUSCAR QUANTIDADE DO DIA ANTERIOR
     // ============================================
     
     async function buscarQuantidadeAnterior(codigo, idUnico, tombamento, tipoMaterial) {
         const inputAnterior = document.getElementById(`qtd-anterior-${idUnico}`);
         if (!inputAnterior || !codigo) return;
         
-        // Criar chave única para cache
         let cacheKey = codigo;
         if (tipoMaterial && tipoMaterial !== 'concreto' && tombamento && tombamento !== '') {
             cacheKey = `${codigo}_${tombamento}`;
         }
         
-        // Verificar se temos dados em cache
         if (cacheQuantidades[cacheKey]) {
             const dados = cacheQuantidades[cacheKey];
             inputAnterior.value = dados.qtd || '0';
@@ -2005,7 +1999,6 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
-        // Validar concretos
         const concretoItems = document.querySelectorAll('.concreto-item');
         let concretoInvalido = false;
         concretoItems.forEach((item) => {
@@ -2039,7 +2032,6 @@ if (document.getElementById('contagemForm')) {
                 const idRegistro = materialItem.dataset.id || null;
                 const tombamento = materialItem.dataset.tombamento || '';
                 
-                // Buscar N Obra
                 let nObra = '';
                 const nObraInput = materialItem.querySelector('.input-justificativa');
                 if (nObraInput) {
@@ -2183,7 +2175,6 @@ if (document.getElementById('contagemForm')) {
                     const index = parseInt(materialItem.dataset.index);
                     const idUnico = `${categoria}-${index}`;
                     
-                    // Coletar entradas de concreto
                     const entradas = [];
                     const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
                     entradaItems.forEach(entradaItem => {
