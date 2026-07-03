@@ -2127,11 +2127,9 @@ if (document.getElementById('contagemForm')) {
                 return;
             }
             
-            // Verificar se tem quantidade
             const qtdInput = document.getElementById(`qtd-trafos-${index}`);
             const qtd = parseFloat(qtdInput?.value) || 0;
             
-            // Só validar se tiver quantidade > 0
             if (qtd > 0) {
                 if (!validarTrafoCompleto(index)) {
                     trafoIncompleto = true;
@@ -2156,11 +2154,9 @@ if (document.getElementById('contagemForm')) {
                 return;
             }
             
-            // Verificar se tem quantidade
             const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
             const qtd = parseFloat(qtdInput?.value) || 0;
             
-            // Só validar se tiver quantidade > 0
             if (qtd > 0) {
                 if (!validarBobinaCompleta(index)) {
                     bobinaIncompleta = true;
@@ -2179,7 +2175,6 @@ if (document.getElementById('contagemForm')) {
         const concretoItems = document.querySelectorAll('.concreto-item');
         let concretoInvalido = false;
         concretoItems.forEach((item) => {
-            const idUnico = item.dataset.codigo;
             const diferencaDiv = document.getElementById(`diferenca-concretos-${item.dataset.index}`);
             if (diferencaDiv && diferencaDiv.classList.contains('diferenca-erro')) {
                 concretoInvalido = true;
@@ -2353,8 +2348,7 @@ if (document.getElementById('contagemForm')) {
                     // Verificar se tem contagem anterior
                     const temContagemAnterior = materialItem.dataset.temContagemAnterior === 'true';
                     
-                    // Se NÃO tem contagem anterior, a justificativa é opcional
-                    // Se tem contagem anterior, a justificativa é obrigatória
+                    // Só validar justificativa se tiver contagem anterior
                     if (temContagemAnterior) {
                         const justificativa = document.getElementById(`justificativa-${idUnico}`)?.value || '';
                         if (!justificativa.trim()) {
