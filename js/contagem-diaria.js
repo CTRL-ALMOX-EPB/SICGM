@@ -40,7 +40,7 @@ if (document.getElementById('contagemForm')) {
             tipo: 'manual',
             tipo_material: 'bobina',
             codigos: [],
-            validacao: 'cabo_cordoalha' // Alterado para refletir a mudança
+            validacao: 'cabo_cordoalha'
         },
         'trafos': {
             nome: 'Trafos',
@@ -203,7 +203,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÃO DE VALIDAÇÃO POR CATEGORIA (CORRIGIDA - ACEITA CABO E CORDOALHA)
+    // FUNÇÃO DE VALIDAÇÃO POR CATEGORIA
     // ============================================
 
     function validarCodigoPorCategoria(codigo, categoria) {
@@ -224,7 +224,6 @@ if (document.getElementById('contagemForm')) {
         }
         
         if (categoria === 'bobinas') {
-            // Aceita tanto CABO quanto CORDOALHA
             const palavrasValidas = ['CABO', 'CORDOALHA'];
             const valido = palavrasValidas.some(palavra => descricao.startsWith(palavra));
             
@@ -367,8 +366,8 @@ if (document.getElementById('contagemForm')) {
                             tipo_material: 'bobina',
                             id: item.id,
                             numero_serie: null,
-                            oleo: item.oleo || '',
-                            cor: item.cor || '',
+                            oleo: null,
+                            cor: null,
                             _qtd: qtdSalva,
                             _n_obra: ''
                         });
@@ -411,8 +410,8 @@ if (document.getElementById('contagemForm')) {
                                 tipo_material: 'bobina',
                                 id: item.id,
                                 numero_serie: null,
-                                oleo: item.oleo || '',
-                                cor: item.cor || '',
+                                oleo: null,
+                                cor: null,
                                 _qtd: qtdSalva,
                                 _n_obra: ''
                             });
@@ -834,13 +833,12 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR BOBINAS (COM BOTÃO NO TOPO E RODAPÉ)
+    // RENDERIZAR BOBINAS (APENAS TOMBAMENTO)
     // ============================================
 
     function renderizarBobinas(materiais) {
         let html = '';
         
-        // BOTÃO NO TOPO
         html += `
             <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
                 <button type="button" class="btn-add-material" onclick="adicionarBobina()" style="margin-top: 0;">
@@ -935,22 +933,6 @@ if (document.getElementById('contagemForm')) {
                                 placeholder="Tombamento" class="input-extra ${lockedClass}" 
                                 ${existeNoBanco ? 'readonly' : ''} required>
                         </div>
-                        <div class="material-field">
-                            <label>Cor *</label>
-                            <select id="bobina-cor-${idx}" class="input-extra ${lockedClass}" 
-                                ${existeNoBanco ? 'disabled' : ''} required>
-                                <option value="">Selecione...</option>
-                                ${CORES.map(cor => `<option value="${cor}" ${material.cor === cor ? 'selected' : ''}>${cor}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div class="material-field">
-                            <label>Óleo *</label>
-                            <select id="bobina-oleo-${idx}" class="input-extra ${lockedClass}" 
-                                ${existeNoBanco ? 'disabled' : ''} required>
-                                <option value="">Selecione...</option>
-                                ${OLEOS.map(oleo => `<option value="${oleo}" ${material.oleo === oleo ? 'selected' : ''}>${oleo}</option>`).join('')}
-                            </select>
-                        </div>
                     </div>
                     
                     <div class="material-row material-row-qtd">
@@ -992,7 +974,6 @@ if (document.getElementById('contagemForm')) {
         
         html += `</div>`;
         
-        // BOTÃO NO RODAPÉ
         html += `
             <button type="button" id="btn-add-bobina" class="btn-add-material" onclick="adicionarBobina()">
                 + Adicionar Nova Bobina
@@ -1015,13 +996,12 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR TRAFOS (COM BOTÃO NO TOPO E RODAPÉ)
+    // RENDERIZAR TRAFOS (COM TODOS OS CAMPOS)
     // ============================================
 
     function renderizarTrafos(materiais) {
         let html = '';
         
-        // BOTÃO NO TOPO
         html += `
             <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
                 <button type="button" class="btn-add-material" onclick="adicionarTrafo()" style="margin-top: 0;">
@@ -1179,7 +1159,6 @@ if (document.getElementById('contagemForm')) {
         
         html += `</div>`;
         
-        // BOTÃO NO RODAPÉ
         html += `
             <button type="button" id="btn-add-trafo" class="btn-add-material" onclick="adicionarTrafo()">
                 + Adicionar Novo Trafo
@@ -1316,7 +1295,7 @@ if (document.getElementById('contagemForm')) {
                 bobinasManuais[index].descricao = '';
                 bobinasManuais[index].und = '';
             }
-            mostrarMensagem('❌ ' + validacao.motivo, 'erro');
+            mostrarToast('❌ ' + validacao.motivo, 'erro');
             return;
         }
         
@@ -1406,11 +1385,9 @@ if (document.getElementById('contagemForm')) {
         const descricao = document.getElementById(`bobina-descricao-${index}`)?.value || '';
         const und = document.getElementById(`bobina-und-${index}`)?.value || '';
         const tombamento = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
-        const cor = document.getElementById(`bobina-cor-${index}`)?.value || '';
-        const oleo = document.getElementById(`bobina-oleo-${index}`)?.value || '';
         const nObra = document.getElementById(`n-obra-bobinas-${index}`)?.value || '';
         
-        if (!codigo || !descricao || !und || !tombamento || !cor || !oleo || !nObra) {
+        if (!codigo || !descricao || !und || !tombamento || !nObra) {
             return false;
         }
         return true;
@@ -1442,14 +1419,14 @@ if (document.getElementById('contagemForm')) {
             descricao: '',
             und: '',
             tombamento: '',
-            cor: '',
-            oleo: '',
             ativo: true,
             isNew: true,
             _qtd: '',
             _n_obra: '',
             tipo_material: 'bobina',
             numero_serie: null,
+            oleo: null,
+            cor: null,
             id: null
         };
         
@@ -1500,8 +1477,6 @@ if (document.getElementById('contagemForm')) {
             const descricao = document.getElementById(`bobina-descricao-${index}`)?.value || '';
             const und = document.getElementById(`bobina-und-${index}`)?.value || '';
             const tombamento = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
-            const cor = document.getElementById(`bobina-cor-${index}`)?.value || '';
-            const oleo = document.getElementById(`bobina-oleo-${index}`)?.value || '';
             const qtd = document.getElementById(`qtd-bobinas-${index}`)?.value || '';
             const nObra = document.getElementById(`n-obra-bobinas-${index}`)?.value || '';
             
@@ -1509,8 +1484,6 @@ if (document.getElementById('contagemForm')) {
             bobinasManuais[index].descricao = descricao;
             bobinasManuais[index].und = und;
             bobinasManuais[index].tombamento = tombamento;
-            bobinasManuais[index].cor = cor;
-            bobinasManuais[index].oleo = oleo;
             bobinasManuais[index]._qtd = qtd;
             bobinasManuais[index]._n_obra = nObra;
             bobinasManuais[index].tipo_material = 'bobina';
@@ -1555,7 +1528,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // REMOVER BOBINA
+    // REMOVER BOBINA (COM TOAST)
     // ============================================
     
     function removerBobina(index) {
@@ -1563,7 +1536,7 @@ if (document.getElementById('contagemForm')) {
         const codigo = bobina?.codigo || '';
         
         if (codigo && codigoExisteNoBanco(codigo)) {
-            mostrarMensagem('❌ Esta bobina já está registrada no banco de dados e não pode ser removida. Use a opção "Dar baixa" para desativá-la.', 'erro');
+            mostrarToast('❌ Esta bobina já está registrada no banco de dados e não pode ser removida. Use a opção "Dar baixa" para desativá-la.', 'erro');
             return;
         }
         
@@ -1575,7 +1548,7 @@ if (document.getElementById('contagemForm')) {
             tabsContent.innerHTML = renderizarBobinas(bobinasManuais);
             atualizarContadorBobinas();
             
-            mostrarMensagem('✅ Bobina removida com sucesso!', 'sucesso');
+            mostrarToast('✅ Bobina removida com sucesso!', 'sucesso');
         }
     }
     
@@ -1635,12 +1608,16 @@ if (document.getElementById('contagemForm')) {
         }
     }
     
+    // ============================================
+    // REMOVER TRAFO (COM TOAST)
+    // ============================================
+    
     function removerTrafo(index) {
         const trafo = materiaisManuais[index];
         const codigo = trafo?.codigo || '';
         
         if (codigo && codigoExisteNoBanco(codigo)) {
-            mostrarMensagem('❌ Este trafo já está registrado no banco de dados e não pode ser removido. Use a opção "Dar baixa" para desativá-lo.', 'erro');
+            mostrarToast('❌ Este trafo já está registrado no banco de dados e não pode ser removido. Use a opção "Dar baixa" para desativá-lo.', 'erro');
             return;
         }
         
@@ -1652,7 +1629,7 @@ if (document.getElementById('contagemForm')) {
             tabsContent.innerHTML = renderizarTrafos(materiaisManuais);
             atualizarContadorTrafos();
             
-            mostrarMensagem('✅ Trafo removido com sucesso!', 'sucesso');
+            mostrarToast('✅ Trafo removido com sucesso!', 'sucesso');
         }
     }
     
@@ -1723,7 +1700,7 @@ if (document.getElementById('contagemForm')) {
                 materiaisManuais[index].descricao = '';
                 materiaisManuais[index].und = '';
             }
-            mostrarMensagem('❌ ' + validacao.motivo, 'erro');
+            mostrarToast('❌ ' + validacao.motivo, 'erro');
             return;
         }
         
@@ -1786,6 +1763,92 @@ if (document.getElementById('contagemForm')) {
         if (!codigo || !materiaisBanco.length) return null;
         const material = materiaisBanco.find(m => m.codigo === codigo.trim());
         return material || null;
+    }
+    
+    // ============================================
+    // TOAST DE NOTIFICAÇÃO (POP-UP FLUTUANTE)
+    // ============================================
+
+    function mostrarToast(mensagem, tipo) {
+        const toastExistente = document.querySelector('.toast-notificacao');
+        if (toastExistente) {
+            toastExistente.remove();
+        }
+        
+        const toast = document.createElement('div');
+        toast.className = `toast-notificacao toast-${tipo}`;
+        toast.innerHTML = mensagem;
+        
+        Object.assign(toast.style, {
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '15px 25px',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '500',
+            zIndex: '9999',
+            maxWidth: '400px',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+            transform: 'translateX(120%)',
+            transition: 'transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            border: '1px solid rgba(255,255,255,0.2)',
+            backdropFilter: 'blur(10px)'
+        });
+        
+        const cores = {
+            sucesso: {
+                background: 'linear-gradient(135deg, #48bb78, #38a169)',
+                color: '#ffffff',
+                borderColor: '#48bb78'
+            },
+            erro: {
+                background: 'linear-gradient(135deg, #fc8181, #e53e3e)',
+                color: '#ffffff',
+                borderColor: '#fc8181'
+            },
+            info: {
+                background: 'linear-gradient(135deg, #63b3ed, #4299e1)',
+                color: '#ffffff',
+                borderColor: '#63b3ed'
+            },
+            aviso: {
+                background: 'linear-gradient(135deg, #f6ad55, #ed8936)',
+                color: '#ffffff',
+                borderColor: '#f6ad55'
+            }
+        };
+        
+        const cor = cores[tipo] || cores.info;
+        toast.style.background = cor.background;
+        toast.style.color = cor.color;
+        toast.style.borderColor = cor.borderColor;
+        
+        document.body.appendChild(toast);
+        
+        toast.offsetHeight;
+        toast.style.transform = 'translateX(0)';
+        
+        setTimeout(() => {
+            toast.style.transform = 'translateX(120%)';
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 400);
+        }, 4000);
+        
+        toast.addEventListener('click', () => {
+            toast.style.transform = 'translateX(120%)';
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 400);
+        });
     }
     
     // ============================================
@@ -1976,7 +2039,7 @@ if (document.getElementById('contagemForm')) {
         const data = document.getElementById('data').value;
         
         if (!nome.trim()) {
-            mostrarMensagem('❌ Por favor, preencha o nome!', 'erro');
+            mostrarToast('❌ Por favor, preencha o nome!', 'erro');
             return;
         }
         
@@ -1997,7 +2060,7 @@ if (document.getElementById('contagemForm')) {
         });
         
         if (trafoIncompleto) {
-            mostrarMensagem('❌ Todos os campos dos trafos são obrigatórios!', 'erro');
+            mostrarToast('❌ Todos os campos dos trafos são obrigatórios!', 'erro');
             return;
         }
         
@@ -2018,7 +2081,7 @@ if (document.getElementById('contagemForm')) {
         });
         
         if (bobinaIncompleta) {
-            mostrarMensagem('❌ Todos os campos das bobinas são obrigatórios!', 'erro');
+            mostrarToast('❌ Todos os campos das bobinas são obrigatórios!', 'erro');
             return;
         }
         
@@ -2036,7 +2099,7 @@ if (document.getElementById('contagemForm')) {
         });
         
         if (concretoInvalido) {
-            mostrarMensagem('❌ Verifique as entradas de concreto: o total não bate com a diferença da contagem!', 'erro');
+            mostrarToast('❌ Verifique as entradas de concreto: o total não bate com a diferença da contagem!', 'erro');
             return;
         }
         
@@ -2095,7 +2158,7 @@ if (document.getElementById('contagemForm')) {
                     
                     const validacao = validarCodigoPorCategoria(codigoTrafo, 'trafos');
                     if (!validacao.valido) {
-                        mostrarMensagem('❌ Trafo #' + (parseInt(index) + 1) + ': ' + validacao.motivo, 'erro');
+                        mostrarToast('❌ Trafo #' + (parseInt(index) + 1) + ': ' + validacao.motivo, 'erro');
                         const codigoInput = document.getElementById(`trafo-codigo-${index}`);
                         if (codigoInput) {
                             codigoInput.classList.add('input-error');
@@ -2108,7 +2171,7 @@ if (document.getElementById('contagemForm')) {
                     
                     const dadosCodigo = buscarDadosCodigo(codigoTrafo);
                     if (!dadosCodigo) {
-                        mostrarMensagem('❌ O código "' + codigoTrafo + '" do Trafo #' + (parseInt(index) + 1) + ' não foi encontrado na base de dados!', 'erro');
+                        mostrarToast('❌ O código "' + codigoTrafo + '" do Trafo #' + (parseInt(index) + 1) + ' não foi encontrado na base de dados!', 'erro');
                         const codigoInput = document.getElementById(`trafo-codigo-${index}`);
                         if (codigoInput) {
                             codigoInput.classList.add('input-error');
@@ -2150,12 +2213,10 @@ if (document.getElementById('contagemForm')) {
                     const descricaoBobina = document.getElementById(`bobina-descricao-${index}`)?.value || '';
                     const undBobina = document.getElementById(`bobina-und-${index}`)?.value || '';
                     const tombamentoBobina = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
-                    const corBobina = document.getElementById(`bobina-cor-${index}`)?.value || '';
-                    const oleoBobina = document.getElementById(`bobina-oleo-${index}`)?.value || '';
                     
                     const validacao = validarCodigoPorCategoria(codigoBobina, 'bobinas');
                     if (!validacao.valido) {
-                        mostrarMensagem('❌ Bobina #' + (parseInt(index) + 1) + ': ' + validacao.motivo, 'erro');
+                        mostrarToast('❌ Bobina #' + (parseInt(index) + 1) + ': ' + validacao.motivo, 'erro');
                         const codigoInput = document.getElementById(`bobina-codigo-${index}`);
                         if (codigoInput) {
                             codigoInput.classList.add('input-error');
@@ -2168,7 +2229,7 @@ if (document.getElementById('contagemForm')) {
                     
                     const dadosCodigo = buscarDadosCodigo(codigoBobina);
                     if (!dadosCodigo) {
-                        mostrarMensagem('❌ O código "' + codigoBobina + '" da Bobina #' + (parseInt(index) + 1) + ' não foi encontrado na base de dados!', 'erro');
+                        mostrarToast('❌ O código "' + codigoBobina + '" da Bobina #' + (parseInt(index) + 1) + ' não foi encontrado na base de dados!', 'erro');
                         const codigoInput = document.getElementById(`bobina-codigo-${index}`);
                         if (codigoInput) {
                             codigoInput.classList.add('input-error');
@@ -2187,8 +2248,8 @@ if (document.getElementById('contagemForm')) {
                         qtd: qtd,
                         numero_serie: null,
                         tombamento: tombamentoBobina,
-                        oleo: oleoBobina,
-                        cor: corBobina,
+                        oleo: null,
+                        cor: null,
                         n_obra: nObra || `Contagem diária - ${nome}`,
                         ativo: 1,
                         tipo_material: 'bobina'
@@ -2243,7 +2304,7 @@ if (document.getElementById('contagemForm')) {
         }
         
         if (materiaisParaEnviar.length === 0 && materiaisParaDesativar.length === 0) {
-            mostrarMensagem('❌ Preencha a quantidade de pelo menos um material ou selecione "Dar baixa" em um item!', 'erro');
+            mostrarToast('❌ Preencha a quantidade de pelo menos um material ou selecione "Dar baixa" em um item!', 'erro');
             return;
         }
         
@@ -2255,7 +2316,7 @@ if (document.getElementById('contagemForm')) {
             let totalDesativados = 0;
             
             if (materiaisParaDesativar.length > 0) {
-                mostrarMensagem(`⏳ Desativando ${materiaisParaDesativar.length} item(ns)...`, 'info');
+                mostrarToast(`⏳ Desativando ${materiaisParaDesativar.length} item(ns)...`, 'info');
                 
                 for (const item of materiaisParaDesativar) {
                     try {
@@ -2283,7 +2344,7 @@ if (document.getElementById('contagemForm')) {
             }
             
             if (materiaisParaEnviar.length > 0) {
-                mostrarMensagem(`⏳ Salvando ${materiaisParaEnviar.length} material(is)...`, 'info');
+                mostrarToast(`⏳ Salvando ${materiaisParaEnviar.length} material(is)...`, 'info');
                 
                 for (const material of materiaisParaEnviar) {
                     try {
@@ -2315,7 +2376,7 @@ if (document.getElementById('contagemForm')) {
             } else {
                 msg = '⚠️ Nenhuma operação foi realizada com sucesso.';
             }
-            mostrarMensagem(msg, 'sucesso');
+            mostrarToast(msg, 'sucesso');
             
             document.querySelectorAll('.input-qtd').forEach(input => input.value = '');
             document.querySelectorAll('.input-justificativa').forEach(input => input.value = '');
@@ -2341,7 +2402,7 @@ if (document.getElementById('contagemForm')) {
             
         } catch (error) {
             console.error('❌ Erro:', error);
-            mostrarMensagem('❌ Erro de conexão com o servidor.', 'erro');
+            mostrarToast('❌ Erro de conexão com o servidor.', 'erro');
             
         } finally {
             botaoSubmit.disabled = false;
@@ -2361,6 +2422,7 @@ if (document.getElementById('contagemForm')) {
     window.buscarQuantidadeAnterior = buscarQuantidadeAnterior;
     window.formatarData = formatarData;
     window.mostrarMensagem = mostrarMensagem;
+    window.mostrarToast = mostrarToast;
     window.validarCodigoTrafo = validarCodigoTrafo;
     window.validarCodigoBobina = validarCodigoBobina;
     window.adicionarTrafo = adicionarTrafo;
