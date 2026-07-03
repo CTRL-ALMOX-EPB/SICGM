@@ -831,11 +831,20 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR BOBINAS (COM TRAVAS)
+    // RENDERIZAR BOBINAS (COM BOTÃO NO TOPO E RODAPÉ)
     // ============================================
 
     function renderizarBobinas(materiais) {
         let html = '';
+        
+        // BOTÃO NO TOPO
+        html += `
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+                <button type="button" class="btn-add-material" onclick="adicionarBobina()" style="margin-top: 0;">
+                    + Adicionar Nova Bobina
+                </button>
+            </div>
+        `;
         
         html += `<div id="bobinas-container">`;
         
@@ -980,6 +989,7 @@ if (document.getElementById('contagemForm')) {
         
         html += `</div>`;
         
+        // BOTÃO NO RODAPÉ
         html += `
             <button type="button" id="btn-add-bobina" class="btn-add-material" onclick="adicionarBobina()">
                 + Adicionar Nova Bobina
@@ -1002,11 +1012,20 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR TRAFOS (COM TRAVAS)
+    // RENDERIZAR TRAFOS (COM BOTÃO NO TOPO E RODAPÉ)
     // ============================================
 
     function renderizarTrafos(materiais) {
         let html = '';
+        
+        // BOTÃO NO TOPO
+        html += `
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+                <button type="button" class="btn-add-material" onclick="adicionarTrafo()" style="margin-top: 0;">
+                    + Adicionar Novo Trafo
+                </button>
+            </div>
+        `;
         
         html += `<div id="trafos-container">`;
         
@@ -1157,6 +1176,7 @@ if (document.getElementById('contagemForm')) {
         
         html += `</div>`;
         
+        // BOTÃO NO RODAPÉ
         html += `
             <button type="button" id="btn-add-trafo" class="btn-add-material" onclick="adicionarTrafo()">
                 + Adicionar Novo Trafo

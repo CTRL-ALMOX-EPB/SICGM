@@ -5,7 +5,7 @@
 }
 
 body {
-    background-color: #F0F4F8;
+    background-color: #F0F4F8; /* Tom gelo */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     min-height: 100vh;
     display: flex;
@@ -20,7 +20,7 @@ body {
 }
 
 .form-card {
-    background-color: #FFFFFF;
+    background-color: #FFFFFF; /* Branco */
     border-radius: 15px;
     padding: 40px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
@@ -34,17 +34,21 @@ body {
 .header-container {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-start; /* Alinha à esquerda */
     gap: 15px;
     margin-bottom: 2rem;
     padding: 0.5rem 0;
-    border-bottom: 2px solid #e2e8f0;
+    border-bottom: 2px solid #e2e8f0; /* Linha separadora opcional */
 }
 
 .logo-empresa {
     width: 60px;
     height: 60px;
     object-fit: contain;
+}
+
+.header-container .title {
+    margin-bottom: 0;
 }
 
 .title {
@@ -54,9 +58,10 @@ body {
 }
 
 /* ============================================ */
-/* FORMULÁRIO - GRID DE 3 COLUNAS               */
+/* FORMULÁRIO MGM - APENAS NOVOS ESTILOS        */
 /* ============================================ */
 
+/* Grid de 3 colunas para Separador/Encarregado/Conferente */
 .form-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -64,14 +69,67 @@ body {
     margin-bottom: 35px;
 }
 
-.form-group {
+/* Campos de matrícula dentro dos grupos */
+.matricula-field {
+    margin-top: 15px;
+}
+
+/* Ajuste para os inputs dentro de form-group */
+.form-group > input {
+    margin-bottom: 0; /* Remove margem extra */
+}
+
+/* Container de materiais dinâmicos */
+#materiais-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+/* Responsivo para tablet */
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr; /* Empilha em telas menores */
+        gap: 20px;
+    }
+    
+    .matricula-field {
+        margin-top: 10px;
+    }
+}
+
+/* Responsivo para celular */
+@media (max-width: 480px) {
+    .form-row {
+        gap: 15px;
+    }
+    
+    .form-group {
+        padding: 12px;
+    }
+}
+
+/* ============================================ */
+/* SEÇÃO OBRA E DATA LADO A LADO                */
+/* ============================================ */
+
+.obra-data-row {
+    display: flex;
+    gap: 25px;
+    margin-bottom: 30px;
+    align-items: flex-end;
+}
+
+.obra-field {
+    flex: 1;
     background-color: #F8FAFC;
     padding: 20px;
     border-radius: 8px;
     border: 1px solid #E2E8F0;
 }
 
-.form-group label {
+.obra-field label {
     font-size: 1.1em;
     font-weight: 600;
     color: #4A5568;
@@ -79,7 +137,7 @@ body {
     display: block;
 }
 
-.form-group input {
+.obra-field input {
     padding: 12px 15px;
     border: 2px solid #E2E8F0;
     border-radius: 6px;
@@ -90,12 +148,13 @@ body {
     background-color: #FFFFFF;
 }
 
-.form-group input:focus {
+.obra-field input:focus {
     border-color: #4299E1;
     box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
 
 .data-field {
+    flex: 1;
     background-color: #F8FAFC;
     padding: 20px;
     border-radius: 8px;
@@ -127,6 +186,73 @@ body {
 }
 
 /* ============================================ */
+/* SEÇÃO SEPARADOR / ENCARREGADO / CONFERENTE   */
+/* ============================================ */
+
+.form-row {
+    display: flex;
+    gap: 25px;
+    margin-bottom: 35px;
+}
+
+.form-group {
+    flex: 1;
+    background-color: #F8FAFC;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+}
+
+.form-group > label {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #4A5568;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.form-group > input {
+    padding: 12px 15px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    outline: none;
+    margin-bottom: 15px;
+    width: 100%;
+    background-color: #FFFFFF;
+}
+
+.form-group > input:focus {
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.matricula-field label {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #4A5568;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.matricula-field input {
+    padding: 12px 15px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 1em;
+    width: 100%;
+    transition: all 0.3s ease;
+    outline: none;
+    background-color: #FFFFFF;
+}
+
+.matricula-field input:focus {
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+/* ============================================ */
 /* SEÇÃO DE MATERIAIS                           */
 /* ============================================ */
 
@@ -143,6 +269,138 @@ body {
     font-size: 1.3em;
     margin-bottom: 20px;
     font-weight: 600;
+}
+
+/* Botão Adicionar Material */
+.btn-add-material {
+    background-color: #48BB78;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 15px;
+}
+
+.btn-add-material:hover {
+    background-color: #38A169;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(72, 187, 120, 0.3);
+}
+
+/* Item de Material */
+.material-item {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+}
+
+.material-item:hover {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.material-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.material-number {
+    font-weight: 600;
+    color: #4A5568;
+    font-size: 0.9em;
+}
+
+.btn-remove-material {
+    background-color: #FC8181;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove-material:hover {
+    background-color: #F56565;
+    transform: scale(1.1);
+}
+
+/* Linha de campos do material */
+.material-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr 1fr;
+    gap: 15px;
+}
+
+.material-field {
+    position: relative;
+}
+
+.material-field label {
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #718096;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.material-field input {
+    padding: 10px 12px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 0.95em;
+    width: 100%;
+    transition: all 0.3s ease;
+    outline: none;
+    background-color: #FFFFFF;
+}
+
+/* ============================================ */
+/* INPUT QTD ANTERIOR                           */
+/* ============================================ */
+
+.input-qtd-anterior {
+    text-align: center;
+    font-weight: 500;
+}
+
+.tem-dado-anterior {
+    color: #2C3E50 !important;
+    background-color: #EBF4FF !important;
+    border-color: #4299E1 !important;
+}
+
+.sem-dado-anterior {
+    color: #A0AEC0 !important;
+    font-style: italic;
+}
+
+/* ============================================ */
+/* INDICADOR DE DIFERENÇA                       */
+/* ============================================ */
+
+.diferenca-indicador {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    margin-top: 10px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 500;
 }
 
 /* ============================================ */
@@ -222,218 +480,80 @@ body {
     color: white;
 }
 
-.tab-content {
-    display: none;
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-top: none;
-    border-radius: 0 0 8px 8px;
-    padding: 20px;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* ============================================ */
-/* ITEM DE MATERIAL                             */
-/* ============================================ */
-
-.material-item {
-    background-color: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 15px;
-    transition: all 0.3s ease;
-}
-
-.material-item:hover {
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.material-item.material-bloqueado {
-    background-color: #f8fafc;
-    border-color: #cbd5e0;
-}
-
-.material-header {
+/* Botão remover trafo */
+.btn-remover-trafo {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    font-size: 14px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #e2e8f0;
+    justify-content: center;
 }
 
-.material-number {
-    font-weight: 600;
-    color: #2d3748;
-    font-size: 15px;
-}
-
-.material-bloqueado .material-number {
-    color: #4a5568;
-}
-
+/* Checkbox de baixa */
 .trafo-header-actions {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-/* ============================================ */
-/* BOTÃO REMOVER TRAFO/BOBINA                   */
-/* ============================================ */
-
-.btn-remover-trafo-x {
-    background: none;
-    border: none;
-    color: #FF4444;
-    font-size: 20px;
-    font-weight: bold;
-    cursor: pointer;
-    padding: 2px 8px;
-    border-radius: 50%;
-    transition: all 0.2s ease;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-remover-trafo-x:hover {
-    background-color: #FF4444;
-    color: white;
-    transform: scale(1.1);
-}
-
-.btn-remover-trafo-x:active {
-    transform: scale(0.95);
-}
-
-/* ============================================ */
-/* CHECKBOX DE BAIXA                            */
-/* ============================================ */
-
 .checkbox-baixa-label {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: #e53e3e;
-    font-weight: 500;
+    gap: 5px;
+    font-size: 0.85em;
+    color: #E53E3E;
     cursor: pointer;
-    padding: 4px 10px;
-    border-radius: 4px;
-    background: #fff5f5;
-    border: 1px solid #feb2b2;
-    transition: all 0.3s ease;
+    font-weight: 500;
 }
 
-.checkbox-baixa-label:hover {
-    background: #fed7d7;
-}
-
-.checkbox-baixa-label input[type="checkbox"] {
+.checkbox-baixa {
     width: 16px;
     height: 16px;
     cursor: pointer;
-    accent-color: #e53e3e;
 }
 
-/* ============================================ */
-/* LINHA DE CAMPOS DO MATERIAL                  */
-/* ============================================ */
-
-.material-row {
-    display: grid;
-    grid-template-columns: 1fr 2fr 0.8fr 1fr 1fr;
-    gap: 12px;
-}
-
-.material-row-extras {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.material-row-qtd {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.material-field {
-    position: relative;
-}
-
-.material-field label {
-    font-size: 0.9em;
-    font-weight: 500;
-    color: #718096;
-    margin-bottom: 5px;
-    display: block;
-}
-
-.material-field input,
-.material-field select {
-    padding: 10px 12px;
-    border: 2px solid #E2E8F0;
+/* Alerta de baixa */
+.alerta-baixa {
+    background-color: #FFF5F5;
+    border: 1px solid #FC8181;
+    color: #C53030;
+    padding: 8px 12px;
     border-radius: 6px;
-    font-size: 0.95em;
-    width: 100%;
-    transition: all 0.3s ease;
-    outline: none;
-    background-color: #FFFFFF;
+    margin-top: 8px;
+    font-size: 0.85em;
+    animation: fadeInAlerta 0.3s ease-out;
 }
 
-.material-field input:focus,
-.material-field select:focus {
-    border-color: #4299E1;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+/* Status de validação do código */
+.codigo-status {
+    font-size: 0.8em;
+    margin-top: 4px;
+    font-weight: 500;
 }
 
-.material-field input[readonly] {
-    background-color: #f7fafc;
-    cursor: default;
+.codigo-ok {
+    color: #22543D;
 }
 
-/* ============================================ */
-/* INPUTS BLOQUEADOS (LOCKED)                   */
-/* ============================================ */
-
-.input-locked {
-    background-color: #edf2f7 !important;
-    color: #4a5568 !important;
-    cursor: not-allowed !important;
-    opacity: 0.8;
-    border-style: dashed !important;
-    border-color: #cbd5e0 !important;
+.codigo-erro {
+    color: #C53030;
 }
 
-.input-locked:focus {
-    outline: none !important;
-    border-color: #cbd5e0 !important;
-    box-shadow: none !important;
+.codigo-carregando {
+    color: #718096;
 }
 
-.input-locked select {
-    background-color: #edf2f7 !important;
-    cursor: not-allowed !important;
-    opacity: 0.8;
+.btn-remover-trafo:hover {
+    background: #c82333;
 }
 
-.input-locked option {
-    background-color: #edf2f7;
-}
-
-/* ============================================ */
-/* INPUTS DE TRAFO E BOBINA                     */
-/* ============================================ */
-
+/* Inputs de trafo */
 .input-trafo {
     padding: 10px 12px;
     border: 2px solid #E2E8F0;
@@ -450,110 +570,147 @@ body {
     box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
 
-.input-extra {
-    width: 100%;
-    padding: 8px 12px;
-    border: 2px solid #E2E8F0;
-    border-radius: 6px;
-    font-size: 14px;
-    transition: border-color 0.3s ease;
-}
-
-.input-extra:focus {
-    outline: none;
-    border-color: #4299E1;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
-}
-
-.input-extra select {
-    width: 100%;
-    padding: 8px 12px;
-    border: 2px solid #E2E8F0;
-    border-radius: 6px;
-    font-size: 14px;
-    background: white;
-    cursor: pointer;
-    transition: border-color 0.3s ease;
-    appearance: auto;
-}
-
-.input-extra select:focus {
-    outline: none;
-    border-color: #4299E1;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
-}
-
-.input-extra select option {
-    padding: 5px;
-}
-
-/* ============================================ */
-/* INPUT QTD ANTERIOR                           */
-/* ============================================ */
-
-.input-qtd-anterior {
-    text-align: center;
-    font-weight: 500;
-}
-
-.tem-dado-anterior {
-    color: #2C3E50 !important;
-    background-color: #EBF4FF !important;
-    border-color: #4299E1 !important;
-}
-
-.sem-dado-anterior {
-    color: #A0AEC0 !important;
-    font-style: italic;
-}
-
-/* ============================================ */
-/* INDICADOR DE DIFERENÇA                       */
-/* ============================================ */
-
-.diferenca-indicador {
-    margin-top: 8px;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
+.tab-content {
     display: none;
-    align-items: center;
-    gap: 8px;
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 20px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .tabs-nav {
+        gap: 2px;
+    }
+    
+    .tab-btn {
+        padding: 10px 14px;
+        font-size: 0.85em;
+    }
 }
 
 .diferenca-igual {
-    background: #e2e8f0;
-    color: #4a5568;
-    border: 1px solid #cbd5e0;
+    background-color: #EBF8FF;
+    color: #2B6CB0;
+    border: 1px solid #BEE3F8;
 }
 
 .diferenca-positiva {
-    background: #c6f6d5;
-    color: #276749;
-    border: 1px solid #48bb78;
+    background-color: #F0FFF4;
+    color: #22543D;
+    border: 1px solid #C6F6D5;
 }
 
 .diferenca-negativa {
-    background: #fed7d7;
-    color: #c53030;
-    border: 1px solid #fc8181;
+    background-color: #FFF5F5;
+    color: #742A2A;
+    border: 1px solid #FED7D7;
 }
 
-.diferenca-erro {
-    background: #fed7d7 !important;
-    color: #c53030 !important;
-    border: 2px solid #fc8181 !important;
+/* Ajuste do grid para 5 colunas */
+.material-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr 0.8fr 1fr 1fr;
+    gap: 12px;
 }
 
-.diferenca-ok {
-    background: #c6f6d5 !important;
-    color: #276749 !important;
-    border: 2px solid #48bb78 !important;
+.material-field input:focus {
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.material-field input[readonly] {
+    cursor: pointer;
+}
+
+/* Input de descrição (clique para pop-up) */
+.input-descricao {
+    cursor: pointer;
+}
+
+.input-descricao[readonly] {
+    cursor: pointer;
 }
 
 /* ============================================ */
-/* LINHA DE JUSTIFICATIVA / N OBRA              */
+/* POP-UP DE DESCRIÇÃO COMPLETA                 */
+/* ============================================ */
+
+.descricao-popup {
+    display: none;
+    position: fixed;
+    background-color: #2D3748;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    min-width: 200px;
+    max-width: 350px;
+    word-wrap: break-word;
+    white-space: normal;
+    z-index: 1000;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    line-height: 1.4;
+    pointer-events: none;
+}
+
+.descricao-popup::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 8px;
+    border-style: solid;
+}
+
+/* Seta para baixo (pop-up acima do input) */
+.descricao-popup:not(.popup-bottom)::after {
+    top: 100%;
+    border-color: #2D3748 transparent transparent transparent;
+}
+
+/* Seta para cima (pop-up abaixo do input) */
+.descricao-popup.popup-bottom::after {
+    bottom: 100%;
+    border-color: transparent transparent #2D3748 transparent;
+}
+
+/* Animação do pop-up */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.descricao-popup.show {
+    display: block;
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Overlay para fechar pop-up ao clicar fora */
+.popup-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999;
+}
+
+/* ============================================ */
+/* LINHA DE JUSTIFICATIVA (LARGURA TOTAL)       */
 /* ============================================ */
 
 .justificativa-row {
@@ -595,45 +752,34 @@ body {
     font-style: italic;
 }
 
-/* ============================================ */
-/* STATUS DE VALIDAÇÃO DO CÓDIGO                */
-/* ============================================ */
-
-.codigo-status {
-    font-size: 12px;
-    margin-top: 4px;
-    padding: 2px 8px;
-    border-radius: 4px;
-}
-
-.codigo-ok {
-    color: #276749;
-    background: #c6f6d5;
-}
-
-.codigo-erro {
-    color: #c53030;
-    background: #fed7d7;
-}
-
-.codigo-carregando {
-    color: #718096;
+.popup-overlay.active {
+    display: block;
 }
 
 /* ============================================ */
-/* ALERTA DE BAIXA                              */
+/* ALERTA DE MATERIAL NÃO CADASTRADO            */
 /* ============================================ */
 
-.alerta-baixa {
-    margin-top: 8px;
-    padding: 8px 12px;
-    background: #fff5f5;
-    border: 1px solid #fc8181;
-    border-radius: 6px;
-    color: #c53030;
-    font-size: 13px;
-    display: none;
+.alerta-material {
+    background-color: #FFF5F5;
+    border: 1px solid #FC8181;
+    border-left: 4px solid #F56565;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 15px;
     animation: fadeInAlerta 0.3s ease-out;
+}
+
+.alerta-conteudo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #C53030;
+    font-size: 0.95em;
+}
+
+.alerta-icone {
+    font-size: 1.2em;
 }
 
 @keyframes fadeInAlerta {
@@ -641,16 +787,23 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
 /* ============================================ */
 /* ESTADOS DOS INPUTS                           */
 /* ============================================ */
 
+/* Input com erro */
 .input-error {
-    border-color: #fc8181 !important;
-    background-color: #fff5f5 !important;
-    animation: shake 0.5s ease;
+    border-color: #FC8181 !important;
+    background-color: #FFF5F5 !important;
+    animation: shake 0.5s ease-in-out;
 }
 
+/* Input com sucesso */
 .input-success {
     border-color: #48BB78 !important;
     background-color: #F0FFF4 !important;
@@ -660,101 +813,6 @@ body {
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-5px); }
     75% { transform: translateX(5px); }
-}
-
-/* ============================================ */
-/* POP-UP DE DESCRIÇÃO COMPLETA                 */
-/* ============================================ */
-
-.descricao-popup {
-    display: none;
-    position: fixed;
-    background-color: #2D3748;
-    color: white;
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 0.9em;
-    min-width: 200px;
-    max-width: 350px;
-    word-wrap: break-word;
-    white-space: normal;
-    z-index: 1000;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-    line-height: 1.4;
-    pointer-events: none;
-}
-
-.descricao-popup::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    border-width: 8px;
-    border-style: solid;
-}
-
-.descricao-popup:not(.popup-bottom)::after {
-    top: 100%;
-    border-color: #2D3748 transparent transparent transparent;
-}
-
-.descricao-popup.popup-bottom::after {
-    bottom: 100%;
-    border-color: transparent transparent #2D3748 transparent;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateX(-50%) translateY(5px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-    }
-}
-
-.descricao-popup.show {
-    display: block;
-    animation: fadeIn 0.2s ease-out;
-}
-
-.popup-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 999;
-}
-
-.popup-overlay.active {
-    display: block;
-}
-
-/* ============================================ */
-/* BOTÃO ADICIONAR MATERIAL                     */
-/* ============================================ */
-
-.btn-add-material {
-    background-color: #48BB78;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 12px 20px;
-    font-size: 1em;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    margin-top: 15px;
-    width: auto;
-}
-
-.btn-add-material:hover {
-    background-color: #38A169;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(72, 187, 120, 0.3);
 }
 
 /* ============================================ */
@@ -782,20 +840,414 @@ body {
     box-shadow: 0 5px 15px rgba(66, 153, 225, 0.3);
 }
 
+/* Botão X vermelho para remover trafo */
+.btn-remover-trafo-x {
+    background: none;
+    border: none;
+    color: #FF4444;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Estilo para inputs bloqueados */
+.input-locked {
+    background-color: #f0f4f8;
+    cursor: not-allowed;
+    opacity: 0.8;
+    border-style: dashed;
+}
+
+.input-locked:focus {
+    outline: none;
+    border-color: #cbd5e0;
+}
+
+.btn-remover-trafo-x:hover {
+    background-color: #FF4444;
+    color: white;
+    transform: scale(1.1);
+}
+
+.btn-remover-trafo-x:active {
+    transform: scale(0.95);
+}
+
+/* Ajuste no container de ações do header do trafo */
+.trafo-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .submit-btn:active {
     transform: translateY(0);
 }
 
-.submit-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
+/* ============================================ */
+/* RESPONSIVIDADE - TABLET                      */
+/* ============================================ */
+
+@media (max-width: 768px) {
+    .header-container {
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .logo-empresa {
+        height: 45px;
+    }
+    
+    .header-container .title {
+        font-size: 2em;
+    }
+    
+    .title {
+        font-size: 2em;
+        margin-bottom: 30px;
+    }
+    
+    .form-card {
+        padding: 25px;
+    }
+    
+    /* Obra e Data empilhados */
+    .obra-data-row {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .obra-field,
+    .data-field {
+        flex: 1;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    /* Separador/Encarregado/Conferente empilhados */
+    .form-row {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .obra-field,
+    .form-group {
+        padding: 15px;
+    }
+    
+    /* Materiais */
+    .material-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    .btn-add-material {
+        width: 100%;
+    }
+    
+    .descricao-popup {
+        max-width: 250px;
+        font-size: 0.85em;
+        padding: 10px 14px;
+    }
 }
 
 /* ============================================ */
-/* CONCRETOS - SISTEMA DE ENTRADAS              */
+/* RESPONSIVIDADE - CELULAR                     */
 /* ============================================ */
 
+@media (max-width: 480px) {
+    .header-container {
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .logo-empresa {
+        height: 35px;
+    }
+    
+    .header-container .title {
+        font-size: 1.5em;
+    }
+    
+    .form-card {
+        padding: 15px;
+    }
+    
+    .title {
+        font-size: 1.5em;
+        margin-bottom: 20px;
+    }
+    
+    .obra-data-row {
+        gap: 15px;
+    }
+    
+    .obra-field,
+    .data-field {
+        padding: 12px;
+    }
+    
+    .obra-field label,
+    .data-field label {
+        font-size: 0.95em;
+    }
+    
+    .obra-field input,
+    .data-field input {
+        padding: 10px 12px;
+        font-size: 0.9em;
+    }
+    
+    .form-row {
+        gap: 15px;
+    }
+    
+    .form-group {
+        padding: 12px;
+    }
+    
+    /* Materiais em coluna única */
+    .material-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .submit-btn {
+        padding: 12px;
+        font-size: 1em;
+    }
+    
+    .descricao-popup {
+        max-width: 220px;
+        font-size: 0.8em;
+    }
+}
+
+/* ============================================ */
+/* ESTILOS DA PÁGINA DE LOGIN                   */
+/* ============================================ */
+
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+}
+
+.login-box {
+    background: white;
+    padding: 50px 40px;
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    width: 420px;
+    max-width: 100%;
+    position: relative;
+}
+
+.logo-container {
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    background: white;
+    border-radius: 50%;
+    padding: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo {
+    width: 55px;
+    height: 55px;
+    object-fit: contain;
+}
+
+.login-box h2 {
+    text-align: center;
+    color: #2D3748;
+    margin-bottom: 35px;
+    margin-top: 10px;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.login-box .input-group {
+    margin-bottom: 22px;
+}
+
+.login-box label {
+    display: block;
+    margin-bottom: 8px;
+    color: #4A5568;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.login-box input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #E2E8F0;
+    border-radius: 8px;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    outline: none;
+    background-color: #F8FAFC;
+}
+
+.login-box input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background-color: #FFFFFF;
+}
+
+.login-box .btn-login {
+    width: 100%;
+    padding: 14px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+    letter-spacing: 1px;
+}
+
+.login-box .btn-login:hover {
+    background: #5a67d8;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+}
+
+.login-box .btn-login:active {
+    transform: translateY(0);
+}
+
+.login-box .mensagem-erro {
+    color: #FC8181;
+    font-size: 14px;
+    margin-bottom: 15px;
+    text-align: center;
+    min-height: 24px;
+    font-weight: 500;
+}
+
+.login-box .mensagem-sucesso {
+    color: #48BB78;
+    font-size: 14px;
+    margin-bottom: 15px;
+    text-align: center;
+    min-height: 24px;
+    font-weight: 500;
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #E2E8F0;
+    color: #A0AEC0;
+    font-size: 13px;
+}
+
+/* Responsivo para login */
+@media (max-width: 480px) {
+    .login-box {
+        padding: 35px 25px;
+    }
+    
+    .logo-container {
+        top: -25px;
+        right: -25px;
+        width: 65px;
+        height: 65px;
+        padding: 10px;
+    }
+    
+    .logo {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .login-box h2 {
+        font-size: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .login-box input {
+        padding: 12px 14px;
+        font-size: 14px;
+    }
+}
+
+/* ============================================
+   BOTÃO VOLTAR HOME
+   ============================================ */
+
+.btn-voltar-home {
+    background: #4299E1;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-voltar-home:hover {
+    background: #3182CE;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+}
+
+.btn-voltar-home:active {
+    transform: translateY(0);
+}
+
+/* Versão pequena */
+.btn-voltar-home.small {
+    padding: 6px 15px;
+    font-size: 12px;
+}
+
+/* Versão outline */
+.btn-voltar-home.outline {
+    background: transparent;
+    color: #4299E1;
+    border: 2px solid #4299E1;
+}
+
+.btn-voltar-home.outline:hover {
+    background: #4299E1;
+    color: white;
+}
+
+/* ============================================ */
+/* NOVOS ESTILOS PARA CONCRETOS, TRAVAS E SELECTS */
+/* ============================================ */
+
+/* Estilos para concretos */
 .concreto-entradas-container {
     margin-top: 15px;
     padding: 15px;
@@ -826,7 +1278,6 @@ body {
     cursor: pointer;
     font-size: 12px;
     transition: all 0.3s ease;
-    font-weight: 500;
 }
 
 .btn-add-concreto-entrada:hover {
@@ -840,11 +1291,6 @@ body {
     border-radius: 6px;
     margin-bottom: 8px;
     border: 1px solid #e2e8f0;
-    transition: border-color 0.3s ease;
-}
-
-.concreto-entrada-item:hover {
-    border-color: #bee3f8;
 }
 
 .concreto-entrada-fields {
@@ -862,8 +1308,6 @@ body {
 .concreto-entrada-fields .material-field label {
     font-size: 12px;
     margin-bottom: 3px;
-    display: block;
-    color: #4a5568;
 }
 
 .concreto-entrada-valor-field,
@@ -875,41 +1319,20 @@ body {
     display: none !important;
 }
 
-.concreto-entrada-fields select,
-.concreto-entrada-fields input {
-    width: 100%;
-    padding: 6px 10px;
-    border: 2px solid #e2e8f0;
-    border-radius: 4px;
-    font-size: 13px;
-    transition: border-color 0.3s ease;
-}
-
-.concreto-entrada-fields select:focus,
-.concreto-entrada-fields input:focus {
-    outline: none;
-    border-color: #4299e1;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
-}
-
 .btn-remover-entrada {
     background: #fc8181;
     color: white;
     border: none;
-    padding: 6px 12px;
+    padding: 5px 10px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 12px;
     transition: all 0.3s ease;
     margin-bottom: 4px;
-    height: 38px;
-    display: flex;
-    align-items: center;
 }
 
 .btn-remover-entrada:hover {
     background: #e53e3e;
-    transform: scale(1.05);
 }
 
 .concreto-total {
@@ -919,18 +1342,86 @@ body {
     font-weight: 600;
     color: #2d3748;
     text-align: right;
-    font-size: 15px;
 }
 
-.concreto-total span {
-    color: #2b6cb0;
-    font-size: 16px;
+.diferenca-erro {
+    background: #fed7d7 !important;
+    color: #c53030 !important;
+    border-color: #fc8181 !important;
 }
 
-/* ============================================ */
-/* MENSAGEM                                     */
-/* ============================================ */
+.diferenca-ok {
+    background: #c6f6d5 !important;
+    color: #276749 !important;
+    border-color: #48bb78 !important;
+}
 
+/* Estilos para selects em bobinas/trafos */
+.input-extra select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+.input-extra select:focus {
+    outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.input-extra select option {
+    padding: 5px;
+}
+
+/* Estilos para inputs bloqueados (locked) */
+.input-locked {
+    background-color: #edf2f7 !important;
+    color: #4a5568 !important;
+    cursor: not-allowed !important;
+    opacity: 0.8;
+    border-style: dashed !important;
+    border-color: #cbd5e0 !important;
+}
+
+.input-locked:focus {
+    outline: none !important;
+    border-color: #cbd5e0 !important;
+    box-shadow: none !important;
+}
+
+.input-locked select {
+    background-color: #edf2f7 !important;
+    cursor: not-allowed !important;
+    opacity: 0.8;
+}
+
+.input-locked option {
+    background-color: #edf2f7;
+}
+
+/* Estilo para material bloqueado */
+.material-item.material-bloqueado {
+    background-color: #f8fafc;
+    border-color: #cbd5e0;
+}
+
+.material-bloqueado .material-number {
+    color: #4a5568;
+}
+
+/* Estilo para material com erro */
+.material-item.material-erro {
+    border-color: #FC8181 !important;
+    border-width: 2px !important;
+    border-style: solid !important;
+}
+
+/* Mensagem */
 .mensagem {
     display: none;
     padding: 15px;
@@ -960,170 +1451,46 @@ body {
     border: 1px solid #63B3ED;
 }
 
-/* ============================================ */
-/* BOTÃO VOLTAR HOME                            */
-/* ============================================ */
+/* Sub-grid para extras (tombamento, cor, oleo) */
+.material-row-extras {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
 
-.btn-voltar-home {
-    background: #4299E1;
-    color: white;
-    border: none;
-    padding: 10px 25px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
+/* Grid para QTD e Últ. Cont. */
+.material-row-qtd {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* Inputs extras */
+.input-extra {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
     font-size: 14px;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+    transition: border-color 0.3s ease;
 }
 
-.btn-voltar-home:hover {
-    background: #3182CE;
-    transform: translateY(-2px);
+.input-extra:focus {
+    outline: none;
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
 
-/* ============================================ */
-/* RESPONSIVIDADE                               */
-/* ============================================ */
-
-@media (max-width: 768px) {
-    .form-row {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-    
-    .header-container {
-        gap: 15px;
-        margin-bottom: 30px;
-    }
-    
-    .logo-empresa {
-        height: 45px;
-    }
-    
-    .title {
-        font-size: 2em;
-    }
-    
-    .form-card {
-        padding: 25px;
-    }
-    
-    .material-row {
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-    }
-    
-    .material-row-extras {
-        grid-template-columns: 1fr 1fr;
-    }
-    
-    .material-row-qtd {
-        grid-template-columns: 1fr 1fr;
-    }
-    
-    .tabs-nav {
-        gap: 2px;
-    }
-    
-    .tab-btn {
-        padding: 10px 14px;
-        font-size: 0.85em;
-    }
-    
-    .btn-add-material {
-        width: 100%;
-    }
-    
-    .descricao-popup {
-        max-width: 250px;
-        font-size: 0.85em;
-        padding: 10px 14px;
-    }
-    
-    .concreto-entrada-fields {
-        flex-direction: column;
-    }
-    
-    .concreto-entrada-fields .material-field {
-        min-width: 100%;
-    }
-    
-    .trafo-header-actions {
-        flex-wrap: wrap;
-    }
-    
-    .checkbox-baixa-label {
-        font-size: 12px;
-        padding: 3px 8px;
-    }
+/* Botão submit desabilitado */
+.submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
 }
 
-@media (max-width: 480px) {
-    .header-container {
-        gap: 10px;
-        margin-bottom: 20px;
-    }
-    
-    .logo-empresa {
-        height: 35px;
-        width: 35px;
-    }
-    
-    .title {
-        font-size: 1.3em;
-    }
-    
-    .form-card {
-        padding: 15px;
-    }
-    
-    .form-group {
-        padding: 12px;
-    }
-    
-    .data-field {
-        padding: 12px;
-    }
-    
-    .material-row {
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-    
-    .material-row-extras {
-        grid-template-columns: 1fr;
-    }
-    
-    .material-row-qtd {
-        grid-template-columns: 1fr;
-    }
-    
-    .material-item {
-        padding: 15px;
-    }
-    
-    .submit-btn {
-        padding: 12px;
-        font-size: 1em;
-    }
-    
-    .descricao-popup {
-        max-width: 220px;
-        font-size: 0.8em;
-    }
-    
-    .material-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-    
-    .concreto-entradas-header {
-        flex-direction: column;
-        gap: 8px;
-        align-items: stretch;
-    }
+.submit-btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
 }
