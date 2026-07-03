@@ -1494,3 +1494,82 @@ body {
     transform: none;
     box-shadow: none;
 }
+
+/* ============================================ */
+/* CORREÇÕES PARA O LAYOUT DOS CONCRETOS        */
+/* ============================================ */
+
+/* Garantir que os campos de concreto tenham a mesma largura */
+.material-item.concreto-item .material-row {
+    grid-template-columns: 1fr 2fr 0.8fr 1fr 1fr;
+}
+
+/* Ajuste para o campo QTD nos concretos */
+.concreto-item .input-qtd {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 0.95em;
+    transition: all 0.3s ease;
+    outline: none;
+    background-color: #FFFFFF;
+}
+
+.concreto-item .input-qtd:focus {
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+/* Estilo para o select de tipo dentro dos concretos */
+.concreto-entrada-item .concreto-entrada-tipo {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 13px;
+    background-color: white;
+    cursor: pointer;
+    height: 38px;
+    appearance: auto;
+}
+
+.concreto-entrada-item .concreto-entrada-tipo:focus {
+    outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+/* Estilo para os inputs de valor dos concretos */
+.concreto-entrada-item .concreto-entrada-valor {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 13px;
+    background-color: white;
+    height: 38px;
+}
+
+.concreto-entrada-item .concreto-entrada-valor:focus {
+    outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+/* Estilo para os inputs de quantidade dos concretos */
+.concreto-entrada-item .concreto-entrada-qtd {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 13px;
+    background-color: white;
+    height: 38px;
+}
+
+.concreto-entrada-item .concreto-entrada-qtd:focus {
+    outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
