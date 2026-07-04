@@ -815,6 +815,19 @@ if (document.getElementById('contagemForm')) {
         
         const diferencaDiv = document.getElementById(`diferenca-${idUnico}`);
         if (diferencaDiv) {
+            // Verificar se tem contagem anterior
+            const materialItem = document.querySelector(`.concreto-item[data-index="${idUnico.split('-')[1]}"]`);
+            const temContagemAnterior = materialItem?.dataset?.temContagemAnterior === 'true';
+            
+            // Se não tem contagem anterior, não validar a diferença
+            if (!temContagemAnterior && qtdAnterior === 0) {
+                diferencaDiv.style.display = 'flex';
+                diferencaDiv.className = 'diferenca-indicador diferenca-ok';
+                diferencaDiv.innerHTML = `✅ Primeira contagem - Total das entradas: ${total.toFixed(2)}`;
+                return;
+            }
+            
+            // Só validar se tiver contagem anterior
             if (Math.abs(total - diferenca) > 0.001) {
                 diferencaDiv.style.display = 'flex';
                 diferencaDiv.className = 'diferenca-indicador diferenca-erro';
@@ -829,7 +842,9 @@ if (document.getElementById('contagemForm')) {
     
     function calcularDiferencaConcreto(idUnico, codigo) {
         calcularDiferenca(idUnico, codigo);
-        atualizarTotalConcreto(idUnico);
+        setTimeout(() => {
+            atualizarTotalConcreto(idUnico);
+        }, 100);
     }
     
     // ============================================
@@ -2038,9 +2053,9 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CALCULAR DIFERENÇA
+    // CALCULAR DIFERENÇA - CORRIGIDA
     // ============================================
-    
+
     function calcularDiferenca(idUnico, codigo) {
         const inputQtd = document.getElementById(`qtd-${idUnico}`);
         const inputAnterior = document.getElementById(`qtd-anterior-${idUnico}`);
@@ -2061,6 +2076,14 @@ if (document.getElementById('contagemForm')) {
         const materialItem = inputQtd.closest('.material-item');
         if (materialItem) {
             materialItem.dataset.temContagemAnterior = qtdAnterior > 0 ? 'true' : 'false';
+        }
+        
+        // Se não tem contagem anterior, mostrar mensagem informativa
+        if (qtdAnterior === 0) {
+            diferencaDiv.style.display = 'flex';
+            diferencaDiv.className = 'diferenca-indicador diferenca-ok';
+            diferencaDiv.innerHTML = `📝 Primeira contagem - QTD: ${qtdAtual.toFixed(2)}`;
+            return;
         }
         
         if (diferenca === 0) {
