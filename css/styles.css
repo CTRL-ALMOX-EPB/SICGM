@@ -2151,3 +2151,131 @@ body {
         min-height: 32px;
     }
 }
+/* ============================================ */
+/* BOTÕES DE NAVEGAÇÃO - TOPO E FIM            */
+/* ============================================ */
+
+.btn-navegacao {
+    position: fixed;
+    right: 20px;
+    z-index: 9998;
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+}
+
+.btn-navegacao.visivel {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.btn-navegacao:hover {
+    transform: scale(1.1) translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.btn-navegacao:active {
+    transform: scale(0.95);
+}
+
+.btn-navegacao-icone {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.btn-navegacao-texto {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Botão Topo */
+.btn-topo {
+    bottom: 80px;
+    background: linear-gradient(135deg, #4299E1, #3182CE);
+    color: white;
+}
+
+.btn-topo:hover {
+    background: linear-gradient(135deg, #3182CE, #2B6CB0);
+}
+
+/* Botão Fim */
+.btn-fim {
+    bottom: 20px;
+    background: linear-gradient(135deg, #48BB78, #38A169);
+    color: white;
+}
+
+.btn-fim:hover {
+    background: linear-gradient(135deg, #38A169, #2F855A);
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE - BOTÕES DE NAVEGAÇÃO         */
+/* ============================================ */
+
+@media (max-width: 768px) {
+    .btn-navegacao {
+        width: 42px;
+        height: 42px;
+        right: 15px;
+        font-size: 12px;
+    }
+    
+    .btn-navegacao-icone {
+        font-size: 15px;
+    }
+    
+    .btn-navegacao-texto {
+        font-size: 7px;
+    }
+    
+    .btn-topo {
+        bottom: 70px;
+    }
+    
+    .btn-fim {
+        bottom: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-navegacao {
+        width: 36px;
+        height: 36px;
+        right: 10px;
+        font-size: 10px;
+    }
+    
+    .btn-navegacao-icone {
+        font-size: 12px;
+    }
+    
+    .btn-navegacao-texto {
+        font-size: 6px;
+    }
+    
+    .btn-topo {
+        bottom: 60px;
+    }
+    
+    .btn-fim {
+        bottom: 10px;
+    }
+}
