@@ -2880,7 +2880,7 @@ if (document.getElementById('contagemForm')) {
             });
         });
         
-        // CONCRETOS - CORRIGIDO FINAL (permitir múltiplas contagens)
+        // CONCRETOS - CORRIGIDO FINAL (justificativa via entradas de concreto)
         concretoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
@@ -2906,27 +2906,63 @@ if (document.getElementById('contagemForm')) {
             }
             
             // ✅ CONCRETOS: NÃO VERIFICA DUPLICATA (permite múltiplas contagens)
-            // Apenas log para debug
             console.log(`✅ Concreto ${codigo} - novo registro permitido (contagem múltipla)`);
             
-            const temContagemAnterior = item.dataset.temContagemAnterior === 'true';
-            const justificativa = document.getElementById(`justificativa-${idUnico}`)?.value || '';
+            // ✅ CORREÇÃO: Verificar se há entradas de concreto preenchidas
+            const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
+            let temEntradaValida = false;
+            let justificativaCompleta = '';
             
-            if (temContagemAnterior && !justificativa.trim()) {
-                const descricaoMaterial = item.querySelector('.input-descricao')?.value || codigo;
-                mostrarToast(`❌ Justificativa é obrigatória para ${descricaoMaterial} pois tem contagem anterior!`, 'erro');
-                const justificativaInput = document.getElementById(`justificativa-${idUnico}`);
-                if (justificativaInput) {
-                    justificativaInput.classList.add('input-error');
-                    justificativaInput.focus();
-                    setTimeout(() => justificativaInput.classList.remove('input-error'), 3000);
+            entradaItems.forEach(entradaItem => {
+                const tipo = entradaItem.querySelector('.concreto-entrada-tipo')?.value || '';
+                const valor = entradaItem.querySelector('.concreto-entrada-valor')?.value || '';
+                const qtdEntrada = parseFloat(entradaItem.querySelector('.concreto-entrada-qtd')?.value) || 0;
+                
+                if (valor && qtdEntrada !== 0) {
+                    temEntradaValida = true;
+                    const tipoLabel = tipo === 'n_obra' ? 'Nº Obra' : 'Nº Recebimento';
+                    justificativaCompleta += `${tipoLabel}: ${valor} (${qtdEntrada > 0 ? '+' : ''}${qtdEntrada.toFixed(2)}) `;
                 }
-                temErroValidacao = true;
-                return;
+            });
+            
+            const temContagemAnterior = item.dataset.temContagemAnterior === 'true';
+            const justificativaCampo = document.getElementById(`justificativa-${idUnico}`)?.value || '';
+            
+            // ✅ CORREÇÃO: Se tem contagem anterior, precisa de justificativa (via entradas OU campo)
+            if (temContagemAnterior) {
+                const justificativa = justificativaCampo.trim() || justificativaCompleta.trim();
+                
+                if (!justificativa) {
+                    const descricaoMaterial = item.querySelector('.input-descricao')?.value || codigo;
+                    mostrarToast(`❌ É necessário adicionar entradas (Nº Obra ou Recebimento) ou preencher a justificativa para ${descricaoMaterial}!`, 'erro');
+                    
+                    // Destacar as entradas
+                    const entradasContainer = document.getElementById(`concreto-entradas-${idUnico}`);
+                    if (entradasContainer) {
+                        entradasContainer.style.borderColor = '#FC8181';
+                        entradasContainer.style.borderWidth = '2px';
+                        entradasContainer.style.borderStyle = 'solid';
+                        setTimeout(() => {
+                            entradasContainer.style.borderColor = '#e2e8f0';
+                            entradasContainer.style.borderWidth = '1px';
+                        }, 3000);
+                    }
+                    
+                    // Destacar o campo justificativa também
+                    const justificativaInput = document.getElementById(`justificativa-${idUnico}`);
+                    if (justificativaInput) {
+                        justificativaInput.classList.add('input-error');
+                        justificativaInput.focus();
+                        setTimeout(() => justificativaInput.classList.remove('input-error'), 3000);
+                    }
+                    
+                    temErroValidacao = true;
+                    return;
+                }
             }
             
+            // ✅ Coletar entradas de concreto para enviar
             const entradas = [];
-            const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
             entradaItems.forEach(entradaItem => {
                 const tipo = entradaItem.querySelector('.concreto-entrada-tipo')?.value || '';
                 const valor = entradaItem.querySelector('.concreto-entrada-valor')?.value || '';
@@ -2945,6 +2981,9 @@ if (document.getElementById('contagemForm')) {
             const material = materiaisDaCategoria.find(m => m.codigo === codigo);
             
             if (material) {
+                // ✅ Usar a justificativa das entradas ou o campo
+                const obsFinal = justificativaCompleta.trim() || justificativaCampo.trim() || (temContagemAnterior ? '' : 'Primeira contagem - sem justificativa');
+                
                 materiaisParaEnviar.push({
                     nome, matricula, data,
                     codigo: material.codigo,
@@ -2959,9 +2998,9 @@ if (document.getElementById('contagemForm')) {
                     ativo: 1,
                     tipo_material: 'concreto',
                     entradas_concreto: entradas,
-                    obs: justificativa || (temContagemAnterior ? '' : 'Primeira contagem - sem justificativa')
+                    obs: obsFinal
                 });
-                console.log(`✅ Concreto ${codigo} adicionado para envio. QTD: ${qtdAtual}, Justificativa: ${justificativa || 'Primeira contagem'}`);
+                console.log(`✅ Concreto ${codigo} adicionado para envio. QTD: ${qtdAtual}, Justificativa: ${obsFinal}`);
             }
         });
         
