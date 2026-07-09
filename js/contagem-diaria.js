@@ -662,7 +662,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // VERIFICAR SE ITEM JÁ EXISTE NO BANCO - CORRIGIDO
+    // VERIFICAR SE ITEM JÁ EXISTE NO BANCO
     // ============================================
     
     function itemJaExisteNoBanco(codigo, tombamento, tipoMaterial) {
@@ -2522,21 +2522,23 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // VERIFICAR DUPLICATA - CORRIGIDO
+    // VERIFICAR DUPLICATA - CORRIGIDO FINAL
     // ============================================
     
     function verificarDuplicata(codigo, tombamento, tipoMaterial) {
         if (!codigo) return false;
         
-        if (tipoMaterial === 'concreto' || !tombamento) {
-            const existe = todosRegistrosDB.some(r => 
-                r.codigo === codigo && 
-                r.ativo === 1 &&
-                (!r.tombamento || r.tombamento === '') &&
-                r.tipo_material === tipoMaterial
-            );
-            console.log(`🔍 Verificando duplicata concreto ${codigo}: ${existe ? 'EXISTE' : 'NÃO EXISTE'}`);
-            return existe;
+        // ✅ CONCRETOS: SEMPRE retorna false (nunca bloqueia)
+        // Isso permite múltiplas contagens para o mesmo código em datas diferentes
+        if (tipoMaterial === 'concreto') {
+            console.log(`✅ Concreto ${codigo} - duplicata PERMITIDA (contagens múltiplas)`);
+            return false;
+        }
+        
+        // Para trafos e bobinas, verificar por código + tombamento
+        if (!tombamento) {
+            console.log(`⚠️ ${tipoMaterial} sem tombamento - não verifica duplicata`);
+            return false;
         }
         
         const existe = todosRegistrosDB.some(r => 
@@ -2878,7 +2880,7 @@ if (document.getElementById('contagemForm')) {
             });
         });
         
-        // CONCRETOS - CORRIGIDO
+        // CONCRETOS - CORRIGIDO FINAL (permitir múltiplas contagens)
         concretoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
@@ -2903,15 +2905,9 @@ if (document.getElementById('contagemForm')) {
                 return;
             }
             
-            if (verificarDuplicata(codigo, '', 'concreto')) {
-                temDuplicata = true;
-                console.log(`❌ Concreto ${codigo} já existe no banco!`);
-                mostrarToast(`❌ Concreto ${codigo} já está registrado no banco!`, 'erro');
-                item.style.borderColor = '#FC8181';
-                item.style.borderWidth = '3px';
-                item.style.borderStyle = 'solid';
-                return;
-            }
+            // ✅ CONCRETOS: NÃO VERIFICA DUPLICATA (permite múltiplas contagens)
+            // Apenas log para debug
+            console.log(`✅ Concreto ${codigo} - novo registro permitido (contagem múltipla)`);
             
             const temContagemAnterior = item.dataset.temContagemAnterior === 'true';
             const justificativa = document.getElementById(`justificativa-${idUnico}`)?.value || '';
