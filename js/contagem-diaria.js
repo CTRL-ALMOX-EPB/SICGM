@@ -166,7 +166,6 @@ if (document.getElementById('contagemForm')) {
             select.style.cursor = 'not-allowed';
         });
         
-        // Remover botão de baixa se existir
         const btnBaixa = itemElement.querySelector('.btn-dar-baixa');
         if (btnBaixa) {
             btnBaixa.disabled = true;
@@ -234,7 +233,6 @@ if (document.getElementById('contagemForm')) {
         const descricao = descricaoInput ? descricaoInput.value : '';
         const tombamento = tombamentoInput ? tombamentoInput.value : '';
         
-        // Preencher o modal
         const modal = document.getElementById('modal-baixa');
         const modalIcon = document.getElementById('modal-icon');
         const modalTitle = document.getElementById('modal-title');
@@ -244,7 +242,6 @@ if (document.getElementById('contagemForm')) {
         const modalCancelar = document.getElementById('modal-cancelar');
         const modalError = document.getElementById('modal-error');
         
-        // Definir ícone e título baseado no tipo
         if (tipoMaterial === 'trafo') {
             modalIcon.textContent = '⚡';
             modalTitle.textContent = 'Dar Baixa no Trafo';
@@ -253,21 +250,18 @@ if (document.getElementById('contagemForm')) {
             modalTitle.textContent = 'Dar Baixa na Bobina';
         }
         
-        // Informações do item
         modalInfo.innerHTML = `
             <span><span class="label">Código:</span> <span class="value">${codigo}</span></span>
             <span><span class="label">Descrição:</span> <span class="value">${descricao}</span></span>
             ${tombamento ? `<span><span class="label">Tombamento:</span> <span class="value">${tombamento}</span></span>` : ''}
         `;
         
-        // Limpar campos
         modalInput.value = '';
         modalInput.classList.remove('input-error');
         modalError.style.display = 'none';
         modalConfirmar.disabled = false;
         modalConfirmar.textContent = '✅ Confirmar Baixa';
         
-        // Armazenar dados pendentes
         baixaPendente = {
             tipo: tipo,
             index: index,
@@ -277,11 +271,9 @@ if (document.getElementById('contagemForm')) {
             descricao: descricao
         };
         
-        // Exibir modal
         modal.classList.add('active');
         modalInput.focus();
         
-        // Configurar eventos do modal
         modalConfirmar.onclick = function() {
             confirmarBaixa();
         };
@@ -290,7 +282,6 @@ if (document.getElementById('contagemForm')) {
             fecharModalBaixa();
         };
         
-        // Enter no input confirma
         modalInput.onkeydown = function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -301,7 +292,6 @@ if (document.getElementById('contagemForm')) {
             }
         };
         
-        // Fechar ao clicar fora
         modal.onclick = function(e) {
             if (e.target === modal) {
                 fecharModalBaixa();
@@ -332,7 +322,6 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
-        // Desabilitar botão para evitar duplo clique
         modalConfirmar.disabled = true;
         modalConfirmar.textContent = '⏳ Processando...';
         
@@ -342,7 +331,6 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
-        // Executar a baixa
         executarBaixa(baixaPendente.id, nObra, baixaPendente.tipoMaterial, baixaPendente.tipo, baixaPendente.index);
     }
     
@@ -351,7 +339,6 @@ if (document.getElementById('contagemForm')) {
         modal.classList.remove('active');
         baixaPendente = null;
         
-        // Limpar campos
         const modalInput = document.getElementById('modal-n-obra');
         modalInput.value = '';
         modalInput.classList.remove('input-error');
@@ -380,20 +367,16 @@ if (document.getElementById('contagemForm')) {
             if (response.ok && resultado.success) {
                 mostrarToast(`✅ Baixa realizada com sucesso! Obra: ${nObra}`, 'sucesso');
                 
-                // Atualizar a interface
                 const item = document.querySelector(`.${tipoMaterial}-item[data-index="${index}"]`);
                 if (item) {
-                    // Marcar como baixado
                     item.dataset.jaRegistrado = 'true';
                     item.classList.add('item-registrado', 'item-baixado');
                     item.style.borderColor = '#E53E3E';
                     item.style.borderWidth = '2px';
                     item.style.borderStyle = 'solid';
                     
-                    // Atualizar o cabeçalho
                     const header = item.querySelector('.material-header');
                     if (header) {
-                        // Remover badge existente
                         const oldBadge = header.querySelector('.badge-registrado');
                         if (oldBadge) oldBadge.remove();
                         
@@ -412,7 +395,6 @@ if (document.getElementById('contagemForm')) {
                         header.appendChild(badge);
                     }
                     
-                    // Bloquear inputs
                     const qtdInput = item.querySelector('.input-qtd');
                     if (qtdInput) {
                         qtdInput.value = '0';
@@ -422,7 +404,6 @@ if (document.getElementById('contagemForm')) {
                         qtdInput.style.cursor = 'not-allowed';
                     }
                     
-                    // Desabilitar botão de baixa
                     const btnBaixa = item.querySelector('.btn-dar-baixa');
                     if (btnBaixa) {
                         btnBaixa.disabled = true;
@@ -431,7 +412,6 @@ if (document.getElementById('contagemForm')) {
                         btnBaixa.textContent = '🔴 Baixado';
                     }
                     
-                    // Atualizar campo de obra
                     const justificativaInput = item.querySelector('.input-justificativa');
                     if (justificativaInput) {
                         justificativaInput.value = `Baixa para obra: ${nObra}`;
@@ -440,17 +420,14 @@ if (document.getElementById('contagemForm')) {
                         justificativaInput.style.cursor = 'not-allowed';
                     }
                     
-                    // Remover botão de remover
                     const btnRemover = item.querySelector('.btn-remover-trafo-x');
                     if (btnRemover) {
                         btnRemover.style.display = 'none';
                     }
                 }
                 
-                // Fechar modal
                 fecharModalBaixa();
                 
-                // Atualizar cache
                 cacheQuantidades = {};
                 await carregarTodosRegistros();
                 await carregarItensManuais();
@@ -685,25 +662,31 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // VERIFICAR SE ITEM JÁ EXISTE NO BANCO
+    // VERIFICAR SE ITEM JÁ EXISTE NO BANCO - CORRIGIDO
     // ============================================
     
     function itemJaExisteNoBanco(codigo, tombamento, tipoMaterial) {
         if (!codigo) return false;
         
         if (tipoMaterial === 'concreto' || !tombamento) {
-            return todosRegistrosDB.some(r => 
+            const existe = todosRegistrosDB.some(r => 
                 r.codigo === codigo && 
                 r.ativo === 1 &&
-                (!r.tombamento || r.tombamento === '')
+                (!r.tombamento || r.tombamento === '') &&
+                r.tipo_material === tipoMaterial
             );
+            console.log(`🔍 itemJaExisteNoBanco concreto ${codigo}: ${existe ? 'EXISTE' : 'NÃO EXISTE'}`);
+            return existe;
         }
         
-        return todosRegistrosDB.some(r => 
+        const existe = todosRegistrosDB.some(r => 
             r.codigo === codigo && 
             r.tombamento === tombamento && 
-            r.ativo === 1
+            r.ativo === 1 &&
+            r.tipo_material === tipoMaterial
         );
+        console.log(`🔍 itemJaExisteNoBanco ${tipoMaterial} ${codigo}: ${existe ? 'EXISTE' : 'NÃO EXISTE'}`);
+        return existe;
     }
     
     // ============================================
@@ -1288,7 +1271,6 @@ if (document.getElementById('contagemForm')) {
             const idx = index;
             const jaRegistrado = material._jaRegistrado || false;
             
-            // ✅ CORREÇÃO: Verificar se o item está baixado (ativo === false)
             const estaBaixado = jaRegistrado && material.ativo === false;
             
             const lockedClass = (existeNoBanco || jaRegistrado) ? 'input-locked' : '';
@@ -1296,19 +1278,18 @@ if (document.getElementById('contagemForm')) {
             const readonlyAttr = (existeNoBanco || jaRegistrado) ? 'readonly' : '';
             const disabledAttr = (existeNoBanco || jaRegistrado) ? 'disabled' : '';
             
-            // ✅ CORREÇÃO: Botão só desabilitado se já estiver baixado (estaBaixado)
             const botaoBaixaDesabilitado = estaBaixado;
             
             html += `
                 <div class="material-item bobina-item ${itemBloqueado} ${jaRegistrado ? 'item-registrado' : ''} ${estaBaixado ? 'item-baixado' : ''}" 
-                    data-codigo="${codigoBobina}" 
-                    data-categoria="bobinas" 
-                    data-tipo="bobina" 
-                    data-id="${idRegistro}" 
-                    data-tombamento="${material.tombamento || ''}"
-                    data-index="${idx}"
-                    data-ja-registrado="${jaRegistrado}"
-                    data-ativo="${material.ativo !== false ? '1' : '0'}">
+                     data-codigo="${codigoBobina}" 
+                     data-categoria="bobinas" 
+                     data-tipo="bobina" 
+                     data-id="${idRegistro}" 
+                     data-tombamento="${material.tombamento || ''}"
+                     data-index="${idx}"
+                     data-ja-registrado="${jaRegistrado}"
+                     data-ativo="${material.ativo !== false ? '1' : '0'}">
                     <div class="material-header">
                         <span class="material-number">Bobina #${idx + 1}</span>
                         <div class="trafo-header-actions">
@@ -1426,7 +1407,7 @@ if (document.getElementById('contagemForm')) {
         
         return html;
     }
-
+    
     // ============================================
     // RENDERIZAR TRAFOS - COM BOTÃO DAR BAIXA CORRIGIDO
     // ============================================
@@ -1465,7 +1446,6 @@ if (document.getElementById('contagemForm')) {
             const idx = index;
             const jaRegistrado = material._jaRegistrado || false;
             
-            // ✅ CORREÇÃO: Verificar se o item está baixado (ativo === false)
             const estaBaixado = jaRegistrado && material.ativo === false;
             
             const lockedClass = (existeNoBanco || jaRegistrado) ? 'input-locked' : '';
@@ -1473,19 +1453,18 @@ if (document.getElementById('contagemForm')) {
             const readonlyAttr = (existeNoBanco || jaRegistrado) ? 'readonly' : '';
             const disabledAttr = (existeNoBanco || jaRegistrado) ? 'disabled' : '';
             
-            // ✅ CORREÇÃO: Botão só desabilitado se já estiver baixado (estaBaixado)
             const botaoBaixaDesabilitado = estaBaixado;
             
             html += `
                 <div class="material-item trafo-item ${itemBloqueado} ${jaRegistrado ? 'item-registrado' : ''} ${estaBaixado ? 'item-baixado' : ''}" 
-                    data-codigo="${codigoTrafo}" 
-                    data-categoria="trafos" 
-                    data-tipo="trafo" 
-                    data-id="${idRegistro}" 
-                    data-tombamento="${material.tombamento || ''}"
-                    data-index="${idx}"
-                    data-ja-registrado="${jaRegistrado}"
-                    data-ativo="${material.ativo !== false ? '1' : '0'}">
+                     data-codigo="${codigoTrafo}" 
+                     data-categoria="trafos" 
+                     data-tipo="trafo" 
+                     data-id="${idRegistro}" 
+                     data-tombamento="${material.tombamento || ''}"
+                     data-index="${idx}"
+                     data-ja-registrado="${jaRegistrado}"
+                     data-ativo="${material.ativo !== false ? '1' : '0'}">
                     <div class="material-header">
                         <span class="material-number">Trafo #${idx + 1}</span>
                         <div class="trafo-header-actions">
@@ -2543,27 +2522,31 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // VERIFICAR DUPLICATA
+    // VERIFICAR DUPLICATA - CORRIGIDO
     // ============================================
     
     function verificarDuplicata(codigo, tombamento, tipoMaterial) {
         if (!codigo) return false;
         
         if (tipoMaterial === 'concreto' || !tombamento) {
-            return todosRegistrosDB.some(r => 
+            const existe = todosRegistrosDB.some(r => 
                 r.codigo === codigo && 
                 r.ativo === 1 &&
                 (!r.tombamento || r.tombamento === '') &&
                 r.tipo_material === tipoMaterial
             );
+            console.log(`🔍 Verificando duplicata concreto ${codigo}: ${existe ? 'EXISTE' : 'NÃO EXISTE'}`);
+            return existe;
         }
         
-        return todosRegistrosDB.some(r => 
+        const existe = todosRegistrosDB.some(r => 
             r.codigo === codigo && 
             r.tombamento === tombamento && 
             r.ativo === 1 &&
             r.tipo_material === tipoMaterial
         );
+        console.log(`🔍 Verificando duplicata ${tipoMaterial} ${codigo} (${tombamento}): ${existe ? 'EXISTE' : 'NÃO EXISTE'}`);
+        return existe;
     }
     
     // ============================================
@@ -2895,7 +2878,7 @@ if (document.getElementById('contagemForm')) {
             });
         });
         
-        // CONCRETOS
+        // CONCRETOS - CORRIGIDO
         concretoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
@@ -2904,15 +2887,25 @@ if (document.getElementById('contagemForm')) {
             const qtdInput = document.getElementById(`qtd-${idUnico}`);
             if (!qtdInput) return;
             
-            if (!itemFoiModificado(qtdInput, item)) {
+            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
                 return;
             }
             
             const qtdAtual = parseFloat(qtdInput.value) || 0;
             const codigo = item.dataset.codigo;
             
+            if (!itemFoiModificado(qtdInput, item)) {
+                console.log(`⏭️ Concreto ${codigo} não foi modificado - pulando`);
+                return;
+            }
+            
+            if (qtdAtual === 0) {
+                return;
+            }
+            
             if (verificarDuplicata(codigo, '', 'concreto')) {
                 temDuplicata = true;
+                console.log(`❌ Concreto ${codigo} já existe no banco!`);
                 mostrarToast(`❌ Concreto ${codigo} já está registrado no banco!`, 'erro');
                 item.style.borderColor = '#FC8181';
                 item.style.borderWidth = '3px';
@@ -2921,20 +2914,19 @@ if (document.getElementById('contagemForm')) {
             }
             
             const temContagemAnterior = item.dataset.temContagemAnterior === 'true';
-            if (temContagemAnterior) {
-                const justificativa = document.getElementById(`justificativa-${idUnico}`)?.value || '';
-                if (!justificativa.trim()) {
-                    const descricaoMaterial = item.querySelector('.input-descricao')?.value || codigo;
-                    mostrarToast(`❌ Justificativa é obrigatória para ${descricaoMaterial} pois tem contagem anterior!`, 'erro');
-                    const justificativaInput = document.getElementById(`justificativa-${idUnico}`);
-                    if (justificativaInput) {
-                        justificativaInput.classList.add('input-error');
-                        justificativaInput.focus();
-                        setTimeout(() => justificativaInput.classList.remove('input-error'), 3000);
-                    }
-                    temErroValidacao = true;
-                    return;
+            const justificativa = document.getElementById(`justificativa-${idUnico}`)?.value || '';
+            
+            if (temContagemAnterior && !justificativa.trim()) {
+                const descricaoMaterial = item.querySelector('.input-descricao')?.value || codigo;
+                mostrarToast(`❌ Justificativa é obrigatória para ${descricaoMaterial} pois tem contagem anterior!`, 'erro');
+                const justificativaInput = document.getElementById(`justificativa-${idUnico}`);
+                if (justificativaInput) {
+                    justificativaInput.classList.add('input-error');
+                    justificativaInput.focus();
+                    setTimeout(() => justificativaInput.classList.remove('input-error'), 3000);
                 }
+                temErroValidacao = true;
+                return;
             }
             
             const entradas = [];
@@ -2957,7 +2949,6 @@ if (document.getElementById('contagemForm')) {
             const material = materiaisDaCategoria.find(m => m.codigo === codigo);
             
             if (material) {
-                const justificativa = document.getElementById(`justificativa-${idUnico}`)?.value || '';
                 materiaisParaEnviar.push({
                     nome, matricula, data,
                     codigo: material.codigo,
@@ -2974,6 +2965,7 @@ if (document.getElementById('contagemForm')) {
                     entradas_concreto: entradas,
                     obs: justificativa || (temContagemAnterior ? '' : 'Primeira contagem - sem justificativa')
                 });
+                console.log(`✅ Concreto ${codigo} adicionado para envio. QTD: ${qtdAtual}, Justificativa: ${justificativa || 'Primeira contagem'}`);
             }
         });
         
