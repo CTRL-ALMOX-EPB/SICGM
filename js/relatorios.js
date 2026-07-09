@@ -72,6 +72,15 @@ function formatarDataHora(dataString) {
     }
 }
 
+function formatarMoeda(valor) {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(valor);
+}
+
 // ============================================
 // TOAST DE NOTIFICAÇÃO
 // ============================================
@@ -166,36 +175,94 @@ let posicaoEstoque = {};
 
 async function carregarPosicaoEstoque() {
     try {
+        console.log('🔄 Carregando posição de estoque...');
+        
+        // Caminho relativo para o arquivo na pasta data
         const response = await fetch('../data/posicao-de-estoque.txt');
+        
         if (!response.ok) {
             console.warn('⚠️ Arquivo posicao-de-estoque.txt não encontrado');
+            mostrarToast('⚠️ Arquivo de posição de estoque não encontrado', 'aviso');
             return;
         }
         
         const texto = await response.text();
         const linhas = texto.trim().split('\n');
         
-        // Pular cabeçalho
+        if (linhas.length === 0) {
+            console.warn('⚠️ Arquivo posicao-de-estoque.txt vazio');
+            return;
+        }
+        
+        console.log(`📄 Arquivo carregado: ${linhas.length} linhas`);
+        
+        // O cabeçalho é: "codmat	dscmat	codund_mda_mat	vlrult_cot	saldo_oper"
+        // Pular a primeira linha (cabeçalho)
+        let linhasProcessadas = 0;
+        
         for (let i = 1; i < linhas.length; i++) {
             const linha = linhas[i].trim();
             if (!linha) continue;
             
             // Separar por tabulação
             const partes = linha.split('\t');
-            if (partes.length >= 7) {
-                const codmat = partes[1].trim(); // coluna 2 (índice 1)
-                const saldoOper = parseFloat(partes[6].trim()) || 0; // coluna 7 (índice 6)
+            
+            // Verificar se tem pelo menos 7 colunas (como no exemplo)
+            if (partes.length >= 5) {
+                // Mapeamento correto das colunas:
+                // 0: codmat, 1: dscmat, 2: codund_mda_mat, 3: vlrult_cot, 4: saldo_oper
+                const codmat = partes[0].trim();
+                const dscmat = partes[1]?.trim() || '';
+                const codund = partes[2]?.trim() || '';
+                
+                // Converter valor (pode vir com vírgula decimal)
+                let vlrultCot = 0;
+                try {
+                    const valorStr = partes[3]?.trim().replace(',', '.') || '0';
+                    vlrultCot = parseFloat(valorStr) || 0;
+                } catch (e) {
+                    vlrultCot = 0;
+                }
+                
+                let saldoOper = 0;
+                try {
+                    const saldoStr = partes[4]?.trim().replace(',', '.') || '0';
+                    saldoOper = parseFloat(saldoStr) || 0;
+                } catch (e) {
+                    saldoOper = 0;
+                }
                 
                 if (codmat) {
-                    posicaoEstoque[codmat] = saldoOper;
+                    posicaoEstoque[codmat] = {
+                        codmat: codmat,
+                        descricao: dscmat,
+                        und: codund,
+                        valor_unitario: vlrultCot,
+                        saldo_sistemico: saldoOper
+                    };
+                    linhasProcessadas++;
                 }
             }
         }
         
-        console.log('📦 Posição de estoque carregada:', Object.keys(posicaoEstoque).length, 'códigos');
+        console.log(`📦 Posição de estoque carregada: ${linhasProcessadas} códigos`);
+        console.log(`📊 Exemplo dos primeiros 3 itens:`, Object.values(posicaoEstoque).slice(0, 3));
+        
+        if (linhasProcessadas === 0) {
+            mostrarToast('⚠️ Nenhum dado válido encontrado no arquivo de estoque', 'aviso');
+        } else {
+            mostrarToast(`✅ ${linhasProcessadas} itens carregados da posição de estoque`, 'sucesso');
+        }
+        
     } catch (error) {
         console.error('❌ Erro ao carregar posição de estoque:', error);
+        mostrarToast('❌ Erro ao carregar posição de estoque', 'erro');
     }
+}
+
+function getPosicaoEstoque(codigo) {
+    if (!codigo) return null;
+    return posicaoEstoque[codigo] || null;
 }
 
 // ============================================
@@ -204,7 +271,7 @@ async function carregarPosicaoEstoque() {
 
 async function carregarDados() {
     try {
-        mostrarToast('⏳ Carregando dados...', 'info');
+        mostrarToast('⏳ Carregando dados do banco...', 'info');
         
         const response = await fetch(`${API_URL}/api/dados`);
         if (!response.ok) {
@@ -212,6 +279,7 @@ async function carregarDados() {
         }
         
         const dados = await response.json();
+        console.log(`📊 Dados carregados: ${dados.length} registros`);
         return dados;
         
     } catch (error) {
@@ -266,7 +334,6 @@ function processarDados(dados, filtros) {
     
     // Agrupar por código
     const grupos = {};
-    const bobinasUnicas = new Set();
     
     dadosFiltrados.forEach(item => {
         const codigo = item.codigo;
@@ -281,7 +348,6 @@ function processarDados(dados, filtros) {
                 ultimo_usuario: null,
                 ultima_data: null,
                 registros: [],
-                // Para bobinas, contar itens únicos por tombamento
                 bobinas_unicas: new Set()
             };
         }
@@ -292,7 +358,6 @@ function processarDados(dados, filtros) {
         // Para bobinas, adicionar tombamento ao set de únicos
         if (item.tipo_material === 'bobina' && item.tombamento) {
             grupos[codigo].bobinas_unicas.add(item.tombamento);
-            bobinasUnicas.add(item.tombamento);
         }
         
         // Atualizar última contagem
@@ -318,28 +383,59 @@ function processarDados(dados, filtros) {
 function renderizarRelatorio(dados) {
     const tbody = document.getElementById('relatorio-body');
     const loading = document.getElementById('loading-relatorio');
+    const resumoDiv = document.getElementById('divergencia-resumo');
     
     if (loading) loading.style.display = 'none';
     
     if (!dados || dados.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="text-center">📭 Nenhum dado encontrado para os filtros selecionados</td>
+                <td colspan="13" class="text-center">📭 Nenhum dado encontrado para os filtros selecionados</td>
             </tr>
         `;
+        if (resumoDiv) resumoDiv.style.display = 'none';
         return;
     }
     
     let html = '';
-    let totalBobinasUnicas = 0;
+    let totalDivergenciaQtd = 0;
+    let totalDivergenciaValor = 0;
+    let totalItensDivergentes = 0;
+    let itensComDivergencia = [];
     
     dados.forEach(item => {
         const badgeClass = `badge-${item.tipo_material}`;
         const tipoLabel = item.tipo_material.charAt(0).toUpperCase() + item.tipo_material.slice(1);
         
-        // Buscar saldo sistemico
-        const saldoSistemico = posicaoEstoque[item.codigo] || 0;
+        // Buscar dados da posição de estoque
+        const estoque = getPosicaoEstoque(item.codigo);
+        const saldoSistemico = estoque ? estoque.saldo_sistemico : 0;
+        const valorUnitario = estoque ? estoque.valor_unitario : 0;
+        const descricaoEstoque = estoque ? estoque.descricao : '';
+        const undEstoque = estoque ? estoque.und : '';
+        
+        // Usar descrição do estoque se disponível, senão a do banco
+        const descricaoFinal = descricaoEstoque || item.descricao || item.codigo;
+        const undFinal = undEstoque || item.und || '-';
+        
         const saldoFisico = item.quantidade_total;
+        
+        // Calcular divergência
+        const divergenciaQtd = saldoFisico - saldoSistemico;
+        const divergenciaValor = divergenciaQtd * valorUnitario;
+        
+        // Acumular totais
+        if (divergenciaQtd !== 0) {
+            totalDivergenciaQtd += divergenciaQtd;
+            totalDivergenciaValor += divergenciaValor;
+            totalItensDivergentes++;
+            itensComDivergencia.push({
+                codigo: item.codigo,
+                descricao: descricaoFinal,
+                divergenciaQtd: divergenciaQtd,
+                divergenciaValor: divergenciaValor
+            });
+        }
         
         // Calcular acuracidade
         let acuracidade = '-';
@@ -348,7 +444,6 @@ function renderizarRelatorio(dados) {
             const percentual = ((1 - (diferenca / saldoSistemico)) * 100);
             acuracidade = percentual.toFixed(1) + '%';
             
-            // Colorir baseado no percentual
             if (percentual >= 95) {
                 acuracidade = `<span style="color: #48BB78; font-weight: 600;">✅ ${acuracidade}</span>`;
             } else if (percentual >= 80) {
@@ -362,17 +457,34 @@ function renderizarRelatorio(dados) {
         let bobinasUnicasCount = '-';
         if (item.tipo_material === 'bobina' && item.bobinas_unicas) {
             bobinasUnicasCount = item.bobinas_unicas.size;
-            totalBobinasUnicas += item.bobinas_unicas.size;
         }
+        
+        // Cor da divergência
+        let divergenciaQtdDisplay = divergenciaQtd.toFixed(2);
+        let divergenciaValorDisplay = formatarMoeda(divergenciaValor);
+        
+        if (divergenciaQtd > 0) {
+            divergenciaQtdDisplay = `<span style="color: #48BB78; font-weight: 600;">▲ +${divergenciaQtd.toFixed(2)}</span>`;
+            divergenciaValorDisplay = `<span style="color: #48BB78; font-weight: 600;">${formatarMoeda(divergenciaValor)}</span>`;
+        } else if (divergenciaQtd < 0) {
+            divergenciaQtdDisplay = `<span style="color: #FC8181; font-weight: 600;">▼ ${divergenciaQtd.toFixed(2)}</span>`;
+            divergenciaValorDisplay = `<span style="color: #FC8181; font-weight: 600;">${formatarMoeda(divergenciaValor)}</span>`;
+        }
+        
+        // Valor unitário
+        const valorUnitarioDisplay = valorUnitario > 0 ? formatarMoeda(valorUnitario) : '-';
         
         html += `
             <tr>
                 <td><strong>${item.codigo}</strong></td>
-                <td>${item.descricao}</td>
-                <td>${item.und}</td>
+                <td>${descricaoFinal}</td>
+                <td>${undFinal}</td>
                 <td><span class="badge-tipo ${badgeClass}">${tipoLabel}</span></td>
-                <td><strong>${item.quantidade_total.toFixed(2)}</strong></td>
+                <td><strong>${saldoFisico.toFixed(2)}</strong></td>
                 <td>${saldoSistemico.toFixed(2)}</td>
+                <td>${divergenciaQtdDisplay}</td>
+                <td>${valorUnitarioDisplay}</td>
+                <td>${divergenciaValorDisplay}</td>
                 <td>${acuracidade}</td>
                 <td>${bobinasUnicasCount}</td>
                 <td>${item.ultimo_usuario || '-'}</td>
@@ -383,8 +495,20 @@ function renderizarRelatorio(dados) {
     
     tbody.innerHTML = html;
     
-    // Atualizar contador de bobinas únicas no total
-    document.getElementById('total-bobinas-unicas').textContent = totalBobinasUnicas;
+    // Atualizar resumo de divergências
+    if (resumoDiv) {
+        if (totalItensDivergentes > 0) {
+            resumoDiv.style.display = 'block';
+            document.getElementById('total-divergencia-valor').textContent = formatarMoeda(totalDivergenciaValor);
+            document.getElementById('total-divergencia-qtd').textContent = totalDivergenciaQtd.toFixed(2);
+            document.getElementById('total-itens-divergentes').textContent = totalItensDivergentes;
+            
+            // Log dos itens divergentes para debug
+            console.log('📊 Itens com divergência:', itensComDivergencia);
+        } else {
+            resumoDiv.style.display = 'none';
+        }
+    }
 }
 
 // ============================================
@@ -442,7 +566,7 @@ async function carregarRelatorios() {
     if (loading) loading.style.display = 'block';
     
     try {
-        // Buscar dados
+        // Buscar dados do banco
         const dadosBrutos = await carregarDados();
         
         if (!dadosBrutos || dadosBrutos.length === 0) {
@@ -505,7 +629,6 @@ function exportarExcel() {
     mostrarToast('🔄 Gerando arquivo Excel...', 'info');
     
     try {
-        // Cabeçalho
         let htmlContent = `
             <html xmlns:o="urn:schemas-microsoft-com:office:office" 
                   xmlns:x="urn:schemas-microsoft-com:office:excel" 
@@ -527,13 +650,11 @@ function exportarExcel() {
                 </xml>
                 <![endif]-->
                 <style>
-                    table { border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11px; }
-                    th { background-color: #4299E1; color: white; font-weight: bold; padding: 8px 12px; border: 1px solid #2B6CB0; }
-                    td { padding: 6px 12px; border: 1px solid #CBD5E0; }
+                    table { border-collapse: collapse; font-family: Arial, sans-serif; font-size: 10px; }
+                    th { background-color: #4299E1; color: white; font-weight: bold; padding: 6px 10px; border: 1px solid #2B6CB0; }
+                    td { padding: 5px 10px; border: 1px solid #CBD5E0; }
                     .text-center { text-align: center; }
-                    .badge-trafo { background: #EBF8FF; }
-                    .badge-bobina { background: #FAF5FF; }
-                    .badge-concreto { background: #F0FFF4; }
+                    .total-row { background-color: #EDF2F7; font-weight: 700; }
                 </style>
             </head>
             <body>
@@ -548,6 +669,9 @@ function exportarExcel() {
                             <th>Tipo</th>
                             <th>QTD Física</th>
                             <th>Saldo Sistêmico</th>
+                            <th>Divergência QTD</th>
+                            <th>Valor Unitário</th>
+                            <th>Valor Divergência</th>
                             <th>Acuracidade</th>
                             <th>Bobinas Únicas</th>
                             <th>Último Usuário</th>
@@ -557,23 +681,47 @@ function exportarExcel() {
                     <tbody>
         `;
         
-        // Dados
+        let totalDivergenciaQtd = 0;
+        let totalDivergenciaValor = 0;
+        
         linhas.forEach(linha => {
             const colunas = linha.querySelectorAll('td');
             if (colunas.length > 0 && !linha.textContent.includes('Nenhum dado')) {
-                htmlContent += `<tr>`;
+                let valores = [];
                 colunas.forEach(col => {
                     let texto = col.textContent.trim();
-                    // Remover tags HTML (cores, etc)
                     texto = texto.replace(/<[^>]*>/g, '').trim();
-                    htmlContent += `<td>${texto}</td>`;
+                    texto = texto.replace(/[▲▼+]/g, '').trim();
+                    valores.push(texto);
                 });
-                htmlContent += `</tr>`;
+                
+                // Tentar extrair divergência para total
+                if (valores.length >= 9) {
+                    const divText = valores[6].trim().replace(/[^0-9,.-]/g, '');
+                    const divValor = parseFloat(divText.replace(',', '.')) || 0;
+                    totalDivergenciaQtd += divValor;
+                    
+                    const valText = valores[8].trim().replace(/[^0-9,.-]/g, '');
+                    const valValor = parseFloat(valText.replace(',', '.')) || 0;
+                    totalDivergenciaValor += valValor;
+                }
+                
+                htmlContent += `<tr><td>${valores.join('</td><td>')}</td></tr>`;
             }
         });
         
+        // Linha de total
         htmlContent += `
                     </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="6" style="text-align: right; font-weight: 700;">TOTAL DIVERGÊNCIA</td>
+                            <td style="font-weight: 700;">${totalDivergenciaQtd.toFixed(2)}</td>
+                            <td></td>
+                            <td style="font-weight: 700;">${formatarMoeda(totalDivergenciaValor)}</td>
+                            <td colspan="4"></td>
+                        </tr>
+                    </tfoot>
                 </table>
                 <br>
                 <p style="font-size: 10px; color: #718096;">
@@ -583,7 +731,6 @@ function exportarExcel() {
             </html>
         `;
         
-        // Criar blob com o conteúdo HTML
         const blob = new Blob([htmlContent], { 
             type: 'application/vnd.ms-excel;charset=utf-8' 
         });
@@ -607,7 +754,6 @@ function exportarExcel() {
 // ============================================
 
 function exportarPDF() {
-    // Verificar se há dados
     const tbody = document.getElementById('relatorio-body');
     const linhas = tbody.querySelectorAll('tr');
     
@@ -619,10 +765,6 @@ function exportarPDF() {
     mostrarToast('🔄 Preparando PDF...', 'info');
     
     setTimeout(() => {
-        // Salvar título original
-        const tituloOriginal = document.querySelector('.tabela-header h2')?.textContent || '';
-        
-        // Criar título para impressão
         const tituloImpressao = document.createElement('div');
         tituloImpressao.id = 'titulo-impressao';
         tituloImpressao.style.cssText = `
@@ -643,21 +785,20 @@ function exportarPDF() {
             </span>
         `;
         
-        // Adicionar título para impressão
         const tabelaContainer = document.querySelector('.tabela-container');
         if (tabelaContainer) {
             tabelaContainer.prepend(tituloImpressao);
             tituloImpressao.style.display = 'block';
         }
         
-        // Adicionar estilo para impressão
         const styleImpressao = document.createElement('style');
         styleImpressao.id = 'style-impressao';
         styleImpressao.textContent = `
             @media print {
                 .filtros-relatorio, .stats-container, .tabela-actions, 
                 .btn-voltar-home, .header-container .title, 
-                #filtro-resultado, .loading-message, #mensagem {
+                #filtro-resultado, .loading-message, #mensagem,
+                .divergencia-resumo {
                     display: none !important;
                 }
                 #titulo-impressao {
@@ -667,7 +808,7 @@ function exportarPDF() {
                     margin-top: 0 !important;
                 }
                 table {
-                    font-size: 10px !important;
+                    font-size: 9px !important;
                 }
                 thead th {
                     background: #4299E1 !important;
@@ -698,14 +839,17 @@ function exportarPDF() {
                 .btn-navegacao {
                     display: none !important;
                 }
+                .total-row {
+                    background-color: #EDF2F7 !important;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
             }
         `;
         document.head.appendChild(styleImpressao);
         
-        // Imprimir
         window.print();
         
-        // Remover elementos de impressão após a impressão
         setTimeout(() => {
             const titulo = document.getElementById('titulo-impressao');
             if (titulo) titulo.remove();
@@ -728,6 +872,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         window.location.href = '../index.html';
         return;
     }
+    
+    console.log('🚀 Inicializando página de relatórios...');
     
     // Carregar posição de estoque
     await carregarPosicaoEstoque();
