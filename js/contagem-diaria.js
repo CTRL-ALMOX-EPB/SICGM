@@ -24,9 +24,9 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CATEGORIAS DE MATERIAIS
+    // CATEGORIAS DE MATERIAIS - COM MISCELÂNEAS ESPECÍFICAS
     // ============================================
-    
+        
     const CATEGORIAS = {
         'concretos': {
             nome: 'Concretos',
@@ -61,6 +61,22 @@ if (document.getElementById('contagemForm')) {
             tipo_material: 'trafo',
             codigos: [],
             validacao: 'transf'
+        },
+        'miscelaneas': {
+            nome: 'Miscelâneas',
+            icone: '📦',
+            tipo: 'predefinido',
+            tipo_material: 'miscelanea',
+            codigos: [
+                '90395', '90013', '90306', '90307', '90701',
+                '90487', '90551', '90547', '90479', '90480',
+                '90481', '90341', '90342', '90343', '90501',
+                '91119', '690403', '90522', '90423', '90208',
+                '90210', '90497', '90498', '90499', '90500',
+                '90641', '90643', '90645', '90510', '90639',
+                '90640', '90567', '90488', '90414', '90415'
+            ],
+            validacao: null
         }
     };
     
@@ -128,8 +144,8 @@ if (document.getElementById('contagemForm')) {
     function travarItemAposRegistro(itemElement, tipoMaterial) {
         if (!itemElement) return;
         
-        if (tipoMaterial === 'concreto') {
-            console.log('ℹ️ Concretos não são travados após registro');
+        if (tipoMaterial === 'concreto' || tipoMaterial === 'miscelanea') {
+            console.log(`ℹ️ ${tipoMaterial} não são travados após registro`);
             return;
         }
         
@@ -541,10 +557,15 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÃO DE VALIDAÇÃO POR CATEGORIA
+    // FUNÇÃO DE VALIDAÇÃO POR CATEGORIA - COM MISCELÂNEAS
     // ============================================
 
     function validarCodigoPorCategoria(codigo, categoria) {
+        // ✅ MISCELÂNEAS: sempre válido (não precisa de validação específica)
+        if (categoria === 'miscelaneas') {
+            return { valido: true };
+        }
+        
         const dados = buscarDadosCodigo(codigo);
         
         if (!dados) {
@@ -662,23 +683,25 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // VERIFICAR SE ITEM JÁ EXISTE NO BANCO
+    // VERIFICAR SE ITEM JÁ EXISTE NO BANCO - COM MISCELÂNEAS
     // ============================================
-    
+        
     function itemJaExisteNoBanco(codigo, tombamento, tipoMaterial) {
         if (!codigo) return false;
         
-        if (tipoMaterial === 'concreto' || !tombamento) {
+        // ✅ CONCRETOS e MISCELÂNEAS: verificar apenas por código
+        if (tipoMaterial === 'concreto' || tipoMaterial === 'miscelanea' || !tombamento) {
             const existe = todosRegistrosDB.some(r => 
                 r.codigo === codigo && 
                 r.ativo === 1 &&
                 (!r.tombamento || r.tombamento === '') &&
                 r.tipo_material === tipoMaterial
             );
-            console.log(`🔍 itemJaExisteNoBanco concreto ${codigo}: ${existe ? 'EXISTE' : 'NÃO EXISTE'}`);
+            console.log(`🔍 itemJaExisteNoBanco ${tipoMaterial} ${codigo}: ${existe ? 'EXISTE' : 'NÃO EXISTE'}`);
             return existe;
         }
         
+        // Para trafos e bobinas
         const existe = todosRegistrosDB.some(r => 
             r.codigo === codigo && 
             r.tombamento === tombamento && 
@@ -781,25 +804,30 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ORGANIZAR MATERIAIS POR CATEGORIA
+    // ORGANIZAR MATERIAIS POR CATEGORIA - COM MISCELÂNEAS ESPECÍFICAS
     // ============================================
-    
+        
     function organizarPorCategoria() {
+        // Processar todas as categorias predefinidas
         for (const [chave, categoria] of Object.entries(CATEGORIAS)) {
-            if (categoria.tipo === 'predefinido') {
+            if (categoria.tipo === 'predefinido' && categoria.codigos && categoria.codigos.length > 0) {
                 const materiais = materiaisBanco.filter(material => 
                     categoria.codigos.includes(material.codigo)
                 );
                 materiais.sort((a, b) => a.codigo.localeCompare(b.codigo));
                 materiaisPorCategoria[chave] = materiais;
+                console.log(`📦 ${categoria.nome}: ${materiais.length} itens encontrados`);
             }
         }
+        
+        // Para categorias manuais (trafos e bobinas), manter como estão
+        // Elas já são populadas pelo carregarItensManuais()
     }
     
     // ============================================
-    // CRIAR SISTEMA DE ABAS
+    // CRIAR SISTEMA DE ABAS - COM MISCELÂNEAS ESPECÍFICAS
     // ============================================
-    
+        
     function criarAbas() {
         const tabsNav = document.getElementById('tabs-nav');
         const tabsContent = document.getElementById('tabs-content');
@@ -809,18 +837,32 @@ if (document.getElementById('contagemForm')) {
         let htmlContent = '';
         let primeiraCategoria = null;
         
-        for (const [chave, categoria] of Object.entries(CATEGORIAS)) {
+        // Ordem das abas: Concretos, Trafos, Bobinas, Miscelâneas
+        const ordemCategorias = ['concretos', 'trafos', 'bobinas', 'miscelaneas'];
+        
+        for (const chave of ordemCategorias) {
+            const categoria = CATEGORIAS[chave];
+            if (!categoria) continue;
+            
             const materiais = materiaisPorCategoria[chave] || [];
             
             if (!primeiraCategoria) {
                 primeiraCategoria = chave;
             }
             
+            // Contar apenas itens ativos para trafos e bobinas
+            let contador = materiais.length;
+            if (chave === 'trafos') {
+                contador = materiais.filter(t => t.ativo !== false && t.tipo_material === 'trafo').length;
+            } else if (chave === 'bobinas') {
+                contador = materiais.filter(b => b.ativo !== false && b.tipo_material === 'bobina').length;
+            }
+            
             htmlNav += `
                 <button type="button" class="tab-btn" data-categoria="${chave}" onclick="ativarAba('${chave}')">
                     <span class="tab-icone">${categoria.icone}</span>
                     ${categoria.nome}
-                    <span class="tab-contador">${materiais.length}</span>
+                    <span class="tab-contador">${contador}</span>
                 </button>
             `;
             
@@ -828,6 +870,7 @@ if (document.getElementById('contagemForm')) {
                 <div class="tab-content" id="tab-${chave}">
                     ${chave === 'trafos' ? renderizarTrafos(materiais) : 
                       chave === 'bobinas' ? renderizarBobinas(materiais) : 
+                      chave === 'miscelaneas' ? renderizarMiscelaneas(materiais) :
                       renderizarMateriaisCategoria(materiais, chave)}
                 </div>
             `;
@@ -874,12 +917,16 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR MATERIAIS PREDEFINIDOS
+    // RENDERIZAR MATERIAIS PREDEFINIDOS (CONCRETOS E MISCELÂNEAS)
     // ============================================
-    
+        
     function renderizarMateriaisCategoria(materiais, categoria) {
         if (categoria === 'concretos') {
             return renderizarConcretos(materiais, categoria);
+        }
+        
+        if (categoria === 'miscelaneas') {
+            return renderizarMiscelaneas(materiais);
         }
         
         if (materiais.length === 0) {
@@ -1227,6 +1274,140 @@ if (document.getElementById('contagemForm')) {
     }
     
     function calcularDiferencaConcreto(idUnico, codigo) {
+        calcularDiferenca(idUnico, codigo);
+        setTimeout(() => {
+            atualizarTotalConcreto(idUnico);
+        }, 100);
+    }
+    
+    // ============================================
+    // RENDERIZAR MISCELÂNEAS
+    // ============================================
+
+    function renderizarMiscelaneas(materiais) {
+        if (materiais.length === 0) {
+            return `<div style="text-align: center; padding: 30px; color: #A0AEC0;">
+                <p style="font-size: 2em;">📦</p>
+                <p>Nenhum material miscelânea encontrado</p>
+            </div>`;
+        }
+        
+        let html = '';
+        const tipoMaterial = 'miscelanea';
+        
+        materiais.forEach((material, index) => {
+            const idUnico = `miscelaneas-${index}`;
+            
+            html += `
+                <div class="material-item miscelanea-item" 
+                     data-codigo="${material.codigo}" 
+                     data-categoria="miscelaneas" 
+                     data-tipo="${tipoMaterial}" 
+                     data-index="${index}" 
+                     data-tombamento=""
+                     data-ja-registrado="false">
+                    <div class="material-row">
+                        <div class="material-field">
+                            <label>Código</label>
+                            <input type="text" value="${material.codigo}" readonly class="input-readonly">
+                        </div>
+                        <div class="material-field">
+                            <label>Descrição</label>
+                            <input type="text" value="${material.descricao}" class="input-descricao" readonly>
+                        </div>
+                        <div class="material-field">
+                            <label>UND</label>
+                            <input type="text" value="${material.und}" readonly class="input-readonly">
+                        </div>
+                        <div class="material-field">
+                            <label for="qtd-${idUnico}">QTD *</label>
+                            <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
+                                class="input-qtd" 
+                                onchange="calcularDiferencaMiscelanea('${idUnico}', '${material.codigo}')"
+                                onkeyup="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }"
+                                onblur="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }">
+                        </div>
+                        <div class="material-field">
+                            <label>Últ. Cont.</label>
+                            <input type="text" id="qtd-anterior-${idUnico}" readonly 
+                                class="input-readonly input-qtd-anterior" value="Carregando...">
+                        </div>
+                    </div>
+                    <div id="diferenca-${idUnico}" class="diferenca-indicador" style="display: none;"></div>
+                    
+                    <div class="concreto-entradas-container" id="concreto-entradas-${idUnico}">
+                        <div class="concreto-entradas-header">
+                            <label>Entradas de Miscelânea</label>
+                            <button type="button" class="btn-add-concreto-entrada" onclick="adicionarEntradaMiscelanea('${idUnico}')">
+                                + Adicionar Entrada
+                            </button>
+                        </div>
+                        <div class="concreto-entradas-list" id="concreto-entradas-list-${idUnico}">
+                        </div>
+                        <div class="concreto-total" id="concreto-total-${idUnico}">
+                            Total: <span id="concreto-total-valor-${idUnico}">0.00</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        setTimeout(() => {
+            materiais.forEach((material, index) => {
+                buscarQuantidadeAnterior(material.codigo, `miscelaneas-${index}`, null, 'miscelanea');
+                const idUnico = `miscelaneas-${index}`;
+                adicionarEntradaMiscelanea(idUnico);
+            });
+        }, 100);
+        
+        return html;
+    }
+    
+    // ============================================
+    // FUNÇÕES PARA MISCELÂNEAS
+    // ============================================
+
+    function adicionarEntradaMiscelanea(idUnico) {
+        const listDiv = document.getElementById(`concreto-entradas-list-${idUnico}`);
+        if (!listDiv) return;
+        
+        const entradaId = `entrada-misc-${idUnico}-${Date.now()}`;
+        
+        const entradaDiv = document.createElement('div');
+        entradaDiv.className = 'concreto-entrada-item';
+        entradaDiv.id = entradaId;
+        entradaDiv.innerHTML = `
+            <div class="concreto-entrada-fields">
+                <div class="material-field">
+                    <label>Tipo</label>
+                    <select class="concreto-entrada-tipo" onchange="toggleConcretoEntradaFields('${entradaId}')">
+                        <option value="n_obra">N Obra</option>
+                        <option value="recebimento">Recebimento</option>
+                    </select>
+                </div>
+                <div class="material-field concreto-entrada-valor-field">
+                    <label>Nº Obra</label>
+                    <input type="text" class="concreto-entrada-valor" placeholder="Número da obra..." 
+                        onchange="validarConcretoEntrada('${idUnico}', '${entradaId}')">
+                </div>
+                <div class="material-field concreto-entrada-qtd-field" style="display: block;">
+                    <label>QTD Saída (-)</label>
+                    <input type="number" step="0.01" class="concreto-entrada-qtd" placeholder="0.00" 
+                        onchange="validarConcretoEntrada('${idUnico}', '${entradaId}')">
+                </div>
+                <button type="button" class="btn-remover-entrada" onclick="removerEntradaConcreto('${idUnico}', '${entradaId}')">✕</button>
+            </div>
+        `;
+        
+        listDiv.appendChild(entradaDiv);
+        
+        const qtdPrincipal = document.getElementById(`qtd-${idUnico}`);
+        if (qtdPrincipal && qtdPrincipal.value !== '' && qtdPrincipal.value !== null) {
+            atualizarTotalConcreto(idUnico);
+        }
+    }
+
+    function calcularDiferencaMiscelanea(idUnico, codigo) {
         calcularDiferenca(idUnico, codigo);
         setTimeout(() => {
             atualizarTotalConcreto(idUnico);
@@ -2323,7 +2504,7 @@ if (document.getElementById('contagemForm')) {
         if (!inputAnterior || !codigo) return;
         
         let cacheKey = codigo;
-        if (tipoMaterial && tipoMaterial !== 'concreto' && tombamento && tombamento !== '') {
+        if (tipoMaterial && tipoMaterial !== 'concreto' && tipoMaterial !== 'miscelanea' && tombamento && tombamento !== '') {
             cacheKey = `${codigo}_${tombamento}`;
         }
         
@@ -2347,7 +2528,7 @@ if (document.getElementById('contagemForm')) {
                 tipo_material: tipoMaterial || 'concreto'
             };
             
-            if (tipoMaterial && tipoMaterial !== 'concreto' && tombamento && tombamento !== '') {
+            if (tipoMaterial && tipoMaterial !== 'concreto' && tipoMaterial !== 'miscelanea' && tombamento && tombamento !== '') {
                 body.tombamento = tombamento;
             }
             
@@ -2522,16 +2703,15 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // VERIFICAR DUPLICATA - CORRIGIDO FINAL
+    // VERIFICAR DUPLICATA - COM MISCELÂNEAS
     // ============================================
-    
+        
     function verificarDuplicata(codigo, tombamento, tipoMaterial) {
         if (!codigo) return false;
         
-        // ✅ CONCRETOS: SEMPRE retorna false (nunca bloqueia)
-        // Isso permite múltiplas contagens para o mesmo código em datas diferentes
-        if (tipoMaterial === 'concreto') {
-            console.log(`✅ Concreto ${codigo} - duplicata PERMITIDA (contagens múltiplas)`);
+        // ✅ CONCRETOS e MISCELÂNEAS: SEMPRE retorna false (nunca bloqueia)
+        if (tipoMaterial === 'concreto' || tipoMaterial === 'miscelanea') {
+            console.log(`✅ ${tipoMaterial} ${codigo} - duplicata PERMITIDA (contagens múltiplas)`);
             return false;
         }
         
@@ -2880,7 +3060,7 @@ if (document.getElementById('contagemForm')) {
             });
         });
         
-        // CONCRETOS - CORRIGIDO FINAL (justificativa via entradas de concreto)
+        // CONCRETOS
         concretoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
@@ -2908,7 +3088,7 @@ if (document.getElementById('contagemForm')) {
             // ✅ CONCRETOS: NÃO VERIFICA DUPLICATA (permite múltiplas contagens)
             console.log(`✅ Concreto ${codigo} - novo registro permitido (contagem múltipla)`);
             
-            // ✅ CORREÇÃO: Verificar se há entradas de concreto preenchidas
+            // Verificar se há entradas preenchidas
             const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
             let temEntradaValida = false;
             let justificativaCompleta = '';
@@ -2928,7 +3108,7 @@ if (document.getElementById('contagemForm')) {
             const temContagemAnterior = item.dataset.temContagemAnterior === 'true';
             const justificativaCampo = document.getElementById(`justificativa-${idUnico}`)?.value || '';
             
-            // ✅ CORREÇÃO: Se tem contagem anterior, precisa de justificativa (via entradas OU campo)
+            // Se tem contagem anterior, precisa de justificativa
             if (temContagemAnterior) {
                 const justificativa = justificativaCampo.trim() || justificativaCompleta.trim();
                 
@@ -2936,7 +3116,6 @@ if (document.getElementById('contagemForm')) {
                     const descricaoMaterial = item.querySelector('.input-descricao')?.value || codigo;
                     mostrarToast(`❌ É necessário adicionar entradas (Nº Obra ou Recebimento) ou preencher a justificativa para ${descricaoMaterial}!`, 'erro');
                     
-                    // Destacar as entradas
                     const entradasContainer = document.getElementById(`concreto-entradas-${idUnico}`);
                     if (entradasContainer) {
                         entradasContainer.style.borderColor = '#FC8181';
@@ -2948,7 +3127,6 @@ if (document.getElementById('contagemForm')) {
                         }, 3000);
                     }
                     
-                    // Destacar o campo justificativa também
                     const justificativaInput = document.getElementById(`justificativa-${idUnico}`);
                     if (justificativaInput) {
                         justificativaInput.classList.add('input-error');
@@ -2961,7 +3139,7 @@ if (document.getElementById('contagemForm')) {
                 }
             }
             
-            // ✅ Coletar entradas de concreto para enviar
+            // Coletar entradas
             const entradas = [];
             entradaItems.forEach(entradaItem => {
                 const tipo = entradaItem.querySelector('.concreto-entrada-tipo')?.value || '';
@@ -2981,7 +3159,6 @@ if (document.getElementById('contagemForm')) {
             const material = materiaisDaCategoria.find(m => m.codigo === codigo);
             
             if (material) {
-                // ✅ Usar a justificativa das entradas ou o campo
                 const obsFinal = justificativaCompleta.trim() || justificativaCampo.trim() || (temContagemAnterior ? '' : 'Primeira contagem - sem justificativa');
                 
                 materiaisParaEnviar.push({
@@ -3001,6 +3178,128 @@ if (document.getElementById('contagemForm')) {
                     obs: obsFinal
                 });
                 console.log(`✅ Concreto ${codigo} adicionado para envio. QTD: ${qtdAtual}, Justificativa: ${obsFinal}`);
+            }
+        });
+        
+        // MISCELÂNEAS - VALIDAÇÃO NO ENVIO
+        const miscelaneaItems = document.querySelectorAll('.miscelanea-item');
+        miscelaneaItems.forEach((item) => {
+            const index = parseInt(item.dataset.index);
+            if (isNaN(index)) return;
+            
+            const idUnico = `miscelaneas-${index}`;
+            const qtdInput = document.getElementById(`qtd-${idUnico}`);
+            if (!qtdInput) return;
+            
+            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
+                return;
+            }
+            
+            const qtdAtual = parseFloat(qtdInput.value) || 0;
+            const codigo = item.dataset.codigo;
+            
+            if (!itemFoiModificado(qtdInput, item)) {
+                console.log(`⏭️ Miscelânea ${codigo} não foi modificada - pulando`);
+                return;
+            }
+            
+            if (qtdAtual === 0) {
+                return;
+            }
+            
+            // ✅ MISCELÂNEAS: NÃO VERIFICA DUPLICATA (permite múltiplas contagens)
+            console.log(`✅ Miscelânea ${codigo} - novo registro permitido (contagem múltipla)`);
+            
+            // Verificar se há entradas preenchidas
+            const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
+            let temEntradaValida = false;
+            let justificativaCompleta = '';
+            
+            entradaItems.forEach(entradaItem => {
+                const tipo = entradaItem.querySelector('.concreto-entrada-tipo')?.value || '';
+                const valor = entradaItem.querySelector('.concreto-entrada-valor')?.value || '';
+                const qtdEntrada = parseFloat(entradaItem.querySelector('.concreto-entrada-qtd')?.value) || 0;
+                
+                if (valor && qtdEntrada !== 0) {
+                    temEntradaValida = true;
+                    const tipoLabel = tipo === 'n_obra' ? 'Nº Obra' : 'Nº Recebimento';
+                    justificativaCompleta += `${tipoLabel}: ${valor} (${qtdEntrada > 0 ? '+' : ''}${qtdEntrada.toFixed(2)}) `;
+                }
+            });
+            
+            const temContagemAnterior = item.dataset.temContagemAnterior === 'true';
+            const justificativaCampo = document.getElementById(`justificativa-${idUnico}`)?.value || '';
+            
+            // Se tem contagem anterior, precisa de justificativa
+            if (temContagemAnterior) {
+                const justificativa = justificativaCampo.trim() || justificativaCompleta.trim();
+                
+                if (!justificativa) {
+                    const descricaoMaterial = item.querySelector('.input-descricao')?.value || codigo;
+                    mostrarToast(`❌ É necessário adicionar entradas (Nº Obra ou Recebimento) ou preencher a justificativa para ${descricaoMaterial}!`, 'erro');
+                    
+                    const entradasContainer = document.getElementById(`concreto-entradas-${idUnico}`);
+                    if (entradasContainer) {
+                        entradasContainer.style.borderColor = '#FC8181';
+                        entradasContainer.style.borderWidth = '2px';
+                        entradasContainer.style.borderStyle = 'solid';
+                        setTimeout(() => {
+                            entradasContainer.style.borderColor = '#e2e8f0';
+                            entradasContainer.style.borderWidth = '1px';
+                        }, 3000);
+                    }
+                    
+                    const justificativaInput = document.getElementById(`justificativa-${idUnico}`);
+                    if (justificativaInput) {
+                        justificativaInput.classList.add('input-error');
+                        justificativaInput.focus();
+                        setTimeout(() => justificativaInput.classList.remove('input-error'), 3000);
+                    }
+                    
+                    temErroValidacao = true;
+                    return;
+                }
+            }
+            
+            // Coletar entradas
+            const entradas = [];
+            entradaItems.forEach(entradaItem => {
+                const tipo = entradaItem.querySelector('.concreto-entrada-tipo')?.value || '';
+                const valor = entradaItem.querySelector('.concreto-entrada-valor')?.value || '';
+                const qtdEntrada = parseFloat(entradaItem.querySelector('.concreto-entrada-qtd')?.value) || 0;
+                
+                if (valor && qtdEntrada !== 0) {
+                    entradas.push({
+                        tipo: tipo,
+                        valor: valor,
+                        qtd: qtdEntrada
+                    });
+                }
+            });
+            
+            const materiaisDaCategoria = materiaisPorCategoria['miscelaneas'] || [];
+            const material = materiaisDaCategoria.find(m => m.codigo === codigo);
+            
+            if (material) {
+                const obsFinal = justificativaCompleta.trim() || justificativaCampo.trim() || (temContagemAnterior ? '' : 'Primeira contagem - sem justificativa');
+                
+                materiaisParaEnviar.push({
+                    nome, matricula, data,
+                    codigo: material.codigo,
+                    descricao: material.descricao,
+                    und: material.und,
+                    qtd: qtdAtual,
+                    numero_serie: null,
+                    tombamento: null,
+                    oleo: null,
+                    cor: null,
+                    n_obra: '',
+                    ativo: 1,
+                    tipo_material: 'miscelanea',
+                    entradas_concreto: entradas,
+                    obs: obsFinal
+                });
+                console.log(`✅ Miscelânea ${codigo} adicionada para envio. QTD: ${qtdAtual}, Justificativa: ${obsFinal}`);
             }
         });
         
@@ -3094,6 +3393,7 @@ if (document.getElementById('contagemForm')) {
     window.calcularDiferencaBobina = calcularDiferencaBobina;
     window.calcularDiferencaTrafo = calcularDiferencaTrafo;
     window.calcularDiferencaConcreto = calcularDiferencaConcreto;
+    window.calcularDiferencaMiscelanea = calcularDiferencaMiscelanea;
     window.buscarQuantidadeAnterior = buscarQuantidadeAnterior;
     window.formatarData = formatarData;
     window.mostrarMensagem = mostrarMensagem;
@@ -3109,6 +3409,7 @@ if (document.getElementById('contagemForm')) {
     window.verificarNObraTrafo = verificarNObraTrafo;
     window.verificarNObraBobina = verificarNObraBobina;
     window.adicionarEntradaConcreto = adicionarEntradaConcreto;
+    window.adicionarEntradaMiscelanea = adicionarEntradaMiscelanea;
     window.toggleConcretoEntradaFields = toggleConcretoEntradaFields;
     window.removerEntradaConcreto = removerEntradaConcreto;
     window.validarConcretoEntrada = validarConcretoEntrada;
