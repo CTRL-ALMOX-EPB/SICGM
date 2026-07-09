@@ -122,7 +122,7 @@ if (document.getElementById('contagemForm')) {
     window.redirecionarParaHome = redirecionarParaHome;
     
     // ============================================
-    // FUNÇÃO PARA TRAVAR ITEM APÓS REGISTRO (APENAS TRAFOS E BOBINAS)
+    // FUNÇÃO PARA TRAVAR ITEM APÓS REGISTRO
     // ============================================
     
     function travarItemAposRegistro(itemElement, tipoMaterial) {
@@ -626,7 +626,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR MATERIAIS PREDEFINIDOS (CONCRETOS - SEM TRAVAR)
+    // RENDERIZAR MATERIAIS PREDEFINIDOS
     // ============================================
     
     function renderizarMateriaisCategoria(materiais, categoria) {
@@ -674,7 +674,8 @@ if (document.getElementById('contagemForm')) {
                             <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
                                 class="input-qtd" 
                                 onchange="calcularDiferenca('${idUnico}', '${material.codigo}')"
-                                onkeyup="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }">
+                                onkeyup="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }"
+                                onblur="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }">
                         </div>
                         <div class="material-field">
                             <label>Últ. Cont.</label>
@@ -704,7 +705,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR CONCRETOS (NUNCA TRAVADOS)
+    // RENDERIZAR CONCRETOS
     // ============================================
     
     function renderizarConcretos(materiais, categoria) {
@@ -747,7 +748,8 @@ if (document.getElementById('contagemForm')) {
                             <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
                                 class="input-qtd" 
                                 onchange="calcularDiferencaConcreto('${idUnico}', '${material.codigo}')"
-                                onkeyup="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }">
+                                onkeyup="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }"
+                                onblur="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }">
                         </div>
                         <div class="material-field">
                             <label>Últ. Cont.</label>
@@ -943,7 +945,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR BOBINAS (COM TRAVA - N OBRA EDITÁVEL)
+    // RENDERIZAR BOBINAS
     // ============================================
 
     function renderizarBobinas(materiais) {
@@ -1057,7 +1059,8 @@ if (document.getElementById('contagemForm')) {
                                 class="input-qtd ${lockedClass}" value="${qtdSalva}" 
                                 ${readonlyAttr}
                                 onchange="calcularDiferencaBobina('${idUnico}', '${codigoBobina}')"
-                                onkeyup="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }">
+                                onkeyup="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }"
+                                onblur="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }">
                         </div>
                         <div class="material-field">
                             <label>Últ. Cont.</label>
@@ -1112,7 +1115,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR TRAFOS (COM TRAVA - N OBRA EDITÁVEL)
+    // RENDERIZAR TRAFOS
     // ============================================
 
     function renderizarTrafos(materiais) {
@@ -1248,7 +1251,8 @@ if (document.getElementById('contagemForm')) {
                                 class="input-qtd ${lockedClass}" value="${qtdSalva}" 
                                 ${readonlyAttr}
                                 onchange="calcularDiferencaTrafo('${idUnico}', '${codigoTrafo}')"
-                                onkeyup="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }">
+                                onkeyup="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }"
+                                onblur="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }">
                         </div>
                         <div class="material-field">
                             <label>Últ. Cont.</label>
@@ -1497,7 +1501,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÕES DE VALIDAÇÃO - CORRIGIDAS PARA TRATAR CAMPOS VAZIOS
+    // FUNÇÕES DE VALIDAÇÃO - CORRIGIDAS
     // ============================================
     
     function validarTrafoCompleto(index) {
@@ -1508,24 +1512,22 @@ if (document.getElementById('contagemForm')) {
         
         const qtdInput = document.getElementById(`qtd-trafos-${index}`);
         
-        // ✅ Se o campo estiver vazio, não precisa validar (item não será enviado)
+        // Se o campo estiver vazio, não precisa validar
         if (!qtdInput || qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
             return true;
         }
         
         const qtd = parseFloat(qtdInput.value);
         
-        // ✅ Se não for um número válido, retorna falso
         if (isNaN(qtd)) {
             return false;
         }
         
-        // ✅ Se quantidade for 0, não precisa validar os outros campos
+        // Se quantidade for 0, não precisa validar os outros campos
         if (qtd === 0) {
             return true;
         }
         
-        // ✅ Só valida os outros campos se qtd > 0
         const codigo = document.getElementById(`trafo-codigo-${index}`)?.value || '';
         const descricao = document.getElementById(`trafo-descricao-${index}`)?.value || '';
         const und = document.getElementById(`trafo-und-${index}`)?.value || '';
@@ -1557,24 +1559,20 @@ if (document.getElementById('contagemForm')) {
         
         const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
         
-        // ✅ Se o campo estiver vazio, não precisa validar (item não será enviado)
         if (!qtdInput || qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
             return true;
         }
         
         const qtd = parseFloat(qtdInput.value);
         
-        // ✅ Se não for um número válido, retorna falso
         if (isNaN(qtd)) {
             return false;
         }
         
-        // ✅ Se quantidade for 0, não precisa validar os outros campos
         if (qtd === 0) {
             return true;
         }
         
-        // ✅ Só valida os outros campos se qtd > 0
         const codigo = document.getElementById(`bobina-codigo-${index}`)?.value || '';
         const descricao = document.getElementById(`bobina-descricao-${index}`)?.value || '';
         const und = document.getElementById(`bobina-und-${index}`)?.value || '';
@@ -1596,7 +1594,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CALCULAR DIFERENÇA - CORRIGIDO PARA TRATAR CAMPOS VAZIOS
+    // CALCULAR DIFERENÇA - CORRIGIDA
     // ============================================
     
     function calcularDiferencaBobina(idUnico, codigo) {
@@ -1607,10 +1605,6 @@ if (document.getElementById('contagemForm')) {
         calcularDiferenca(idUnico, codigo);
     }
     
-    // ============================================
-    // CALCULAR DIFERENÇA - FUNÇÃO PRINCIPAL CORRIGIDA
-    // ============================================
-
     function calcularDiferenca(idUnico, codigo) {
         const inputQtd = document.getElementById(`qtd-${idUnico}`);
         const inputAnterior = document.getElementById(`qtd-anterior-${idUnico}`);
@@ -1618,7 +1612,7 @@ if (document.getElementById('contagemForm')) {
         
         if (!inputQtd || !inputAnterior || !diferencaDiv) return;
         
-        // ✅ Se o campo estiver vazio, esconde a diferença
+        // Se o campo estiver vazio, esconde a diferença e SAI
         if (inputQtd.value === '' || inputQtd.value === null || inputQtd.value === undefined) {
             diferencaDiv.style.display = 'none';
             return;
@@ -1627,7 +1621,6 @@ if (document.getElementById('contagemForm')) {
         const qtdAtual = parseFloat(inputQtd.value);
         const qtdAnterior = parseFloat(inputAnterior.value);
         
-        // ✅ Se não for um número válido, esconde
         if (isNaN(qtdAtual) || isNaN(qtdAnterior)) {
             diferencaDiv.style.display = 'none';
             return;
@@ -1640,14 +1633,11 @@ if (document.getElementById('contagemForm')) {
             materialItem.dataset.temContagemAnterior = qtdAnterior > 0 ? 'true' : 'false';
         }
         
-        if (qtdAnterior === 0) {
+        if (qtdAnterior === 0 && qtdAtual > 0) {
             diferencaDiv.style.display = 'flex';
             diferencaDiv.className = 'diferenca-indicador diferenca-ok';
             diferencaDiv.innerHTML = `📝 Primeira contagem - QTD: ${qtdAtual.toFixed(2)}`;
-            return;
-        }
-        
-        if (diferenca === 0) {
+        } else if (diferenca === 0) {
             diferencaDiv.style.display = 'flex';
             diferencaDiv.className = 'diferenca-indicador diferenca-igual';
             diferencaDiv.innerHTML = '✓ Sem alteração';
@@ -1655,10 +1645,12 @@ if (document.getElementById('contagemForm')) {
             diferencaDiv.style.display = 'flex';
             diferencaDiv.className = 'diferenca-indicador diferenca-positiva';
             diferencaDiv.innerHTML = `▲ +${diferenca.toFixed(2)} a mais`;
-        } else {
+        } else if (diferenca < 0) {
             diferencaDiv.style.display = 'flex';
             diferencaDiv.className = 'diferenca-indicador diferenca-negativa';
             diferencaDiv.innerHTML = `▼ ${diferenca.toFixed(2)} a menos`;
+        } else {
+            diferencaDiv.style.display = 'none';
         }
     }
     
@@ -2342,23 +2334,21 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÃO ITEM FOI MODIFICADO - CORRIGIDA
+    // ITEM FOI MODIFICADO - CORRIGIDA
     // ============================================
     
     function itemFoiModificado(inputQtd, item) {
-        // ✅ Se o campo não existe, não foi modificado
         if (!inputQtd) {
             return false;
         }
         
-        // ✅ Se o campo estiver vazio, não foi modificado
-        if (inputQtd.value === '' || inputQtd.value === null || inputQtd.value === undefined) {
+        const valor = inputQtd.value;
+        if (valor === '' || valor === null || valor === undefined || valor.trim() === '') {
             return false;
         }
         
-        const qtdAtual = parseFloat(inputQtd.value);
+        const qtdAtual = parseFloat(valor);
         
-        // ✅ Se não for um número válido, não foi modificado
         if (isNaN(qtdAtual)) {
             return false;
         }
@@ -2367,19 +2357,14 @@ if (document.getElementById('contagemForm')) {
         const qtdAnterior = parseFloat(qtdAnteriorInput?.value) || 0;
         const idRegistro = item.dataset.id || null;
         
-        // ✅ Se já registrado, não modifica
         if (item.dataset.jaRegistrado === 'true') {
             return false;
         }
         
-        // ✅ Se tem ID no banco e quantidade é igual à anterior, não modificou
         if (idRegistro && idRegistro !== 'null' && qtdAtual === qtdAnterior) {
             return false;
         }
         
-        // ✅ Considera como modificação se:
-        // 1. Não tem ID no banco (item novo) E quantidade > 0
-        // 2. Tem ID no banco E quantidade diferente da anterior (incluindo 0)
         if (!idRegistro || idRegistro === 'null') {
             return qtdAtual > 0;
         }
@@ -2425,14 +2410,12 @@ if (document.getElementById('contagemForm')) {
             
             const qtdInput = document.getElementById(`qtd-trafos-${index}`);
             
-            // ✅ Se o campo estiver vazio, ignora
             if (!qtdInput || qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
                 return;
             }
             
             const qtd = parseFloat(qtdInput.value);
             
-            // ✅ Se não for número válido ou for 0, ignora
             if (isNaN(qtd) || qtd === 0) {
                 return;
             }
@@ -2462,14 +2445,12 @@ if (document.getElementById('contagemForm')) {
             
             const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
             
-            // ✅ Se o campo estiver vazio, ignora
             if (!qtdInput || qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
                 return;
             }
             
             const qtd = parseFloat(qtdInput.value);
             
-            // ✅ Se não for número válido ou for 0, ignora
             if (isNaN(qtd) || qtd === 0) {
                 return;
             }
@@ -2523,7 +2504,6 @@ if (document.getElementById('contagemForm')) {
             const qtdInput = document.getElementById(`qtd-trafos-${index}`);
             if (!qtdInput) return;
             
-            // ✅ Usa a função corrigida para verificar se foi modificado
             if (!itemFoiModificado(qtdInput, item)) {
                 return;
             }
@@ -2616,7 +2596,6 @@ if (document.getElementById('contagemForm')) {
             const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
             if (!qtdInput) return;
             
-            // ✅ Usa a função corrigida para verificar se foi modificado
             if (!itemFoiModificado(qtdInput, item)) {
                 return;
             }
@@ -2696,7 +2675,7 @@ if (document.getElementById('contagemForm')) {
             });
         });
         
-        // CONCRETOS (NUNCA SÃO TRAVADOS)
+        // CONCRETOS
         concretoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
@@ -2705,7 +2684,6 @@ if (document.getElementById('contagemForm')) {
             const qtdInput = document.getElementById(`qtd-${idUnico}`);
             if (!qtdInput) return;
             
-            // ✅ Usa a função corrigida para verificar se foi modificado
             if (!itemFoiModificado(qtdInput, item)) {
                 return;
             }
