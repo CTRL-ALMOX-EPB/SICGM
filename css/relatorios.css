@@ -1,0 +1,317 @@
+/* ============================================ */
+/* RELATÓRIOS - ESTILOS ESPECÍFICOS              */
+/* ============================================ */
+
+/* Filtros */
+.filtros-relatorio {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.filtro-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr auto;
+    gap: 15px;
+    align-items: end;
+}
+
+.filtro-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.filtro-group label {
+    font-size: 0.8em;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.filtro-group input,
+.filtro-group select {
+    padding: 10px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.95em;
+    transition: all 0.3s ease;
+    outline: none;
+    background: white;
+    min-height: 42px;
+}
+
+.filtro-group input:focus,
+.filtro-group select:focus {
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.filtro-botoes {
+    flex-direction: row;
+    gap: 10px;
+    align-items: end;
+}
+
+.btn-filtrar {
+    background: #4299e1;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    min-height: 42px;
+    white-space: nowrap;
+}
+
+.btn-filtrar:hover {
+    background: #3182ce;
+    transform: translateY(-2px);
+}
+
+.btn-limpar {
+    background: #e2e8f0;
+    color: #4a5568;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    min-height: 42px;
+    white-space: nowrap;
+}
+
+.btn-limpar:hover {
+    background: #cbd5e0;
+    transform: translateY(-2px);
+}
+
+/* Estatísticas */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 15px 20px;
+    text-align: center;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.75em;
+    font-weight: 600;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+/* Tabela */
+.tabela-container {
+    margin-top: 20px;
+}
+
+.tabela-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.tabela-header h2 {
+    font-size: 1.2em;
+    color: #2d3748;
+    margin: 0;
+}
+
+.tabela-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-exportar {
+    background: #48bb78;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-exportar:hover {
+    background: #38a169;
+    transform: translateY(-2px);
+}
+
+.btn-exportar:last-child {
+    background: #ed8936;
+}
+
+.btn-exportar:last-child:hover {
+    background: #dd6b20;
+}
+
+.table-responsive {
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+}
+
+thead {
+    background: #f7fafc;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+thead th {
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #4a5568;
+    white-space: nowrap;
+}
+
+tbody tr {
+    border-bottom: 1px solid #edf2f7;
+    transition: background 0.2s ease;
+}
+
+tbody tr:hover {
+    background: #f7fafc;
+}
+
+tbody td {
+    padding: 10px 15px;
+    color: #2d3748;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.loading-message {
+    text-align: center;
+    padding: 40px;
+    color: #718096;
+    font-size: 1.1em;
+}
+
+/* Badge de tipo */
+.badge-tipo {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.badge-trafo {
+    background: #ebf8ff;
+    color: #2b6cb0;
+}
+
+.badge-bobina {
+    background: #faf5ff;
+    color: #6b46c1;
+}
+
+.badge-concreto {
+    background: #f0fff4;
+    color: #276749;
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
+    .filtro-row {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .filtro-botoes {
+        grid-column: span 2;
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 768px) {
+    .stats-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .filtro-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .filtro-botoes {
+        grid-column: span 1;
+        justify-content: stretch;
+    }
+    
+    .filtro-botoes button {
+        flex: 1;
+    }
+    
+    .tabela-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .tabela-actions {
+        flex-direction: column;
+    }
+    
+    .btn-exportar {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-container {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    .stat-card {
+        padding: 10px;
+    }
+    
+    .stat-value {
+        font-size: 1.3em;
+    }
+    
+    table {
+        font-size: 0.75em;
+    }
+    
+    thead th,
+    tbody td {
+        padding: 6px 8px;
+    }
+}

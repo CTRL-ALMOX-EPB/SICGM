@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICGM - Relatórios</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/relatorios.css">
+</head>
+<body>
+    <div class="container">
+        <div class="form-card">
+            
+            <!-- Logo e Título -->
+            <div class="header-container">
+                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                <h1 class="title">📊 SICGM - Relatórios de Contagem</h1>
+            </div>
+            
+            <!-- Botão Voltar -->
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
+                <button onclick="redirecionarParaHome()" class="btn-voltar-home">
+                    🏠 Voltar ao Início
+                </button>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filtros-relatorio">
+                <div class="filtro-row">
+                    <div class="filtro-group">
+                        <label for="filtro-data-inicio">Data Início</label>
+                        <input type="date" id="filtro-data-inicio">
+                    </div>
+                    <div class="filtro-group">
+                        <label for="filtro-data-fim">Data Fim</label>
+                        <input type="date" id="filtro-data-fim">
+                    </div>
+                    <div class="filtro-group">
+                        <label for="filtro-tipo-material">Tipo Material</label>
+                        <select id="filtro-tipo-material">
+                            <option value="">Todos</option>
+                            <option value="trafo">Trafos</option>
+                            <option value="bobina">Bobinas</option>
+                            <option value="concreto">Concretos</option>
+                        </select>
+                    </div>
+                    <div class="filtro-group">
+                        <label for="filtro-usuario">Usuário</label>
+                        <input type="text" id="filtro-usuario" placeholder="Nome do usuário...">
+                    </div>
+                    <div class="filtro-group filtro-botoes">
+                        <button onclick="carregarRelatorios()" class="btn-filtrar">🔍 Filtrar</button>
+                        <button onclick="limparFiltros()" class="btn-limpar">✕ Limpar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estatísticas Rápidas -->
+            <div class="stats-container" id="stats-container">
+                <div class="stat-card">
+                    <span class="stat-label">Total de Registros</span>
+                    <span class="stat-value" id="total-registros">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Códigos Únicos</span>
+                    <span class="stat-value" id="total-codigos">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Última Contagem</span>
+                    <span class="stat-value" id="ultima-contagem">-</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Total em Estoque</span>
+                    <span class="stat-value" id="total-estoque">0</span>
+                </div>
+            </div>
+
+            <!-- Tabela de Relatório -->
+            <div class="tabela-container">
+                <div class="tabela-header">
+                    <h2>📋 Relatório por Código</h2>
+                    <div class="tabela-actions">
+                        <button onclick="exportarCSV()" class="btn-exportar">📥 Exportar CSV</button>
+                        <button onclick="exportarPDF()" class="btn-exportar">📄 Exportar PDF</button>
+                    </div>
+                </div>
+                <div id="loading-relatorio" class="loading-message">
+                    ⏳ Carregando dados...
+                </div>
+                <div class="table-responsive">
+                    <table id="relatorio-tabela">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Descrição</th>
+                                <th>UND</th>
+                                <th>Tipo</th>
+                                <th>Quantidade Total</th>
+                                <th>Última Contagem</th>
+                                <th>Último Usuário</th>
+                                <th>Data da Última</th>
+                            </tr>
+                        </thead>
+                        <tbody id="relatorio-body">
+                            <tr>
+                                <td colspan="8" class="text-center">Nenhum dado encontrado</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Mensagem -->
+            <div id="mensagem" class="mensagem"></div>
+        </div>
+    </div>
+
+    <script src="../js/relatorios.js"></script>
+</body>
+</html>
