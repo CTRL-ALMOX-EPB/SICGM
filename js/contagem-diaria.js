@@ -133,11 +133,13 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
-        // ✅ NÃO TRAVAR A QTD - Deixa editável para permitir baixa
+        // ✅ TRAVAR A QTD INICIALMENTE
         const qtdInput = itemElement.querySelector('.input-qtd');
         if (qtdInput) {
-            qtdInput.style.backgroundColor = '#ffffff';
-            qtdInput.style.cursor = 'text';
+            qtdInput.setAttribute('readonly', 'readonly');
+            qtdInput.classList.add('input-locked');
+            qtdInput.style.backgroundColor = '#edf2f7';
+            qtdInput.style.cursor = 'not-allowed';
         }
         
         const justificativaInput = itemElement.querySelector('.input-justificativa');
@@ -165,11 +167,40 @@ if (document.getElementById('contagemForm')) {
             select.style.cursor = 'not-allowed';
         });
         
-        // ✅ CHECKBOX DE BAIXA FICA HABILITADO
+        // ✅ CHECKBOX DE BAIXA FICA HABILITADO E CONTROLA A QTD
         const checkboxes = itemElement.querySelectorAll('.checkbox-baixa-trafo, .checkbox-baixa-bobina');
         checkboxes.forEach(cb => {
             cb.style.cursor = 'pointer';
             cb.disabled = false;
+            
+            // ✅ Evento para controlar a QTD
+            cb.addEventListener('change', function() {
+                const item = this.closest('.material-item');
+                const qtdInput = item.querySelector('.input-qtd');
+                
+                if (this.checked) {
+                    // Desbloquear QTD para permitir zerar
+                    qtdInput.removeAttribute('readonly');
+                    qtdInput.classList.remove('input-locked');
+                    qtdInput.style.backgroundColor = '#ffffff';
+                    qtdInput.style.cursor = 'text';
+                    qtdInput.focus();
+                    mostrarToast('📝 Digite 0 (zero) para dar baixa no item', 'info');
+                } else {
+                    // Bloquear QTD novamente
+                    qtdInput.setAttribute('readonly', 'readonly');
+                    qtdInput.classList.add('input-locked');
+                    qtdInput.style.backgroundColor = '#edf2f7';
+                    qtdInput.style.cursor = 'not-allowed';
+                    // Restaurar valor anterior se for 0
+                    const qtdAnterior = item.dataset.qtdAnterior || '0';
+                    if (parseFloat(qtdInput.value) === 0) {
+                        qtdInput.value = qtdAnterior;
+                        const idUnico = qtdInput.id.replace('qtd-', '');
+                        calcularDiferenca(idUnico, item.dataset.codigo);
+                    }
+                }
+            });
         });
         
         itemElement.classList.add('item-registrado');
@@ -197,6 +228,11 @@ if (document.getElementById('contagemForm')) {
         const btnRemover = itemElement.querySelector('.btn-remover-trafo-x');
         if (btnRemover) {
             btnRemover.style.display = 'none';
+        }
+        
+        // ✅ Salvar QTD anterior
+        if (qtdInput) {
+            itemElement.dataset.qtdAnterior = qtdInput.value || '0';
         }
         
         const id = itemElement.dataset.id || itemElement.dataset.codigo;
@@ -1098,7 +1134,8 @@ if (document.getElementById('contagemForm')) {
                         <div class="material-field">
                             <label>QTD *</label>
                             <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
-                                class="input-qtd" value="${qtdSalva}" 
+                                class="input-qtd ${lockedClass}" value="${qtdSalva}" 
+                                ${readonlyAttr}
                                 onchange="calcularDiferencaBobina('${idUnico}', '${codigoBobina}')"
                                 onkeyup="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }"
                                 onblur="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }">
@@ -1289,7 +1326,8 @@ if (document.getElementById('contagemForm')) {
                         <div class="material-field">
                             <label>QTD *</label>
                             <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
-                                class="input-qtd" value="${qtdSalva}" 
+                                class="input-qtd ${lockedClass}" value="${qtdSalva}" 
+                                ${readonlyAttr}
                                 onchange="calcularDiferencaTrafo('${idUnico}', '${codigoTrafo}')"
                                 onkeyup="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }"
                                 onblur="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }">
@@ -1376,6 +1414,7 @@ if (document.getElementById('contagemForm')) {
         const nObraInput = document.getElementById(`n-obra-bobinas-${index}`);
         const alertaDiv = document.getElementById(`alerta-baixa-bobina-${index}`);
         const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
+        const item = document.querySelector(`.bobina-item[data-index="${index}"]`);
         
         if (checkbox.checked) {
             const nObra = nObraInput ? nObraInput.value.trim() : '';
@@ -1395,8 +1434,10 @@ if (document.getElementById('contagemForm')) {
                 return;
             }
             
+            // Desbloquear QTD para permitir zerar
             if (qtdInput) {
                 qtdInput.removeAttribute('readonly');
+                qtdInput.classList.remove('input-locked');
                 qtdInput.style.backgroundColor = '#ffffff';
                 qtdInput.style.cursor = 'text';
                 qtdInput.focus();
@@ -1407,11 +1448,23 @@ if (document.getElementById('contagemForm')) {
             }
             
             if (alertaDiv) alertaDiv.style.display = 'none';
+            mostrarToast('✅ Item será desativado. Digite 0 na QTD e clique em "Registrar Contagem".', 'info');
             
         } else {
+            // Bloquear QTD novamente
             if (qtdInput) {
+                qtdInput.setAttribute('readonly', 'readonly');
+                qtdInput.classList.add('input-locked');
                 qtdInput.style.backgroundColor = '#edf2f7';
-                qtdInput.style.cursor = 'default';
+                qtdInput.style.cursor = 'not-allowed';
+                
+                // Restaurar valor anterior se for 0
+                if (item && parseFloat(qtdInput.value) === 0) {
+                    const qtdAnterior = item.dataset.qtdAnterior || '0';
+                    qtdInput.value = qtdAnterior;
+                    const idUnico = qtdInput.id.replace('qtd-', '');
+                    calcularDiferenca(idUnico, item.dataset.codigo);
+                }
             }
             
             if (alertaDiv) {
@@ -1427,6 +1480,7 @@ if (document.getElementById('contagemForm')) {
         const nObraInput = document.getElementById(`n-obra-trafos-${index}`);
         const alertaDiv = document.getElementById(`alerta-baixa-trafo-${index}`);
         const qtdInput = document.getElementById(`qtd-trafos-${index}`);
+        const item = document.querySelector(`.trafo-item[data-index="${index}"]`);
         
         if (checkbox.checked) {
             const nObra = nObraInput ? nObraInput.value.trim() : '';
@@ -1446,8 +1500,10 @@ if (document.getElementById('contagemForm')) {
                 return;
             }
             
+            // Desbloquear QTD para permitir zerar
             if (qtdInput) {
                 qtdInput.removeAttribute('readonly');
+                qtdInput.classList.remove('input-locked');
                 qtdInput.style.backgroundColor = '#ffffff';
                 qtdInput.style.cursor = 'text';
                 qtdInput.focus();
@@ -1458,11 +1514,23 @@ if (document.getElementById('contagemForm')) {
             }
             
             if (alertaDiv) alertaDiv.style.display = 'none';
+            mostrarToast('✅ Item será desativado. Digite 0 na QTD e clique em "Registrar Contagem".', 'info');
             
         } else {
+            // Bloquear QTD novamente
             if (qtdInput) {
+                qtdInput.setAttribute('readonly', 'readonly');
+                qtdInput.classList.add('input-locked');
                 qtdInput.style.backgroundColor = '#edf2f7';
-                qtdInput.style.cursor = 'default';
+                qtdInput.style.cursor = 'not-allowed';
+                
+                // Restaurar valor anterior se for 0
+                if (item && parseFloat(qtdInput.value) === 0) {
+                    const qtdAnterior = item.dataset.qtdAnterior || '0';
+                    qtdInput.value = qtdAnterior;
+                    const idUnico = qtdInput.id.replace('qtd-', '');
+                    calcularDiferenca(idUnico, item.dataset.codigo);
+                }
             }
             
             if (alertaDiv) {
@@ -2421,6 +2489,7 @@ if (document.getElementById('contagemForm')) {
         
         // ✅ Se "Dar baixa" está marcado, SEMPRE considera como modificado
         if (darBaixa) {
+            console.log('✅ Item com "Dar baixa" marcado - considerado modificado');
             return true;
         }
         
@@ -2591,6 +2660,8 @@ if (document.getElementById('contagemForm')) {
             const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
             const idRegistro = item.dataset.id || null;
             
+            console.log(`🔍 Verificando Trafo #${index}: darBaixa=${darBaixa}, idRegistro=${idRegistro}`);
+            
             // ✅ SE FOR BAIXA, PROCESSA MESMO COM QTD = 0
             if (darBaixa && idRegistro && idRegistro !== 'null') {
                 const nObraInput = item.querySelector('.input-justificativa');
@@ -2610,7 +2681,7 @@ if (document.getElementById('contagemForm')) {
                     obs: nObra,
                     tipo_material: 'trafo'
                 });
-                console.log(`🔴 Trafo ID ${idRegistro} será desativado com obs: ${nObra}`);
+                console.log(`🔴 Trafo ID ${idRegistro} ADICIONADO para desativar com obs: ${nObra}`);
                 return;
             }
             
@@ -2623,6 +2694,7 @@ if (document.getElementById('contagemForm')) {
             
             // ✅ SE NÃO FOI MODIFICADO, PULA
             if (!itemFoiModificado(qtdInput, item)) {
+                console.log(`⏭️ Trafo #${index} não foi modificado - pulando`);
                 return;
             }
             
@@ -2707,6 +2779,8 @@ if (document.getElementById('contagemForm')) {
             const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
             const idRegistro = item.dataset.id || null;
             
+            console.log(`🔍 Verificando Bobina #${index}: darBaixa=${darBaixa}, idRegistro=${idRegistro}`);
+            
             // ✅ SE FOR BAIXA, PROCESSA MESMO COM QTD = 0
             if (darBaixa && idRegistro && idRegistro !== 'null') {
                 const nObraInput = item.querySelector('.input-justificativa');
@@ -2726,7 +2800,7 @@ if (document.getElementById('contagemForm')) {
                     obs: nObra,
                     tipo_material: 'bobina'
                 });
-                console.log(`🔴 Bobina ID ${idRegistro} será desativada com obs: ${nObra}`);
+                console.log(`🔴 Bobina ID ${idRegistro} ADICIONADA para desativar com obs: ${nObra}`);
                 return;
             }
             
@@ -2739,6 +2813,7 @@ if (document.getElementById('contagemForm')) {
             
             // ✅ SE NÃO FOI MODIFICADO, PULA
             if (!itemFoiModificado(qtdInput, item)) {
+                console.log(`⏭️ Bobina #${index} não foi modificada - pulando`);
                 return;
             }
             
