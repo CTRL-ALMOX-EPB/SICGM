@@ -122,7 +122,7 @@ if (document.getElementById('contagemForm')) {
     window.redirecionarParaHome = redirecionarParaHome;
     
     // ============================================
-    // FUNÇÃO PARA TRAVAR ITEM APÓS REGISTRO - CORRIGIDA
+    // FUNÇÃO PARA TRAVAR ITEM APÓS REGISTRO
     // ============================================
     
     function travarItemAposRegistro(itemElement, tipoMaterial) {
@@ -2471,7 +2471,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ITEM FOI MODIFICADO
+    // ITEM FOI MODIFICADO - CORRIGIDO
     // ============================================
     
     function itemFoiModificado(inputQtd, item) {
@@ -2506,11 +2506,17 @@ if (document.getElementById('contagemForm')) {
             return qtdAtual > 0;
         }
         
-        return true;
+        // ✅ Se o checkbox "Dar baixa" está marcado, considera como modificado
+        const checkboxBaixa = item.querySelector('.checkbox-baixa-trafo, .checkbox-baixa-bobina');
+        if (checkboxBaixa && checkboxBaixa.checked) {
+            return true;
+        }
+        
+        return qtdAtual !== qtdAnterior;
     }
     
     // ============================================
-    // ENVIAR FORMULÁRIO
+    // ENVIAR FORMULÁRIO - CORRIGIDO
     // ============================================
     
     document.getElementById('contagemForm').addEventListener('submit', async (e) => {
@@ -2623,7 +2629,7 @@ if (document.getElementById('contagemForm')) {
         }
         
         // ============================================
-        // IDENTIFICAR APENAS ITENS MODIFICADOS
+        // IDENTIFICAR APENAS ITENS MODIFICADOS - CORRIGIDO
         // ============================================
         
         const materiaisParaEnviar = [];
@@ -2631,7 +2637,7 @@ if (document.getElementById('contagemForm')) {
         let temErroValidacao = false;
         let temDuplicata = false;
         
-        // TRAFOS
+        // TRAFOS - CORRIGIDO
         trafoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
@@ -2641,16 +2647,12 @@ if (document.getElementById('contagemForm')) {
             const qtdInput = document.getElementById(`qtd-trafos-${index}`);
             if (!qtdInput) return;
             
-            if (!itemFoiModificado(qtdInput, item)) {
-                return;
-            }
-            
-            const qtdAtual = parseFloat(qtdInput.value) || 0;
-            const idRegistro = item.dataset.id || null;
-            
+            // ✅ VERIFICA SE O CHECKBOX DE BAIXA ESTÁ MARCADO
             const checkboxBaixa = item.querySelector('.checkbox-baixa-trafo');
             const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
+            const idRegistro = item.dataset.id || null;
             
+            // ✅ SE FOR BAIXA, PROCESSA MESMO COM QTD = 0
             if (darBaixa && idRegistro && idRegistro !== 'null') {
                 const nObraInput = item.querySelector('.input-justificativa');
                 const nObra = nObraInput?.value || `Baixa realizada por ${nome}`;
@@ -2659,6 +2661,23 @@ if (document.getElementById('contagemForm')) {
                     obs: nObra,
                     tipo_material: 'trafo'
                 });
+                return;
+            }
+            
+            // ✅ VERIFICA SE O CAMPO ESTÁ VAZIO
+            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
+                return;
+            }
+            
+            const qtdAtual = parseFloat(qtdInput.value) || 0;
+            
+            // ✅ SE NÃO FOI MODIFICADO, PULA
+            if (!itemFoiModificado(qtdInput, item)) {
+                return;
+            }
+            
+            // ✅ SE QTD = 0 E NÃO É BAIXA, PULA
+            if (qtdAtual === 0 && !darBaixa) {
                 return;
             }
             
@@ -2723,7 +2742,7 @@ if (document.getElementById('contagemForm')) {
             });
         });
         
-        // BOBINAS
+        // BOBINAS - CORRIGIDO
         bobinaItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
@@ -2733,16 +2752,12 @@ if (document.getElementById('contagemForm')) {
             const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
             if (!qtdInput) return;
             
-            if (!itemFoiModificado(qtdInput, item)) {
-                return;
-            }
-            
-            const qtdAtual = parseFloat(qtdInput.value) || 0;
-            const idRegistro = item.dataset.id || null;
-            
+            // ✅ VERIFICA SE O CHECKBOX DE BAIXA ESTÁ MARCADO
             const checkboxBaixa = item.querySelector('.checkbox-baixa-bobina');
             const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
+            const idRegistro = item.dataset.id || null;
             
+            // ✅ SE FOR BAIXA, PROCESSA MESMO COM QTD = 0
             if (darBaixa && idRegistro && idRegistro !== 'null') {
                 const nObraInput = item.querySelector('.input-justificativa');
                 const nObra = nObraInput?.value || `Baixa realizada por ${nome}`;
@@ -2751,6 +2766,23 @@ if (document.getElementById('contagemForm')) {
                     obs: nObra,
                     tipo_material: 'bobina'
                 });
+                return;
+            }
+            
+            // ✅ VERIFICA SE O CAMPO ESTÁ VAZIO
+            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
+                return;
+            }
+            
+            const qtdAtual = parseFloat(qtdInput.value) || 0;
+            
+            // ✅ SE NÃO FOI MODIFICADO, PULA
+            if (!itemFoiModificado(qtdInput, item)) {
+                return;
+            }
+            
+            // ✅ SE QTD = 0 E NÃO É BAIXA, PULA
+            if (qtdAtual === 0 && !darBaixa) {
                 return;
             }
             
@@ -2901,6 +2933,7 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
+        // ✅ CORREÇÃO: Verifica se há itens para desativar também
         if (materiaisParaEnviar.length === 0 && materiaisParaDesativar.length === 0) {
             mostrarToast('ℹ️ Nenhum item foi modificado. Nada para salvar.', 'info');
             return;
