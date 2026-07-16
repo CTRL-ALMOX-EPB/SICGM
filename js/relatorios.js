@@ -328,10 +328,41 @@ function processarDados(dados, filtros) {
         }
     }
     
+    // ============================================================
+    // CORREÇÃO: Para cada código, pegar APENAS o último registro
+    // ============================================================
+    
     // Agrupar por código
-    const grupos = {};
+    const gruposPorCodigo = {};
     
     dadosFiltrados.forEach(item => {
+        const codigo = item.codigo;
+        if (!gruposPorCodigo[codigo]) {
+            gruposPorCodigo[codigo] = [];
+        }
+        gruposPorCodigo[codigo].push(item);
+    });
+    
+    // Para cada código, pegar apenas o registro mais recente
+    const ultimosRegistros = [];
+    
+    Object.values(gruposPorCodigo).forEach(registros => {
+        // Ordenar do mais antigo para o mais novo
+        registros.sort((a, b) => {
+            const dateA = new Date(a.created_at || a.data);
+            const dateB = new Date(b.created_at || b.data);
+            return dateA - dateB;
+        });
+        
+        // Pegar o último registro (o mais recente)
+        const ultimoRegistro = registros[registros.length - 1];
+        ultimosRegistros.push(ultimoRegistro);
+    });
+    
+    // Agora agrupar para o relatório final (cada código terá apenas 1 registro)
+    const grupos = {};
+    
+    ultimosRegistros.forEach(item => {
         const codigo = item.codigo;
         if (!grupos[codigo]) {
             grupos[codigo] = {
@@ -348,6 +379,7 @@ function processarDados(dados, filtros) {
             };
         }
         
+        // Agora a quantidade_total é APENAS a última contagem
         grupos[codigo].quantidade_total += parseFloat(item.qtd) || 0;
         grupos[codigo].registros.push(item);
         

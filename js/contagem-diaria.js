@@ -113,6 +113,7 @@ if (document.getElementById('contagemForm')) {
     let todosRegistrosDB = [];
     let registrosCarregados = false;
     let itemsRegistrados = new Set();
+    let enviandoDados = false;
     
     // ============================================
     // PREENCHER DATA AUTOMATICAMENTE
@@ -568,11 +569,10 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÃO DE VALIDAÇÃO POR CATEGORIA - COM ESPECÍFICOS
+    // FUNÇÃO DE VALIDAÇÃO POR CATEGORIA
     // ============================================
 
     function validarCodigoPorCategoria(codigo, categoria) {
-        // ✅ MISCELÂNEAS e ESPECÍFICOS: sempre válido (não precisa de validação específica)
         if (categoria === 'miscelaneas' || categoria === 'especificos') {
             return { valido: true };
         }
@@ -674,14 +674,6 @@ if (document.getElementById('contagemForm')) {
             console.log('📊 Total de registros no banco:', resultados.length);
             console.log('📊 Registros ativos:', todosRegistrosDB.length);
             
-            const usuarios = {};
-            todosRegistrosDB.forEach(r => {
-                const nome = r.nome || 'Desconhecido';
-                if (!usuarios[nome]) usuarios[nome] = 0;
-                usuarios[nome]++;
-            });
-            console.log('📊 Registros por usuário:', usuarios);
-            
             registrosCarregados = true;
             return todosRegistrosDB;
             
@@ -694,13 +686,12 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // VERIFICAR SE ITEM JÁ EXISTE NO BANCO - COM ESPECÍFICOS
+    // VERIFICAR SE ITEM JÁ EXISTE NO BANCO
     // ============================================
         
     function itemJaExisteNoBanco(codigo, tombamento, tipoMaterial) {
         if (!codigo) return false;
         
-        // ✅ CONCRETOS, MISCELÂNEAS e ESPECÍFICOS: verificar apenas por código
         if (tipoMaterial === 'concreto' || tipoMaterial === 'miscelanea' || tipoMaterial === 'especifico' || !tombamento) {
             const existe = todosRegistrosDB.some(r => 
                 r.codigo === codigo && 
@@ -712,7 +703,6 @@ if (document.getElementById('contagemForm')) {
             return existe;
         }
         
-        // Para trafos e bobinas
         const existe = todosRegistrosDB.some(r => 
             r.codigo === codigo && 
             r.tombamento === tombamento && 
@@ -815,11 +805,10 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ORGANIZAR MATERIAIS POR CATEGORIA - COM ESPECÍFICOS
+    // ORGANIZAR MATERIAIS POR CATEGORIA
     // ============================================
         
     function organizarPorCategoria() {
-        // Processar todas as categorias predefinidas
         for (const [chave, categoria] of Object.entries(CATEGORIAS)) {
             if (categoria.tipo === 'predefinido' && categoria.codigos && categoria.codigos.length > 0) {
                 const materiais = materiaisBanco.filter(material => 
@@ -830,13 +819,10 @@ if (document.getElementById('contagemForm')) {
                 console.log(`📦 ${categoria.nome}: ${materiais.length} itens encontrados`);
             }
         }
-        
-        // Para categorias manuais (trafos e bobinas), manter como estão
-        // Elas já são populadas pelo carregarItensManuais()
     }
     
     // ============================================
-    // CRIAR SISTEMA DE ABAS - COM ESPECÍFICOS
+    // CRIAR SISTEMA DE ABAS
     // ============================================
         
     function criarAbas() {
@@ -848,7 +834,6 @@ if (document.getElementById('contagemForm')) {
         let htmlContent = '';
         let primeiraCategoria = null;
         
-        // Ordem das abas: Concretos, Trafos, Bobinas, Miscelâneas, Específicos
         const ordemCategorias = ['concretos', 'trafos', 'bobinas', 'miscelaneas', 'especificos'];
         
         for (const chave of ordemCategorias) {
@@ -861,7 +846,6 @@ if (document.getElementById('contagemForm')) {
                 primeiraCategoria = chave;
             }
             
-            // Contar apenas itens ativos para trafos e bobinas
             let contador = materiais.length;
             if (chave === 'trafos') {
                 contador = materiais.filter(t => t.ativo !== false && t.tipo_material === 'trafo').length;
@@ -929,7 +913,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR MATERIAIS PREDEFINIDOS (CONCRETOS, MISCELÂNEAS E ESPECÍFICOS)
+    // RENDERIZAR MATERIAIS PREDEFINIDOS
     // ============================================
         
     function renderizarMateriaisCategoria(materiais, categoria) {
@@ -997,8 +981,8 @@ if (document.getElementById('contagemForm')) {
                     <div id="diferenca-${idUnico}" class="diferenca-indicador" style="display: none;"></div>
                     <div class="justificativa-row">
                         <div class="material-field justificativa-field">
-                            <label for="justificativa-${idUnico}">Justificativa</label>
-                            <input type="text" id="justificativa-${idUnico}" placeholder="Justificativa..." 
+                            <label for="justificativa-${idUnico}">Justificativa (opcional)</label>
+                            <input type="text" id="justificativa-${idUnico}" placeholder="Justificativa (opcional)..." 
                                 class="input-justificativa">
                         </div>
                     </div>
@@ -1565,7 +1549,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR BOBINAS - COM BOTÃO DAR BAIXA CORRIGIDO
+    // RENDERIZAR BOBINAS
     // ============================================
 
     function renderizarBobinas(materiais) {
@@ -1740,7 +1724,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR TRAFOS - COM BOTÃO DAR BAIXA CORRIGIDO
+    // RENDERIZAR TRAFOS
     // ============================================
 
     function renderizarTrafos(materiais) {
@@ -2853,19 +2837,17 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // VERIFICAR DUPLICATA - COM ESPECÍFICOS
+    // VERIFICAR DUPLICATA
     // ============================================
         
     function verificarDuplicata(codigo, tombamento, tipoMaterial) {
         if (!codigo) return false;
         
-        // ✅ CONCRETOS, MISCELÂNEAS e ESPECÍFICOS: SEMPRE retorna false (nunca bloqueia)
         if (tipoMaterial === 'concreto' || tipoMaterial === 'miscelanea' || tipoMaterial === 'especifico') {
             console.log(`✅ ${tipoMaterial} ${codigo} - duplicata PERMITIDA (contagens múltiplas)`);
             return false;
         }
         
-        // Para trafos e bobinas, verificar por código + tombamento
         if (!tombamento) {
             console.log(`⚠️ ${tipoMaterial} sem tombamento - não verifica duplicata`);
             return false;
@@ -2901,6 +2883,10 @@ if (document.getElementById('contagemForm')) {
             return false;
         }
         
+        if (qtdAtual === 0) {
+            return false;
+        }
+        
         const qtdAnteriorInput = item.querySelector('.input-qtd-anterior');
         const qtdAnterior = parseFloat(qtdAnteriorInput?.value) || 0;
         const idRegistro = item.dataset.id || null;
@@ -2921,11 +2907,25 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ENVIAR FORMULÁRIO
+    // VERIFICAR SE QUANTIDADE É MENOR QUE ANTERIOR
+    // ============================================
+    
+    function quantidadeMenorQueAnterior(qtdAtual, qtdAnterior) {
+        return qtdAtual < qtdAnterior;
+    }
+    
+    // ============================================
+    // ENVIAR FORMULÁRIO - CORRIGIDO
     // ============================================
     
     document.getElementById('contagemForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Evitar múltiplos envios simultâneos
+        if (enviandoDados) {
+            mostrarToast('⏳ Aguarde o envio atual ser concluído...', 'aviso');
+            return;
+        }
         
         salvarDadosTrafosAtuais();
         salvarDadosBobinasAtuais();
@@ -3040,6 +3040,7 @@ if (document.getElementById('contagemForm')) {
         const materiaisParaEnviar = [];
         let temErroValidacao = false;
         let temDuplicata = false;
+        let temQuantidadeMenor = false;
         
         // TRAFOS
         trafoItems.forEach((item) => {
@@ -3063,6 +3064,20 @@ if (document.getElementById('contagemForm')) {
             }
             
             if (qtdAtual === 0) {
+                return;
+            }
+            
+            // Verificar se quantidade é menor que a anterior
+            const qtdAnteriorInput = item.querySelector('.input-qtd-anterior');
+            const qtdAnterior = parseFloat(qtdAnteriorInput?.value) || 0;
+            
+            if (quantidadeMenorQueAnterior(qtdAtual, qtdAnterior)) {
+                temQuantidadeMenor = true;
+                mostrarToast(`⚠️ Trafo #${index + 1}: Quantidade (${qtdAtual}) é menor que a contagem anterior (${qtdAnterior}). Confirme se deseja continuar.`, 'aviso');
+                // Marcar o item para destacar
+                item.style.borderColor = '#ED8936';
+                item.style.borderWidth = '2px';
+                item.style.borderStyle = 'solid';
                 return;
             }
             
@@ -3111,6 +3126,11 @@ if (document.getElementById('contagemForm')) {
                 return;
             }
             
+            // Remover destaque de quantidade menor se passou na validação
+            item.style.borderColor = '';
+            item.style.borderWidth = '';
+            item.style.borderStyle = '';
+            
             materiaisParaEnviar.push({
                 nome, matricula, data,
                 codigo: codigoTrafo,
@@ -3149,6 +3169,19 @@ if (document.getElementById('contagemForm')) {
             }
             
             if (qtdAtual === 0) {
+                return;
+            }
+            
+            // Verificar se quantidade é menor que a anterior
+            const qtdAnteriorInput = item.querySelector('.input-qtd-anterior');
+            const qtdAnterior = parseFloat(qtdAnteriorInput?.value) || 0;
+            
+            if (quantidadeMenorQueAnterior(qtdAtual, qtdAnterior)) {
+                temQuantidadeMenor = true;
+                mostrarToast(`⚠️ Bobina #${index + 1}: Quantidade (${qtdAtual}) é menor que a contagem anterior (${qtdAnterior}). Confirme se deseja continuar.`, 'aviso');
+                item.style.borderColor = '#ED8936';
+                item.style.borderWidth = '2px';
+                item.style.borderStyle = 'solid';
                 return;
             }
             
@@ -3194,6 +3227,11 @@ if (document.getElementById('contagemForm')) {
                 return;
             }
             
+            // Remover destaque de quantidade menor se passou na validação
+            item.style.borderColor = '';
+            item.style.borderWidth = '';
+            item.style.borderStyle = '';
+            
             materiaisParaEnviar.push({
                 nome, matricula, data,
                 codigo: codigoBobina,
@@ -3209,6 +3247,15 @@ if (document.getElementById('contagemForm')) {
                 tipo_material: 'bobina'
             });
         });
+        
+        // Se houve quantidade menor, perguntar se deseja continuar
+        if (temQuantidadeMenor) {
+            const continuar = confirm('⚠️ Uma ou mais quantidades são menores que a contagem anterior. Deseja continuar mesmo assim?');
+            if (!continuar) {
+                mostrarToast('⏸️ Envio cancelado pelo usuário.', 'info');
+                return;
+            }
+        }
         
         // CONCRETOS - SEM OBRIGATORIEDADE DE JUSTIFICATIVA
         concretoItems.forEach((item) => {
@@ -3235,7 +3282,7 @@ if (document.getElementById('contagemForm')) {
                 return;
             }
             
-            // ✅ CONCRETOS: NÃO VERIFICA DUPLICATA (permite múltiplas contagens)
+            // Concretos: não verifica duplicata
             console.log(`✅ Concreto ${codigo} - novo registro permitido (contagem múltipla)`);
             
             // Coletar entradas (opcionais)
@@ -3253,7 +3300,6 @@ if (document.getElementById('contagemForm')) {
                 }
             });
             
-            // Coletar entradas para envio
             const entradas = [];
             entradaItems.forEach(entradaItem => {
                 const tipo = entradaItem.querySelector('.concreto-entrada-tipo')?.value || '';
@@ -3274,7 +3320,6 @@ if (document.getElementById('contagemForm')) {
             
             if (material) {
                 const justificativaCampo = document.getElementById(`justificativa-${idUnico}`)?.value || '';
-                // ✅ Justificativa é opcional - permite enviar mesmo sem
                 const obsFinal = justificativaCompleta.trim() || justificativaCampo.trim() || `Contagem: ${qtdAtual}`;
                 
                 materiaisParaEnviar.push({
@@ -3323,10 +3368,8 @@ if (document.getElementById('contagemForm')) {
                 return;
             }
             
-            // ✅ MISCELÂNEAS: NÃO VERIFICA DUPLICATA (permite múltiplas contagens)
             console.log(`✅ Miscelânea ${codigo} - novo registro permitido (contagem múltipla)`);
             
-            // Coletar entradas (opcionais)
             const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
             let justificativaCompleta = '';
             
@@ -3361,7 +3404,6 @@ if (document.getElementById('contagemForm')) {
             
             if (material) {
                 const justificativaCampo = document.getElementById(`justificativa-${idUnico}`)?.value || '';
-                // ✅ Justificativa é opcional - permite enviar mesmo sem
                 const obsFinal = justificativaCompleta.trim() || justificativaCampo.trim() || `Contagem: ${qtdAtual}`;
                 
                 materiaisParaEnviar.push({
@@ -3410,10 +3452,8 @@ if (document.getElementById('contagemForm')) {
                 return;
             }
             
-            // ✅ ESPECÍFICOS: NÃO VERIFICA DUPLICATA (permite múltiplas contagens)
             console.log(`✅ Específico ${codigo} - novo registro permitido (contagem múltipla)`);
             
-            // Coletar entradas (opcionais)
             const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
             let justificativaCompleta = '';
             
@@ -3448,7 +3488,6 @@ if (document.getElementById('contagemForm')) {
             
             if (material) {
                 const justificativaCampo = document.getElementById(`justificativa-${idUnico}`)?.value || '';
-                // ✅ Justificativa é opcional - permite enviar mesmo sem
                 const obsFinal = justificativaCompleta.trim() || justificativaCampo.trim() || `Contagem: ${qtdAtual}`;
                 
                 materiaisParaEnviar.push({
@@ -3488,6 +3527,7 @@ if (document.getElementById('contagemForm')) {
         // ============================================
         
         try {
+            enviandoDados = true;
             botaoSubmit.disabled = true;
             botaoSubmit.textContent = 'Enviando...';
             
@@ -3516,14 +3556,21 @@ if (document.getElementById('contagemForm')) {
                             }
                         }
                     } else {
-                        console.error(`❌ Erro ao salvar ${material.codigo}:`, await response.text());
+                        const errorText = await response.text();
+                        console.error(`❌ Erro ao salvar ${material.codigo}:`, errorText);
+                        mostrarToast(`❌ Erro ao salvar ${material.codigo}: ${errorText}`, 'erro');
                     }
                 } catch (error) {
                     console.error(`❌ Erro ao salvar ${material.codigo}:`, error);
+                    mostrarToast(`❌ Erro de conexão ao salvar ${material.codigo}`, 'erro');
                 }
             }
             
-            mostrarToast(`✅ ${totalProcessados} item(ns) registrado(s) com sucesso!`, 'sucesso');
+            if (totalProcessados > 0) {
+                mostrarToast(`✅ ${totalProcessados} item(ns) registrado(s) com sucesso!`, 'sucesso');
+            } else {
+                mostrarToast('❌ Nenhum item foi salvo. Verifique os erros acima.', 'erro');
+            }
             
             cacheQuantidades = {};
             setTimeout(async () => {
@@ -3547,6 +3594,7 @@ if (document.getElementById('contagemForm')) {
             mostrarToast('❌ Erro de conexão com o servidor.', 'erro');
             
         } finally {
+            enviandoDados = false;
             botaoSubmit.disabled = false;
             botaoSubmit.textContent = '📝 Registrar Contagem';
         }
@@ -3592,6 +3640,7 @@ if (document.getElementById('contagemForm')) {
     window.travarItemAposRegistro = travarItemAposRegistro;
     window.itemFoiModificado = itemFoiModificado;
     window.atualizarTotalConcreto = atualizarTotalConcreto;
+    window.quantidadeMenorQueAnterior = quantidadeMenorQueAnterior;
     
     // ============================================
     // INICIALIZAR
