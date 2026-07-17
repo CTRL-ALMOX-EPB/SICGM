@@ -334,8 +334,9 @@ function processarDados(dados, filtros) {
     // - Trafos e Bobinas: SOMAR todas as quantidades (cada item é único)
     // ============================================================
     
-    const tiposQueUsamUltimaContagem = ['concreto', 'miscelanea', 'especifico'];
-    const tiposQueSomaTudo = ['trafo', 'bobina'];
+    // Definir quais tipos usam apenas a última contagem
+    const tiposUltimaContagem = ['concreto', 'miscelanea', 'especifico'];
+    const tiposSomaTudo = ['trafo', 'bobina'];
     
     // Agrupar por código
     const gruposPorCodigo = {};
@@ -343,44 +344,63 @@ function processarDados(dados, filtros) {
     dadosFiltrados.forEach(item => {
         const codigo = item.codigo;
         if (!gruposPorCodigo[codigo]) {
-            gruposPorCodigo[codigo] = [];
+            gruposPorCodigo[codigo] = {
+                codigo: codigo,
+                tipo_material: item.tipo_material || 'desconhecido',
+                registros: []
+            };
         }
-        gruposPorCodigo[codigo].push(item);
+        gruposPorCodigo[codigo].registros.push(item);
     });
     
+    // Processar cada grupo
     const registrosProcessados = [];
     
-    Object.values(gruposPorCodigo).forEach(registros => {
-        const tipoMaterial = registros[0]?.tipo_material || 'desconhecido';
+    Object.values(gruposPorCodigo).forEach(grupo => {
+        const tipoMaterial = grupo.tipo_material;
+        const registros = grupo.registros;
         
-        // Ordenar por data (do mais antigo para o mais novo)
+        // Ordenar registros por data (do mais antigo para o mais novo)
         registros.sort((a, b) => {
             const dateA = new Date(a.created_at || a.data);
             const dateB = new Date(b.created_at || b.data);
             return dateA - dateB;
         });
         
-        if (tiposQueUsamUltimaContagem.includes(tipoMaterial)) {
-            // Concretos, Miscelâneas, Específicos: APENAS a última contagem
+        if (tiposUltimaContagem.includes(tipoMaterial)) {
+            // ==========================================
+            // CONCRETOS, MISCELÂNEAS, ESPECÍFICOS
+            // Pegar APENAS a ÚLTIMA contagem
+            // ==========================================
             const ultimoRegistro = registros[registros.length - 1];
             registrosProcessados.push(ultimoRegistro);
-            console.log(`📊 ${tipoMaterial} ${ultimoRegistro.codigo}: usando última contagem (${ultimoRegistro.qtd})`);
-        } else if (tiposQueSomaTudo.includes(tipoMaterial)) {
-            // Trafos e Bobinas: SOMAR todas as quantidades
-            // Para trafos e bobinas, cada registro é um item único (tombamento diferente)
-            // Então somamos todas as quantidades
+            
+            console.log(`📊 ${tipoMaterial} ${grupo.codigo}: usando ÚLTIMA contagem = ${ultimoRegistro.qtd} (total de ${registros.length} registros)`);
+            
+        } else if (tiposSomaTudo.includes(tipoMaterial)) {
+            // ==========================================
+            // TRAFOS E BOBINAS
+            // Manter TODOS os registros para somar
+            // ==========================================
             registros.forEach(registro => {
                 registrosProcessados.push(registro);
             });
-            console.log(`📊 ${tipoMaterial}: ${registros.length} registros para somar`);
+            
+            const totalQtd = registros.reduce((sum, r) => sum + (parseFloat(r.qtd) || 0), 0);
+            console.log(`📊 ${tipoMaterial} ${grupo.codigo}: ${registros.length} registros, soma total = ${totalQtd}`);
+            
         } else {
-            // Fallback: pegar o último registro para tipos desconhecidos
+            // Fallback para tipos desconhecidos
             const ultimoRegistro = registros[registros.length - 1];
             registrosProcessados.push(ultimoRegistro);
+            console.log(`📊 ${tipoMaterial} ${grupo.codigo}: tipo desconhecido, usando último registro`);
         }
     });
     
-    // Agora agrupar para o relatório final
+    // ============================================================
+    // AGRUPAR PARA O RELATÓRIO FINAL
+    // ============================================================
+    
     const grupos = {};
     
     registrosProcessados.forEach(item => {
@@ -399,25 +419,27 @@ function processarDados(dados, filtros) {
                 ultima_data: null,
                 registros: [],
                 bobinas_unicas: new Set(),
-                // Para controle de quais registros foram usados
-                registros_usados: []
+                qtds_utilizadas: []
             };
         }
         
-        // Adicionar a quantidade (pode ser a última ou soma de todas)
-        grupos[codigo].quantidade_total += parseFloat(item.qtd) || 0;
+        // Adicionar a quantidade ao total
+        const qtd = parseFloat(item.qtd) || 0;
+        grupos[codigo].quantidade_total += qtd;
         grupos[codigo].registros.push(item);
-        grupos[codigo].registros_usados.push({
-            qtd: item.qtd,
+        grupos[codigo].qtds_utilizadas.push({
+            qtd: qtd,
             data: item.data,
-            created_at: item.created_at
+            created_at: item.created_at,
+            nome: item.nome
         });
         
+        // Para bobinas, contar tombamentos únicos
         if (item.tipo_material === 'bobina' && item.tombamento) {
             grupos[codigo].bobinas_unicas.add(item.tombamento);
         }
         
-        // Atualizar última contagem (último registro processado)
+        // Atualizar última contagem (para exibição)
         const dataItem = new Date(item.created_at || item.data);
         if (!grupos[codigo].ultima_data || dataItem > new Date(grupos[codigo].ultima_data)) {
             grupos[codigo].ultima_contagem = item.qtd;
@@ -429,11 +451,13 @@ function processarDados(dados, filtros) {
     const resultado = Object.values(grupos);
     resultado.sort((a, b) => a.codigo.localeCompare(b.codigo));
     
-    // Log para debug
-    console.log('📊 Resultado do processamento:');
+    // Log de debug
+    console.log('📊 ===== RELATÓRIO PROCESSADO =====');
     resultado.forEach(item => {
-        console.log(`  ${item.codigo} (${item.tipo_material}): QTD=${item.quantidade_total}, Registros=${item.registros_usados.length}`);
+        const qtds = item.qtds_utilizadas.map(q => q.qtd).join(', ');
+        console.log(`  ${item.codigo} (${item.tipo_material}): QTD TOTAL = ${item.quantidade_total} | QTDs usadas: [${qtds}]`);
     });
+    console.log('📊 ================================');
     
     return resultado;
 }
@@ -655,7 +679,7 @@ function renderizarRelatorio(dados) {
 }
 
 // ============================================
-// ATUALIZAR ESTATÍSTICAS
+// ATUALIZAR ESTATÍSTICAS - CORRIGIDO
 // ============================================
 
 function atualizarEstatisticas(dados, dadosBrutos) {
@@ -678,17 +702,120 @@ function atualizarEstatisticas(dados, dadosBrutos) {
     if (dadosBrutos) {
         const ativos = dadosBrutos.filter(i => i.ativo === 1 || i.ativo === true);
         
+        // ============================================
+        // TRAFOS - SOMAR TODOS (cada trafo é único)
+        // ============================================
         const trafos = ativos.filter(i => i.tipo_material === 'trafo');
         const totalTrafos = trafos.reduce((sum, item) => sum + (parseFloat(item.qtd) || 0), 0);
         document.getElementById('total-trafos').textContent = totalTrafos.toFixed(0);
         
+        // ============================================
+        // BOBINAS - SOMAR TODOS (cada bobina é única)
+        // ============================================
         const bobinas = ativos.filter(i => i.tipo_material === 'bobina');
         const totalBobinas = bobinas.reduce((sum, item) => sum + (parseFloat(item.qtd) || 0), 0);
         document.getElementById('total-bobinas').textContent = totalBobinas.toFixed(0);
         
+        // ============================================
+        // CONCRETOS - PEGAR APENAS A ÚLTIMA CONTAGEM DE CADA CÓDIGO
+        // ============================================
         const concretos = ativos.filter(i => i.tipo_material === 'concreto');
-        const totalConcretos = concretos.reduce((sum, item) => sum + (parseFloat(item.qtd) || 0), 0);
+        
+        // Agrupar concretos por código
+        const gruposConcretos = {};
+        concretos.forEach(item => {
+            const codigo = item.codigo;
+            if (!gruposConcretos[codigo]) {
+                gruposConcretos[codigo] = [];
+            }
+            gruposConcretos[codigo].push(item);
+        });
+        
+        // Para cada código de concreto, pegar apenas a última contagem
+        let totalConcretos = 0;
+        Object.values(gruposConcretos).forEach(registros => {
+            // Ordenar por data (do mais novo para o mais antigo)
+            registros.sort((a, b) => {
+                const dateA = new Date(a.created_at || a.data);
+                const dateB = new Date(b.created_at || b.data);
+                return dateB - dateA;
+            });
+            // Pegar o primeiro (mais recente)
+            const ultimoRegistro = registros[0];
+            totalConcretos += parseFloat(ultimoRegistro.qtd) || 0;
+        });
+        
         document.getElementById('total-concretos').textContent = totalConcretos.toFixed(0);
+        
+        // ============================================
+        // MISCELÂNEAS - PEGAR APENAS A ÚLTIMA CONTAGEM DE CADA CÓDIGO
+        // ============================================
+        const miscelaneas = ativos.filter(i => i.tipo_material === 'miscelanea');
+        
+        const gruposMiscelaneas = {};
+        miscelaneas.forEach(item => {
+            const codigo = item.codigo;
+            if (!gruposMiscelaneas[codigo]) {
+                gruposMiscelaneas[codigo] = [];
+            }
+            gruposMiscelaneas[codigo].push(item);
+        });
+        
+        let totalMiscelaneas = 0;
+        Object.values(gruposMiscelaneas).forEach(registros => {
+            registros.sort((a, b) => {
+                const dateA = new Date(a.created_at || a.data);
+                const dateB = new Date(b.created_at || b.data);
+                return dateB - dateA;
+            });
+            const ultimoRegistro = registros[0];
+            totalMiscelaneas += parseFloat(ultimoRegistro.qtd) || 0;
+        });
+        
+        // Se existir um elemento para miscelâneas, atualizar
+        const totalMiscelaneasEl = document.getElementById('total-miscelaneas');
+        if (totalMiscelaneasEl) {
+            totalMiscelaneasEl.textContent = totalMiscelaneas.toFixed(0);
+        }
+        
+        // ============================================
+        // ESPECÍFICOS - PEGAR APENAS A ÚLTIMA CONTAGEM DE CADA CÓDIGO
+        // ============================================
+        const especificos = ativos.filter(i => i.tipo_material === 'especifico');
+        
+        const gruposEspecificos = {};
+        especificos.forEach(item => {
+            const codigo = item.codigo;
+            if (!gruposEspecificos[codigo]) {
+                gruposEspecificos[codigo] = [];
+            }
+            gruposEspecificos[codigo].push(item);
+        });
+        
+        let totalEspecificos = 0;
+        Object.values(gruposEspecificos).forEach(registros => {
+            registros.sort((a, b) => {
+                const dateA = new Date(a.created_at || a.data);
+                const dateB = new Date(b.created_at || b.data);
+                return dateB - dateA;
+            });
+            const ultimoRegistro = registros[0];
+            totalEspecificos += parseFloat(ultimoRegistro.qtd) || 0;
+        });
+        
+        // Se existir um elemento para específicos, atualizar
+        const totalEspecificosEl = document.getElementById('total-especificos');
+        if (totalEspecificosEl) {
+            totalEspecificosEl.textContent = totalEspecificos.toFixed(0);
+        }
+        
+        console.log('📊 ===== ESTATÍSTICAS =====');
+        console.log(`  Trafos: ${totalTrafos}`);
+        console.log(`  Bobinas: ${totalBobinas}`);
+        console.log(`  Concretos (última contagem): ${totalConcretos}`);
+        console.log(`  Miscelâneas (última contagem): ${totalMiscelaneas}`);
+        console.log(`  Específicos (última contagem): ${totalEspecificos}`);
+        console.log('📊 ========================');
     }
 }
 
