@@ -100,49 +100,72 @@
                     </div>
                 </div>
 
-                <!-- Seção de Materiais -->
-                <div class="materiais-section">
-                    <h2 class="section-title">Materiais</h2>
-                    
-                    <!-- FILTRO DE PESQUISA -->
-                    <div class="filtro-container">
-                        <div class="filtro-row">
-                            <div class="filtro-input-group">
-                                <label for="filtro-texto">🔍 Pesquisar</label>
-                                <input type="text" id="filtro-texto" placeholder="Digite para pesquisar..." oninput="aplicarFiltro()">
-                            </div>
-                            <div class="filtro-select-group">
-                                <label for="filtro-tipo">Filtrar por</label>
-                                <select id="filtro-tipo" onchange="aplicarFiltro()">
-                                    <option value="codigo">Código</option>
-                                    <option value="descricao">Descrição</option>
-                                    <option value="tombamento">Tombamento</option>
-                                    <option value="todos">Todos os campos</option>
-                                </select>
-                            </div>
-                            <div class="filtro-clear-group">
-                                <button type="button" class="btn-limpar-filtro" onclick="limparFiltro()">
-                                    ✕ Limpar
-                                </button>
-                            </div>
+                <!-- ============================================ -->
+                <!-- SUBDIVISÕES DE CONTAGEM                      -->
+                <!-- ============================================ -->
+                
+                <!-- CONTAGEM DIÁRIA -->
+                <div class="subdivisao-container">
+                    <div class="subdivisao-header" onclick="toggleSubdivisao('diaria')">
+                        <span class="subdivisao-icone">📋</span>
+                        <span class="subdivisao-titulo">Contagem Diária</span>
+                        <span class="subdivisao-toggle">▼</span>
+                    </div>
+                    <div class="subdivisao-conteudo" id="subdivisao-diaria">
+                        <div class="subdivisao-descricao">
+                            Materiais contados diariamente: Concretos, Bobinas, Trafos e Itens Específicos
                         </div>
-                        <div id="filtro-resultado" class="filtro-resultado">
-                            <span id="filtro-contagem">Mostrando 0 itens</span>
+                        <!-- Abas internas da Contagem Diária -->
+                        <div class="tabs-container" id="tabs-diaria">
+                            <div class="tabs-nav" id="tabs-nav-diaria"></div>
+                            <div id="tabs-content-diaria"></div>
                         </div>
                     </div>
-                    
-                    <!-- Sistema de Abas -->
-                    <div class="tabs-container">
-                        <div class="tabs-nav" id="tabs-nav"></div>
-                        <div id="tabs-content"></div>
-                    </div>
-                    
-                    <div id="loading-materiais" style="text-align: center; padding: 20px; color: #718096;">
-                        ⏳ Carregando materiais...
-                    </div>
-                    
-                    <div id="mensagem" class="mensagem"></div>
                 </div>
+
+                <!-- CONTAGEM SEMANAL -->
+                <div class="subdivisao-container">
+                    <div class="subdivisao-header" onclick="toggleSubdivisao('semanal')">
+                        <span class="subdivisao-icone">📅</span>
+                        <span class="subdivisao-titulo">Contagem Semanal</span>
+                        <span class="subdivisao-toggle">▼</span>
+                    </div>
+                    <div class="subdivisao-conteudo" id="subdivisao-semanal">
+                        <div class="subdivisao-descricao">
+                            Materiais contados semanalmente: Miscelâneas (antigo)
+                        </div>
+                        <!-- Abas internas da Contagem Semanal -->
+                        <div class="tabs-container" id="tabs-semanal">
+                            <div class="tabs-nav" id="tabs-nav-semanal"></div>
+                            <div id="tabs-content-semanal"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONTAGENS ROTATIVAS -->
+                <div class="subdivisao-container">
+                    <div class="subdivisao-header" onclick="toggleSubdivisao('rotativas')">
+                        <span class="subdivisao-icone">🔄</span>
+                        <span class="subdivisao-titulo">Contagens Rotativas</span>
+                        <span class="subdivisao-toggle">▼</span>
+                    </div>
+                    <div class="subdivisao-conteudo" id="subdivisao-rotativas">
+                        <div class="subdivisao-descricao">
+                            Materiais contados em rotação: Laços, Alças, Parafusos, Cabos, Miscelâneas 1, Miscelâneas 2 e Medidores
+                        </div>
+                        <!-- Abas internas das Contagens Rotativas -->
+                        <div class="tabs-container" id="tabs-rotativas">
+                            <div class="tabs-nav" id="tabs-nav-rotativas"></div>
+                            <div id="tabs-content-rotativas"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="loading-materiais" style="text-align: center; padding: 20px; color: #718096;">
+                    ⏳ Carregando materiais...
+                </div>
+                
+                <div id="mensagem" class="mensagem"></div>
 
                 <button type="submit" class="submit-btn">📝 Registrar Contagem</button>
             </form>

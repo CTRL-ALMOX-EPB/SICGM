@@ -2911,3 +2911,179 @@ body {
 .especifico-item {
     border-left: 4px solid #805AD5;
 }
+
+/* ============================================ */
+/* SUBDIVISÕES DE CONTAGEM                      */
+/* ============================================ */
+
+.subdivisao-container {
+    margin-bottom: 20px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #FFFFFF;
+    transition: all 0.3s ease;
+}
+
+.subdivisao-container:hover {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.subdivisao-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 20px;
+    background: #F7FAFC;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.subdivisao-header:hover {
+    background: #EDF2F7;
+}
+
+.subdivisao-header .subdivisao-icone {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.subdivisao-header .subdivisao-titulo {
+    font-weight: 600;
+    color: #2D3748;
+    font-size: 1.05em;
+    flex: 1;
+}
+
+.subdivisao-header .subdivisao-toggle {
+    font-size: 14px;
+    color: #718096;
+    transition: transform 0.3s ease;
+}
+
+.subdivisao-container.aberto .subdivisao-toggle {
+    transform: rotate(180deg);
+}
+
+.subdivisao-conteudo {
+    display: none;
+    padding: 15px 20px 20px 20px;
+    background: #FFFFFF;
+    border-top: 1px solid #E2E8F0;
+    animation: subdivisaoExpand 0.3s ease-out;
+}
+
+.subdivisao-container.aberto .subdivisao-conteudo {
+    display: block;
+}
+
+@keyframes subdivisaoExpand {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.subdivisao-descricao {
+    font-size: 0.85em;
+    color: #718096;
+    margin-bottom: 15px;
+    padding: 8px 12px;
+    background: #F7FAFC;
+    border-radius: 6px;
+    border-left: 3px solid #4299E1;
+}
+
+/* Abas dentro das subdivisões */
+.subdivisao-conteudo .tabs-container {
+    margin-top: 5px;
+}
+
+.subdivisao-conteudo .tabs-nav {
+    gap: 4px;
+    border-bottom: 2px solid #E2E8F0;
+}
+
+.subdivisao-conteudo .tab-btn {
+    padding: 10px 16px;
+    font-size: 0.85em;
+}
+
+.subdivisao-conteudo .tab-content {
+    padding: 15px;
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE - SUBDIVISÕES                 */
+/* ============================================ */
+
+@media (max-width: 768px) {
+    .subdivisao-header {
+        padding: 12px 15px;
+    }
+    
+    .subdivisao-header .subdivisao-icone {
+        font-size: 18px;
+    }
+    
+    .subdivisao-header .subdivisao-titulo {
+        font-size: 0.95em;
+    }
+    
+    .subdivisao-conteudo {
+        padding: 12px 15px 15px 15px;
+    }
+    
+    .subdivisao-descricao {
+        font-size: 0.8em;
+        padding: 6px 10px;
+    }
+    
+    .subdivisao-conteudo .tab-btn {
+        padding: 8px 12px;
+        font-size: 0.75em;
+    }
+}
+
+@media (max-width: 480px) {
+    .subdivisao-header {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+    
+    .subdivisao-header .subdivisao-icone {
+        font-size: 16px;
+    }
+    
+    .subdivisao-header .subdivisao-titulo {
+        font-size: 0.85em;
+    }
+    
+    .subdivisao-header .subdivisao-toggle {
+        font-size: 12px;
+    }
+    
+    .subdivisao-conteudo {
+        padding: 10px 10px 12px 10px;
+    }
+    
+    .subdivisao-descricao {
+        font-size: 0.7em;
+        padding: 5px 8px;
+    }
+    
+    .subdivisao-conteudo .tab-btn {
+        padding: 6px 10px;
+        font-size: 0.7em;
+        gap: 4px;
+    }
+    
+    .subdivisao-conteudo .tab-content {
+        padding: 10px 8px;
+    }
+}
