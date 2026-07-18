@@ -742,11 +742,6 @@ if (document.getElementById('contagemForm')) {
             criarAbas();
             dadosCarregados = true;
             
-            // Inicializar subdivisões após carregar
-            setTimeout(() => {
-                inicializarSubdivisoes();
-            }, 300);
-            
         } catch (error) {
             console.error('Erro ao carregar materiais:', error);
             document.getElementById('loading-materiais').innerHTML = 
@@ -920,7 +915,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CRIAR SISTEMA DE SUBDIVISÕES E ABAS
+    // CRIAR SISTEMA DE ABAS PRINCIPAIS E SUB-ABAS
     // ============================================
     
     function criarAbas() {
@@ -1004,6 +999,52 @@ if (document.getElementById('contagemForm')) {
         
         // Esconder loading
         loading.style.display = 'none';
+        
+        // Ativar primeira aba principal por padrão (Diária)
+        ativarTipoContagem('diaria');
+    }
+    
+    // ============================================
+    // ATIVAR TIPO DE CONTAGEM (ABA PRINCIPAL)
+    // ============================================
+    
+    function ativarTipoContagem(tipo) {
+        // Atualizar botões principais
+        document.querySelectorAll('.tab-principal-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.tipo === tipo) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // Atualizar conteúdos principais
+        document.querySelectorAll('.tab-principal-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        const contentAtivo = document.getElementById(`tab-principal-${tipo}`);
+        if (contentAtivo) {
+            contentAtivo.classList.add('active');
+        }
+        
+        // Atualizar o título da página
+        const tituloMap = {
+            'diaria': '📋 Contagem Diária',
+            'semanal': '📅 Contagem Semanal',
+            'rotativas': '🔄 Contagens Rotativas'
+        };
+        
+        const titleElement = document.querySelector('.title');
+        if (titleElement) {
+            titleElement.textContent = `SICGM - ${tituloMap[tipo] || 'Contagem'}`;
+        }
+        
+        // Reaplicar filtro após trocar de aba
+        setTimeout(() => {
+            if (typeof aplicarFiltro === 'function') {
+                aplicarFiltro();
+            }
+        }, 100);
     }
     
     // ============================================
@@ -1030,27 +1071,6 @@ if (document.getElementById('contagemForm')) {
                 aplicarFiltro();
             }
         }, 100);
-    }
-    
-    // ============================================
-    // TOGGLE SUBDIVISÃO
-    // ============================================
-    
-    function toggleSubdivisao(subdivisaoId) {
-        const container = document.getElementById(`subdivisao-${subdivisaoId}`).closest('.subdivisao-container');
-        if (container) {
-            container.classList.toggle('aberto');
-        }
-    }
-    
-    // ============================================
-    // INICIALIZAR SUBDIVISÕES
-    // ============================================
-    
-    function inicializarSubdivisoes() {
-        document.querySelectorAll('.subdivisao-container').forEach(container => {
-            container.classList.add('aberto');
-        });
     }
     
     // ============================================
@@ -2356,9 +2376,8 @@ if (document.getElementById('contagemForm')) {
         bobinasManuais.unshift(novaBobina);
         materiaisPorCategoria['bobinas'] = bobinasManuais;
         
-        const tabsContent = document.getElementById('tabs-content-diaria');
         const tabBobinas = document.getElementById('tab-diaria-bobinas');
-        if (tabsContent && tabBobinas) {
+        if (tabBobinas) {
             tabBobinas.innerHTML = renderizarBobinas(bobinasManuais);
             atualizarContadorBobinas();
             
@@ -2899,7 +2918,14 @@ if (document.getElementById('contagemForm')) {
     function aplicarFiltro() {
         const texto = document.getElementById('filtro-texto').value.toLowerCase().trim();
         const tipo = document.getElementById('filtro-tipo').value;
-        const items = document.querySelectorAll('.material-item');
+        
+        const subdivisaoAtiva = document.querySelector('.tab-principal-content.active');
+        if (!subdivisaoAtiva) {
+            document.getElementById('filtro-contagem').textContent = 'Mostrando 0 itens';
+            return;
+        }
+        
+        const items = subdivisaoAtiva.querySelectorAll('.material-item');
         let visiveis = 0;
         
         if (!texto) {
@@ -3793,12 +3819,12 @@ if (document.getElementById('contagemForm')) {
                 await carregarItensManuais();
                 
                 const tabTrafos = document.getElementById('tab-diaria-trafos');
-                if (tabTrafos && categoriaAtiva === 'trafos') {
+                if (tabTrafos) {
                     tabTrafos.innerHTML = renderizarTrafos(materiaisManuais);
                     atualizarContadorTrafos();
                 }
                 const tabBobinas = document.getElementById('tab-diaria-bobinas');
-                if (tabBobinas && categoriaAtiva === 'bobinas') {
+                if (tabBobinas) {
                     tabBobinas.innerHTML = renderizarBobinas(bobinasManuais);
                     atualizarContadorBobinas();
                 }
@@ -3819,8 +3845,8 @@ if (document.getElementById('contagemForm')) {
     // EXPOR FUNÇÕES GLOBAIS PARA O HTML
     // ============================================
     
+    window.ativarTipoContagem = ativarTipoContagem;
     window.ativarAbaSubdivisao = ativarAbaSubdivisao;
-    window.toggleSubdivisao = toggleSubdivisao;
     window.calcularDiferenca = calcularDiferenca;
     window.calcularDiferencaBobina = calcularDiferencaBobina;
     window.calcularDiferencaTrafo = calcularDiferencaTrafo;

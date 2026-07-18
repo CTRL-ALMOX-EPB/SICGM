@@ -101,63 +101,62 @@
                 </div>
 
                 <!-- ============================================ -->
-                <!-- SUBDIVISÕES DE CONTAGEM                      -->
+                <!-- ABAS PRINCIPAIS - TIPO DE CONTAGEM          -->
+                <!-- ============================================ -->
+                <div class="tabs-principais-container">
+                    <div class="tabs-principais-nav" id="tabs-principais-nav">
+                        <button type="button" class="tab-principal-btn active" data-tipo="diaria" onclick="ativarTipoContagem('diaria')">
+                            <span class="tab-icone">📋</span>
+                            Contagem Diária
+                        </button>
+                        <button type="button" class="tab-principal-btn" data-tipo="semanal" onclick="ativarTipoContagem('semanal')">
+                            <span class="tab-icone">📅</span>
+                            Contagem Semanal
+                        </button>
+                        <button type="button" class="tab-principal-btn" data-tipo="rotativas" onclick="ativarTipoContagem('rotativas')">
+                            <span class="tab-icone">🔄</span>
+                            Contagens Rotativas
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- CONTEÚDO DAS ABAS PRINCIPAIS                 -->
                 <!-- ============================================ -->
                 
                 <!-- CONTAGEM DIÁRIA -->
-                <div class="subdivisao-container">
-                    <div class="subdivisao-header" onclick="toggleSubdivisao('diaria')">
-                        <span class="subdivisao-icone">📋</span>
-                        <span class="subdivisao-titulo">Contagem Diária</span>
-                        <span class="subdivisao-toggle">▼</span>
+                <div class="tab-principal-content active" id="tab-principal-diaria">
+                    <div class="sub-titulo-secao">
+                        <span class="sub-titulo-icone">📋</span>
+                        <span>Materiais contados diariamente: Concretos, Bobinas, Trafos e Itens Específicos</span>
                     </div>
-                    <div class="subdivisao-conteudo" id="subdivisao-diaria">
-                        <div class="subdivisao-descricao">
-                            Materiais contados diariamente: Concretos, Bobinas, Trafos e Itens Específicos
-                        </div>
-                        <!-- Abas internas da Contagem Diária -->
-                        <div class="tabs-container" id="tabs-diaria">
-                            <div class="tabs-nav" id="tabs-nav-diaria"></div>
-                            <div id="tabs-content-diaria"></div>
-                        </div>
+                    <div class="tabs-container" id="tabs-diaria">
+                        <div class="tabs-nav" id="tabs-nav-diaria"></div>
+                        <div id="tabs-content-diaria"></div>
                     </div>
                 </div>
 
                 <!-- CONTAGEM SEMANAL -->
-                <div class="subdivisao-container">
-                    <div class="subdivisao-header" onclick="toggleSubdivisao('semanal')">
-                        <span class="subdivisao-icone">📅</span>
-                        <span class="subdivisao-titulo">Contagem Semanal</span>
-                        <span class="subdivisao-toggle">▼</span>
+                <div class="tab-principal-content" id="tab-principal-semanal">
+                    <div class="sub-titulo-secao">
+                        <span class="sub-titulo-icone">📅</span>
+                        <span>Materiais contados semanalmente: Miscelâneas (antigo)</span>
                     </div>
-                    <div class="subdivisao-conteudo" id="subdivisao-semanal">
-                        <div class="subdivisao-descricao">
-                            Materiais contados semanalmente: Miscelâneas (antigo)
-                        </div>
-                        <!-- Abas internas da Contagem Semanal -->
-                        <div class="tabs-container" id="tabs-semanal">
-                            <div class="tabs-nav" id="tabs-nav-semanal"></div>
-                            <div id="tabs-content-semanal"></div>
-                        </div>
+                    <div class="tabs-container" id="tabs-semanal">
+                        <div class="tabs-nav" id="tabs-nav-semanal"></div>
+                        <div id="tabs-content-semanal"></div>
                     </div>
                 </div>
 
                 <!-- CONTAGENS ROTATIVAS -->
-                <div class="subdivisao-container">
-                    <div class="subdivisao-header" onclick="toggleSubdivisao('rotativas')">
-                        <span class="subdivisao-icone">🔄</span>
-                        <span class="subdivisao-titulo">Contagens Rotativas</span>
-                        <span class="subdivisao-toggle">▼</span>
+                <div class="tab-principal-content" id="tab-principal-rotativas">
+                    <div class="sub-titulo-secao">
+                        <span class="sub-titulo-icone">🔄</span>
+                        <span>Materiais contados em rotação: Laços, Alças, Parafusos, Cabos, Miscelâneas 1, Miscelâneas 2 e Medidores</span>
                     </div>
-                    <div class="subdivisao-conteudo" id="subdivisao-rotativas">
-                        <div class="subdivisao-descricao">
-                            Materiais contados em rotação: Laços, Alças, Parafusos, Cabos, Miscelâneas 1, Miscelâneas 2 e Medidores
-                        </div>
-                        <!-- Abas internas das Contagens Rotativas -->
-                        <div class="tabs-container" id="tabs-rotativas">
-                            <div class="tabs-nav" id="tabs-nav-rotativas"></div>
-                            <div id="tabs-content-rotativas"></div>
-                        </div>
+                    <div class="tabs-container" id="tabs-rotativas">
+                        <div class="tabs-nav" id="tabs-nav-rotativas"></div>
+                        <div id="tabs-content-rotativas"></div>
                     </div>
                 </div>
                 
