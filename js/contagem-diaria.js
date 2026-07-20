@@ -2919,12 +2919,14 @@ if (document.getElementById('contagemForm')) {
         const texto = document.getElementById('filtro-texto').value.toLowerCase().trim();
         const tipo = document.getElementById('filtro-tipo').value;
         
+        // Encontrar a subdivisão ativa
         const subdivisaoAtiva = document.querySelector('.tab-principal-content.active');
         if (!subdivisaoAtiva) {
             document.getElementById('filtro-contagem').textContent = 'Mostrando 0 itens';
             return;
         }
         
+        // Buscar itens na subdivisão ativa
         const items = subdivisaoAtiva.querySelectorAll('.material-item');
         let visiveis = 0;
         
@@ -2976,7 +2978,7 @@ if (document.getElementById('contagemForm')) {
         document.getElementById('filtro-tipo').value = 'todos';
         aplicarFiltro();
         document.getElementById('filtro-texto').focus();
-    }
+    }   
     
     // ============================================
     // FUNÇÕES DE NAVEGAÇÃO - TOPO E FIM
