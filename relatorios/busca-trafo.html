@@ -2,84 +2,223 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Busca Trafo - Índice Geral</title>
-  <link rel="stylesheet" href="../css/styles.css" />
-  <link rel="stylesheet" href="../css/busca-trafo.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICGM - Busca Trafo</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/busca-trafo.css">
 </head>
 <body>
 
-<div class="container">
-  <h1>🔍 Busca Trafo</h1>
-  <p>Índice geral de todos os transformadores registrados.</p>
+    <!-- ============================================ -->
+    <!-- LOADING OVERLAY                              -->
+    <!-- ============================================ -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Validando acesso...</div>
+    </div>
 
-  <!-- Filtros -->
-  <div class="filtros-container">
-    <!-- REMOVIDO: filtro de Chave -->
-    <div class="filtro-item">
-      <label for="filtroCodMat">Cód. Mat</label>
-      <input type="text" id="filtroCodMat" placeholder="Ex: 90063" />
-    </div>
-    <div class="filtro-item">
-      <label for="filtroDescricao">Descrição</label>
-      <input type="text" id="filtroDescricao" placeholder="Ex: 75KVA" />
-    </div>
-    <div class="filtro-item">
-      <label for="filtroFabricante">Fabricante</label>
-      <input type="text" id="filtroFabricante" placeholder="Ex: ITAIPU" />
-    </div>
-    <div class="filtro-item">
-      <label for="filtroSerie">Nº de Série</label>
-      <input type="text" id="filtroSerie" placeholder="Ex: 232691" />
-    </div>
-    <div class="filtro-item">
-      <label for="filtroTombamento">Tombamento</label>
-      <input type="text" id="filtroTombamento" placeholder="Ex: 58158" />
-    </div>
-    <div class="filtro-item">
-      <label for="filtroStatus">Status</label>
-      <select id="filtroStatus">
-        <option value="">Todos</option>
-        <option value="Estoque">Estoque</option>
-        <option value="Obra">Obra</option>
-        <option value="Transferido">Transferido</option>
-        <option value="Falta">Falta</option>
-      </select>
-    </div>
-    <button class="btn-filtrar" id="btnBuscar">🔍 Buscar</button>
-  </div>
+    <!-- ============================================ -->
+    <!-- CONTEÚDO PRINCIPAL                           -->
+    <!-- ============================================ -->
+    <div class="container" id="mainContent" style="display: none;">
 
-  <!-- Estatísticas -->
-  <div class="stats" id="stats">Carregando registros...</div>
+        <!-- ============================================ -->
+        <!-- CABEÇALHO COM LOGO E USUÁRIO                -->
+        <!-- ============================================ -->
+        <div class="page-header">
+            <div class="header-left">
+                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                <div>
+                    <h1>
+                        🔍 Busca Trafo
+                        <small>Índice geral de transformadores</small>
+                    </h1>
+                </div>
+            </div>
+            <div class="user-info">
+                <div class="user-details">
+                    <div class="user-name" id="nomeUsuario">Carregando...</div>
+                    <div class="user-matricula" id="matriculaUsuario">Matrícula: ---</div>
+                </div>
+                <span class="user-perfil" id="perfilUsuario">GESTÃO</span>
+                <button class="btn-voltar-home" id="btnVoltarHome" onclick="redirecionarParaHome()">
+                    🏠 Voltar
+                </button>
+                <button class="btn-sair" onclick="sair()">🚪 Sair</button>
+            </div>
+        </div>
 
-  <!-- Tabela -->
-  <div class="tabela-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <!-- REMOVIDO: Chave -->
-          <th>Cód. Mat</th>
-          <th>Descrição</th>
-          <th>Fabricante</th>
-          <th>Nº Série</th>
-          <th>Tombamento</th>
-          <th>Status</th>
-          <th>Dt. Rec. Energisa</th>
-          <th>Dt. Saída</th>
-          <th>Histórico</th>
-          <th>Obra/SS</th>
-        </tr>
-      </thead>
-      <tbody id="tabelaCorpo">
-        <tr>
-          <td colspan="10" style="text-align: center; padding: 40px;">Carregando dados...</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</div>
+        <!-- ============================================ -->
+        <!-- SUBTÍTULO                                    -->
+        <!-- ============================================ -->
+        <p class="subtitulo">
+            Índice geral de todos os transformadores registrados no sistema.
+        </p>
 
-<script src="../js/busca-trafo.js"></script>
+        <!-- ============================================ -->
+        <!-- FILTROS                                       -->
+        <!-- ============================================ -->
+        <div class="filtros-container">
+            <div class="filtro-item">
+                <label for="filtroCodMat">Cód. Mat</label>
+                <input type="text" id="filtroCodMat" placeholder="Ex: 90063" />
+            </div>
+            <div class="filtro-item">
+                <label for="filtroDescricao">Descrição</label>
+                <input type="text" id="filtroDescricao" placeholder="Ex: 75KVA" />
+            </div>
+            <div class="filtro-item">
+                <label for="filtroFabricante">Fabricante</label>
+                <input type="text" id="filtroFabricante" placeholder="Ex: ITAIPU" />
+            </div>
+            <div class="filtro-item">
+                <label for="filtroSerie">Nº de Série</label>
+                <input type="text" id="filtroSerie" placeholder="Ex: 232691" />
+            </div>
+            <div class="filtro-item">
+                <label for="filtroTombamento">Tombamento</label>
+                <input type="text" id="filtroTombamento" placeholder="Ex: 58158" />
+            </div>
+            <div class="filtro-item">
+                <label for="filtroStatus">Status</label>
+                <select id="filtroStatus">
+                    <option value="">Todos</option>
+                    <option value="Estoque">Estoque</option>
+                    <option value="Obra">Obra</option>
+                    <option value="Transferido">Transferido</option>
+                    <option value="Falta">Falta</option>
+                </select>
+            </div>
+            <button class="btn-filtrar" id="btnBuscar">🔍 Buscar</button>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- ESTATÍSTICAS                                  -->
+        <!-- ============================================ -->
+        <div class="stats" id="stats">Carregando registros...</div>
+
+        <!-- ============================================ -->
+        <!-- TABELA                                        -->
+        <!-- ============================================ -->
+        <div class="tabela-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cód. Mat</th>
+                        <th>Descrição</th>
+                        <th>Fabricante</th>
+                        <th>Nº Série</th>
+                        <th>Tombamento</th>
+                        <th>Status</th>
+                        <th>Dt. Rec. Energisa</th>
+                        <th>Dt. Saída</th>
+                        <th>Histórico</th>
+                        <th>Obra/SS</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCorpo">
+                    <tr>
+                        <td colspan="10" style="text-align: center; padding: 40px;">Carregando dados...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SCRIPTS                                        -->
+    <!-- ============================================ -->
+    <script src="../js/script.js"></script>
+    <script src="../js/busca-trafo.js"></script>
+    <script>
+        // ============================================
+        // REDIRECIONAMENTO BASEADO NO PERFIL
+        // ============================================
+        function redirecionarParaHome() {
+            const sessao = verificarSessao();
+            if (!sessao) {
+                window.location.href = '../index.html';
+                return;
+            }
+
+            const perfil = sessao.perfil || 'GESTAO';
+            const homePages = {
+                'GESTAO': '../home-gestao.html',
+                'OPERACIONAL': '../home-operacional.html',
+                'VISUALIZACAO': '../home-visualizacao.html'
+            };
+
+            window.location.href = homePages[perfil] || '../index.html';
+        }
+
+        // ============================================
+        // SAIR
+        // ============================================
+        function sair() {
+            sessionStorage.removeItem('sessaoSICGM');
+            window.location.href = '../index.html';
+        }
+
+        // ============================================
+        // CARREGAR DADOS DO USUÁRIO
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const mainContent = document.getElementById('mainContent');
+            
+            loadingOverlay.classList.add('active');
+
+            const sessao = verificarSessao();
+            
+            if (!sessao) {
+                console.log('🔒 Sessão inválida - Redirecionando para login');
+                window.location.href = '../index.html';
+                return;
+            }
+
+            console.log('✅ Sessão válida para:', sessao.nome, '(', sessao.perfil, ')');
+            
+            try {
+                document.getElementById('nomeUsuario').textContent = sessao.nome || 'Usuário';
+                document.getElementById('matriculaUsuario').textContent = `Matrícula: ${sessao.matricula || '---'}`;
+                document.getElementById('perfilUsuario').textContent = sessao.perfil || 'GESTÃO';
+            } catch (e) {
+                console.error('Erro ao carregar dados do usuário:', e);
+                window.location.href = '../index.html';
+                return;
+            }
+
+            setTimeout(() => {
+                loadingOverlay.classList.remove('active');
+                mainContent.style.display = 'block';
+            }, 500);
+
+            atualizarTimestampSessao();
+        });
+
+        function atualizarTimestampSessao() {
+            const sessao = sessionStorage.getItem('sessaoSICGM');
+            if (sessao) {
+                try {
+                    const dados = JSON.parse(sessao);
+                    dados.timestamp = Date.now();
+                    sessionStorage.setItem('sessaoSICGM', JSON.stringify(dados));
+                } catch (e) {}
+            }
+        }
+
+        document.addEventListener('click', atualizarTimestampSessao);
+        document.addEventListener('keydown', atualizarTimestampSessao);
+
+        setInterval(function() {
+            const sessao = verificarSessao();
+            if (!sessao) {
+                console.log('🔒 Sessão expirada - Redirecionando para login');
+                window.location.href = '../index.html';
+            }
+        }, 5 * 60 * 1000);
+    </script>
+
 </body>
 </html>
