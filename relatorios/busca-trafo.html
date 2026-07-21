@@ -1,0 +1,85 @@
+<!-- relatorios/busca-trafo.html -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Busca Trafo - Índice Geral</title>
+  <link rel="stylesheet" href="../css/styles.css" />
+  <link rel="stylesheet" href="../css/busca-trafo.css" />
+</head>
+<body>
+
+<div class="container">
+  <h1>🔍 Busca Trafo</h1>
+  <p>Índice geral de todos os transformadores registrados.</p>
+
+  <!-- Filtros -->
+  <div class="filtros-container">
+    <!-- REMOVIDO: filtro de Chave -->
+    <div class="filtro-item">
+      <label for="filtroCodMat">Cód. Mat</label>
+      <input type="text" id="filtroCodMat" placeholder="Ex: 90063" />
+    </div>
+    <div class="filtro-item">
+      <label for="filtroDescricao">Descrição</label>
+      <input type="text" id="filtroDescricao" placeholder="Ex: 75KVA" />
+    </div>
+    <div class="filtro-item">
+      <label for="filtroFabricante">Fabricante</label>
+      <input type="text" id="filtroFabricante" placeholder="Ex: ITAIPU" />
+    </div>
+    <div class="filtro-item">
+      <label for="filtroSerie">Nº de Série</label>
+      <input type="text" id="filtroSerie" placeholder="Ex: 232691" />
+    </div>
+    <div class="filtro-item">
+      <label for="filtroTombamento">Tombamento</label>
+      <input type="text" id="filtroTombamento" placeholder="Ex: 58158" />
+    </div>
+    <div class="filtro-item">
+      <label for="filtroStatus">Status</label>
+      <select id="filtroStatus">
+        <option value="">Todos</option>
+        <option value="Estoque">Estoque</option>
+        <option value="Obra">Obra</option>
+        <option value="Transferido">Transferido</option>
+        <option value="Falta">Falta</option>
+      </select>
+    </div>
+    <button class="btn-filtrar" id="btnBuscar">🔍 Buscar</button>
+  </div>
+
+  <!-- Estatísticas -->
+  <div class="stats" id="stats">Carregando registros...</div>
+
+  <!-- Tabela -->
+  <div class="tabela-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <!-- REMOVIDO: Chave -->
+          <th>Cód. Mat</th>
+          <th>Descrição</th>
+          <th>Fabricante</th>
+          <th>Nº Série</th>
+          <th>Tombamento</th>
+          <th>Status</th>
+          <th>Dt. Rec. Energisa</th>
+          <th>Dt. Saída</th>
+          <th>Histórico</th>
+          <th>Obra/SS</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaCorpo">
+        <tr>
+          <td colspan="10" style="text-align: center; padding: 40px;">Carregando dados...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="../js/busca-trafo.js"></script>
+</body>
+</html>

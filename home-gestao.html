@@ -108,6 +108,7 @@
             text-decoration: none;
             color: inherit;
             display: block;
+            position: relative;
         }
 
         .menu-card:hover {
@@ -160,6 +161,99 @@
             50% { opacity: 0.5; }
             100% { opacity: 1; }
         }
+
+        /* ===== DROPDOWN DOS RELATÓRIOS ===== */
+        .dropdown-container {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            margin-top: 10px;
+            padding: 8px 0;
+            z-index: 1000;
+            min-width: 220px;
+            overflow: hidden;
+            animation: slideDown 0.25s ease;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: #2D3748;
+            text-decoration: none;
+            transition: background 0.2s;
+            font-size: 14px;
+        }
+
+        .dropdown-item:hover {
+            background: #F7FAFC;
+        }
+
+        .dropdown-item .item-icon {
+            font-size: 20px;
+            width: 28px;
+            text-align: center;
+        }
+
+        .dropdown-item .item-label {
+            flex: 1;
+        }
+
+        .dropdown-item .item-badge {
+            font-size: 10px;
+            background: #48BB78;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: #E2E8F0;
+            margin: 6px 16px;
+        }
+
+        /* Ícone de seta no card */
+        .menu-card .arrow-icon {
+            font-size: 14px;
+            color: #A0AEC0;
+            margin-left: 6px;
+            transition: transform 0.3s;
+        }
+
+        .menu-card:hover .arrow-icon {
+            transform: rotate(180deg);
+        }
+
+        /* ===== FIM DROPDOWN ===== */
 
         .loading-overlay {
             display: none;
@@ -224,6 +318,12 @@
             .grid-menu {
                 grid-template-columns: 1fr 1fr;
             }
+
+            .dropdown-menu {
+                position: static;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                margin-top: 8px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -282,13 +382,39 @@
                 <span class="badge-gestao">✓ Disponível</span>
             </a>
 
-            <!-- Relatórios - CORRIGIDO -->
-            <a href="relatorios/index.html" class="menu-card">
+            <!-- RELATÓRIOS COM DROPDOWN -->
+            <div class="menu-card" onclick="toggleDropdown(event)" style="cursor: pointer;">
                 <div class="icon">📈</div>
-                <h3>Relatórios <span class="badge-novo">NOVO</span></h3>
+                <h3>
+                    Relatórios 
+                    <span class="badge-novo">NOVO</span>
+                    <span class="arrow-icon">▼</span>
+                </h3>
                 <p>Visualize relatórios e análises das contagens</p>
                 <span class="badge-gestao">✓ Disponível</span>
-            </a>
+
+                <!-- Dropdown -->
+                <div class="dropdown-container">
+                    <div class="dropdown-menu" id="dropdownRelatorios">
+                        <a href="relatorios/relatorio-contagem.html" class="dropdown-item">
+                            <span class="item-icon">📊</span>
+                            <span class="item-label">Relatório de Contagem</span>
+                            <span class="item-badge">Ativo</span>
+                        </a>
+                        <a href="relatorios/busca-trafo.html" class="dropdown-item">
+                            <span class="item-icon">🔍</span>
+                            <span class="item-label">Busca Trafo</span>
+                            <span class="item-badge">Novo</span>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item" onclick="mostrarEmDesenvolvimento(event)">
+                            <span class="item-icon">📜</span>
+                            <span class="item-label">Histórico de Movimentações</span>
+                            <span class="item-badge" style="background: #A0AEC0;">Em breve</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
 
             <!-- Configurações -->
             <a href="#" class="menu-card" onclick="mostrarEmDesenvolvimento(event)">
@@ -306,6 +432,48 @@
 
     <script src="js/script.js"></script>
     <script>
+        // ============================================
+        // DROPDOWN DOS RELATÓRIOS
+        // ============================================
+        function toggleDropdown(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('dropdownRelatorios');
+            const isOpen = dropdown.classList.contains('show');
+            
+            // Fecha todos os outros dropdowns abertos
+            document.querySelectorAll('.dropdown-menu.show').forEach(el => {
+                if (el !== dropdown) el.classList.remove('show');
+            });
+            
+            if (isOpen) {
+                dropdown.classList.remove('show');
+            } else {
+                dropdown.classList.add('show');
+            }
+        }
+
+        // Fecha o dropdown ao clicar fora
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('dropdownRelatorios');
+            const card = event.target.closest('.menu-card');
+            
+            if (!card || !card.querySelector('.dropdown-menu')) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        // Fecha o dropdown ao pressionar ESC
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                document.querySelectorAll('.dropdown-menu.show').forEach(el => {
+                    el.classList.remove('show');
+                });
+            }
+        });
+
+        // ============================================
+        // FUNÇÕES EXISTENTES (mantidas)
+        // ============================================
         document.addEventListener('DOMContentLoaded', function() {
             const loadingOverlay = document.getElementById('loadingOverlay');
             const homeContent = document.getElementById('homeContent');
@@ -360,8 +528,9 @@
         }
 
         function mostrarEmDesenvolvimento(e) {
-            e.preventDefault();
-            alert('⚙️ Funcionalidade em desenvolvimento. Em breve disponível!');
+            if (e) e.preventDefault();
+            e.stopPropagation();
+            alert('📜 Funcionalidade em desenvolvimento. Em breve disponível!');
         }
 
         document.addEventListener('click', atualizarTimestampSessao);
