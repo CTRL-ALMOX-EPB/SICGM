@@ -106,19 +106,19 @@
             </div>
 
             <!-- Resumo de Divergências -->
-            <div class="divergencia-resumo" id="divergencia-resumo" style="display: none; background: #F7FAFC; border-radius: 8px; padding: 15px 20px; margin-bottom: 20px; border: 2px solid #E2E8F0;">
-                <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; align-items: center;">
-                    <div>
-                        <span style="font-weight: 600; color: #2D3748;">💰 Valor Total da Divergência:</span>
-                        <span id="total-divergencia-valor" style="font-size: 1.4em; font-weight: 700; color: #E53E3E; margin-left: 10px;">R$ 0,00</span>
+            <div class="divergencia-resumo" id="divergencia-resumo" style="display: none;">
+                <div class="resumo-content">
+                    <div class="resumo-item">
+                        <span class="resumo-label">💰 Valor Total da Divergência:</span>
+                        <span class="resumo-valor" id="total-divergencia-valor">R$ 0,00</span>
                     </div>
-                    <div>
-                        <span style="font-weight: 600; color: #2D3748;">📦 Total em Divergência:</span>
-                        <span id="total-divergencia-qtd" style="font-size: 1.2em; font-weight: 700; color: #ED8936; margin-left: 10px;">0</span>
+                    <div class="resumo-item">
+                        <span class="resumo-label">📦 Total em Divergência:</span>
+                        <span class="resumo-valor" id="total-divergencia-qtd">0</span>
                     </div>
-                    <div>
-                        <span style="font-weight: 600; color: #2D3748;">📊 Itens com Divergência:</span>
-                        <span id="total-itens-divergentes" style="font-size: 1.2em; font-weight: 700; color: #E53E3E; margin-left: 10px;">0</span>
+                    <div class="resumo-item">
+                        <span class="resumo-label">📊 Itens com Divergência:</span>
+                        <span class="resumo-valor" id="total-itens-divergentes">0</span>
                     </div>
                 </div>
             </div>
@@ -129,11 +129,12 @@
                     <h2>📋 Relatório por Código</h2>
                     <div class="tabela-actions">
                         <button onclick="exportarExcel()" class="btn-exportar">📊 Exportar Excel</button>
-                        <button onclick="exportarPDF()" class="btn-exportar">📄 Exportar PDF</button>
+                        <button onclick="exportarPDF()" class="btn-exportar btn-pdf">📄 Exportar PDF</button>
                     </div>
                 </div>
                 <div id="loading-relatorio" class="loading-message">
-                    ⏳ Carregando dados...
+                    <div class="spinner"></div>
+                    <div>⏳ Carregando dados...</div>
                 </div>
                 <div class="table-responsive">
                     <table id="relatorio-tabela">
@@ -173,33 +174,12 @@
     <script src="../js/relatorios.js"></script>
     <script>
         // ============================================
-        // FUNÇÕES DE NAVEGAÇÃO
+        // FUNÇÕES DE NAVEGAÇÃO (usando as do relatorios.js)
         // ============================================
-        function irParaTopo() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function irParaFim() {
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        }
-
-        function redirecionarParaHome() {
-            const sessao = verificarSessao();
-            if (!sessao) {
-                window.location.href = '../login.html';
-                return;
-            }
-
-            const perfil = sessao.perfil || 'GESTAO';
-            const homePages = {
-                'GESTAO': '../home-gestao.html',
-                'OPERACIONAL': '../home-operacional.html',
-                'VISUALIZACAO': '../home-visualizacao.html'
-            };
-
-            window.location.href = homePages[perfil] || '../login.html';
-        }
-
+        
+        // As funções irParaTopo, irParaFim e redirecionarParaHome 
+        // já estão definidas no relatorios.js
+        
         // ============================================
         // CONTROLAR BOTÕES DE NAVEGAÇÃO
         // ============================================
