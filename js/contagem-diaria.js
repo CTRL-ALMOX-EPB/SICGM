@@ -1495,10 +1495,12 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
+        // CORREÇÃO: NÃO BLOQUEIA MAIS O ENVIO, APENAS EXIBE O AVISO
+        // O indicador de erro continua sendo exibido, mas não interrompe o fluxo
         if (Math.abs(total - diferenca) > 0.001) {
             diferencaDiv.style.display = 'flex';
             diferencaDiv.className = 'diferenca-indicador diferenca-erro';
-            diferencaDiv.innerHTML = `❌ Total das entradas (${total.toFixed(2)}) não bate com a diferença (${diferenca.toFixed(2)})`;
+            diferencaDiv.innerHTML = `⚠️ Total das entradas (${total.toFixed(2)}) não bate com a diferença (${diferenca.toFixed(2)}) - O envio será realizado mesmo assim.`;
         } else {
             diferencaDiv.style.display = 'flex';
             diferencaDiv.className = 'diferenca-indicador diferenca-ok';
@@ -3184,24 +3186,42 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
+        // ============================================
+        // VALIDAÇÃO DE CONCRETOS - CORRIGIDA (APENAS AVISO, NÃO BLOQUEIA)
+        // ============================================
         const concretoItems = document.querySelectorAll('.concreto-item');
-        let concretoInvalido = false;
+        let concretoDivergente = false;
+        let mensagemConcreto = '';
+        
         concretoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
             const idUnico = `concretos-${index}`;
             const diferencaDiv = document.getElementById(`diferenca-${idUnico}`);
+            
+            // Verifica se há divergência
             if (diferencaDiv && diferencaDiv.classList.contains('diferenca-erro')) {
-                concretoInvalido = true;
-                item.style.borderColor = '#FC8181';
+                concretoDivergente = true;
+                const codigo = item.dataset.codigo || '';
+                mensagemConcreto += `⚠️ Concreto ${codigo}: ${diferencaDiv.textContent.trim()}\n`;
+                // Apenas destaca visualmente, não bloqueia o envio
+                item.style.borderColor = '#ED8936';
                 item.style.borderWidth = '2px';
                 item.style.borderStyle = 'solid';
+                item.style.background = '#FFFAF0';
+            } else if (diferencaDiv && diferencaDiv.style.display === 'flex' && !diferencaDiv.classList.contains('diferenca-erro')) {
+                // Remove destaque se estava destacado
+                item.style.borderColor = '';
+                item.style.borderWidth = '';
+                item.style.borderStyle = '';
+                item.style.background = '';
             }
         });
         
-        if (concretoInvalido) {
-            mostrarToast('❌ Verifique as entradas de concreto: o total não bate com a diferença da contagem!', 'erro');
-            return;
+        // Se houver divergência, apenas avisa, não bloqueia
+        if (concretoDivergente) {
+            mostrarToast('⚠️ Atenção: Há divergências nos concretos. O envio será realizado mesmo assim.\n' + mensagemConcreto, 'aviso');
+            // Não retorna - continua o fluxo
         }
         
         // ============================================
@@ -3406,7 +3426,7 @@ if (document.getElementById('contagemForm')) {
             }
         }
         
-        // CONCRETOS
+        // CONCRETOS - CORRIGIDO (ENVIA MESMO COM DIVERGÊNCIA)
         concretoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
@@ -3419,13 +3439,7 @@ if (document.getElementById('contagemForm')) {
             const qtdAtual = parseFloat(qtdInput.value) || 0;
             const codigo = item.dataset.codigo;
             
-            if (!itemFoiModificado(qtdInput, item)) {
-                console.log(`⏭️ Concreto ${codigo} não foi modificado - pulando`);
-                return;
-            }
-            if (qtdAtual === 0) return;
-            
-            console.log(`✅ Concreto ${codigo} - novo registro permitido (contagem múltipla)`);
+            console.log(`✅ Concreto ${codigo} - enviando contagem (QTD: ${qtdAtual})`);
             
             const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
             let justificativaCompleta = '';
@@ -4075,4 +4089,5 @@ if (document.getElementById('contagemForm')) {
     
     window.mostrarDescricaoPopup = mostrarDescricaoPopup;
     window.fecharDescricaoPopup = fecharDescricaoPopup;
-}
+    
+} // FIM DO if (document.getElementById('contagemForm'))
