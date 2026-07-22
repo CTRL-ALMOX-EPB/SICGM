@@ -283,6 +283,17 @@ body {
     border: 1px solid #63B3ED;
 }
 
+.mensagem.aviso {
+    display: block;
+    background-color: #FFFAF0;
+    color: #744210;
+    border: 1px solid #F6AD55;
+}
+
+.text-center {
+    text-align: center;
+}
+
 /* ============================================ */
 /* RESPONSIVIDADE BASE                          */
 /* ============================================ */
