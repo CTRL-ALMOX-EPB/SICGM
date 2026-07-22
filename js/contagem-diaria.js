@@ -721,9 +721,9 @@ if (document.getElementById('contagemForm')) {
     // ============================================
 
     function validarCodigoPorCategoria(codigo, categoria) {
-        const categoriasRotativas = ['lacos', 'alcas', 'parafusos', 'cabos', 'miscelaneas1', 'miscelaneas2', 'medidores'];
+        const categoriasRotativas = ['lacos', 'alcas', 'parafusos', 'cabos', 'miscelaneas1', 'miscelaneas2'];
         
-        if (categoria === 'miscelaneas' || categoria === 'especificos' || categoriasRotativas.includes(categoria)) {
+        if (categoria === 'miscelaneas' || categoria === 'especificos' || categoria === 'medidores' || categoriasRotativas.includes(categoria)) {
             return { valido: true };
         }
         
@@ -955,7 +955,7 @@ if (document.getElementById('contagemForm')) {
             'diaria': {
                 nome: 'Contagem Diária',
                 icone: '📋',
-                categorias: ['concretos', 'trafos', 'bobinas', 'especificos']
+                categorias: ['concretos', 'trafos', 'bobinas', 'especificos', 'medidores']
             },
             'semanal': {
                 nome: 'Contagem Semanal',
@@ -965,7 +965,7 @@ if (document.getElementById('contagemForm')) {
             'rotativas': {
                 nome: 'Contagens Rotativas',
                 icone: '🔄',
-                categorias: ['lacos', 'alcas', 'parafusos', 'cabos', 'miscelaneas1', 'miscelaneas2', 'medidores']
+                categorias: ['lacos', 'alcas', 'parafusos', 'cabos', 'miscelaneas1', 'miscelaneas2']
             }
         };
         
@@ -1011,6 +1011,7 @@ if (document.getElementById('contagemForm')) {
                           chave === 'concretos' ? renderizarConcretos(materiais, chave) :
                           chave === 'miscelaneas' ? renderizarMiscelaneas(materiais) :
                           chave === 'especificos' ? renderizarEspecificos(materiais) :
+                          chave === 'medidores' ? renderizarPredefinidos(materiais, chave) :
                           renderizarCategoriaRotativa(materiais, chave)}
                     </div>
                 `;
@@ -1094,10 +1095,93 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
+    // RENDERIZAR CATEGORIAS PREDEFINIDAS (MEDIDORES, LAÇOS, ETC)
+    // ============================================
+
+    function renderizarPredefinidos(materiais, chave) {
+        if (materiais.length === 0) {
+            return `<div style="text-align: center; padding: 30px; color: #A0AEC0;">
+                <p style="font-size: 2em;">📭</p>
+                <p>Nenhum material configurado nesta categoria</p>
+            </div>`;
+        }
+        
+        const categoriaConfig = CATEGORIAS[chave];
+        const tipoMaterial = categoriaConfig?.tipo_material || chave;
+        
+        let html = '';
+        
+        materiais.forEach((material, index) => {
+            const idUnico = `${chave}-${index}`;
+            
+            html += `
+                <div class="material-item ${chave}-item" 
+                     data-codigo="${material.codigo}" 
+                     data-categoria="${chave}" 
+                     data-tipo="${tipoMaterial}" 
+                     data-index="${index}" 
+                     data-tombamento=""
+                     data-ja-registrado="false">
+                    <div class="material-row">
+                        <div class="material-field">
+                            <label>Código</label>
+                            <input type="text" value="${material.codigo}" readonly class="input-readonly">
+                        </div>
+                        <div class="material-field">
+                            <label>Descrição</label>
+                            <input type="text" value="${material.descricao}" class="input-descricao" readonly>
+                        </div>
+                        <div class="material-field">
+                            <label>UND</label>
+                            <input type="text" value="${material.und}" readonly class="input-readonly">
+                        </div>
+                        <div class="material-field">
+                            <label for="qtd-${idUnico}">QTD *</label>
+                            <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
+                                class="input-qtd" 
+                                onchange="calcularDiferencaRotativa('${idUnico}', '${material.codigo}')"
+                                onkeyup="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }"
+                                onblur="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }">
+                        </div>
+                        <div class="material-field">
+                            <label>Últ. Cont.</label>
+                            <input type="text" id="qtd-anterior-${idUnico}" readonly 
+                                class="input-readonly input-qtd-anterior" value="Carregando...">
+                        </div>
+                    </div>
+                    <div id="diferenca-${idUnico}" class="diferenca-indicador" style="display: none;"></div>
+                    <div class="justificativa-row">
+                        <div class="material-field justificativa-field">
+                            <label for="justificativa-${idUnico}">Justificativa (opcional)</label>
+                            <input type="text" id="justificativa-${idUnico}" placeholder="Justificativa (opcional)..." 
+                                class="input-justificativa">
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        setTimeout(() => {
+            materiais.forEach((material, index) => {
+                buscarQuantidadeAnterior(material.codigo, `${chave}-${index}`, null, tipoMaterial);
+            });
+        }, 100);
+        
+        return html;
+    }
+    
+    // ============================================
     // FUNÇÕES DE RENDERIZAÇÃO - CATEGORIAS ROTATIVAS
     // ============================================
     
     function renderizarCategoriaRotativa(materiais, chave) {
+        // Verifica se é uma categoria que deve usar o renderizador de predefinidos
+        if (chave === 'medidores' || chave === 'lacos' || chave === 'alcas' || 
+            chave === 'parafusos' || chave === 'cabos' || chave === 'miscelaneas1' || 
+            chave === 'miscelaneas2') {
+            return renderizarPredefinidos(materiais, chave);
+        }
+        
         if (materiais.length === 0) {
             return `<div style="text-align: center; padding: 30px; color: #A0AEC0;">
                 <p style="font-size: 2em;">📭</p>
@@ -2984,8 +3068,8 @@ if (document.getElementById('contagemForm')) {
     function verificarDuplicata(codigo, tombamento, tipoMaterial) {
         if (!codigo) return false;
         
-        const categoriasRotativas = ['laco', 'alca', 'parafuso', 'cabo', 'miscelanea1', 'miscelanea2', 'medidor'];
-        const categoriasMultiplas = ['concreto', 'miscelanea', 'especifico'];
+        const categoriasRotativas = ['laco', 'alca', 'parafuso', 'cabo', 'miscelanea1', 'miscelanea2'];
+        const categoriasMultiplas = ['concreto', 'miscelanea', 'especifico', 'medidor'];
         const categoriasSemDuplicata = [...categoriasRotativas, ...categoriasMultiplas];
         
         if (categoriasSemDuplicata.includes(tipoMaterial)) {
@@ -3580,8 +3664,8 @@ if (document.getElementById('contagemForm')) {
             }
         });
         
-        // CATEGORIAS ROTATIVAS
-        const categoriasRotativas = ['lacos', 'alcas', 'parafusos', 'cabos', 'miscelaneas1', 'miscelaneas2', 'medidores'];
+        // CATEGORIAS ROTATIVAS (excluindo medidores que já estão na diária)
+        const categoriasRotativas = ['lacos', 'alcas', 'parafusos', 'cabos', 'miscelaneas1', 'miscelaneas2'];
         
         for (const chaveRotativa of categoriasRotativas) {
             const itemsRotativos = document.querySelectorAll(`.${chaveRotativa}-item`);
@@ -3634,6 +3718,55 @@ if (document.getElementById('contagemForm')) {
                 }
             });
         }
+        
+        // MEDIDORES (agora na Contagem Diária)
+        const medidorItems = document.querySelectorAll('.medidor-item');
+        medidorItems.forEach((item) => {
+            const index = parseInt(item.dataset.index);
+            if (isNaN(index)) return;
+            
+            const idUnico = `medidores-${index}`;
+            const qtdInput = document.getElementById(`qtd-${idUnico}`);
+            if (!qtdInput) return;
+            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) return;
+            
+            const qtdAtual = parseFloat(qtdInput.value) || 0;
+            const codigo = item.dataset.codigo;
+            
+            if (!itemFoiModificado(qtdInput, item)) {
+                console.log(`⏭️ Medidor ${codigo} não foi modificado - pulando`);
+                return;
+            }
+            if (qtdAtual === 0) return;
+            
+            console.log(`✅ Medidor ${codigo} - novo registro permitido (contagem múltipla)`);
+            
+            const materiaisDaCategoria = materiaisPorCategoria['medidores'] || [];
+            const material = materiaisDaCategoria.find(m => m.codigo === codigo);
+            
+            if (material) {
+                const justificativaCampo = document.getElementById(`justificativa-${idUnico}`)?.value || '';
+                const obsFinal = justificativaCampo.trim() || `Contagem: ${qtdAtual}`;
+                
+                materiaisParaEnviar.push({
+                    nome, matricula, data,
+                    codigo: material.codigo,
+                    descricao: material.descricao,
+                    und: material.und,
+                    qtd: qtdAtual,
+                    numero_serie: null,
+                    tombamento: null,
+                    oleo: null,
+                    cor: null,
+                    n_obra: '',
+                    ativo: 1,
+                    tipo_material: 'medidor',
+                    entradas_concreto: [],
+                    obs: obsFinal
+                });
+                console.log(`✅ Medidor ${codigo} adicionado para envio. QTD: ${qtdAtual}, Justificativa: ${obsFinal}`);
+            }
+        });
         
         if (temErroValidacao || temDuplicata) {
             if (temDuplicata) {
