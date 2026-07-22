@@ -71,12 +71,13 @@ function redirecionarPorPerfil(perfil) {
     
     console.log(`🔀 Redirecionando para: ${homePage} (Perfil: ${perfilNormalizado})`);
     
-    // Redirecionar para a página correta
+    // Redirecionar para a página correta na raiz
     window.location.href = homePage;
 }
 
 /**
  * Redireciona para a home baseado no perfil atual
+ * CORRIGIDO: Usa caminho absoluto a partir da raiz
  */
 function redirecionarParaHome() {
     const sessao = verificarSessao();
@@ -87,7 +88,12 @@ function redirecionarParaHome() {
         return;
     }
     
-    redirecionarPorPerfil(sessao.perfil);
+    // Redireciona usando o caminho absoluto a partir da raiz
+    const perfil = sessao.perfil.toUpperCase().trim();
+    const homePage = HOME_PAGES[perfil] || 'login.html';
+    
+    console.log(`🔀 Redirecionando para: ${homePage} (Perfil: ${perfil})`);
+    window.location.href = homePage;
 }
 
 /**
