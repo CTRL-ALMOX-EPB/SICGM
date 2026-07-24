@@ -9,28 +9,18 @@
     <link rel="stylesheet" href="../css/sa-emergencial.css">
 </head>
 <body>
-    <!-- ============================================ -->
-    <!-- BOTÃO IR PARA O TOPO (FIXO NO CANTO)        -->
-    <!-- ============================================ -->
+    <!-- Botões de navegação -->
     <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
         <span class="btn-navegacao-icone">⬆</span>
         <span class="btn-navegacao-texto">Topo</span>
     </button>
-
-    <!-- ============================================ -->
-    <!-- BOTÃO IR PARA O FIM (FIXO NO CANTO)         -->
-    <!-- ============================================ -->
     <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
         <span class="btn-navegacao-icone">⬇</span>
         <span class="btn-navegacao-texto">Fim</span>
     </button>
 
-    <!-- ============================================ -->
-    <!-- CONTEÚDO PRINCIPAL                          -->
-    <!-- ============================================ -->
     <div class="container">
         <div class="form-card">
-            
             <!-- Logo e Título -->
             <div class="header-container">
                 <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
@@ -38,19 +28,15 @@
                 <span style="margin-left: auto; background: #1a237e; color: white; padding: 4px 16px; border-radius: 20px; font-weight: 600; font-size: 14px;" id="saNumero">#0000</span>
             </div>
             
-            <!-- Botão Voltar ao Início Baseado no Perfil -->
+            <!-- Botões de navegação -->
             <div style="display: flex; justify-content: flex-start; margin-bottom: 20px; gap: 10px; flex-wrap: wrap;">
-                <button onclick="voltarPainel()" class="btn-voltar-home" style="background: #718096;">
-                    ⬅ Voltar ao Painel
-                </button>
-                <button onclick="redirecionarParaHome()" class="btn-voltar-home">
-                    🏠 Voltar ao Início
-                </button>
+                <button onclick="window.location.href='index.html'" class="btn-voltar-home" style="background: #718096;">⬅ Voltar ao Painel</button>
+                <button onclick="redirecionarParaHome()" class="btn-voltar-home">🏠 Voltar ao Início</button>
             </div>
             
             <div class="sa-form-body">
                 <!-- Dados do Colaborador -->
-                <h3 style="color: #2D3748; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #E2E8F0; padding-bottom: 10px;">👤 Dados do Colaborador</h3>
+                <h3>👤 Dados do Colaborador</h3>
                 <div class="form-row">
                     <div class="form-group">
                         <label>MATRÍCULA *</label>
@@ -82,10 +68,10 @@
                     </div>
                 </div>
 
-                <hr style="border: none; border-top: 2px dashed #E2E8F0; margin: 30px 0;">
+                <hr>
 
                 <!-- Dados da SA -->
-                <h3 style="color: #2D3748; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #E2E8F0; padding-bottom: 10px;">📝 Dados da Solicitação</h3>
+                <h3>📝 Dados da Solicitação</h3>
                 <div class="form-row">
                     <div class="form-group">
                         <label>SOLICITANTE *</label>
@@ -97,10 +83,10 @@
                     </div>
                 </div>
 
-                <hr style="border: none; border-top: 2px dashed #E2E8F0; margin: 30px 0;">
+                <hr>
 
                 <!-- Itens -->
-                <h3 style="color: #2D3748; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #E2E8F0; padding-bottom: 10px;">📦 Itens</h3>
+                <h3>📦 Itens</h3>
                 <div class="table-responsive">
                     <table class="items-table" id="itemsTable">
                         <thead>
@@ -129,12 +115,13 @@
                 </div>
                 <button class="add-item-btn" onclick="adicionarLinhaItem()">➕ Adicionar Item</button>
 
-                <hr style="border: none; border-top: 2px dashed #E2E8F0; margin: 30px 0;">
+                <hr>
 
                 <!-- Termo de Responsabilidade -->
                 <div class="termo-responsabilidade">
-                    <h3 style="color: #1a237e; margin-top: 0;">📜 TERMO DE RESPONSABILIDADE</h3>
+                    <h3>📜 TERMO DE RESPONSABILIDADE</h3>
                     <div class="termo-text">
+                        <!-- Conteúdo do termo mantido igual -->
                         <p><strong>NR 06</strong><br>
                         6.7. CABE AO EMPREGADO:<br>
                         6.7.1. CABE AO EMPREGADO QUANTO AO EPI:<br>
@@ -142,7 +129,6 @@
                         B) RESPONSABILIZAR-SE PELA GUARDA E CONSERVAÇÃO;<br>
                         C) COMUNICAR AO EMPREGADOR QUALQUER ALTERAÇÃO QUE O TORNE IMPRÓPRIO PARA USO; E,<br>
                         D) CUMPRIR AS DETERMINAÇÕES DO EMPREGADOR SOBRE O USO ADEQUADO.</p>
-
                         <p><strong>NR 01</strong><br>
                         1.8. CABE AO EMPREGADO:<br>
                         A) CUMPRIR AS DISPOSIÇÕES LEGAIS E REGULAMENTARES SOBRE SEGURANÇA E MEDICINA DO TRABALHO, INCLUSIVE AS ORDENS DE SERVIÇO EXPEDIDAS PELO EMPREGADOR;<br>
@@ -150,16 +136,11 @@
                         C) SUBMETER-SE AOS EXAMES MÉDICOS PREVISTOS NAS NORMAS REGULAMENTADORAS - NR;<br>
                         D) COLABORAR COM A EMPRESA NA APLICAÇÃO DAS NORMAS REGULAMENTADORAS – NR.<br>
                         1.8.1. CONSTITUI ATO FALTOSO A RECUSA INJUSTIFICADA DO EMPREGADO AO CUMPRIMENTO DO DISPOSTO NO ITEM ANTERIOR.</p>
-
                         <p><strong>CLT:</strong><br>
                         ART. 462, § 1º - EM CASO DE DANO CAUSADO PELO EMPREGADO, O DESCONTO SERÁ LÍCITO, DESDE QUE ESTA POSSIBILIDADE TENHA SIDO ACORDADA OU NA OCORRÊNCIA DE DOLO DO EMPREGADO.</p>
-
                         <p>Declaro para os devidos fins que recebi da CONTROL CONSTRUÇÕES LTDA, os Equipamentos de Proteção Individual acima descritos, novos e em perfeitas condições de uso, tendo sido treinado quanto ao seu uso adequado, bem como, que estou ciente das obrigações descritas na NR 06, baixada pela Portaria MTb 3214/78, subitem 6.7.1.</p>
-
                         <p>Comprometo-me a bem cuidar da sua conservação e a restitui-los a empresa na eventualidade da rescisão de meu contrato de trabalho, antes de decorrido o prazo normal de utilização.</p>
-
                         <p>Declaro, também, que estou ciente das disposições do Art. 462 e § 1º da CLT, e autorizo o desconto salarial proporcional ao custo de reparação do dano que os EPIs aos meus cuidados venham apresentar, seja por extravio, pelo uso inadequado e/ ou indevido.</p>
-
                         <p>Declaro ainda que estou ciente de que seu uso é obrigatório sob pena de ser punido das disposições do artigo 158, alínea "a", da CLT, e do item 1.8 da NR 01, em especial daquela do subitem 1.8.1, de que constitui ato faltoso à recusa injustificada de usar EPI fornecido pela empresa, incorrendo nas penas da Lei cabíveis que irão desde simples advertências até a dispensa por justa causa (Art. 482 da C.L.T).</p>
                     </div>
                 </div>
@@ -170,16 +151,26 @@
                         <h4>📤 ENTREGUE POR</h4>
                         <p><strong>Nome:</strong> <span class="signatario-nome">-</span></p>
                         <p><strong>Data:</strong> <span class="signatario-data">-</span></p>
-                        <img class="signature-img" style="display: none;" alt="Assinatura">
+                        <div class="signature-preview" style="display: none; margin: 10px 0;">
+                            <img class="signature-img" style="max-width: 100%; max-height: 120px; border: 1px solid #E2E8F0; border-radius: 6px; background: white; padding: 5px;" alt="Assinatura">
+                        </div>
                         <button class="btn-assinar" onclick="abrirPaginaAssinatura('entregue')">✍️ Assinar como Entregue</button>
+                        <button class="btn-reassinar" onclick="abrirPaginaAssinatura('entregue')" style="display: none; background: #ED8936; color: white; padding: 6px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 8px; font-size: 13px;">
+                            🔄 Reassinar
+                        </button>
                     </div>
 
                     <div class="assinatura-box" data-tipo="recebido">
                         <h4>📥 RECEBIDO POR</h4>
                         <p><strong>Nome:</strong> <span class="signatario-nome">-</span></p>
                         <p><strong>Data:</strong> <span class="signatario-data">-</span></p>
-                        <img class="signature-img" style="display: none;" alt="Assinatura">
+                        <div class="signature-preview" style="display: none; margin: 10px 0;">
+                            <img class="signature-img" style="max-width: 100%; max-height: 120px; border: 1px solid #E2E8F0; border-radius: 6px; background: white; padding: 5px;" alt="Assinatura">
+                        </div>
                         <button class="btn-assinar" onclick="abrirPaginaAssinatura('recebido')">✍️ Assinar como Recebido</button>
+                        <button class="btn-reassinar" onclick="abrirPaginaAssinatura('recebido')" style="display: none; background: #ED8936; color: white; padding: 6px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 8px; font-size: 13px;">
+                            🔄 Reassinar
+                        </button>
                     </div>
                 </div>
 
@@ -187,18 +178,10 @@
             </div>
         </div>
         
-        <!-- Rodapé com link de voltar (fallback) -->
+        <!-- Rodapé -->
         <div style="text-align: center; margin-top: 1rem;">
-            <button onclick="voltarPainel()" style="
-                background: transparent;
-                color: #4299E1;
-                border: none;
-                cursor: pointer;
-                font-weight: 500;
-                font-size: 14px;
-                text-decoration: underline;
-            ">
-                ← Voltar para o Painel
+            <button onclick="redirecionarParaHome()" style="background: transparent; color: #4299E1; border: none; cursor: pointer; font-weight: 500; font-size: 14px; text-decoration: underline;">
+                ← Voltar para Home
             </button>
         </div>
     </div>
@@ -206,443 +189,5 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <script src="../js/script.js"></script>
     <script src="../js/sa-emergencial.js"></script>
-    <script>
-        let manager;
-        let numeroSA = null;
-
-        // ============================================
-        // REDIRECIONAMENTO BASEADO NO PERFIL
-        // ============================================
-        function redirecionarParaHome() {
-            const sessao = verificarSessao();
-            if (!sessao) {
-                window.location.href = '../login.html';
-                return;
-            }
-
-            const perfil = sessao.perfil || 'GESTAO';
-            const homePages = {
-                'GESTAO': '../home-gestao.html',
-                'OPERACIONAL': '../home-operacional.html',
-                'VISUALIZACAO': '../home-visualizacao.html'
-            };
-
-            window.location.href = homePages[perfil] || '../login.html';
-        }
-
-        // ============================================
-        // IR PARA O TOPO
-        // ============================================
-        function irParaTopo() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // ============================================
-        // IR PARA O FIM
-        // ============================================
-        function irParaFim() {
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        }
-
-        // ============================================
-        // MOSTRAR/OCULTAR BOTÕES DE NAVEGAÇÃO
-        // ============================================
-        function controlarBotoesNavegacao() {
-            const btnTopo = document.getElementById('btnTopo');
-            const btnFim = document.getElementById('btnFim');
-            const scrollY = window.scrollY;
-            const alturaTotal = document.body.scrollHeight - window.innerHeight;
-
-            if (scrollY > 200) {
-                btnTopo.classList.add('visivel');
-            } else {
-                btnTopo.classList.remove('visivel');
-            }
-
-            if (scrollY < alturaTotal - 100) {
-                btnFim.classList.add('visivel');
-            } else {
-                btnFim.classList.remove('visivel');
-            }
-        }
-
-        // ============================================
-        // FUNÇÕES DE NAVEGAÇÃO
-        // ============================================
-
-        function voltarPainel() {
-            window.location.href = 'index.html';
-        }
-
-        function abrirPaginaAssinatura(tipo) {
-            const nome = tipo === 'entregue' ? 
-                document.getElementById('colaborador').value : 
-                document.getElementById('solicitante').value;
-            
-            if (!nome) {
-                alert('⚠️ Preencha o nome do colaborador/solicitante antes de assinar.');
-                return;
-            }
-
-            if (!manager.saAtual) {
-                alert('❌ Erro: S.A. não encontrada.');
-                return;
-            }
-
-            salvarDadosFormulario();
-
-            const numero = manager.saAtual.numero;
-            const url = `assinar.html?tipo=${tipo}&nome=${encodeURIComponent(nome)}&numero=${numero}`;
-            window.open(url, '_blank', 'width=800,height=700,scrollbars=yes');
-        }
-
-        // ============================================
-        // FUNÇÕES DE MATERIAL (com pop-up)
-        // ============================================
-
-        async function buscarMaterial(input) {
-            const codigo = input.value.trim();
-            if (!codigo) return;
-            
-            const row = input.closest('tr');
-            
-            try {
-                const material = await manager.buscarMaterial(codigo);
-                if (material) {
-                    const descricaoInput = row.querySelector('.item-descricao');
-                    const unidadeInput = row.querySelector('.item-unidade');
-                    const armazemInput = row.querySelector('.item-armazem');
-                    
-                    descricaoInput.value = material.descricao;
-                    unidadeInput.value = material.unidadeMedida || '';
-                    armazemInput.value = material.armazem;
-                    
-                    descricaoInput.style.backgroundColor = '#f7fafc';
-                    unidadeInput.style.backgroundColor = '#f7fafc';
-                    armazemInput.style.backgroundColor = '#f7fafc';
-                    
-                    mostrarPopupMaterial(material);
-                } else {
-                    alert(`⚠️ Material com código "${codigo}" não encontrado!`);
-                    row.querySelector('.item-descricao').value = '';
-                    row.querySelector('.item-armazem').value = '';
-                    row.querySelector('.item-unidade').value = '';
-                }
-            } catch (error) {
-                alert('❌ Erro ao buscar material: ' + error.message);
-            }
-        }
-
-        function mostrarPopupMaterial(material) {
-            const overlay = document.createElement('div');
-            overlay.className = 'popup-overlay';
-            overlay.id = 'popupMaterial';
-            
-            overlay.innerHTML = `
-                <div class="popup-content">
-                    <div class="popup-header">
-                        <h3>📦 Material Encontrado</h3>
-                        <button class="popup-close" onclick="fecharPopupMaterial()">✕</button>
-                    </div>
-                    <div class="popup-body">
-                        <div class="popup-field">
-                            <span class="popup-label">Código:</span>
-                            <span class="popup-value">${material.codigo}</span>
-                        </div>
-                        <div class="popup-field">
-                            <span class="popup-label">Descrição:</span>
-                            <span class="popup-value">${material.descricao}</span>
-                        </div>
-                        <div class="popup-field">
-                            <span class="popup-label">Armazém:</span>
-                            <span class="popup-value">${material.armazem}</span>
-                        </div>
-                        ${material.unidadeMedida ? `
-                        <div class="popup-field">
-                            <span class="popup-label">Unidade:</span>
-                            <span class="popup-value">${material.unidadeMedida}</span>
-                        </div>
-                        ` : ''}
-                    </div>
-                    <div class="popup-footer">
-                        <button onclick="fecharPopupMaterial()" class="popup-btn">OK</button>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(overlay);
-            
-            overlay.addEventListener('click', function(e) {
-                if (e.target === overlay) {
-                    fecharPopupMaterial();
-                }
-            });
-        }
-
-        function fecharPopupMaterial() {
-            const popup = document.getElementById('popupMaterial');
-            if (popup) {
-                popup.remove();
-            }
-        }
-
-        // ============================================
-        // FUNÇÕES DE ITENS
-        // ============================================
-
-        function adicionarLinhaItem(item = null) {
-            const tbody = document.getElementById('itemsBody');
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código" value="${item ? item.codigo : ''}"></td>
-                <td><input type="text" class="item-descricao" readonly placeholder="Descrição" value="${item ? item.descricao : ''}" style="background-color: ${item ? '#f7fafc' : ''};"></td>
-                <td><input type="text" class="item-unidade" readonly placeholder="Unid." value="${item ? item.unidadeMedida : ''}" style="background-color: ${item ? '#f7fafc' : ''};"></td>
-                <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" value="${item ? item.quantidade : ''}"></td>
-                <td><input type="text" class="item-armazem" readonly placeholder="Armazém" value="${item ? item.armazem : ''}" style="background-color: ${item ? '#f7fafc' : ''};"></td>
-                <td><input type="text" class="item-ca" placeholder="C.A" value="${item ? item.ca : ''}"></td>
-                <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
-            `;
-            tbody.appendChild(tr);
-        }
-
-        function removerItem(btn) {
-            const row = btn.closest('tr');
-            if (document.getElementById('itemsBody').children.length > 1) {
-                row.remove();
-            } else {
-                alert('⚠️ É necessário ter pelo menos um item.');
-            }
-        }
-
-        // ============================================
-        // FUNÇÕES DE COLABORADOR
-        // ============================================
-
-        async function buscarColaborador() {
-            const matricula = document.getElementById('matricula').value.trim();
-            if (!matricula) return;
-            
-            try {
-                const colaborador = await manager.buscarColaborador(matricula);
-                if (colaborador) {
-                    document.getElementById('colaborador').value = colaborador.colaborador;
-                    document.getElementById('cpf').value = colaborador.cpf;
-                    document.getElementById('funcao').value = colaborador.funcao;
-                    document.getElementById('filial').value = colaborador.filial;
-                    document.getElementById('centroCusto').value = colaborador.centroCusto;
-                    
-                    if (manager.saAtual) {
-                        manager.saAtual.colaborador = {
-                            matricula: colaborador.matricula,
-                            nome: colaborador.colaborador,
-                            cpf: colaborador.cpf,
-                            funcao: colaborador.funcao,
-                            filial: colaborador.filial,
-                            centroCusto: colaborador.centroCusto
-                        };
-                    }
-                } else {
-                    alert('⚠️ Colaborador não encontrado!');
-                    document.getElementById('colaborador').value = '';
-                    document.getElementById('cpf').value = '';
-                    document.getElementById('funcao').value = '';
-                    document.getElementById('filial').value = '';
-                    document.getElementById('centroCusto').value = '';
-                }
-            } catch (error) {
-                alert('❌ Erro ao buscar colaborador: ' + error.message);
-            }
-        }
-
-        // ============================================
-        // SALVAR DADOS DO FORMULÁRIO
-        // ============================================
-
-        function salvarDadosFormulario() {
-            if (!manager.saAtual) return;
-            
-            const sa = manager.saAtual;
-            
-            sa.colaborador = {
-                matricula: document.getElementById('matricula').value.trim(),
-                nome: document.getElementById('colaborador').value.trim(),
-                cpf: document.getElementById('cpf').value.trim(),
-                funcao: document.getElementById('funcao').value.trim(),
-                filial: document.getElementById('filial').value.trim(),
-                centroCusto: document.getElementById('centroCusto').value.trim()
-            };
-            
-            sa.solicitante = document.getElementById('solicitante').value.trim();
-            sa.dataSolicitacao = document.getElementById('dataSolicitacao').value;
-            
-            sa.itens = [];
-            document.querySelectorAll('#itemsBody tr').forEach(row => {
-                const codigo = row.querySelector('.item-codigo').value.trim();
-                const descricao = row.querySelector('.item-descricao').value.trim();
-                const unidadeMedida = row.querySelector('.item-unidade').value.trim();
-                const quantidade = parseInt(row.querySelector('.item-quantidade').value) || 0;
-                const armazem = row.querySelector('.item-armazem').value.trim();
-                const ca = row.querySelector('.item-ca').value.trim();
-                
-                if (codigo && descricao) {
-                    sa.itens.push({ codigo, descricao, unidadeMedida, quantidade, armazem, ca });
-                }
-            });
-        }
-
-        // ============================================
-        // FINALIZAR SA
-        // ============================================
-
-        async function finalizarSA() {
-            if (!manager.saAtual) {
-                alert('❌ Erro: S.A. não encontrada.');
-                return;
-            }
-            
-            try {
-                salvarDadosFormulario();
-                
-                const sa = manager.saAtual;
-                
-                if (!sa.colaborador.matricula || !sa.colaborador.nome || !sa.colaborador.cpf) {
-                    alert('⚠️ Preencha todos os dados do colaborador!');
-                    return;
-                }
-                
-                if (!sa.solicitante) {
-                    alert('⚠️ Informe o solicitante!');
-                    return;
-                }
-                
-                if (sa.itens.length === 0) {
-                    alert('⚠️ Adicione pelo menos um item!');
-                    return;
-                }
-                
-                const assinaturaPendente = sessionStorage.getItem('assinatura_temp');
-                if (assinaturaPendente) {
-                    const dadosAssinatura = JSON.parse(assinaturaPendente);
-                    await manager.assinarDocumento(dadosAssinatura.tipo, dadosAssinatura.nome, dadosAssinatura.assinatura);
-                    sessionStorage.removeItem('assinatura_temp');
-                }
-                
-                await manager.salvarSA();
-                await manager.finalizarSA();
-                
-                alert('✅ S.A. finalizada com sucesso!');
-                window.location.href = 'index.html';
-            } catch (error) {
-                alert('❌ ' + error.message);
-            }
-        }
-
-        // ============================================
-        // INICIALIZAÇÃO
-        // ============================================
-
-        document.addEventListener('DOMContentLoaded', async function() {
-            manager = window.saManager;
-            
-            // Inicializar botões de navegação
-            window.addEventListener('scroll', controlarBotoesNavegacao);
-            window.addEventListener('resize', controlarBotoesNavegacao);
-            setTimeout(controlarBotoesNavegacao, 100);
-            
-            const assinaturaPendente = sessionStorage.getItem('assinatura_temp');
-            if (assinaturaPendente) {
-                try {
-                    const dados = JSON.parse(assinaturaPendente);
-                    await manager.assinarDocumento(dados.tipo, dados.nome, dados.assinatura);
-                    sessionStorage.removeItem('assinatura_temp');
-                    manager.atualizarVisualizacaoAssinaturas();
-                    alert('✅ Assinatura aplicada com sucesso!');
-                } catch (error) {
-                    console.error('Erro ao aplicar assinatura:', error);
-                }
-            }
-            
-            try {
-                const params = new URLSearchParams(window.location.search);
-                const numero = params.get('numero');
-                
-                await manager.carregarUsuarioLogado();
-                
-                if (numero) {
-                    numeroSA = parseInt(numero);
-                    const sa = await manager.buscarSA(numeroSA);
-                    if (sa) {
-                        manager.saAtual = sa;
-                        carregarDadosFormulario(sa);
-                    } else {
-                        alert('❌ S.A. não encontrada!');
-                        window.location.href = 'index.html';
-                    }
-                } else {
-                    const podeCriar = await manager.verificarPermissaoGerar(manager.usuarioAtual);
-                    if (!podeCriar) {
-                        alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
-                        window.location.href = 'index.html';
-                        return;
-                    }
-                    
-                    const novaSA = await manager.criarSA(manager.usuarioAtual);
-                    if (novaSA) {
-                        numeroSA = novaSA.numero;
-                        document.getElementById('saNumero').textContent = `#${String(numeroSA).padStart(4, '0')}`;
-                        document.getElementById('dataSolicitacao').value = new Date().toISOString().split('T')[0];
-                    }
-                }
-                
-                manager.atualizarVisualizacaoAssinaturas();
-                
-            } catch (error) {
-                console.error('❌ Erro ao carregar formulário:', error);
-                mostrarErro(error.message || 'Erro ao carregar dados do servidor');
-            }
-        });
-
-        function carregarDadosFormulario(sa) {
-            document.getElementById('saNumero').textContent = `#${String(sa.numero).padStart(4, '0')}`;
-            
-            const col = sa.colaborador || {};
-            document.getElementById('matricula').value = col.matricula || '';
-            document.getElementById('colaborador').value = col.nome || '';
-            document.getElementById('cpf').value = col.cpf || '';
-            document.getElementById('funcao').value = col.funcao || '';
-            document.getElementById('filial').value = col.filial || '';
-            document.getElementById('centroCusto').value = col.centroCusto || '';
-            
-            document.getElementById('solicitante').value = sa.solicitante || '';
-            document.getElementById('dataSolicitacao').value = sa.dataSolicitacao || '';
-            
-            const tbody = document.getElementById('itemsBody');
-            tbody.innerHTML = '';
-            if (sa.itens && sa.itens.length > 0) {
-                sa.itens.forEach(item => {
-                    adicionarLinhaItem(item);
-                });
-            } else {
-                adicionarLinhaItem();
-            }
-        }
-
-        function mostrarErro(mensagem) {
-            const body = document.querySelector('.sa-form-body');
-            body.innerHTML = `
-                <div style="text-align: center; padding: 60px 20px;">
-                    <p style="font-size: 48px;">❌</p>
-                    <h2 style="color: #f44336;">Erro ao carregar formulário</h2>
-                    <p style="color: #666; margin: 20px 0;">${mensagem}</p>
-                    <button onclick="window.location.href='index.html'" style="padding: 12px 30px; background: #1a237e; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
-                        ⬅ Voltar ao Painel
-                    </button>
-                    <button onclick="window.location.reload()" style="margin-left: 10px; padding: 12px 30px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
-                        🔄 Tentar Novamente
-                    </button>
-                </div>
-            `;
-        }
-    </script>
 </body>
 </html>

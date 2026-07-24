@@ -114,7 +114,8 @@ class SAManager {
                         return {
                             codigo: colunas[0],
                             armazem: colunas[1],
-                            descricao: colunas[2]
+                            descricao: colunas[2],
+                            unidadeMedida: '' // Não tem unidade no arquivo
                         };
                     }
                 }
@@ -318,10 +319,10 @@ class SAManager {
     }
 
     // ============================================
-    // FUNÇÕES DE UI
+    // FUNÇÕES DE UI - PAINEL
     // ============================================
 
-    renderizarLista(dados, container) {
+    renderizarLista(dados, container, onExcluir) {
         if (!Array.isArray(dados)) {
             console.error('❌ dados não é um array:', dados);
             container.innerHTML = `
@@ -349,7 +350,7 @@ class SAManager {
                 <span>Colaborador</span>
                 <span>Criado por</span>
                 <span>Status</span>
-                <span>Data</span>
+                <span style="text-align: center;">Ações</span>
             </div>
         `;
         
@@ -360,16 +361,17 @@ class SAManager {
             const statusLabel = doc.status === 'finalizado' ? '✅ Finalizado' :
                               doc.status === 'assinado' ? '✍️ Assinado' : '⏳ Pendente';
             
-            const dataFormatada = doc.criado_em ? new Date(doc.criado_em).toLocaleDateString('pt-BR') : '-';
-            
             html += `
-                <div class="sa-list-item" data-numero="${doc.numero}" 
-                     onclick="window.location.href='formulario.html?numero=${doc.numero}'">
-                    <span class="sa-number">#${String(doc.numero).padStart(4, '0')}</span>
-                    <span>${doc.colaborador_nome || 'Não definido'}</span>
-                    <span>${doc.criado_por || 'Sistema'}</span>
-                    <span><span class="sa-status ${statusClass}">${statusLabel}</span></span>
-                    <span>${dataFormatada}</span>
+                <div class="sa-list-item" data-numero="${doc.numero}">
+                    <span class="sa-number" onclick="window.location.href='formulario.html?numero=${doc.numero}'">#${String(doc.numero).padStart(4, '0')}</span>
+                    <span onclick="window.location.href='formulario.html?numero=${doc.numero}'">${doc.colaborador_nome || 'Não definido'}</span>
+                    <span onclick="window.location.href='formulario.html?numero=${doc.numero}'">${doc.criado_por || 'Sistema'}</span>
+                    <span onclick="window.location.href='formulario.html?numero=${doc.numero}'"><span class="sa-status ${statusClass}">${statusLabel}</span></span>
+                    <span style="text-align: center;">
+                        <button class="btn-excluir-item" onclick="excluirSA(${doc.numero}, event, ${onExcluir ? 'true' : 'false'})" title="Excluir S.A.">
+                            🗑️
+                        </button>
+                    </span>
                 </div>
             `;
         });
@@ -378,66 +380,10 @@ class SAManager {
     }
 
     // ============================================
-    // SIGNATURE PAD
+    // FUNÇÕES DE UI - FORMULÁRIO
     // ============================================
 
-    initSignaturePad(canvasId) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return null;
-        
-        this.signaturePad = new SignaturePad(canvas, {
-            backgroundColor: 'rgba(255, 255, 255, 0)',
-            penColor: '#1a237e',
-            minWidth: 2,
-            maxWidth: 4
-        });
-        
-        return this.signaturePad;
-    }
-
-    abrirModalAssinatura(tipo, nome) {
-        this.tipoAssinatura = tipo;
-        const modal = document.getElementById('signatureModal');
-        modal.classList.add('active');
-        
-        if (this.signaturePad) {
-            this.signaturePad.clear();
-        }
-        
-        document.getElementById('signatureName').value = nome || '';
-        document.getElementById('signatureType').textContent = 
-            tipo === 'entregue' ? 'ENTREGUE POR' : 'RECEBIDO POR';
-    }
-
-    fecharModalAssinatura() {
-        const modal = document.getElementById('signatureModal');
-        modal.classList.remove('active');
-        this.tipoAssinatura = null;
-    }
-
-    async confirmarAssinatura() {
-        if (!this.signaturePad || this.signaturePad.isEmpty()) {
-            alert('⚠️ Por favor, assine no campo acima.');
-            return;
-        }
-        
-        const nome = document.getElementById('signatureName').value.trim();
-        if (!nome) {
-            alert('⚠️ Por favor, informe o nome do signatário.');
-            return;
-        }
-        
-        try {
-            const assinaturaData = this.signaturePad.toDataURL();
-            await this.assinarDocumento(this.tipoAssinatura, nome, assinaturaData);
-            this.fecharModalAssinatura();
-            this.atualizarVisualizacaoAssinaturas();
-            alert('✅ Assinatura realizada com sucesso!');
-        } catch (error) {
-            alert('❌ Erro ao assinar: ' + error.message);
-        }
-    }
-
+    // Atualizar visualização das assinaturas
     atualizarVisualizacaoAssinaturas() {
         if (!this.saAtual) return;
         
@@ -455,29 +401,697 @@ class SAManager {
         const nomeSpan = box.querySelector('.signatario-nome');
         const dataSpan = box.querySelector('.signatario-data');
         const img = box.querySelector('.signature-img');
-        const btn = box.querySelector('.btn-assinar');
+        const preview = box.querySelector('.signature-preview');
+        const btnAssinar = box.querySelector('.btn-assinar');
+        const btnReassinar = box.querySelector('.btn-reassinar');
         
         if (dados && dados.assinatura) {
             box.classList.add('has-signature');
             if (nomeSpan) nomeSpan.textContent = dados.nome;
-            if (dataSpan) dataSpan.textContent = new Date(dados.data).toLocaleString('pt-BR');
+            if (dataSpan) dataSpan.textContent = dados.data ? new Date(dados.data).toLocaleString('pt-BR') : '-';
             if (img) {
                 img.src = dados.assinatura;
                 img.style.display = 'block';
             }
-            if (btn) btn.style.display = 'none';
+            if (preview) preview.style.display = 'block';
+            if (btnAssinar) btnAssinar.style.display = 'none';
+            if (btnReassinar) btnReassinar.style.display = 'inline-block';
         } else {
             box.classList.remove('has-signature');
             if (img) img.style.display = 'none';
-            if (btn) btn.style.display = 'block';
+            if (preview) preview.style.display = 'none';
+            if (btnAssinar) btnAssinar.style.display = 'inline-block';
+            if (btnReassinar) btnReassinar.style.display = 'none';
             if (nomeSpan) nomeSpan.textContent = '-';
             if (dataSpan) dataSpan.textContent = '-';
         }
     }
+
+    // Aplicar assinatura vinda da página de assinatura
+    async aplicarAssinatura(dadosAssinatura) {
+        try {
+            const tipo = dadosAssinatura.tipo;
+            const nome = dadosAssinatura.nome;
+            const assinatura = dadosAssinatura.assinatura;
+            const numero = dadosAssinatura.numero;
+            
+            // Verificar se a SA ainda existe e é a mesma
+            if (!this.saAtual || this.saAtual.numero !== parseInt(numero)) {
+                const sa = await this.buscarSA(parseInt(numero));
+                if (sa) {
+                    this.saAtual = sa;
+                } else {
+                    throw new Error('S.A. não encontrada. Recarregue a página.');
+                }
+            }
+            
+            // Atualizar o objeto SA
+            if (!this.saAtual.termoResponsabilidade) {
+                this.saAtual.termoResponsabilidade = {
+                    entreguePor: null,
+                    recebidoPor: null
+                };
+            }
+            
+            // Salvar localmente
+            if (tipo === 'entregue') {
+                this.saAtual.termoResponsabilidade.entreguePor = {
+                    nome: nome,
+                    assinatura: assinatura,
+                    data: new Date().toISOString()
+                };
+            } else {
+                this.saAtual.termoResponsabilidade.recebidoPor = {
+                    nome: nome,
+                    assinatura: assinatura,
+                    data: new Date().toISOString()
+                };
+            }
+            
+            // Salvar no servidor
+            await this.assinarDocumento(tipo, nome, assinatura);
+            
+            // Atualizar visualização
+            this.atualizarVisualizacaoAssinaturas();
+            
+            console.log(`✅ Assinatura ${tipo} aplicada com sucesso!`);
+            return true;
+        } catch (error) {
+            console.error('❌ Erro ao aplicar assinatura:', error);
+            throw error;
+        }
+    }
+
+    // ============================================
+    // FUNÇÕES DE POP-UP MATERIAL
+    // ============================================
+
+    mostrarPopupMaterial(material) {
+        // Remover pop-up existente
+        this.fecharPopupMaterial();
+        
+        const overlay = document.createElement('div');
+        overlay.className = 'popup-overlay';
+        overlay.id = 'popupMaterial';
+        
+        overlay.innerHTML = `
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h3>📦 Material Encontrado</h3>
+                    <button class="popup-close" onclick="saManager.fecharPopupMaterial()">✕</button>
+                </div>
+                <div class="popup-body">
+                    <div class="popup-field">
+                        <span class="popup-label">Código:</span>
+                        <span class="popup-value">${material.codigo}</span>
+                    </div>
+                    <div class="popup-field">
+                        <span class="popup-label">Descrição:</span>
+                        <span class="popup-value">${material.descricao}</span>
+                    </div>
+                    <div class="popup-field">
+                        <span class="popup-label">Armazém:</span>
+                        <span class="popup-value">${material.armazem}</span>
+                    </div>
+                    ${material.unidadeMedida ? `
+                    <div class="popup-field">
+                        <span class="popup-label">Unidade:</span>
+                        <span class="popup-value">${material.unidadeMedida}</span>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="popup-footer">
+                    <button onclick="saManager.fecharPopupMaterial()" class="popup-btn">OK</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+        
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                saManager.fecharPopupMaterial();
+            }
+        });
+    }
+
+    fecharPopupMaterial() {
+        const popup = document.getElementById('popupMaterial');
+        if (popup) {
+            popup.remove();
+        }
+    }
+
+    // ============================================
+    // FUNÇÕES DE NAVEGAÇÃO
+    // ============================================
+
+    redirecionarParaHome() {
+        const sessao = this.verificarSessao();
+        if (!sessao) {
+            window.location.href = '../login.html';
+            return;
+        }
+
+        const perfil = sessao.perfil || 'GESTAO';
+        const homePages = {
+            'GESTAO': '../home-gestao.html',
+            'OPERACIONAL': '../home-operacional.html',
+            'VISUALIZACAO': '../home-visualizacao.html'
+        };
+
+        window.location.href = homePages[perfil] || '../login.html';
+    }
+
+    verificarSessao() {
+        const sessao = sessionStorage.getItem('sessaoSICGM');
+        if (!sessao) return null;
+        
+        try {
+            const dados = JSON.parse(sessao);
+            const tempoDecorrido = Date.now() - dados.timestamp;
+            if (tempoDecorrido > 30 * 60 * 1000) {
+                sessionStorage.removeItem('sessaoSICGM');
+                return null;
+            }
+            return dados;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // ============================================
+    // FUNÇÕES DE NAVEGAÇÃO - TOPO/FIM
+    // ============================================
+
+    irParaTopo() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    irParaFim() {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+
+    controlarBotoesNavegacao() {
+        const btnTopo = document.getElementById('btnTopo');
+        const btnFim = document.getElementById('btnFim');
+        if (!btnTopo || !btnFim) return;
+        
+        const scrollY = window.scrollY;
+        const alturaTotal = document.body.scrollHeight - window.innerHeight;
+
+        if (scrollY > 200) {
+            btnTopo.classList.add('visivel');
+        } else {
+            btnTopo.classList.remove('visivel');
+        }
+
+        if (scrollY < alturaTotal - 100) {
+            btnFim.classList.add('visivel');
+        } else {
+            btnFim.classList.remove('visivel');
+        }
+    }
+
+    // ============================================
+    // FUNÇÕES DE VALIDAÇÃO
+    // ============================================
+
+    validarCamposObrigatorios(sa) {
+        const erros = [];
+        
+        if (!sa.colaborador.matricula || !sa.colaborador.nome || !sa.colaborador.cpf) {
+            erros.push('Preencha todos os dados do colaborador!');
+        }
+        
+        if (!sa.solicitante) {
+            erros.push('Informe o solicitante!');
+        }
+        
+        if (!sa.itens || sa.itens.length === 0) {
+            erros.push('Adicione pelo menos um item!');
+        }
+        
+        return erros;
+    }
+
+    validarAssinaturas(sa) {
+        const entregue = sa.termoResponsabilidade?.entreguePor;
+        const recebido = sa.termoResponsabilidade?.recebidoPor;
+        
+        if (!entregue || !recebido) {
+            return 'Ambas as partes precisam assinar o documento!';
+        }
+        return null;
+    }
 }
 
 // ============================================
-// INSTÂNCIA GLOBAL
+// FUNÇÕES GLOBAIS PARA USO NO HTML
 // ============================================
+
+// Criar instância global
 const saManager = new SAManager();
 window.saManager = saManager;
+
+// Função para excluir SA (usada no onclick do botão)
+window.excluirSA = async function(numero, event, recarregar = true) {
+    if (event) event.stopPropagation();
+    
+    if (confirm(`⚠️ Tem certeza que deseja excluir a S.A. #${String(numero).padStart(4, '0')}?`)) {
+        try {
+            await saManager.excluirSA(numero);
+            
+            if (recarregar) {
+                const dados = await saManager.listarSA();
+                const container = document.getElementById('saList');
+                saManager.renderizarLista(dados, container, true);
+            }
+            
+            alert('✅ S.A. excluída com sucesso!');
+        } catch (error) {
+            alert('❌ Erro ao excluir: ' + error.message);
+        }
+    }
+};
+
+// Função para redirecionar para home
+window.redirecionarParaHome = function() {
+    saManager.redirecionarParaHome();
+};
+
+// Função para ir ao topo
+window.irParaTopo = function() {
+    saManager.irParaTopo();
+};
+
+// Função para ir ao fim
+window.irParaFim = function() {
+    saManager.irParaFim();
+};
+
+// Função para buscar colaborador
+window.buscarColaborador = async function() {
+    const matricula = document.getElementById('matricula').value.trim();
+    if (!matricula) return;
+    
+    try {
+        const colaborador = await saManager.buscarColaborador(matricula);
+        if (colaborador) {
+            document.getElementById('colaborador').value = colaborador.colaborador;
+            document.getElementById('cpf').value = colaborador.cpf;
+            document.getElementById('funcao').value = colaborador.funcao;
+            document.getElementById('filial').value = colaborador.filial;
+            document.getElementById('centroCusto').value = colaborador.centroCusto;
+            
+            if (saManager.saAtual) {
+                saManager.saAtual.colaborador = {
+                    matricula: colaborador.matricula,
+                    nome: colaborador.colaborador,
+                    cpf: colaborador.cpf,
+                    funcao: colaborador.funcao,
+                    filial: colaborador.filial,
+                    centroCusto: colaborador.centroCusto
+                };
+            }
+        } else {
+            alert('⚠️ Colaborador não encontrado!');
+            document.getElementById('colaborador').value = '';
+            document.getElementById('cpf').value = '';
+            document.getElementById('funcao').value = '';
+            document.getElementById('filial').value = '';
+            document.getElementById('centroCusto').value = '';
+        }
+    } catch (error) {
+        alert('❌ Erro ao buscar colaborador: ' + error.message);
+    }
+};
+
+// Função para buscar material
+window.buscarMaterial = async function(input) {
+    const codigo = input.value.trim();
+    if (!codigo) return;
+    
+    const row = input.closest('tr');
+    
+    try {
+        const material = await saManager.buscarMaterial(codigo);
+        if (material) {
+            const descricaoInput = row.querySelector('.item-descricao');
+            const unidadeInput = row.querySelector('.item-unidade');
+            const armazemInput = row.querySelector('.item-armazem');
+            
+            descricaoInput.value = material.descricao;
+            unidadeInput.value = material.unidadeMedida || '';
+            armazemInput.value = material.armazem;
+            
+            descricaoInput.style.backgroundColor = '#f7fafc';
+            unidadeInput.style.backgroundColor = '#f7fafc';
+            armazemInput.style.backgroundColor = '#f7fafc';
+            
+            saManager.mostrarPopupMaterial(material);
+        } else {
+            alert(`⚠️ Material com código "${codigo}" não encontrado!`);
+            row.querySelector('.item-descricao').value = '';
+            row.querySelector('.item-armazem').value = '';
+            row.querySelector('.item-unidade').value = '';
+        }
+    } catch (error) {
+        alert('❌ Erro ao buscar material: ' + error.message);
+    }
+};
+
+// Função para adicionar linha de item
+window.adicionarLinhaItem = function(item = null) {
+    const tbody = document.getElementById('itemsBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código" value="${item ? item.codigo : ''}"></td>
+        <td><input type="text" class="item-descricao" readonly placeholder="Descrição" value="${item ? item.descricao : ''}" style="background-color: ${item ? '#f7fafc' : ''};"></td>
+        <td><input type="text" class="item-unidade" readonly placeholder="Unid." value="${item ? item.unidadeMedida : ''}" style="background-color: ${item ? '#f7fafc' : ''};"></td>
+        <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" value="${item ? item.quantidade : ''}"></td>
+        <td><input type="text" class="item-armazem" readonly placeholder="Armazém" value="${item ? item.armazem : ''}" style="background-color: ${item ? '#f7fafc' : ''};"></td>
+        <td><input type="text" class="item-ca" placeholder="C.A" value="${item ? item.ca : ''}"></td>
+        <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+};
+
+// Função para remover item
+window.removerItem = function(btn) {
+    const row = btn.closest('tr');
+    if (document.getElementById('itemsBody').children.length > 1) {
+        row.remove();
+    } else {
+        alert('⚠️ É necessário ter pelo menos um item.');
+    }
+};
+
+// Função para abrir página de assinatura
+window.abrirPaginaAssinatura = function(tipo) {
+    const nome = tipo === 'entregue' ? 
+        document.getElementById('colaborador').value : 
+        document.getElementById('solicitante').value;
+    
+    if (!nome) {
+        alert('⚠️ Preencha o nome do colaborador/solicitante antes de assinar.');
+        return;
+    }
+
+    if (!saManager.saAtual) {
+        alert('❌ Erro: S.A. não encontrada.');
+        return;
+    }
+
+    // Salvar dados antes de abrir assinatura
+    window.salvarDadosFormulario();
+
+    const numero = saManager.saAtual.numero;
+    const url = `assinar.html?tipo=${tipo}&nome=${encodeURIComponent(nome)}&numero=${numero}`;
+    
+    const janela = window.open(url, '_blank', 'width=800,height=700,scrollbars=yes');
+    
+    if (!janela) {
+        alert('⚠️ O pop-up foi bloqueado. Permita pop-ups para este site e tente novamente.');
+    }
+};
+
+// Função para salvar dados do formulário
+window.salvarDadosFormulario = function() {
+    if (!saManager.saAtual) return;
+    
+    const sa = saManager.saAtual;
+    
+    sa.colaborador = {
+        matricula: document.getElementById('matricula').value.trim(),
+        nome: document.getElementById('colaborador').value.trim(),
+        cpf: document.getElementById('cpf').value.trim(),
+        funcao: document.getElementById('funcao').value.trim(),
+        filial: document.getElementById('filial').value.trim(),
+        centroCusto: document.getElementById('centroCusto').value.trim()
+    };
+    
+    sa.solicitante = document.getElementById('solicitante').value.trim();
+    sa.dataSolicitacao = document.getElementById('dataSolicitacao').value;
+    
+    sa.itens = [];
+    document.querySelectorAll('#itemsBody tr').forEach(row => {
+        const codigo = row.querySelector('.item-codigo').value.trim();
+        const descricao = row.querySelector('.item-descricao').value.trim();
+        const unidadeMedida = row.querySelector('.item-unidade').value.trim();
+        const quantidade = parseInt(row.querySelector('.item-quantidade').value) || 0;
+        const armazem = row.querySelector('.item-armazem').value.trim();
+        const ca = row.querySelector('.item-ca').value.trim();
+        
+        if (codigo && descricao) {
+            sa.itens.push({ codigo, descricao, unidadeMedida, quantidade, armazem, ca });
+        }
+    });
+};
+
+// Função para finalizar SA
+window.finalizarSA = async function() {
+    if (!saManager.saAtual) {
+        alert('❌ Erro: S.A. não encontrada.');
+        return;
+    }
+    
+    try {
+        window.salvarDadosFormulario();
+        
+        const sa = saManager.saAtual;
+        
+        // Validar campos obrigatórios
+        const erros = saManager.validarCamposObrigatorios(sa);
+        if (erros.length > 0) {
+            alert('⚠️ ' + erros.join('\n'));
+            return;
+        }
+        
+        // Validar assinaturas
+        const erroAssinatura = saManager.validarAssinaturas(sa);
+        if (erroAssinatura) {
+            alert('⚠️ ' + erroAssinatura);
+            return;
+        }
+        
+        // Verificar se há assinatura pendente no sessionStorage
+        const assinaturaPendente = sessionStorage.getItem('assinatura_temp');
+        if (assinaturaPendente) {
+            const dadosAssinatura = JSON.parse(assinaturaPendente);
+            await saManager.aplicarAssinatura(dadosAssinatura);
+            sessionStorage.removeItem('assinatura_temp');
+        }
+        
+        // Salvar dados no D1
+        await saManager.salvarSA();
+        
+        // Finalizar
+        await saManager.finalizarSA();
+        
+        alert('✅ S.A. finalizada com sucesso!');
+        window.location.href = 'index.html';
+    } catch (error) {
+        alert('❌ ' + error.message);
+    }
+};
+
+// ============================================
+// INICIALIZAÇÃO DO PAINEL
+// ============================================
+document.addEventListener('DOMContentLoaded', async function() {
+    // Verificar se está no painel (tem o elemento saList)
+    const container = document.getElementById('saList');
+    if (!container) return;
+    
+    try {
+        // Carregar usuário
+        const usuario = await saManager.carregarUsuarioLogado();
+        
+        // Buscar informações completas do usuário
+        const userInfo = await saManager.buscarUsuarioAutorizado(usuario.nome);
+        
+        if (userInfo) {
+            document.getElementById('userName').textContent = userInfo.nome;
+            document.getElementById('userRole').textContent = userInfo.funcao || 'Usuário';
+            document.getElementById('userMatricula').textContent = `Matrícula: ${userInfo.matricula}`;
+            document.getElementById('userAvatar').textContent = userInfo.nome.charAt(0);
+            
+            usuario.matricula = userInfo.matricula;
+            usuario.cpf = userInfo.cpf;
+            usuario.funcao = userInfo.funcao;
+            sessionStorage.setItem('usuarioLogado', JSON.stringify(usuario));
+        } else {
+            document.getElementById('userName').textContent = usuario.nome;
+            document.getElementById('userRole').textContent = usuario.funcao || 'Usuário';
+            document.getElementById('userMatricula').textContent = `Matrícula: ${usuario.matricula || '---'}`;
+            document.getElementById('userAvatar').textContent = usuario.nome.charAt(0);
+        }
+        
+        // Verificar permissão para criar SA
+        const podeCriar = await saManager.verificarPermissaoGerar(usuario);
+        const btnNova = document.getElementById('btnNovaSA');
+        
+        if (!podeCriar) {
+            btnNova.disabled = true;
+            btnNova.title = 'Apenas usuários cadastrados podem criar SA';
+            btnNova.style.opacity = '0.5';
+            btnNova.textContent = '🔒 Nova S.A. (Sem permissão)';
+        }
+        
+        // Carregar lista
+        const dados = await saManager.listarSA();
+        saManager.renderizarLista(dados, container, true);
+        
+        // Evento: Nova SA
+        btnNova.addEventListener('click', async function() {
+            if (!podeCriar) {
+                alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
+                return;
+            }
+            
+            try {
+                const novaSA = await saManager.criarSA(usuario);
+                if (novaSA) {
+                    alert(`✅ S.A. #${String(novaSA.numero).padStart(4, '0')} criada com sucesso!`);
+                    const dadosAtualizados = await saManager.listarSA();
+                    saManager.renderizarLista(dadosAtualizados, container, true);
+                }
+            } catch (error) {
+                alert('❌ Erro ao criar S.A.: ' + error.message);
+            }
+        });
+        
+        // Inicializar botões de navegação
+        window.addEventListener('scroll', () => saManager.controlarBotoesNavegacao());
+        window.addEventListener('resize', () => saManager.controlarBotoesNavegacao());
+        setTimeout(() => saManager.controlarBotoesNavegacao(), 100);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar página:', error);
+        container.innerHTML = `
+            <div class="empty-state" style="color: #f44336; padding: 40px;">
+                <p style="font-size: 24px;">❌ Erro</p>
+                <p style="font-size: 16px; color: #666; margin: 10px 0;">${error.message || 'Erro ao carregar dados do servidor'}</p>
+                <p style="font-size: 14px; color: #999; margin-top: 20px;">
+                    Verifique se a API está disponível ou tente novamente mais tarde.
+                </p>
+                <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 30px; background: #1a237e; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                    🔄 Tentar Novamente
+                </button>
+            </div>
+        `;
+    }
+});
+
+// ============================================
+// INICIALIZAÇÃO DO FORMULÁRIO
+// ============================================
+document.addEventListener('DOMContentLoaded', async function() {
+    // Verificar se está no formulário (tem o elemento saNumero)
+    const saNumero = document.getElementById('saNumero');
+    if (!saNumero) return;
+    
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const numero = params.get('numero');
+        
+        await saManager.carregarUsuarioLogado();
+        
+        // Verificar se há assinatura pendente no sessionStorage
+        const assinaturaPendente = sessionStorage.getItem('assinatura_temp');
+        if (assinaturaPendente) {
+            try {
+                const dados = JSON.parse(assinaturaPendente);
+                if (dados.concluido) {
+                    await saManager.aplicarAssinatura(dados);
+                    sessionStorage.removeItem('assinatura_temp');
+                }
+            } catch (error) {
+                console.error('Erro ao processar assinatura:', error);
+            }
+        }
+        
+        if (numero) {
+            // Editar SA existente
+            const sa = await saManager.buscarSA(parseInt(numero));
+            if (sa) {
+                saManager.saAtual = sa;
+                carregarDadosFormulario(sa);
+                saManager.atualizarVisualizacaoAssinaturas();
+            } else {
+                alert('❌ S.A. não encontrada!');
+                window.location.href = 'index.html';
+            }
+        } else {
+            // Nova SA
+            const podeCriar = await saManager.verificarPermissaoGerar(saManager.usuarioAtual);
+            if (!podeCriar) {
+                alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            const novaSA = await saManager.criarSA(saManager.usuarioAtual);
+            if (novaSA) {
+                document.getElementById('saNumero').textContent = `#${String(novaSA.numero).padStart(4, '0')}`;
+                document.getElementById('dataSolicitacao').value = new Date().toISOString().split('T')[0];
+            }
+        }
+        
+        // Inicializar botões de navegação
+        window.addEventListener('scroll', () => saManager.controlarBotoesNavegacao());
+        window.addEventListener('resize', () => saManager.controlarBotoesNavegacao());
+        setTimeout(() => saManager.controlarBotoesNavegacao(), 100);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar formulário:', error);
+        mostrarErroFormulario(error.message || 'Erro ao carregar dados do servidor');
+    }
+});
+
+// Função para carregar dados do formulário
+function carregarDadosFormulario(sa) {
+    document.getElementById('saNumero').textContent = `#${String(sa.numero).padStart(4, '0')}`;
+    
+    const col = sa.colaborador || {};
+    document.getElementById('matricula').value = col.matricula || '';
+    document.getElementById('colaborador').value = col.nome || '';
+    document.getElementById('cpf').value = col.cpf || '';
+    document.getElementById('funcao').value = col.funcao || '';
+    document.getElementById('filial').value = col.filial || '';
+    document.getElementById('centroCusto').value = col.centroCusto || '';
+    
+    document.getElementById('solicitante').value = sa.solicitante || '';
+    document.getElementById('dataSolicitacao').value = sa.dataSolicitacao || '';
+    
+    const tbody = document.getElementById('itemsBody');
+    tbody.innerHTML = '';
+    if (sa.itens && sa.itens.length > 0) {
+        sa.itens.forEach(item => {
+            window.adicionarLinhaItem(item);
+        });
+    } else {
+        window.adicionarLinhaItem();
+    }
+}
+
+// Função para mostrar erro no formulário
+function mostrarErroFormulario(mensagem) {
+    const body = document.querySelector('.sa-form-body');
+    if (!body) return;
+    
+    body.innerHTML = `
+        <div style="text-align: center; padding: 60px 20px;">
+            <p style="font-size: 48px;">❌</p>
+            <h2 style="color: #f44336;">Erro ao carregar formulário</h2>
+            <p style="color: #666; margin: 20px 0;">${mensagem}</p>
+            <button onclick="window.location.href='index.html'" style="padding: 12px 30px; background: #1a237e; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                ⬅ Voltar ao Painel
+            </button>
+            <button onclick="window.location.reload()" style="margin-left: 10px; padding: 12px 30px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                🔄 Tentar Novamente
+            </button>
+        </div>
+    `;
+}

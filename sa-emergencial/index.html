@@ -9,42 +9,27 @@
     <link rel="stylesheet" href="../css/sa-emergencial.css">
 </head>
 <body>
-    <!-- ============================================ -->
-    <!-- BOTÃO IR PARA O TOPO (FIXO NO CANTO)        -->
-    <!-- ============================================ -->
+    <!-- Botões de navegação -->
     <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
         <span class="btn-navegacao-icone">⬆</span>
         <span class="btn-navegacao-texto">Topo</span>
     </button>
-
-    <!-- ============================================ -->
-    <!-- BOTÃO IR PARA O FIM (FIXO NO CANTO)         -->
-    <!-- ============================================ -->
     <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
         <span class="btn-navegacao-icone">⬇</span>
         <span class="btn-navegacao-texto">Fim</span>
     </button>
 
-    <!-- ============================================ -->
-    <!-- CONTEÚDO PRINCIPAL                          -->
-    <!-- ============================================ -->
     <div class="container">
         <div class="form-card">
-            
             <!-- Logo e Título -->
             <div class="header-container">
                 <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
                 <h1 class="title">🚨 S.A. Emergencial</h1>
             </div>
             
-            <!-- Botão Voltar ao Início Baseado no Perfil -->
-            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px; gap: 10px; flex-wrap: wrap;">
-                <button onclick="redirecionarParaHome()" class="btn-voltar-home">
-                    🏠 Voltar ao Início
-                </button>
-                <button onclick="voltarHomeGestao()" class="btn-voltar-home" style="background: #718096;">
-                    ⬅ Voltar para Gestão
-                </button>
+            <!-- Botão Voltar -->
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
+                <button onclick="redirecionarParaHome()" class="btn-voltar-home">🏠 Voltar ao Início</button>
             </div>
 
             <!-- Header do Usuário -->
@@ -54,7 +39,7 @@
                     <div class="user-details">
                         <h3 id="userName">Carregando...</h3>
                         <p id="userRole">Carregando...</p>
-                        <p id="userMatricula" style="font-size: 12px; opacity: 0.8;">Matrícula: ---</p>
+                        <p id="userMatricula">Matrícula: ---</p>
                     </div>
                 </div>
                 <div class="user-actions">
@@ -70,20 +55,11 @@
                     </div>
                 </div>
             </div>
-            
         </div>
         
-        <!-- Rodapé com link de voltar (fallback) -->
+        <!-- Rodapé -->
         <div style="text-align: center; margin-top: 1rem;">
-            <button onclick="redirecionarParaHome()" style="
-                background: transparent;
-                color: #4299E1;
-                border: none;
-                cursor: pointer;
-                font-weight: 500;
-                font-size: 14px;
-                text-decoration: underline;
-            ">
+            <button onclick="redirecionarParaHome()" style="background: transparent; color: #4299E1; border: none; cursor: pointer; font-weight: 500; font-size: 14px; text-decoration: underline;">
                 ← Voltar para Home
             </button>
         </div>
@@ -92,236 +68,5 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <script src="../js/script.js"></script>
     <script src="../js/sa-emergencial.js"></script>
-    <script>
-        // ============================================
-        // REDIRECIONAMENTO BASEADO NO PERFIL
-        // ============================================
-        function redirecionarParaHome() {
-            const sessao = verificarSessao();
-            if (!sessao) {
-                window.location.href = '../login.html';
-                return;
-            }
-
-            const perfil = sessao.perfil || 'GESTAO';
-            const homePages = {
-                'GESTAO': '../home-gestao.html',
-                'OPERACIONAL': '../home-operacional.html',
-                'VISUALIZACAO': '../home-visualizacao.html'
-            };
-
-            window.location.href = homePages[perfil] || '../login.html';
-        }
-
-        function voltarHomeGestao() {
-            window.location.href = '../home-gestao.html';
-        }
-
-        // ============================================
-        // IR PARA O TOPO
-        // ============================================
-        function irParaTopo() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // ============================================
-        // IR PARA O FIM
-        // ============================================
-        function irParaFim() {
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        }
-
-        // ============================================
-        // MOSTRAR/OCULTAR BOTÕES DE NAVEGAÇÃO
-        // ============================================
-        function controlarBotoesNavegacao() {
-            const btnTopo = document.getElementById('btnTopo');
-            const btnFim = document.getElementById('btnFim');
-            const scrollY = window.scrollY;
-            const alturaTotal = document.body.scrollHeight - window.innerHeight;
-
-            if (scrollY > 200) {
-                btnTopo.classList.add('visivel');
-            } else {
-                btnTopo.classList.remove('visivel');
-            }
-
-            if (scrollY < alturaTotal - 100) {
-                btnFim.classList.add('visivel');
-            } else {
-                btnFim.classList.remove('visivel');
-            }
-        }
-
-        // ============================================
-        // FUNÇÕES DO PAINEL
-        // ============================================
-
-        // Função para mostrar erro na tela
-        function mostrarErro(container, mensagem) {
-            container.innerHTML = `
-                <div class="empty-state" style="color: #f44336; padding: 40px;">
-                    <p style="font-size: 24px;">❌ Erro</p>
-                    <p style="font-size: 16px; color: #666; margin: 10px 0;">${mensagem}</p>
-                    <p style="font-size: 14px; color: #999; margin-top: 20px;">
-                        Verifique se a API está disponível ou tente novamente mais tarde.
-                    </p>
-                    <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 30px; background: #1a237e; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
-                        🔄 Tentar Novamente
-                    </button>
-                </div>
-            `;
-        }
-
-        // Função para excluir SA individual
-        async function excluirSA(numero, event) {
-            event.stopPropagation();
-            
-            if (confirm(`⚠️ Tem certeza que deseja excluir a S.A. #${String(numero).padStart(4, '0')}?`)) {
-                try {
-                    const manager = window.saManager;
-                    await manager.excluirSA(numero);
-                    
-                    const dados = await manager.listarSA();
-                    const container = document.getElementById('saList');
-                    manager.renderizarLista(dados, container);
-                    
-                    alert('✅ S.A. excluída com sucesso!');
-                } catch (error) {
-                    alert('❌ Erro ao excluir: ' + error.message);
-                }
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', async function() {
-            const manager = window.saManager;
-            const container = document.getElementById('saList');
-            
-            // Inicializar botões de navegação
-            window.addEventListener('scroll', controlarBotoesNavegacao);
-            window.addEventListener('resize', controlarBotoesNavegacao);
-            setTimeout(controlarBotoesNavegacao, 100);
-            
-            // Sobrescrever renderizarLista para incluir botão excluir
-            manager.renderizarLista = function(dados, container) {
-                if (!Array.isArray(dados)) {
-                    container.innerHTML = `
-                        <div class="empty-state" style="color: #f44336;">
-                            <p>❌ Erro ao carregar lista de S.A.</p>
-                            <p style="font-size: 14px; color: #999;">Os dados retornados não são válidos</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                if (dados.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <p>📋 Nenhuma S.A. Emergencial encontrada.</p>
-                            <p>Clique em "Nova S.A." para criar a primeira.</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                let html = `
-                    <div class="sa-list-header">
-                        <span>Nº S.A.</span>
-                        <span>Colaborador</span>
-                        <span>Criado por</span>
-                        <span>Status</span>
-                        <span style="text-align: center;">Ações</span>
-                    </div>
-                `;
-                
-                dados.forEach(doc => {
-                    const statusClass = doc.status === 'finalizado' ? 'status-finalizado' : 
-                                      doc.status === 'assinado' ? 'status-assinado' : 'status-pendente';
-                    
-                    const statusLabel = doc.status === 'finalizado' ? '✅ Finalizado' :
-                                      doc.status === 'assinado' ? '✍️ Assinado' : '⏳ Pendente';
-                    
-                    html += `
-                        <div class="sa-list-item" data-numero="${doc.numero}">
-                            <span class="sa-number" onclick="window.location.href='formulario.html?numero=${doc.numero}'">#${String(doc.numero).padStart(4, '0')}</span>
-                            <span onclick="window.location.href='formulario.html?numero=${doc.numero}'">${doc.colaborador_nome || 'Não definido'}</span>
-                            <span onclick="window.location.href='formulario.html?numero=${doc.numero}'">${doc.criado_por || 'Sistema'}</span>
-                            <span onclick="window.location.href='formulario.html?numero=${doc.numero}'"><span class="sa-status ${statusClass}">${statusLabel}</span></span>
-                            <span style="text-align: center;">
-                                <button class="btn-excluir-item" onclick="excluirSA(${doc.numero}, event)" title="Excluir S.A.">
-                                    🗑️
-                                </button>
-                            </span>
-                        </div>
-                    `;
-                });
-                
-                container.innerHTML = html;
-            };
-            
-            try {
-                // Carregar usuário
-                const usuario = await manager.carregarUsuarioLogado();
-                
-                // Buscar informações completas do usuário no arquivo de autorizados
-                const userInfo = await manager.buscarUsuarioAutorizado(usuario.nome);
-                
-                if (userInfo) {
-                    document.getElementById('userName').textContent = userInfo.nome;
-                    document.getElementById('userRole').textContent = userInfo.funcao || 'Usuário';
-                    document.getElementById('userMatricula').textContent = `Matrícula: ${userInfo.matricula}`;
-                    document.getElementById('userAvatar').textContent = userInfo.nome.charAt(0);
-                    
-                    usuario.matricula = userInfo.matricula;
-                    usuario.cpf = userInfo.cpf;
-                    usuario.funcao = userInfo.funcao;
-                    sessionStorage.setItem('usuarioLogado', JSON.stringify(usuario));
-                } else {
-                    document.getElementById('userName').textContent = usuario.nome;
-                    document.getElementById('userRole').textContent = usuario.funcao || 'Usuário';
-                    document.getElementById('userMatricula').textContent = `Matrícula: ${usuario.matricula || '---'}`;
-                    document.getElementById('userAvatar').textContent = usuario.nome.charAt(0);
-                }
-                
-                // Verificar permissão para criar SA
-                const podeCriar = await manager.verificarPermissaoGerar(usuario);
-                const btnNova = document.getElementById('btnNovaSA');
-                
-                if (!podeCriar) {
-                    btnNova.disabled = true;
-                    btnNova.title = 'Apenas usuários cadastrados podem criar SA';
-                    btnNova.style.opacity = '0.5';
-                    btnNova.textContent = '🔒 Nova S.A. (Sem permissão)';
-                }
-                
-                // Carregar lista
-                const dados = await manager.listarSA();
-                manager.renderizarLista(dados, container);
-                
-                // Evento: Nova SA
-                btnNova.addEventListener('click', async function() {
-                    if (!podeCriar) {
-                        alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
-                        return;
-                    }
-                    
-                    try {
-                        const novaSA = await manager.criarSA(usuario);
-                        if (novaSA) {
-                            alert(`✅ S.A. #${String(novaSA.numero).padStart(4, '0')} criada com sucesso!`);
-                            const dadosAtualizados = await manager.listarSA();
-                            manager.renderizarLista(dadosAtualizados, container);
-                        }
-                    } catch (error) {
-                        alert('❌ Erro ao criar S.A.: ' + error.message);
-                    }
-                });
-                
-            } catch (error) {
-                console.error('❌ Erro ao carregar página:', error);
-                mostrarErro(container, error.message || 'Erro ao carregar dados do servidor');
-            }
-        });
-    </script>
 </body>
 </html>
