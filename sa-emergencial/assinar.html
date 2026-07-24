@@ -570,7 +570,6 @@
                 const width = rect.width - 4;
                 const height = Math.max(rect.height - 4, 150);
                 
-                // Garantir que o canvas tenha o tamanho correto
                 const dpr = window.devicePixelRatio || 1;
                 canvas.width = width * dpr;
                 canvas.height = height * dpr;
@@ -579,7 +578,6 @@
                 
                 if (signaturePad) {
                     signaturePad.resizeCanvas();
-                    // Forçar redesenho
                     signaturePad._ctx.scale(dpr, dpr);
                 }
             }
@@ -590,7 +588,7 @@
                 penColor: '#1a237e',
                 minWidth: 2,
                 maxWidth: 4,
-                throttle: 16 // Melhor para dispositivos móveis
+                throttle: 16
             });
 
             // Redimensionar inicial

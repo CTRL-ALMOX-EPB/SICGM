@@ -3,18 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>S.A. Emergencial - Painel de Controle</title>
+    <title>SICGM - S.A. Emergencial</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/sa-emergencial.css">
 </head>
 <body>
+    <!-- ============================================ -->
+    <!-- BOTÃO IR PARA O TOPO (FIXO NO CANTO)        -->
+    <!-- ============================================ -->
+    <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
+        <span class="btn-navegacao-icone">⬆</span>
+        <span class="btn-navegacao-texto">Topo</span>
+    </button>
+
+    <!-- ============================================ -->
+    <!-- BOTÃO IR PARA O FIM (FIXO NO CANTO)         -->
+    <!-- ============================================ -->
+    <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
+        <span class="btn-navegacao-icone">⬇</span>
+        <span class="btn-navegacao-texto">Fim</span>
+    </button>
+
+    <!-- ============================================ -->
+    <!-- CONTEÚDO PRINCIPAL                          -->
+    <!-- ============================================ -->
     <div class="container">
         <div class="form-card">
-            <!-- Header -->
+            
+            <!-- Logo e Título -->
             <div class="header-container">
-                <img src="../assets/img/logo-control.png" alt="Logo" class="logo-empresa">
+                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
                 <h1 class="title">🚨 S.A. Emergencial</h1>
+            </div>
+            
+            <!-- Botão Voltar ao Início Baseado no Perfil -->
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px; gap: 10px; flex-wrap: wrap;">
+                <button onclick="redirecionarParaHome()" class="btn-voltar-home">
+                    🏠 Voltar ao Início
+                </button>
+                <button onclick="voltarHomeGestao()" class="btn-voltar-home" style="background: #718096;">
+                    ⬅ Voltar para Gestão
+                </button>
             </div>
 
             <!-- Header do Usuário -->
@@ -29,7 +59,6 @@
                 </div>
                 <div class="user-actions">
                     <button class="btn-primary" id="btnNovaSA">➕ Nova S.A.</button>
-                    <button class="btn-secondary" onclick="voltarHome()">🏠 Voltar</button>
                 </div>
             </div>
 
@@ -41,16 +70,92 @@
                     </div>
                 </div>
             </div>
+            
+        </div>
+        
+        <!-- Rodapé com link de voltar (fallback) -->
+        <div style="text-align: center; margin-top: 1rem;">
+            <button onclick="redirecionarParaHome()" style="
+                background: transparent;
+                color: #4299E1;
+                border: none;
+                cursor: pointer;
+                font-weight: 500;
+                font-size: 14px;
+                text-decoration: underline;
+            ">
+                ← Voltar para Home
+            </button>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script src="../js/script.js"></script>
     <script src="../js/sa-emergencial.js"></script>
     <script>
-        // Função para voltar para home-gestao
-        function voltarHome() {
+        // ============================================
+        // REDIRECIONAMENTO BASEADO NO PERFIL
+        // ============================================
+        function redirecionarParaHome() {
+            const sessao = verificarSessao();
+            if (!sessao) {
+                window.location.href = '../login.html';
+                return;
+            }
+
+            const perfil = sessao.perfil || 'GESTAO';
+            const homePages = {
+                'GESTAO': '../home-gestao.html',
+                'OPERACIONAL': '../home-operacional.html',
+                'VISUALIZACAO': '../home-visualizacao.html'
+            };
+
+            window.location.href = homePages[perfil] || '../login.html';
+        }
+
+        function voltarHomeGestao() {
             window.location.href = '../home-gestao.html';
         }
+
+        // ============================================
+        // IR PARA O TOPO
+        // ============================================
+        function irParaTopo() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ============================================
+        // IR PARA O FIM
+        // ============================================
+        function irParaFim() {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        // ============================================
+        // MOSTRAR/OCULTAR BOTÕES DE NAVEGAÇÃO
+        // ============================================
+        function controlarBotoesNavegacao() {
+            const btnTopo = document.getElementById('btnTopo');
+            const btnFim = document.getElementById('btnFim');
+            const scrollY = window.scrollY;
+            const alturaTotal = document.body.scrollHeight - window.innerHeight;
+
+            if (scrollY > 200) {
+                btnTopo.classList.add('visivel');
+            } else {
+                btnTopo.classList.remove('visivel');
+            }
+
+            if (scrollY < alturaTotal - 100) {
+                btnFim.classList.add('visivel');
+            } else {
+                btnFim.classList.remove('visivel');
+            }
+        }
+
+        // ============================================
+        // FUNÇÕES DO PAINEL
+        // ============================================
 
         // Função para mostrar erro na tela
         function mostrarErro(container, mensagem) {
@@ -91,6 +196,11 @@
         document.addEventListener('DOMContentLoaded', async function() {
             const manager = window.saManager;
             const container = document.getElementById('saList');
+            
+            // Inicializar botões de navegação
+            window.addEventListener('scroll', controlarBotoesNavegacao);
+            window.addEventListener('resize', controlarBotoesNavegacao);
+            setTimeout(controlarBotoesNavegacao, 100);
             
             // Sobrescrever renderizarLista para incluir botão excluir
             manager.renderizarLista = function(dados, container) {
