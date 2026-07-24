@@ -20,6 +20,7 @@ class SAManager {
         this.saAtual = null;
         this.signaturePad = null;
         this.tipoAssinatura = null;
+        this.modoOffline = false; // Flag para modo offline
     }
 
     // ============================================
@@ -157,8 +158,125 @@ class SAManager {
             return await response.json();
         } catch (error) {
             console.error('Erro na requisição:', error);
-            throw error;
+            console.warn('⚠️ Modo offline ativado - usando dados locais');
+            this.modoOffline = true;
+            
+            // Retornar dados mockados para desenvolvimento
+            return this.getDadosMock(endpoint, options);
         }
+    }
+
+    // Dados mockados para desenvolvimento offline
+    getDadosMock(endpoint, options) {
+        console.log('📦 Usando dados mockados para:', endpoint);
+        
+        if (endpoint === '/sa' && options.method === 'GET') {
+            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
+            if (dadosSalvos) {
+                return JSON.parse(dadosSalvos);
+            }
+            return [];
+        }
+        
+        if (endpoint === '/sa' && options.method === 'POST') {
+            const body = JSON.parse(options.body || '{}');
+            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
+            const lista = dadosSalvos ? JSON.parse(dadosSalvos) : [];
+            
+            const novoNumero = lista.length > 0 ? Math.max(...lista.map(s => s.numero)) + 1 : 1;
+            const novaSA = {
+                id: Date.now(),
+                numero: novoNumero,
+                status: 'pendente',
+                criado_por: body.criadoPor || 'Sistema',
+                criado_em: new Date().toISOString(),
+                colaborador_nome: body.colaborador?.nome || '',
+                colaborador_matricula: body.colaborador?.matricula || '',
+                solicitante: body.solicitante || '',
+                data_solicitacao: body.dataSolicitacao || new Date().toISOString().split('T')[0],
+                finalizado: false,
+                itens: body.itens || [],
+                termoResponsabilidade: {
+                    entreguePor: null,
+                    recebidoPor: null
+                }
+            };
+            
+            lista.push(novaSA);
+            localStorage.setItem('sa_emergencial_mock', JSON.stringify(lista));
+            
+            return { success: true, numero: novoNumero };
+        }
+        
+        if (endpoint.match(/^\/sa\/\d+$/) && options.method === 'PUT') {
+            const numero = parseInt(endpoint.split('/')[2]);
+            const body = JSON.parse(options.body || '{}');
+            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
+            const lista = dadosSalvos ? JSON.parse(dadosSalvos) : [];
+            
+            const index = lista.findIndex(s => s.numero === numero);
+            if (index !== -1) {
+                lista[index] = { ...lista[index], ...body };
+                localStorage.setItem('sa_emergencial_mock', JSON.stringify(lista));
+            }
+            
+            return { success: true };
+        }
+        
+        if (endpoint.match(/^\/sa\/\d+\/assinatura$/) && options.method === 'POST') {
+            const numero = parseInt(endpoint.split('/')[2]);
+            const body = JSON.parse(options.body || '{}');
+            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
+            const lista = dadosSalvos ? JSON.parse(dadosSalvos) : [];
+            
+            const index = lista.findIndex(s => s.numero === numero);
+            if (index !== -1) {
+                const sa = lista[index];
+                if (!sa.termoResponsabilidade) {
+                    sa.termoResponsabilidade = { entreguePor: null, recebidoPor: null };
+                }
+                
+                if (body.tipo === 'entregue') {
+                    sa.termoResponsabilidade.entreguePor = {
+                        nome: body.nome,
+                        assinatura: body.assinatura,
+                        data: new Date().toISOString()
+                    };
+                } else if (body.tipo === 'recebido') {
+                    sa.termoResponsabilidade.recebidoPor = {
+                        nome: body.nome,
+                        assinatura: body.assinatura,
+                        data: new Date().toISOString()
+                    };
+                }
+                
+                // Verificar se ambas assinaturas foram feitas
+                if (sa.termoResponsabilidade.entreguePor && sa.termoResponsabilidade.recebidoPor) {
+                    sa.status = 'assinado';
+                }
+                
+                localStorage.setItem('sa_emergencial_mock', JSON.stringify(lista));
+            }
+            
+            return { success: true };
+        }
+        
+        if (endpoint.match(/^\/sa\/\d+\/finalizar$/) && options.method === 'POST') {
+            const numero = parseInt(endpoint.split('/')[2]);
+            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
+            const lista = dadosSalvos ? JSON.parse(dadosSalvos) : [];
+            
+            const index = lista.findIndex(s => s.numero === numero);
+            if (index !== -1) {
+                lista[index].status = 'finalizado';
+                lista[index].finalizado = true;
+                localStorage.setItem('sa_emergencial_mock', JSON.stringify(lista));
+            }
+            
+            return { success: true };
+        }
+        
+        return {};
     }
 
     // Carregar usuário logado
@@ -182,19 +300,29 @@ class SAManager {
     // Listar todas as SA
     async listarSA() {
         try {
-            return await this.request('/sa');
+            const resultado = await this.request('/sa');
+            return resultado;
         } catch (error) {
             console.error('Erro ao listar SA:', error);
-            return [];
+            // Tentar carregar do localStorage
+            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
+            return dadosSalvos ? JSON.parse(dadosSalvos) : [];
         }
     }
 
     // Buscar SA por número
     async buscarSA(numero) {
         try {
-            return await this.request(`/sa/${numero}`);
+            const resultado = await this.request(`/sa/${numero}`);
+            return resultado;
         } catch (error) {
             console.error('Erro ao buscar SA:', error);
+            // Tentar carregar do localStorage
+            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
+            if (dadosSalvos) {
+                const lista = JSON.parse(dadosSalvos);
+                return lista.find(s => s.numero === numero) || null;
+            }
             return null;
         }
     }
@@ -246,6 +374,15 @@ class SAManager {
             return true;
         } catch (error) {
             console.error('Erro ao salvar SA:', error);
+            // Salvar no localStorage como fallback
+            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
+            const lista = dadosSalvos ? JSON.parse(dadosSalvos) : [];
+            const index = lista.findIndex(s => s.numero === this.saAtual.numero);
+            if (index !== -1) {
+                lista[index] = this.saAtual;
+                localStorage.setItem('sa_emergencial_mock', JSON.stringify(lista));
+                return true;
+            }
             return false;
         }
     }
@@ -259,6 +396,14 @@ class SAManager {
             return true;
         } catch (error) {
             console.error('Erro ao excluir SA:', error);
+            // Excluir do localStorage como fallback
+            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
+            if (dadosSalvos) {
+                let lista = JSON.parse(dadosSalvos);
+                lista = lista.filter(s => s.numero !== numero);
+                localStorage.setItem('sa_emergencial_mock', JSON.stringify(lista));
+                return true;
+            }
             return false;
         }
     }

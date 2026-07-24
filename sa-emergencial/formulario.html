@@ -10,7 +10,12 @@
 <body>
     <div class="sa-form">
         <div class="sa-form-header">
-            <h1>📋 S.A. Emergencial</h1>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <button onclick="voltarPainel()" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                    ⬅ Voltar
+                </button>
+                <h1 style="margin: 0;">📋 S.A. Emergencial</h1>
+            </div>
             <span class="sa-numero" id="saNumero">#0000</span>
         </div>
         
@@ -181,6 +186,11 @@
         let manager;
         let numeroSA = null;
 
+        // Função para voltar ao painel
+        function voltarPainel() {
+            window.location.href = 'index.html';
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
             manager = window.saManager;
             
@@ -202,7 +212,7 @@
                     window.location.href = 'index.html';
                 }
             } else {
-                // Nova SA
+                // Nova SA - verificar permissão
                 const podeCriar = await manager.verificarPermissaoGerar(manager.usuarioAtual);
                 if (!podeCriar) {
                     alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
@@ -210,11 +220,16 @@
                     return;
                 }
                 
-                const novaSA = await manager.criarSA(manager.usuarioAtual);
-                if (novaSA) {
-                    numeroSA = novaSA.numero;
-                    document.getElementById('saNumero').textContent = `#${String(numeroSA).padStart(4, '0')}`;
-                    document.getElementById('dataSolicitacao').value = new Date().toISOString().split('T')[0];
+                try {
+                    const novaSA = await manager.criarSA(manager.usuarioAtual);
+                    if (novaSA) {
+                        numeroSA = novaSA.numero;
+                        document.getElementById('saNumero').textContent = `#${String(numeroSA).padStart(4, '0')}`;
+                        document.getElementById('dataSolicitacao').value = new Date().toISOString().split('T')[0];
+                    }
+                } catch (error) {
+                    alert('❌ Erro ao criar S.A.: ' + error.message);
+                    window.location.href = 'index.html';
                 }
             }
             
@@ -300,7 +315,6 @@
             if (material) {
                 row.querySelector('.item-descricao').value = material.descricao;
                 row.querySelector('.item-armazem').value = material.armazem;
-                // Unidade de medida fica em branco para preenchimento manual
             } else {
                 alert(`⚠️ Material com código "${codigo}" não encontrado!`);
                 row.querySelector('.item-descricao').value = '';
