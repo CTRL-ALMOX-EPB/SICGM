@@ -2178,6 +2178,63 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
+    // FUNÇÃO ADICIONAR TRAFO (CORRIGIDA)
+    // ============================================
+    
+    function adicionarTrafo() {
+        console.log('⚡ Função adicionarTrafo chamada');
+        
+        salvarDadosTrafosAtuais();
+        
+        const novoTrafo = {
+            codigo: '',
+            descricao: '',
+            und: '',
+            numero_serie: '',
+            tombamento: '',
+            oleo: '',
+            cor: '',
+            ativo: true,
+            isNew: true,
+            _qtd: '',
+            _n_obra: '',
+            tipo_material: 'trafo',
+            id: null,
+            _jaRegistrado: false
+        };
+        
+        materiaisManuais.unshift(novoTrafo);
+        materiaisPorCategoria['trafos'] = materiaisManuais;
+        
+        const tabTrafos = document.getElementById('tab-diaria-trafos');
+        if (tabTrafos) {
+            tabTrafos.innerHTML = renderizarTrafos(materiaisManuais);
+            atualizarContadorTrafos();
+            
+            setTimeout(() => {
+                materiaisManuais.forEach((material, index) => {
+                    if (material.codigo) {
+                        buscarQuantidadeAnterior(material.codigo, `trafos-${index}`, material.tombamento, 'trafo');
+                    }
+                    if (material._qtd) {
+                        const idUnico = `trafos-${index}`;
+                        calcularDiferencaTrafo(idUnico, material.codigo);
+                    }
+                });
+            }, 100);
+            
+            const primeiroItem = tabTrafos.querySelector('.trafo-item:first-child');
+            if (primeiroItem) {
+                primeiroItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const novoCodigoInput = primeiroItem.querySelector('#trafo-codigo-0');
+                if (novoCodigoInput) {
+                    setTimeout(() => novoCodigoInput.focus(), 300);
+                }
+            }
+        }
+    }
+    
+    // ============================================
     // FUNÇÕES AUXILIARES
     // ============================================
     
