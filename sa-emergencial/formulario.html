@@ -2,9 +2,9 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>S.A. Emergencial - Formulário</title>
-    <!-- Favicon para evitar erro 404 -->
+    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/sa-emergencial.css">
@@ -12,11 +12,11 @@
 <body>
     <div class="sa-form">
         <div class="sa-form-header">
-            <div style="display: flex; align-items: center; gap: 20px;">
-                <button onclick="voltarPainel()" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-weight: 600;">
+            <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                <button onclick="voltarPainel()" class="btn-voltar-header">
                     ⬅ Voltar
                 </button>
-                <h1 style="margin: 0;">📋 S.A. Emergencial</h1>
+                <h1 style="margin: 0; font-size: clamp(18px, 4vw, 28px);">📋 S.A. Emergencial</h1>
             </div>
             <span class="sa-numero" id="saNumero">#0000</span>
         </div>
@@ -74,30 +74,32 @@
 
             <!-- Itens -->
             <h3>📦 Itens</h3>
-            <table class="items-table" id="itemsTable">
-                <thead>
-                    <tr>
-                        <th style="width: 15%;">Código</th>
-                        <th style="width: 30%;">Descrição</th>
-                        <th style="width: 10%;">Unid.</th>
-                        <th style="width: 15%;">Quantidade</th>
-                        <th style="width: 15%;">Armazém</th>
-                        <th style="width: 10%;">C.A</th>
-                        <th style="width: 5%;"></th>
-                    </tr>
-                </thead>
-                <tbody id="itemsBody">
-                    <tr>
-                        <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código"></td>
-                        <td><input type="text" class="item-descricao" readonly placeholder="Descrição"></td>
-                        <td><input type="text" class="item-unidade" placeholder="Unid."></td>
-                        <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0"></td>
-                        <td><input type="text" class="item-armazem" readonly placeholder="Armazém"></td>
-                        <td><input type="text" class="item-ca" placeholder="C.A"></td>
-                        <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="items-table" id="itemsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Código</th>
+                            <th style="width: 30%;">Descrição</th>
+                            <th style="width: 10%;">Unid.</th>
+                            <th style="width: 15%;">Quantidade</th>
+                            <th style="width: 15%;">Armazém</th>
+                            <th style="width: 10%;">C.A</th>
+                            <th style="width: 5%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsBody">
+                        <tr>
+                            <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código"></td>
+                            <td><input type="text" class="item-descricao" readonly placeholder="Descrição"></td>
+                            <td><input type="text" class="item-unidade" readonly placeholder="Unid."></td>
+                            <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0"></td>
+                            <td><input type="text" class="item-armazem" readonly placeholder="Armazém"></td>
+                            <td><input type="text" class="item-ca" placeholder="C.A"></td>
+                            <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
             <button class="add-item-btn" onclick="adicionarLinhaItem()">➕ Adicionar Item</button>
 
             <hr>
@@ -158,26 +160,36 @@
         </div>
     </div>
 
-    <!-- Modal de Assinatura -->
-    <div class="signature-modal" id="signatureModal">
-        <div class="signature-box">
-            <h2>✍️ ASSINATURA</h2>
-            <p style="text-align: center; color: #666;">Assine no campo abaixo com o mouse ou dedo</p>
-            <p style="text-align: center; color: #1a237e; font-weight: bold;" id="signatureType">ENTREGUE POR</p>
-            
-            <div class="form-group">
-                <label>Nome do Signatário *</label>
-                <input type="text" id="signatureName" placeholder="Digite seu nome completo">
+    <!-- TELA DE ASSINATURA (Página inteira) -->
+    <div class="signature-fullscreen" id="signatureFullscreen">
+        <div class="signature-fullscreen-content">
+            <div class="signature-fullscreen-header">
+                <h2>✍️ ASSINATURA</h2>
+                <button class="btn-close-signature" onclick="fecharAssinaturaFullscreen()">✕</button>
             </div>
             
-            <div class="signature-pad-container">
-                <canvas id="signatureCanvas"></canvas>
-            </div>
-            
-            <div class="signature-actions">
-                <button class="btn-clear" onclick="limparAssinatura()">🗑️ Limpar</button>
-                <button class="btn-confirm" onclick="confirmarAssinatura()">✅ Confirmar</button>
-                <button class="btn-cancel" onclick="fecharModalAssinatura()">❌ Cancelar</button>
+            <div class="signature-fullscreen-body">
+                <p style="text-align: center; color: #666; font-size: 14px; margin-bottom: 10px;">
+                    Assine no campo abaixo com o mouse ou dedo
+                </p>
+                <p style="text-align: center; color: #1a237e; font-weight: bold; font-size: 18px;" id="signatureTypeFullscreen">
+                    ENTREGUE POR
+                </p>
+                
+                <div class="form-group" style="margin: 10px 0;">
+                    <label>Nome do Signatário *</label>
+                    <input type="text" id="signatureNameFullscreen" placeholder="Digite seu nome completo" style="padding: 12px; font-size: 16px;">
+                </div>
+                
+                <div class="signature-pad-container-fullscreen">
+                    <canvas id="signatureCanvasFullscreen"></canvas>
+                </div>
+                
+                <div class="signature-actions-fullscreen">
+                    <button class="btn-clear-fullscreen" onclick="limparAssinaturaFullscreen()">🗑️ Limpar</button>
+                    <button class="btn-confirm-fullscreen" onclick="confirmarAssinaturaFullscreen()">✅ Confirmar</button>
+                    <button class="btn-cancel-fullscreen" onclick="fecharAssinaturaFullscreen()">❌ Cancelar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -187,6 +199,8 @@
     <script>
         let manager;
         let numeroSA = null;
+        let tipoAssinaturaAtual = null;
+        let signaturePadFullscreen = null;
 
         // Função para voltar ao painel
         function voltarPainel() {
@@ -211,83 +225,223 @@
             `;
         }
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            manager = window.saManager;
+        // ============================================
+        // FUNÇÕES DE ASSINATURA EM TELA CHEIA
+        // ============================================
+
+        function abrirModalAssinatura(tipo) {
+            const nome = tipo === 'entregue' ? 
+                document.getElementById('colaborador').value : 
+                document.getElementById('solicitante').value;
+            
+            if (!nome) {
+                alert('⚠️ Preencha o nome do colaborador/solicitante antes de assinar.');
+                return;
+            }
+            
+            tipoAssinaturaAtual = tipo;
+            
+            // Mostrar tela cheia
+            const fullscreen = document.getElementById('signatureFullscreen');
+            fullscreen.classList.add('active');
+            
+            // Configurar texto
+            document.getElementById('signatureTypeFullscreen').textContent = 
+                tipo === 'entregue' ? 'ENTREGUE POR' : 'RECEBIDO POR';
+            document.getElementById('signatureNameFullscreen').value = nome;
+            
+            // Inicializar Signature Pad
+            const canvas = document.getElementById('signatureCanvasFullscreen');
+            
+            // Ajustar tamanho do canvas
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth - 20;
+            canvas.height = 300;
+            
+            signaturePadFullscreen = new SignaturePad(canvas, {
+                backgroundColor: 'rgba(255, 255, 255, 0)',
+                penColor: '#1a237e',
+                minWidth: 2,
+                maxWidth: 4
+            });
+            
+            // Limpar assinatura anterior
+            signaturePadFullscreen.clear();
+            
+            // Ajustar ao redimensionar
+            setTimeout(() => {
+                canvas.width = container.clientWidth - 20;
+                canvas.height = 300;
+                signaturePadFullscreen.resizeCanvas();
+            }, 100);
+        }
+
+        function fecharAssinaturaFullscreen() {
+            const fullscreen = document.getElementById('signatureFullscreen');
+            fullscreen.classList.remove('active');
+            tipoAssinaturaAtual = null;
+            if (signaturePadFullscreen) {
+                signaturePadFullscreen = null;
+            }
+        }
+
+        function limparAssinaturaFullscreen() {
+            if (signaturePadFullscreen) {
+                signaturePadFullscreen.clear();
+            }
+        }
+
+        async function confirmarAssinaturaFullscreen() {
+            if (!signaturePadFullscreen || signaturePadFullscreen.isEmpty()) {
+                alert('⚠️ Por favor, assine no campo acima.');
+                return;
+            }
+            
+            const nome = document.getElementById('signatureNameFullscreen').value.trim();
+            if (!nome) {
+                alert('⚠️ Por favor, informe o nome do signatário.');
+                return;
+            }
             
             try {
-                // Verificar se é nova SA ou edição
-                const params = new URLSearchParams(window.location.search);
-                const numero = params.get('numero');
+                const assinaturaData = signaturePadFullscreen.toDataURL();
                 
-                await manager.carregarUsuarioLogado();
+                // Chamar o manager para salvar
+                await manager.assinarDocumento(tipoAssinaturaAtual, nome, assinaturaData);
                 
-                if (numero) {
-                    // Editar SA existente
-                    numeroSA = parseInt(numero);
-                    const sa = await manager.buscarSA(numeroSA);
-                    if (sa) {
-                        manager.saAtual = sa;
-                        carregarDadosFormulario(sa);
-                    } else {
-                        alert('❌ S.A. não encontrada!');
-                        window.location.href = 'index.html';
-                    }
-                } else {
-                    // Nova SA - verificar permissão
-                    const podeCriar = await manager.verificarPermissaoGerar(manager.usuarioAtual);
-                    if (!podeCriar) {
-                        alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
-                        window.location.href = 'index.html';
-                        return;
-                    }
-                    
-                    const novaSA = await manager.criarSA(manager.usuarioAtual);
-                    if (novaSA) {
-                        numeroSA = novaSA.numero;
-                        document.getElementById('saNumero').textContent = `#${String(numeroSA).padStart(4, '0')}`;
-                        document.getElementById('dataSolicitacao').value = new Date().toISOString().split('T')[0];
-                    }
-                }
-                
-                // Inicializar Signature Pad
-                manager.initSignaturePad('signatureCanvas');
-                
-                // Atualizar assinaturas
+                fecharAssinaturaFullscreen();
                 manager.atualizarVisualizacaoAssinaturas();
-                
+                alert('✅ Assinatura realizada com sucesso!');
             } catch (error) {
-                console.error('❌ Erro ao carregar formulário:', error);
-                mostrarErro(error.message || 'Erro ao carregar dados do servidor');
-            }
-        });
-
-        function carregarDadosFormulario(sa) {
-            document.getElementById('saNumero').textContent = `#${String(sa.numero).padStart(4, '0')}`;
-            
-            const col = sa.colaborador || {};
-            document.getElementById('matricula').value = col.matricula || '';
-            document.getElementById('colaborador').value = col.nome || '';
-            document.getElementById('cpf').value = col.cpf || '';
-            document.getElementById('funcao').value = col.funcao || '';
-            document.getElementById('filial').value = col.filial || '';
-            document.getElementById('centroCusto').value = col.centroCusto || '';
-            
-            document.getElementById('solicitante').value = sa.solicitante || '';
-            document.getElementById('dataSolicitacao').value = sa.dataSolicitacao || '';
-            
-            const tbody = document.getElementById('itemsBody');
-            tbody.innerHTML = '';
-            if (sa.itens && sa.itens.length > 0) {
-                sa.itens.forEach(item => {
-                    adicionarLinhaItem(item);
-                });
-            } else {
-                adicionarLinhaItem();
+                alert('❌ Erro ao assinar: ' + error.message);
             }
         }
 
         // ============================================
-        // FUNÇÕES DO FORMULÁRIO
+        // FUNÇÕES DE MATERIAL (com pop-up)
+        // ============================================
+
+        async function buscarMaterial(input) {
+            const codigo = input.value.trim();
+            if (!codigo) return;
+            
+            const row = input.closest('tr');
+            
+            try {
+                const material = await manager.buscarMaterial(codigo);
+                if (material) {
+                    // Preencher campos e travá-los
+                    const descricaoInput = row.querySelector('.item-descricao');
+                    const unidadeInput = row.querySelector('.item-unidade');
+                    const armazemInput = row.querySelector('.item-armazem');
+                    
+                    descricaoInput.value = material.descricao;
+                    unidadeInput.value = material.unidadeMedida || '';
+                    armazemInput.value = material.armazem;
+                    
+                    // Travar os campos (já são readonly, mas vamos garantir)
+                    descricaoInput.style.backgroundColor = '#f5f5f5';
+                    unidadeInput.style.backgroundColor = '#f5f5f5';
+                    armazemInput.style.backgroundColor = '#f5f5f5';
+                    
+                    // Mostrar pop-up com a descrição completa
+                    mostrarPopupMaterial(material);
+                } else {
+                    alert(`⚠️ Material com código "${codigo}" não encontrado!`);
+                    row.querySelector('.item-descricao').value = '';
+                    row.querySelector('.item-armazem').value = '';
+                    row.querySelector('.item-unidade').value = '';
+                }
+            } catch (error) {
+                alert('❌ Erro ao buscar material: ' + error.message);
+            }
+        }
+
+        function mostrarPopupMaterial(material) {
+            // Criar overlay do pop-up
+            const overlay = document.createElement('div');
+            overlay.className = 'popup-overlay';
+            overlay.id = 'popupMaterial';
+            
+            overlay.innerHTML = `
+                <div class="popup-content">
+                    <div class="popup-header">
+                        <h3>📦 Material Encontrado</h3>
+                        <button class="popup-close" onclick="fecharPopupMaterial()">✕</button>
+                    </div>
+                    <div class="popup-body">
+                        <div class="popup-field">
+                            <span class="popup-label">Código:</span>
+                            <span class="popup-value">${material.codigo}</span>
+                        </div>
+                        <div class="popup-field">
+                            <span class="popup-label">Descrição:</span>
+                            <span class="popup-value">${material.descricao}</span>
+                        </div>
+                        <div class="popup-field">
+                            <span class="popup-label">Armazém:</span>
+                            <span class="popup-value">${material.armazem}</span>
+                        </div>
+                        ${material.unidadeMedida ? `
+                        <div class="popup-field">
+                            <span class="popup-label">Unidade:</span>
+                            <span class="popup-value">${material.unidadeMedida}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="popup-footer">
+                        <button onclick="fecharPopupMaterial()" class="popup-btn">OK</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+            
+            // Fechar ao clicar fora
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    fecharPopupMaterial();
+                }
+            });
+        }
+
+        function fecharPopupMaterial() {
+            const popup = document.getElementById('popupMaterial');
+            if (popup) {
+                popup.remove();
+            }
+        }
+
+        // ============================================
+        // FUNÇÕES DE ITENS
+        // ============================================
+
+        function adicionarLinhaItem(item = null) {
+            const tbody = document.getElementById('itemsBody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código" value="${item ? item.codigo : ''}"></td>
+                <td><input type="text" class="item-descricao" readonly placeholder="Descrição" value="${item ? item.descricao : ''}" style="background-color: ${item ? '#f5f5f5' : ''};"></td>
+                <td><input type="text" class="item-unidade" readonly placeholder="Unid." value="${item ? item.unidadeMedida : ''}" style="background-color: ${item ? '#f5f5f5' : ''};"></td>
+                <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" value="${item ? item.quantidade : ''}"></td>
+                <td><input type="text" class="item-armazem" readonly placeholder="Armazém" value="${item ? item.armazem : ''}" style="background-color: ${item ? '#f5f5f5' : ''};"></td>
+                <td><input type="text" class="item-ca" placeholder="C.A" value="${item ? item.ca : ''}"></td>
+                <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function removerItem(btn) {
+            const row = btn.closest('tr');
+            if (document.getElementById('itemsBody').children.length > 1) {
+                row.remove();
+            } else {
+                alert('⚠️ É necessário ter pelo menos um item.');
+            }
+        }
+
+        // ============================================
+        // FUNÇÕES DE COLABORADOR
         // ============================================
 
         async function buscarColaborador() {
@@ -324,82 +478,6 @@
             } catch (error) {
                 alert('❌ Erro ao buscar colaborador: ' + error.message);
             }
-        }
-
-        async function buscarMaterial(input) {
-            const codigo = input.value.trim();
-            if (!codigo) return;
-            
-            const row = input.closest('tr');
-            
-            try {
-                const material = await manager.buscarMaterial(codigo);
-                if (material) {
-                    row.querySelector('.item-descricao').value = material.descricao;
-                    row.querySelector('.item-armazem').value = material.armazem;
-                } else {
-                    alert(`⚠️ Material com código "${codigo}" não encontrado!`);
-                    row.querySelector('.item-descricao').value = '';
-                    row.querySelector('.item-armazem').value = '';
-                }
-            } catch (error) {
-                alert('❌ Erro ao buscar material: ' + error.message);
-            }
-        }
-
-        function adicionarLinhaItem(item = null) {
-            const tbody = document.getElementById('itemsBody');
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código" value="${item ? item.codigo : ''}"></td>
-                <td><input type="text" class="item-descricao" readonly placeholder="Descrição" value="${item ? item.descricao : ''}"></td>
-                <td><input type="text" class="item-unidade" placeholder="Unid." value="${item ? item.unidadeMedida : ''}"></td>
-                <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" value="${item ? item.quantidade : ''}"></td>
-                <td><input type="text" class="item-armazem" readonly placeholder="Armazém" value="${item ? item.armazem : ''}"></td>
-                <td><input type="text" class="item-ca" placeholder="C.A" value="${item ? item.ca : ''}"></td>
-                <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
-            `;
-            tbody.appendChild(tr);
-        }
-
-        function removerItem(btn) {
-            const row = btn.closest('tr');
-            if (document.getElementById('itemsBody').children.length > 1) {
-                row.remove();
-            } else {
-                alert('⚠️ É necessário ter pelo menos um item.');
-            }
-        }
-
-        // ============================================
-        // FUNÇÕES DE ASSINATURA
-        // ============================================
-
-        function abrirModalAssinatura(tipo) {
-            const nome = tipo === 'entregue' ? 
-                document.getElementById('colaborador').value : 
-                document.getElementById('solicitante').value;
-            
-            if (!nome) {
-                alert('⚠️ Preencha o nome do colaborador/solicitante antes de assinar.');
-                return;
-            }
-            
-            manager.abrirModalAssinatura(tipo, nome);
-        }
-
-        function fecharModalAssinatura() {
-            manager.fecharModalAssinatura();
-        }
-
-        function limparAssinatura() {
-            if (manager.signaturePad) {
-                manager.signaturePad.clear();
-            }
-        }
-
-        function confirmarAssinatura() {
-            manager.confirmarAssinatura();
         }
 
         // ============================================
@@ -470,6 +548,93 @@
                 alert('❌ ' + error.message);
             }
         }
+
+        // ============================================
+        // INICIALIZAÇÃO
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            manager = window.saManager;
+            
+            try {
+                // Verificar se é nova SA ou edição
+                const params = new URLSearchParams(window.location.search);
+                const numero = params.get('numero');
+                
+                await manager.carregarUsuarioLogado();
+                
+                if (numero) {
+                    // Editar SA existente
+                    numeroSA = parseInt(numero);
+                    const sa = await manager.buscarSA(numeroSA);
+                    if (sa) {
+                        manager.saAtual = sa;
+                        carregarDadosFormulario(sa);
+                    } else {
+                        alert('❌ S.A. não encontrada!');
+                        window.location.href = 'index.html';
+                    }
+                } else {
+                    // Nova SA - verificar permissão
+                    const podeCriar = await manager.verificarPermissaoGerar(manager.usuarioAtual);
+                    if (!podeCriar) {
+                        alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    
+                    const novaSA = await manager.criarSA(manager.usuarioAtual);
+                    if (novaSA) {
+                        numeroSA = novaSA.numero;
+                        document.getElementById('saNumero').textContent = `#${String(numeroSA).padStart(4, '0')}`;
+                        document.getElementById('dataSolicitacao').value = new Date().toISOString().split('T')[0];
+                    }
+                }
+                
+                // Atualizar assinaturas
+                manager.atualizarVisualizacaoAssinaturas();
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar formulário:', error);
+                mostrarErro(error.message || 'Erro ao carregar dados do servidor');
+            }
+        });
+
+        function carregarDadosFormulario(sa) {
+            document.getElementById('saNumero').textContent = `#${String(sa.numero).padStart(4, '0')}`;
+            
+            const col = sa.colaborador || {};
+            document.getElementById('matricula').value = col.matricula || '';
+            document.getElementById('colaborador').value = col.nome || '';
+            document.getElementById('cpf').value = col.cpf || '';
+            document.getElementById('funcao').value = col.funcao || '';
+            document.getElementById('filial').value = col.filial || '';
+            document.getElementById('centroCusto').value = col.centroCusto || '';
+            
+            document.getElementById('solicitante').value = sa.solicitante || '';
+            document.getElementById('dataSolicitacao').value = sa.dataSolicitacao || '';
+            
+            const tbody = document.getElementById('itemsBody');
+            tbody.innerHTML = '';
+            if (sa.itens && sa.itens.length > 0) {
+                sa.itens.forEach(item => {
+                    adicionarLinhaItem(item);
+                });
+            } else {
+                adicionarLinhaItem();
+            }
+        }
+
+        // Redimensionar canvas ao redimensionar a tela
+        window.addEventListener('resize', function() {
+            if (signaturePadFullscreen) {
+                const canvas = document.getElementById('signatureCanvasFullscreen');
+                const container = canvas.parentElement;
+                canvas.width = container.clientWidth - 20;
+                canvas.height = 300;
+                signaturePadFullscreen.resizeCanvas();
+            }
+        });
     </script>
 </body>
 </html>
