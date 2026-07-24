@@ -115,7 +115,7 @@ class SAManager {
                             codigo: colunas[0],
                             armazem: colunas[1],
                             descricao: colunas[2],
-                            unidadeMedida: '' // Não tem unidade no arquivo
+                            unidadeMedida: ''
                         };
                     }
                 }
@@ -193,6 +193,12 @@ class SAManager {
         try {
             const resultado = await this.request(`/sa/${numero}`);
             if (resultado && typeof resultado === 'object') {
+                if (!resultado.termoResponsabilidade) {
+                    resultado.termoResponsabilidade = {
+                        entreguePor: null,
+                        recebidoPor: null
+                    };
+                }
                 return resultado;
             }
             throw new Error('S.A. não encontrada');
@@ -322,7 +328,7 @@ class SAManager {
     // FUNÇÕES DE UI - PAINEL
     // ============================================
 
-    renderizarLista(dados, container, onExcluir) {
+    renderizarLista(dados, container) {
         if (!Array.isArray(dados)) {
             console.error('❌ dados não é um array:', dados);
             container.innerHTML = `
@@ -368,7 +374,7 @@ class SAManager {
                     <span onclick="window.location.href='formulario.html?numero=${doc.numero}'">${doc.criado_por || 'Sistema'}</span>
                     <span onclick="window.location.href='formulario.html?numero=${doc.numero}'"><span class="sa-status ${statusClass}">${statusLabel}</span></span>
                     <span style="text-align: center;">
-                        <button class="btn-excluir-item" onclick="excluirSA(${doc.numero}, event, ${onExcluir ? 'true' : 'false'})" title="Excluir S.A.">
+                        <button class="btn-excluir-item" onclick="excluirSA(${doc.numero}, event)" title="Excluir S.A.">
                             🗑️
                         </button>
                     </span>
@@ -383,7 +389,6 @@ class SAManager {
     // FUNÇÕES DE UI - FORMULÁRIO
     // ============================================
 
-    // Atualizar visualização das assinaturas
     atualizarVisualizacaoAssinaturas() {
         if (!this.saAtual) return;
         
@@ -427,7 +432,6 @@ class SAManager {
         }
     }
 
-    // Aplicar assinatura vinda da página de assinatura
     async aplicarAssinatura(dadosAssinatura) {
         try {
             const tipo = dadosAssinatura.tipo;
@@ -435,17 +439,15 @@ class SAManager {
             const assinatura = dadosAssinatura.assinatura;
             const numero = dadosAssinatura.numero;
             
-            // Verificar se a SA ainda existe e é a mesma
-            if (!this.saAtual || this.saAtual.numero !== parseInt(numero)) {
-                const sa = await this.buscarSA(parseInt(numero));
-                if (sa) {
-                    this.saAtual = sa;
-                } else {
-                    throw new Error('S.A. não encontrada. Recarregue a página.');
-                }
+            console.log(`📝 Aplicando assinatura ${tipo} para SA #${numero}`);
+            
+            const sa = await this.buscarSA(parseInt(numero));
+            if (!sa) {
+                throw new Error('S.A. não encontrada. Recarregue a página.');
             }
             
-            // Atualizar o objeto SA
+            this.saAtual = sa;
+            
             if (!this.saAtual.termoResponsabilidade) {
                 this.saAtual.termoResponsabilidade = {
                     entreguePor: null,
@@ -453,7 +455,6 @@ class SAManager {
                 };
             }
             
-            // Salvar localmente
             if (tipo === 'entregue') {
                 this.saAtual.termoResponsabilidade.entreguePor = {
                     nome: nome,
@@ -468,10 +469,7 @@ class SAManager {
                 };
             }
             
-            // Salvar no servidor
             await this.assinarDocumento(tipo, nome, assinatura);
-            
-            // Atualizar visualização
             this.atualizarVisualizacaoAssinaturas();
             
             console.log(`✅ Assinatura ${tipo} aplicada com sucesso!`);
@@ -487,7 +485,6 @@ class SAManager {
     // ============================================
 
     mostrarPopupMaterial(material) {
-        // Remover pop-up existente
         this.fecharPopupMaterial();
         
         const overlay = document.createElement('div');
@@ -650,29 +647,31 @@ class SAManager {
 // FUNÇÕES GLOBAIS PARA USO NO HTML
 // ============================================
 
-// Criar instância global
 const saManager = new SAManager();
 window.saManager = saManager;
 
-// Função para excluir SA (usada no onclick do botão)
-window.excluirSA = async function(numero, event, recarregar = true) {
+// Função para excluir SA
+window.excluirSA = async function(numero, event) {
     if (event) event.stopPropagation();
     
     if (confirm(`⚠️ Tem certeza que deseja excluir a S.A. #${String(numero).padStart(4, '0')}?`)) {
         try {
             await saManager.excluirSA(numero);
             
-            if (recarregar) {
-                const dados = await saManager.listarSA();
-                const container = document.getElementById('saList');
-                saManager.renderizarLista(dados, container, true);
-            }
+            const dados = await saManager.listarSA();
+            const container = document.getElementById('saList');
+            saManager.renderizarLista(dados, container);
             
             alert('✅ S.A. excluída com sucesso!');
         } catch (error) {
             alert('❌ Erro ao excluir: ' + error.message);
         }
     }
+};
+
+// Função para voltar ao painel
+window.voltarPainel = function() {
+    window.location.href = 'index.html';
 };
 
 // Função para redirecionar para home
@@ -803,7 +802,6 @@ window.abrirPaginaAssinatura = function(tipo) {
         return;
     }
 
-    // Salvar dados antes de abrir assinatura
     window.salvarDadosFormulario();
 
     const numero = saManager.saAtual.numero;
@@ -861,32 +859,19 @@ window.finalizarSA = async function() {
         
         const sa = saManager.saAtual;
         
-        // Validar campos obrigatórios
         const erros = saManager.validarCamposObrigatorios(sa);
         if (erros.length > 0) {
             alert('⚠️ ' + erros.join('\n'));
             return;
         }
         
-        // Validar assinaturas
         const erroAssinatura = saManager.validarAssinaturas(sa);
         if (erroAssinatura) {
             alert('⚠️ ' + erroAssinatura);
             return;
         }
         
-        // Verificar se há assinatura pendente no sessionStorage
-        const assinaturaPendente = sessionStorage.getItem('assinatura_temp');
-        if (assinaturaPendente) {
-            const dadosAssinatura = JSON.parse(assinaturaPendente);
-            await saManager.aplicarAssinatura(dadosAssinatura);
-            sessionStorage.removeItem('assinatura_temp');
-        }
-        
-        // Salvar dados no D1
         await saManager.salvarSA();
-        
-        // Finalizar
         await saManager.finalizarSA();
         
         alert('✅ S.A. finalizada com sucesso!');
@@ -900,15 +885,12 @@ window.finalizarSA = async function() {
 // INICIALIZAÇÃO DO PAINEL
 // ============================================
 document.addEventListener('DOMContentLoaded', async function() {
-    // Verificar se está no painel (tem o elemento saList)
     const container = document.getElementById('saList');
     if (!container) return;
     
     try {
-        // Carregar usuário
         const usuario = await saManager.carregarUsuarioLogado();
         
-        // Buscar informações completas do usuário
         const userInfo = await saManager.buscarUsuarioAutorizado(usuario.nome);
         
         if (userInfo) {
@@ -928,7 +910,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             document.getElementById('userAvatar').textContent = usuario.nome.charAt(0);
         }
         
-        // Verificar permissão para criar SA
         const podeCriar = await saManager.verificarPermissaoGerar(usuario);
         const btnNova = document.getElementById('btnNovaSA');
         
@@ -939,11 +920,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             btnNova.textContent = '🔒 Nova S.A. (Sem permissão)';
         }
         
-        // Carregar lista
         const dados = await saManager.listarSA();
-        saManager.renderizarLista(dados, container, true);
+        saManager.renderizarLista(dados, container);
         
-        // Evento: Nova SA
         btnNova.addEventListener('click', async function() {
             if (!podeCriar) {
                 alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
@@ -955,14 +934,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (novaSA) {
                     alert(`✅ S.A. #${String(novaSA.numero).padStart(4, '0')} criada com sucesso!`);
                     const dadosAtualizados = await saManager.listarSA();
-                    saManager.renderizarLista(dadosAtualizados, container, true);
+                    saManager.renderizarLista(dadosAtualizados, container);
                 }
             } catch (error) {
                 alert('❌ Erro ao criar S.A.: ' + error.message);
             }
         });
         
-        // Inicializar botões de navegação
         window.addEventListener('scroll', () => saManager.controlarBotoesNavegacao());
         window.addEventListener('resize', () => saManager.controlarBotoesNavegacao());
         setTimeout(() => saManager.controlarBotoesNavegacao(), 100);
@@ -988,7 +966,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 // INICIALIZAÇÃO DO FORMULÁRIO
 // ============================================
 document.addEventListener('DOMContentLoaded', async function() {
-    // Verificar se está no formulário (tem o elemento saNumero)
     const saNumero = document.getElementById('saNumero');
     if (!saNumero) return;
     
@@ -998,7 +975,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         await saManager.carregarUsuarioLogado();
         
-        // Verificar se há assinatura pendente no sessionStorage
         const assinaturaPendente = sessionStorage.getItem('assinatura_temp');
         if (assinaturaPendente) {
             try {
@@ -1006,14 +982,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (dados.concluido) {
                     await saManager.aplicarAssinatura(dados);
                     sessionStorage.removeItem('assinatura_temp');
+                    window.location.reload();
                 }
             } catch (error) {
                 console.error('Erro ao processar assinatura:', error);
+                sessionStorage.removeItem('assinatura_temp');
             }
         }
         
         if (numero) {
-            // Editar SA existente
             const sa = await saManager.buscarSA(parseInt(numero));
             if (sa) {
                 saManager.saAtual = sa;
@@ -1024,7 +1001,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 window.location.href = 'index.html';
             }
         } else {
-            // Nova SA
             const podeCriar = await saManager.verificarPermissaoGerar(saManager.usuarioAtual);
             if (!podeCriar) {
                 alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
@@ -1039,7 +1015,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }
         
-        // Inicializar botões de navegação
         window.addEventListener('scroll', () => saManager.controlarBotoesNavegacao());
         window.addEventListener('resize', () => saManager.controlarBotoesNavegacao());
         setTimeout(() => saManager.controlarBotoesNavegacao(), 100);
@@ -1050,7 +1025,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-// Função para carregar dados do formulário
+// ============================================
+// FUNÇÕES AUXILIARES
+// ============================================
+
 function carregarDadosFormulario(sa) {
     document.getElementById('saNumero').textContent = `#${String(sa.numero).padStart(4, '0')}`;
     
@@ -1076,7 +1054,6 @@ function carregarDadosFormulario(sa) {
     }
 }
 
-// Função para mostrar erro no formulário
 function mostrarErroFormulario(mensagem) {
     const body = document.querySelector('.sa-form-body');
     if (!body) return;
