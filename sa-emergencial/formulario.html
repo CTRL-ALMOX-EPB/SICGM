@@ -9,153 +9,158 @@
     <link rel="stylesheet" href="../css/sa-emergencial.css">
 </head>
 <body>
-    <div class="sa-form">
-        <div class="sa-form-header">
-            <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-                <button onclick="voltarPainel()" class="btn-voltar-header">
+    <div class="container">
+        <div class="form-card">
+            <!-- Header -->
+            <div class="header-container">
+                <img src="../assets/img/logo-control.png" alt="Logo" class="logo-empresa">
+                <h1 class="title">📋 S.A. Emergencial</h1>
+                <span style="margin-left: auto; background: #1a237e; color: white; padding: 4px 16px; border-radius: 20px; font-weight: 600; font-size: 14px;" id="saNumero">#0000</span>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+                <button onclick="voltarPainel()" class="btn-voltar-home" style="background: #718096; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
                     ⬅ Voltar
                 </button>
-                <h1 style="margin: 0; font-size: clamp(18px, 4vw, 28px);">📋 S.A. Emergencial</h1>
             </div>
-            <span class="sa-numero" id="saNumero">#0000</span>
-        </div>
-        
-        <div class="sa-form-body">
-            <!-- Dados do Colaborador -->
-            <h3>👤 Dados do Colaborador</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>MATRÍCULA *</label>
-                    <input type="text" id="matricula" placeholder="Digite a matrícula" onchange="buscarColaborador()">
+            
+            <div class="sa-form-body">
+                <!-- Dados do Colaborador -->
+                <h3 style="color: #2D3748; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #E2E8F0; padding-bottom: 10px;">👤 Dados do Colaborador</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>MATRÍCULA *</label>
+                        <input type="text" id="matricula" placeholder="Digite a matrícula" onchange="buscarColaborador()">
+                    </div>
+                    <div class="form-group">
+                        <label>COLABORADOR *</label>
+                        <input type="text" id="colaborador" readonly>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>COLABORADOR *</label>
-                    <input type="text" id="colaborador" readonly>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>CPF *</label>
+                        <input type="text" id="cpf" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>FUNÇÃO *</label>
+                        <input type="text" id="funcao" readonly>
+                    </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>FILIAL *</label>
+                        <input type="text" id="filial" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>CENTRO DE CUSTO *</label>
+                        <input type="text" id="centroCusto" readonly>
+                    </div>
+                </div>
+
+                <hr style="border: none; border-top: 2px dashed #E2E8F0; margin: 30px 0;">
+
+                <!-- Dados da SA -->
+                <h3 style="color: #2D3748; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #E2E8F0; padding-bottom: 10px;">📝 Dados da Solicitação</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>SOLICITANTE *</label>
+                        <input type="text" id="solicitante" placeholder="Nome do solicitante">
+                    </div>
+                    <div class="form-group">
+                        <label>DATA DA SOLICITAÇÃO</label>
+                        <input type="date" id="dataSolicitacao">
+                    </div>
+                </div>
+
+                <hr style="border: none; border-top: 2px dashed #E2E8F0; margin: 30px 0;">
+
+                <!-- Itens -->
+                <h3 style="color: #2D3748; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #E2E8F0; padding-bottom: 10px;">📦 Itens</h3>
+                <div class="table-responsive">
+                    <table class="items-table" id="itemsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 15%;">Código</th>
+                                <th style="width: 30%;">Descrição</th>
+                                <th style="width: 10%;">Unid.</th>
+                                <th style="width: 15%;">Quantidade</th>
+                                <th style="width: 15%;">Armazém</th>
+                                <th style="width: 10%;">C.A</th>
+                                <th style="width: 5%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsBody">
+                            <tr>
+                                <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código"></td>
+                                <td><input type="text" class="item-descricao" readonly placeholder="Descrição"></td>
+                                <td><input type="text" class="item-unidade" readonly placeholder="Unid."></td>
+                                <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0"></td>
+                                <td><input type="text" class="item-armazem" readonly placeholder="Armazém"></td>
+                                <td><input type="text" class="item-ca" placeholder="C.A"></td>
+                                <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <button class="add-item-btn" onclick="adicionarLinhaItem()">➕ Adicionar Item</button>
+
+                <hr style="border: none; border-top: 2px dashed #E2E8F0; margin: 30px 0;">
+
+                <!-- Termo de Responsabilidade -->
+                <div class="termo-responsabilidade">
+                    <h3 style="color: #1a237e; margin-top: 0;">📜 TERMO DE RESPONSABILIDADE</h3>
+                    <div class="termo-text">
+                        <p><strong>NR 06</strong><br>
+                        6.7. CABE AO EMPREGADO:<br>
+                        6.7.1. CABE AO EMPREGADO QUANTO AO EPI:<br>
+                        A) USAR, UTILIZANDO-O APENAS PARA A FINALIDADE A QUE SE DESTINA;<br>
+                        B) RESPONSABILIZAR-SE PELA GUARDA E CONSERVAÇÃO;<br>
+                        C) COMUNICAR AO EMPREGADOR QUALQUER ALTERAÇÃO QUE O TORNE IMPRÓPRIO PARA USO; E,<br>
+                        D) CUMPRIR AS DETERMINAÇÕES DO EMPREGADOR SOBRE O USO ADEQUADO.</p>
+
+                        <p><strong>NR 01</strong><br>
+                        1.8. CABE AO EMPREGADO:<br>
+                        A) CUMPRIR AS DISPOSIÇÕES LEGAIS E REGULAMENTARES SOBRE SEGURANÇA E MEDICINA DO TRABALHO, INCLUSIVE AS ORDENS DE SERVIÇO EXPEDIDAS PELO EMPREGADOR;<br>
+                        B) USAR O EPI FORNECIDO PELO EMPREGADOR;<br>
+                        C) SUBMETER-SE AOS EXAMES MÉDICOS PREVISTOS NAS NORMAS REGULAMENTADORAS - NR;<br>
+                        D) COLABORAR COM A EMPRESA NA APLICAÇÃO DAS NORMAS REGULAMENTADORAS – NR.<br>
+                        1.8.1. CONSTITUI ATO FALTOSO A RECUSA INJUSTIFICADA DO EMPREGADO AO CUMPRIMENTO DO DISPOSTO NO ITEM ANTERIOR.</p>
+
+                        <p><strong>CLT:</strong><br>
+                        ART. 462, § 1º - EM CASO DE DANO CAUSADO PELO EMPREGADO, O DESCONTO SERÁ LÍCITO, DESDE QUE ESTA POSSIBILIDADE TENHA SIDO ACORDADA OU NA OCORRÊNCIA DE DOLO DO EMPREGADO.</p>
+
+                        <p>Declaro para os devidos fins que recebi da CONTROL CONSTRUÇÕES LTDA, os Equipamentos de Proteção Individual acima descritos, novos e em perfeitas condições de uso, tendo sido treinado quanto ao seu uso adequado, bem como, que estou ciente das obrigações descritas na NR 06, baixada pela Portaria MTb 3214/78, subitem 6.7.1.</p>
+
+                        <p>Comprometo-me a bem cuidar da sua conservação e a restitui-los a empresa na eventualidade da rescisão de meu contrato de trabalho, antes de decorrido o prazo normal de utilização.</p>
+
+                        <p>Declaro, também, que estou ciente das disposições do Art. 462 e § 1º da CLT, e autorizo o desconto salarial proporcional ao custo de reparação do dano que os EPIs aos meus cuidados venham apresentar, seja por extravio, pelo uso inadequado e/ ou indevido.</p>
+
+                        <p>Declaro ainda que estou ciente de que seu uso é obrigatório sob pena de ser punido das disposições do artigo 158, alínea "a", da CLT, e do item 1.8 da NR 01, em especial daquela do subitem 1.8.1, de que constitui ato faltoso à recusa injustificada de usar EPI fornecido pela empresa, incorrendo nas penas da Lei cabíveis que irão desde simples advertências até a dispensa por justa causa (Art. 482 da C.L.T).</p>
+                    </div>
+                </div>
+
+                <!-- Assinaturas -->
+                <div class="assinaturas">
+                    <div class="assinatura-box" data-tipo="entregue">
+                        <h4>📤 ENTREGUE POR</h4>
+                        <p><strong>Nome:</strong> <span class="signatario-nome">-</span></p>
+                        <p><strong>Data:</strong> <span class="signatario-data">-</span></p>
+                        <img class="signature-img" style="display: none;" alt="Assinatura">
+                        <button class="btn-assinar" onclick="abrirPaginaAssinatura('entregue')">✍️ Assinar como Entregue</button>
+                    </div>
+
+                    <div class="assinatura-box" data-tipo="recebido">
+                        <h4>📥 RECEBIDO POR</h4>
+                        <p><strong>Nome:</strong> <span class="signatario-nome">-</span></p>
+                        <p><strong>Data:</strong> <span class="signatario-data">-</span></p>
+                        <img class="signature-img" style="display: none;" alt="Assinatura">
+                        <button class="btn-assinar" onclick="abrirPaginaAssinatura('recebido')">✍️ Assinar como Recebido</button>
+                    </div>
+                </div>
+
+                <button class="btn-finalizar" onclick="finalizarSA()">✅ FINALIZAR S.A.</button>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>CPF *</label>
-                    <input type="text" id="cpf" readonly>
-                </div>
-                <div class="form-group">
-                    <label>FUNÇÃO *</label>
-                    <input type="text" id="funcao" readonly>
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>FILIAL *</label>
-                    <input type="text" id="filial" readonly>
-                </div>
-                <div class="form-group">
-                    <label>CENTRO DE CUSTO *</label>
-                    <input type="text" id="centroCusto" readonly>
-                </div>
-            </div>
-
-            <hr>
-
-            <!-- Dados da SA -->
-            <h3>📝 Dados da Solicitação</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>SOLICITANTE *</label>
-                    <input type="text" id="solicitante" placeholder="Nome do solicitante">
-                </div>
-                <div class="form-group">
-                    <label>DATA DA SOLICITAÇÃO</label>
-                    <input type="date" id="dataSolicitacao">
-                </div>
-            </div>
-
-            <hr>
-
-            <!-- Itens -->
-            <h3>📦 Itens</h3>
-            <div class="table-responsive">
-                <table class="items-table" id="itemsTable">
-                    <thead>
-                        <tr>
-                            <th style="width: 15%;">Código</th>
-                            <th style="width: 30%;">Descrição</th>
-                            <th style="width: 10%;">Unid.</th>
-                            <th style="width: 15%;">Quantidade</th>
-                            <th style="width: 15%;">Armazém</th>
-                            <th style="width: 10%;">C.A</th>
-                            <th style="width: 5%;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="itemsBody">
-                        <tr>
-                            <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código"></td>
-                            <td><input type="text" class="item-descricao" readonly placeholder="Descrição"></td>
-                            <td><input type="text" class="item-unidade" readonly placeholder="Unid."></td>
-                            <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0"></td>
-                            <td><input type="text" class="item-armazem" readonly placeholder="Armazém"></td>
-                            <td><input type="text" class="item-ca" placeholder="C.A"></td>
-                            <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <button class="add-item-btn" onclick="adicionarLinhaItem()">➕ Adicionar Item</button>
-
-            <hr>
-
-            <!-- Termo de Responsabilidade -->
-            <div class="termo-responsabilidade">
-                <h3>📜 TERMO DE RESPONSABILIDADE</h3>
-                <div class="termo-text">
-                    <p><strong>NR 06</strong><br>
-                    6.7. CABE AO EMPREGADO:<br>
-                    6.7.1. CABE AO EMPREGADO QUANTO AO EPI:<br>
-                    A) USAR, UTILIZANDO-O APENAS PARA A FINALIDADE A QUE SE DESTINA;<br>
-                    B) RESPONSABILIZAR-SE PELA GUARDA E CONSERVAÇÃO;<br>
-                    C) COMUNICAR AO EMPREGADOR QUALQUER ALTERAÇÃO QUE O TORNE IMPRÓPRIO PARA USO; E,<br>
-                    D) CUMPRIR AS DETERMINAÇÕES DO EMPREGADOR SOBRE O USO ADEQUADO.</p>
-
-                    <p><strong>NR 01</strong><br>
-                    1.8. CABE AO EMPREGADO:<br>
-                    A) CUMPRIR AS DISPOSIÇÕES LEGAIS E REGULAMENTARES SOBRE SEGURANÇA E MEDICINA DO TRABALHO, INCLUSIVE AS ORDENS DE SERVIÇO EXPEDIDAS PELO EMPREGADOR;<br>
-                    B) USAR O EPI FORNECIDO PELO EMPREGADOR;<br>
-                    C) SUBMETER-SE AOS EXAMES MÉDICOS PREVISTOS NAS NORMAS REGULAMENTADORAS - NR;<br>
-                    D) COLABORAR COM A EMPRESA NA APLICAÇÃO DAS NORMAS REGULAMENTADORAS – NR.<br>
-                    1.8.1. CONSTITUI ATO FALTOSO A RECUSA INJUSTIFICADA DO EMPREGADO AO CUMPRIMENTO DO DISPOSTO NO ITEM ANTERIOR.</p>
-
-                    <p><strong>CLT:</strong><br>
-                    ART. 462, § 1º - EM CASO DE DANO CAUSADO PELO EMPREGADO, O DESCONTO SERÁ LÍCITO, DESDE QUE ESTA POSSIBILIDADE TENHA SIDO ACORDADA OU NA OCORRÊNCIA DE DOLO DO EMPREGADO.</p>
-
-                    <p>Declaro para os devidos fins que recebi da CONTROL CONSTRUÇÕES LTDA, os Equipamentos de Proteção Individual acima descritos, novos e em perfeitas condições de uso, tendo sido treinado quanto ao seu uso adequado, bem como, que estou ciente das obrigações descritas na NR 06, baixada pela Portaria MTb 3214/78, subitem 6.7.1.</p>
-
-                    <p>Comprometo-me a bem cuidar da sua conservação e a restitui-los a empresa na eventualidade da rescisão de meu contrato de trabalho, antes de decorrido o prazo normal de utilização.</p>
-
-                    <p>Declaro, também, que estou ciente das disposições do Art. 462 e § 1º da CLT, e autorizo o desconto salarial proporcional ao custo de reparação do dano que os EPIs aos meus cuidados venham apresentar, seja por extravio, pelo uso inadequado e/ ou indevido.</p>
-
-                    <p>Declaro ainda que estou ciente de que seu uso é obrigatório sob pena de ser punido das disposições do artigo 158, alínea "a", da CLT, e do item 1.8 da NR 01, em especial daquela do subitem 1.8.1, de que constitui ato faltoso à recusa injustificada de usar EPI fornecido pela empresa, incorrendo nas penas da Lei cabíveis que irão desde simples advertências até a dispensa por justa causa (Art. 482 da C.L.T).</p>
-                </div>
-            </div>
-
-            <!-- Assinaturas -->
-            <div class="assinaturas">
-                <div class="assinatura-box" data-tipo="entregue">
-                    <h4>📤 ENTREGUE POR</h4>
-                    <p><strong>Nome:</strong> <span class="signatario-nome">-</span></p>
-                    <p><strong>Data:</strong> <span class="signatario-data">-</span></p>
-                    <img class="signature-img" style="display: none;" alt="Assinatura">
-                    <button class="btn-assinar" onclick="abrirPaginaAssinatura('entregue')">✍️ Assinar como Entregue</button>
-                </div>
-
-                <div class="assinatura-box" data-tipo="recebido">
-                    <h4>📥 RECEBIDO POR</h4>
-                    <p><strong>Nome:</strong> <span class="signatario-nome">-</span></p>
-                    <p><strong>Data:</strong> <span class="signatario-data">-</span></p>
-                    <img class="signature-img" style="display: none;" alt="Assinatura">
-                    <button class="btn-assinar" onclick="abrirPaginaAssinatura('recebido')">✍️ Assinar como Recebido</button>
-                </div>
-            </div>
-
-            <button class="btn-finalizar" onclick="finalizarSA()">✅ FINALIZAR S.A.</button>
         </div>
     </div>
 
@@ -188,10 +193,8 @@
                 return;
             }
 
-            // Salvar dados antes de ir para assinatura
             salvarDadosFormulario();
 
-            // Abrir página de assinatura
             const numero = manager.saAtual.numero;
             const url = `assinar.html?tipo=${tipo}&nome=${encodeURIComponent(nome)}&numero=${numero}`;
             window.open(url, '_blank', 'width=800,height=700,scrollbars=yes');
@@ -218,9 +221,9 @@
                     unidadeInput.value = material.unidadeMedida || '';
                     armazemInput.value = material.armazem;
                     
-                    descricaoInput.style.backgroundColor = '#f5f5f5';
-                    unidadeInput.style.backgroundColor = '#f5f5f5';
-                    armazemInput.style.backgroundColor = '#f5f5f5';
+                    descricaoInput.style.backgroundColor = '#f7fafc';
+                    unidadeInput.style.backgroundColor = '#f7fafc';
+                    armazemInput.style.backgroundColor = '#f7fafc';
                     
                     mostrarPopupMaterial(material);
                 } else {
@@ -296,10 +299,10 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código" value="${item ? item.codigo : ''}"></td>
-                <td><input type="text" class="item-descricao" readonly placeholder="Descrição" value="${item ? item.descricao : ''}" style="background-color: ${item ? '#f5f5f5' : ''};"></td>
-                <td><input type="text" class="item-unidade" readonly placeholder="Unid." value="${item ? item.unidadeMedida : ''}" style="background-color: ${item ? '#f5f5f5' : ''};"></td>
+                <td><input type="text" class="item-descricao" readonly placeholder="Descrição" value="${item ? item.descricao : ''}" style="background-color: ${item ? '#f7fafc' : ''};"></td>
+                <td><input type="text" class="item-unidade" readonly placeholder="Unid." value="${item ? item.unidadeMedida : ''}" style="background-color: ${item ? '#f7fafc' : ''};"></td>
                 <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" value="${item ? item.quantidade : ''}"></td>
-                <td><input type="text" class="item-armazem" readonly placeholder="Armazém" value="${item ? item.armazem : ''}" style="background-color: ${item ? '#f5f5f5' : ''};"></td>
+                <td><input type="text" class="item-armazem" readonly placeholder="Armazém" value="${item ? item.armazem : ''}" style="background-color: ${item ? '#f7fafc' : ''};"></td>
                 <td><input type="text" class="item-ca" placeholder="C.A" value="${item ? item.ca : ''}"></td>
                 <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
             `;
@@ -402,10 +405,8 @@
             }
             
             try {
-                // Salvar dados antes de finalizar
                 salvarDadosFormulario();
                 
-                // Validar campos obrigatórios
                 const sa = manager.saAtual;
                 
                 if (!sa.colaborador.matricula || !sa.colaborador.nome || !sa.colaborador.cpf) {
@@ -423,23 +424,14 @@
                     return;
                 }
                 
-                // Verificar se há assinatura pendente no sessionStorage
                 const assinaturaPendente = sessionStorage.getItem('assinatura_temp');
                 if (assinaturaPendente) {
                     const dadosAssinatura = JSON.parse(assinaturaPendente);
-                    const tipo = dadosAssinatura.tipo;
-                    const nome = dadosAssinatura.nome;
-                    const assinatura = dadosAssinatura.assinatura;
-                    
-                    // Aplicar assinatura
-                    await manager.assinarDocumento(tipo, nome, assinatura);
+                    await manager.assinarDocumento(dadosAssinatura.tipo, dadosAssinatura.nome, dadosAssinatura.assinatura);
                     sessionStorage.removeItem('assinatura_temp');
                 }
                 
-                // Salvar dados no D1
                 await manager.salvarSA();
-                
-                // Finalizar (verifica assinaturas)
                 await manager.finalizarSA();
                 
                 alert('✅ S.A. finalizada com sucesso!');
@@ -456,12 +448,10 @@
         document.addEventListener('DOMContentLoaded', async function() {
             manager = window.saManager;
             
-            // Verificar se há assinatura retornando
             const assinaturaPendente = sessionStorage.getItem('assinatura_temp');
             if (assinaturaPendente) {
                 try {
                     const dados = JSON.parse(assinaturaPendente);
-                    // Aplicar assinatura automaticamente
                     await manager.assinarDocumento(dados.tipo, dados.nome, dados.assinatura);
                     sessionStorage.removeItem('assinatura_temp');
                     manager.atualizarVisualizacaoAssinaturas();
@@ -472,7 +462,6 @@
             }
             
             try {
-                // Verificar se é nova SA ou edição
                 const params = new URLSearchParams(window.location.search);
                 const numero = params.get('numero');
                 

@@ -9,28 +9,36 @@
     <link rel="stylesheet" href="../css/sa-emergencial.css">
 </head>
 <body>
-    <div class="sa-panel">
-        <!-- Header do Usuário -->
-        <div class="user-header" id="userHeader">
-            <div class="user-info">
-                <div class="avatar" id="userAvatar">U</div>
-                <div class="user-details">
-                    <h3 id="userName">Carregando...</h3>
-                    <p id="userRole">Carregando...</p>
-                    <p id="userMatricula" style="font-size: 12px; opacity: 0.8;">Matrícula: ---</p>
+    <div class="container">
+        <div class="form-card">
+            <!-- Header -->
+            <div class="header-container">
+                <img src="../assets/img/logo-control.png" alt="Logo" class="logo-empresa">
+                <h1 class="title">🚨 S.A. Emergencial</h1>
+            </div>
+
+            <!-- Header do Usuário -->
+            <div class="user-header" id="userHeader">
+                <div class="user-info">
+                    <div class="avatar" id="userAvatar">U</div>
+                    <div class="user-details">
+                        <h3 id="userName">Carregando...</h3>
+                        <p id="userRole">Carregando...</p>
+                        <p id="userMatricula" style="font-size: 12px; opacity: 0.8;">Matrícula: ---</p>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <button class="btn-primary" id="btnNovaSA">➕ Nova S.A.</button>
+                    <button class="btn-secondary" onclick="voltarHome()">🏠 Voltar</button>
                 </div>
             </div>
-            <div class="user-actions">
-                <button class="btn-primary" id="btnNovaSA">➕ Nova S.A.</button>
-                <button class="btn-secondary" onclick="voltarHome()">🏠 Voltar</button>
-            </div>
-        </div>
 
-        <!-- Lista de SA -->
-        <div class="sa-list-container">
-            <div id="saList">
-                <div class="empty-state">
-                    <p>⏳ Carregando S.A. Emergenciais...</p>
+            <!-- Lista de SA -->
+            <div class="sa-list-container">
+                <div id="saList">
+                    <div class="empty-state">
+                        <p>⏳ Carregando S.A. Emergenciais...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -62,14 +70,13 @@
 
         // Função para excluir SA individual
         async function excluirSA(numero, event) {
-            event.stopPropagation(); // Impedir de abrir o formulário
+            event.stopPropagation();
             
             if (confirm(`⚠️ Tem certeza que deseja excluir a S.A. #${String(numero).padStart(4, '0')}?`)) {
                 try {
                     const manager = window.saManager;
                     await manager.excluirSA(numero);
                     
-                    // Recarregar a lista
                     const dados = await manager.listarSA();
                     const container = document.getElementById('saList');
                     manager.renderizarLista(dados, container);
@@ -86,7 +93,6 @@
             const container = document.getElementById('saList');
             
             // Sobrescrever renderizarLista para incluir botão excluir
-            const renderizarListaOriginal = manager.renderizarLista.bind(manager);
             manager.renderizarLista = function(dados, container) {
                 if (!Array.isArray(dados)) {
                     container.innerHTML = `

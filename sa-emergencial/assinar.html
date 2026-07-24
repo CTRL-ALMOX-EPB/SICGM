@@ -5,15 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Assinatura - S.A. Emergencial</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✍️</text></svg>">
+    <link rel="stylesheet" href="../css/base.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        /* ============================================ */
+        /* ASSINATURA - PÁGINA DEDICADA                */
+        /* ============================================ */
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: #1a237e;
             min-height: 100vh;
             display: flex;
@@ -24,7 +22,7 @@
 
         .assinatura-container {
             background: white;
-            border-radius: 20px;
+            border-radius: 16px;
             max-width: 700px;
             width: 100%;
             max-height: 95vh;
@@ -42,13 +40,14 @@
             background: linear-gradient(135deg, #1a237e, #0d47a1);
             color: white;
             padding: 25px 30px;
-            border-radius: 20px 20px 0 0;
+            border-radius: 16px 16px 0 0;
             text-align: center;
         }
 
         .assinatura-header h1 {
             font-size: 28px;
             margin-bottom: 5px;
+            font-weight: 600;
         }
 
         .assinatura-header p {
@@ -61,11 +60,12 @@
         }
 
         .assinatura-info {
-            background: #f5f5f5;
+            background: #F7FAFC;
             padding: 15px 20px;
             border-radius: 10px;
             margin-bottom: 20px;
             text-align: center;
+            border: 1px solid #E2E8F0;
         }
 
         .assinatura-info .label {
@@ -79,13 +79,13 @@
         .assinatura-info .nome {
             font-size: 22px;
             font-weight: 700;
-            color: #333;
+            color: #2D3748;
             margin-top: 5px;
         }
 
         .assinatura-info .tipo {
             font-size: 14px;
-            color: #666;
+            color: #718096;
             margin-top: 5px;
         }
 
@@ -97,27 +97,28 @@
             display: block;
             font-weight: 600;
             margin-bottom: 5px;
-            color: #333;
+            color: #4A5568;
             font-size: 14px;
         }
 
         .form-group input {
             width: 100%;
             padding: 12px 15px;
-            border: 2px solid #ddd;
+            border: 2px solid #E2E8F0;
             border-radius: 8px;
             font-size: 16px;
             transition: border-color 0.3s;
+            background: #FFFFFF;
         }
 
         .form-group input:focus {
-            border-color: #1a237e;
+            border-color: #4299E1;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
         }
 
         .signature-area {
-            border: 2px solid #ddd;
+            border: 2px solid #E2E8F0;
             border-radius: 10px;
             margin: 15px 0 20px;
             background: white;
@@ -147,53 +148,53 @@
             cursor: pointer;
             font-weight: 700;
             font-size: 15px;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
             flex: 1;
             min-width: 120px;
         }
 
         .btn-limpar {
-            background: #ff9800;
+            background: #ED8936;
             color: white;
         }
 
         .btn-limpar:hover {
-            background: #f57c00;
+            background: #DD6B20;
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+            box-shadow: 0 4px 15px rgba(237, 137, 54, 0.4);
         }
 
         .btn-confirmar {
-            background: #4CAF50;
+            background: #48BB78;
             color: white;
         }
 
         .btn-confirmar:hover {
-            background: #388E3C;
+            background: #38A169;
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
         }
 
         .btn-cancelar {
-            background: #f44336;
+            background: #FC8181;
             color: white;
         }
 
         .btn-cancelar:hover {
-            background: #c62828;
+            background: #F56565;
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.4);
+            box-shadow: 0 4px 15px rgba(252, 129, 129, 0.4);
         }
 
         .btn-voltar {
-            background: #607D8B;
+            background: #718096;
             color: white;
         }
 
         .btn-voltar:hover {
-            background: #455A64;
+            background: #4A5568;
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(96, 125, 139, 0.4);
+            box-shadow: 0 4px 15px rgba(113, 128, 150, 0.4);
         }
 
         .assinatura-status {
@@ -206,19 +207,22 @@
 
         .assinatura-status.success {
             display: block;
-            background: #e8f5e9;
-            color: #2e7d32;
-            border: 1px solid #4CAF50;
+            background: #F0FFF4;
+            color: #276749;
+            border: 1px solid #48BB78;
         }
 
         .assinatura-status.error {
             display: block;
-            background: #ffebee;
-            color: #c62828;
-            border: 1px solid #f44336;
+            background: #FFF5F5;
+            color: #C53030;
+            border: 1px solid #FC8181;
         }
 
-        /* Responsivo */
+        /* ============================================ */
+        /* RESPONSIVO                                  */
+        /* ============================================ */
+
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -226,7 +230,7 @@
 
             .assinatura-container {
                 max-height: 98vh;
-                border-radius: 15px;
+                border-radius: 12px;
             }
 
             .assinatura-header {
@@ -265,8 +269,20 @@
                 font-size: 18px;
             }
 
+            .assinatura-header p {
+                font-size: 14px;
+            }
+
             .assinatura-body {
                 padding: 15px;
+            }
+
+            .assinatura-info .nome {
+                font-size: 16px;
+            }
+
+            .assinatura-info .label {
+                font-size: 12px;
             }
 
             .signature-area canvas {
@@ -281,15 +297,30 @@
                 width: 100%;
                 padding: 12px;
                 font-size: 14px;
-            }
-
-            .assinatura-info .nome {
-                font-size: 16px;
+                min-width: unset;
             }
 
             .form-group input {
                 font-size: 14px;
                 padding: 10px 12px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .assinatura-header h1 {
+                font-size: 16px;
+            }
+
+            .assinatura-body {
+                padding: 12px;
+            }
+
+            .signature-area canvas {
+                height: 130px;
+            }
+
+            .assinatura-info .nome {
+                font-size: 14px;
             }
         }
 
@@ -300,7 +331,7 @@
 
         .assinatura-container::-webkit-scrollbar-track {
             background: #f1f1f1;
-            border-radius: 0 0 20px 20px;
+            border-radius: 0 0 16px 16px;
         }
 
         .assinatura-container::-webkit-scrollbar-thumb {
@@ -357,7 +388,6 @@
         // ============================================
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Receber dados via URL
             const params = new URLSearchParams(window.location.search);
             const tipo = params.get('tipo') || 'entregue';
             const nome = params.get('nome') || '';
@@ -369,18 +399,15 @@
                 numero: numero
             };
 
-            // Configurar interface
             const tipoLabel = tipo === 'entregue' ? '📤 ENTREGUE POR' : '📥 RECEBIDO POR';
             document.getElementById('tipoAssinatura').textContent = tipoLabel;
             document.getElementById('nomeSignatario').textContent = nome || 'Aguardando...';
             document.getElementById('nomeInput').value = nome || '';
             document.getElementById('infoAdicional').textContent = `S.A. Emergencial #${String(numero).padStart(4, '0')}`;
 
-            // Inicializar Signature Pad
             const canvas = document.getElementById('signatureCanvas');
             const container = canvas.parentElement;
             
-            // Ajustar tamanho do canvas
             const resizeCanvas = () => {
                 const width = container.clientWidth - 4;
                 const height = window.innerWidth <= 480 ? 160 : window.innerWidth <= 768 ? 200 : 250;
@@ -404,10 +431,8 @@
             resizeCanvas();
             signaturePad.resizeCanvas();
 
-            // Redimensionar ao mudar orientação
             window.addEventListener('resize', resizeCanvas);
 
-            // Enter para confirmar
             document.getElementById('nomeInput').addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     confirmarAssinatura();
@@ -442,7 +467,6 @@
 
             const assinaturaData = signaturePad.toDataURL();
 
-            // Salvar no sessionStorage para o formulário recuperar
             const dados = {
                 tipo: dadosAssinatura.tipo,
                 nome: nome,
@@ -454,7 +478,6 @@
 
             mostrarStatus('✅ Assinatura realizada com sucesso! Redirecionando...', 'success');
 
-            // Redirecionar após 1.5 segundos
             setTimeout(() => {
                 window.location.href = 'formulario.html?numero=' + dadosAssinatura.numero;
             }, 1500);
