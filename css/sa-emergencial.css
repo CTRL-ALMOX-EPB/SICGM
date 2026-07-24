@@ -1347,3 +1347,102 @@
 .mb-20 {
     margin-bottom: 20px;
 }
+
+/* ============================================ */
+/* S.A. EMERGENCIAL - ESTILOS ESPECÍFICOS      */
+/* ============================================ */
+
+/* ... (mantenha todo o CSS existente) ... */
+
+/* ===== BOTÃO EXCLUIR NA LISTA - CORRIGIDO ===== */
+.btn-excluir-item {
+    background: #FFF5F5;
+    color: #FC8181;
+    border: 1px solid #FED7D7;
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    min-width: 40px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-excluir-item:hover {
+    background: #FC8181;
+    color: white;
+    transform: scale(1.05);
+    border-color: #FC8181;
+    box-shadow: 0 2px 8px rgba(252, 129, 129, 0.3);
+}
+
+.btn-excluir-item:active {
+    transform: scale(0.95);
+}
+
+/* Responsivo para o botão excluir */
+@media (max-width: 768px) {
+    .btn-excluir-item {
+        padding: 4px 10px;
+        font-size: 12px;
+        min-width: 32px;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-excluir-item {
+        padding: 4px 8px;
+        font-size: 11px;
+        min-width: 28px;
+        border-radius: 6px;
+    }
+}
+
+/* ============================================ */
+/* BOTÃO REASSINAR - CORRIGIDO                 */
+/* ============================================ */
+
+.btn-reassinar {
+    background: #ED8936;
+    color: white;
+    padding: 6px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 8px;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-reassinar:hover {
+    background: #DD6B20;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(237, 137, 54, 0.3);
+}
+
+.btn-reassinar:active {
+    transform: scale(0.95);
+}
+
+.assinatura-box.has-signature .btn-reassinar {
+    display: inline-flex;
+}
+
+.assinatura-box.has-signature .btn-assinar {
+    display: none;
+}
+
+@media (max-width: 480px) {
+    .btn-reassinar {
+        font-size: 11px;
+        padding: 5px 12px;
+    }
+}

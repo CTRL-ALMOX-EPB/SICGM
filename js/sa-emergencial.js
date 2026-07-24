@@ -441,6 +441,7 @@ class SAManager {
             
             console.log(`📝 Aplicando assinatura ${tipo} para SA #${numero}`);
             
+            // Buscar a SA mais recente do servidor
             const sa = await this.buscarSA(parseInt(numero));
             if (!sa) {
                 throw new Error('S.A. não encontrada. Recarregue a página.');
@@ -469,7 +470,10 @@ class SAManager {
                 };
             }
             
+            // Salvar no servidor
             await this.assinarDocumento(tipo, nome, assinatura);
+            
+            // Atualizar visualização
             this.atualizarVisualizacaoAssinaturas();
             
             console.log(`✅ Assinatura ${tipo} aplicada com sucesso!`);
@@ -963,7 +967,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 // ============================================
-// INICIALIZAÇÃO DO FORMULÁRIO
+// INICIALIZAÇÃO DO FORMULÁRIO - CORRIGIDA
 // ============================================
 document.addEventListener('DOMContentLoaded', async function() {
     const saNumero = document.getElementById('saNumero');
@@ -975,14 +979,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         await saManager.carregarUsuarioLogado();
         
+        // Verificar se há assinatura pendente no sessionStorage
         const assinaturaPendente = sessionStorage.getItem('assinatura_temp');
         if (assinaturaPendente) {
             try {
                 const dados = JSON.parse(assinaturaPendente);
                 if (dados.concluido) {
+                    // Aplicar assinatura
                     await saManager.aplicarAssinatura(dados);
                     sessionStorage.removeItem('assinatura_temp');
-                    window.location.reload();
+                    
+                    // Atualizar a visualização imediatamente
+                    saManager.atualizarVisualizacaoAssinaturas();
+                    
+                    // Recarregar a SA do servidor para garantir dados atualizados
+                    if (saManager.saAtual) {
+                        const saAtualizada = await saManager.buscarSA(saManager.saAtual.numero);
+                        if (saAtualizada) {
+                            saManager.saAtual = saAtualizada;
+                            saManager.atualizarVisualizacaoAssinaturas();
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('Erro ao processar assinatura:', error);
