@@ -208,7 +208,7 @@ async function carregarMateriais() {
         
         console.log(`🔄 Carregando materiais do R2 para depósito ${depositoAtual}...`);
         
-        const response = await fetch(`${R2_URL}/posicao-de-estoque/posicacao-de-estoque-${depositoAtual}.txt`);
+        const response = await fetch(`${R2_URL}/posicacao-de-estoque/posicao-de-estoque-${depositoAtual}.txt`);
         
         if (!response.ok) {
             console.warn(`⚠️ Arquivo posicao-de-estoque-${depositoAtual}.txt não encontrado no R2`);
