@@ -27,7 +27,7 @@
                 <h1 class="title">📋 Formulário Controle DCMD</h1>
             </div>
             
-            <!-- Botão Voltar -->
+            <!-- Botão Voltar - Corrigido para voltar com a aba correta -->
             <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
                 <button onclick="voltarParaPainel()" class="btn-voltar-home">⬅ Voltar ao Painel</button>
             </div>
@@ -461,7 +461,7 @@
                     <div class="modal-actions">
                         <button type="button" class="btn-salvar" onclick="salvarControle()">💾 Salvar</button>
                         <button type="button" class="btn-finalizar" onclick="finalizarControle()">✅ Finalizar</button>
-                        <button type="button" class="btn-cancelar" onclick="window.location.href='index.html'">✕ Cancelar</button>
+                        <button type="button" class="btn-cancelar" onclick="voltarParaPainel()">✕ Cancelar</button>
                     </div>
                 </div>
             </form>

@@ -12,6 +12,9 @@ if (document.getElementById('contagemForm')) {
     const API_URL_CONTAGEM = 'https://noisy-snow-0359.alefe-gomes-72f.workers.dev';
     const API_URL_BUSCA_TRAFO = 'https://busca-trafo-worker.alefe-gomes-72f.workers.dev';
     
+    // URL do Cloudflare R2
+    const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
+    
     // ============================================
     // FUNÇÃO PARA OBTER DATA NO FUSO BRASIL (UTC-3)
     // ============================================
@@ -22,6 +25,58 @@ if (document.getElementById('contagemForm')) {
         const horaUTC = agora.getTime() + (agora.getTimezoneOffset() * 60000);
         const dataBrasil = new Date(horaUTC + (offsetBrasil * 3600000));
         return dataBrasil.toISOString().split('T')[0];
+    }
+    
+    // ============================================
+    // CARREGAR POSIÇÃO DE ESTOQUE - DO R2
+    // ============================================
+    
+    async function carregarPosicaoEstoqueGlobal() {
+        try {
+            console.log(`🔄 Carregando posição de estoque para depósito ${depositoAtual}...`);
+            
+            const response = await fetch(`${R2_URL}/posicao-de-estoque/posicao-de-estoque-${depositoAtual}.txt`);
+            
+            if (!response.ok) {
+                console.warn(`⚠️ Arquivo posicao-de-estoque-${depositoAtual}.txt não encontrado no R2`);
+                mostrarToast(`⚠️ Posição de estoque do depósito ${depositoAtual} não encontrada`, 'aviso');
+                return;
+            }
+            
+            const texto = await response.text();
+            const linhas = texto.trim().split('\n');
+            
+            posicaoEstoque = {};
+            
+            for (let i = 1; i < linhas.length; i++) {
+                const linha = linhas[i].trim();
+                if (!linha) continue;
+                
+                const partes = linha.split('\t');
+                
+                if (partes.length >= 6) {
+                    const codigo = partes[0].trim();
+                    const descricao = partes[2]?.trim() || '';
+                    const unidade = partes[3]?.trim() || 'UN';
+                    
+                    if (codigo && descricao) {
+                        posicaoEstoque[codigo] = {
+                            codigo: codigo,
+                            descricao: descricao,
+                            unidade: unidade,
+                            vlrult_cot: parseFloat(partes[4]?.trim().replace(',', '.') || '0') || 0,
+                            saldo_oper: parseFloat(partes[5]?.trim().replace(',', '.') || '0') || 0
+                        };
+                    }
+                }
+            }
+            
+            console.log(`📦 ${Object.keys(posicaoEstoque).length} materiais únicos carregados`);
+            
+        } catch (error) {
+            console.error('❌ Erro ao carregar posição de estoque:', error);
+            mostrarToast('❌ Erro ao carregar posição de estoque', 'erro');
+        }
     }
     
     // ============================================
@@ -203,6 +258,7 @@ if (document.getElementById('contagemForm')) {
     let enviandoDados = false;
     let baixaPendente = null;
     let depositoAtual = '1050';
+    let posicaoEstoque = {};
     
     // ============================================
     // PREENCHER DATA AUTOMATICAMENTE
@@ -3961,12 +4017,21 @@ if (document.getElementById('contagemForm')) {
         const codigo = item.dataset.codigo || '';
         const existeNoBanco = idRegistro && idRegistro !== 'null' && idRegistro !== '' && idRegistro !== null;
         
+        // CORREÇÃO: Se o item NÃO existe no banco, consideramos como modificação
         if (!existeNoBanco) {
-            console.log(`✅ Item ${codigo} não existe no banco - considerando QTD=${qtdAtual} como modificação`);
-            return true;
+            if (qtdAtual > 0) {
+                console.log(`✅ Item ${codigo} não existe no banco - QTD=${qtdAtual} > 0, será enviado`);
+                return true;
+            } else {
+                console.log(`⏭️ Item ${codigo} não existe no banco - QTD=0, pulando`);
+                return false;
+            }
         }
         
-        if (item.dataset.jaRegistrado === 'true') return false;
+        if (item.dataset.jaRegistrado === 'true') {
+            console.log(`⏭️ Item ${codigo} já registrado, pulando`);
+            return false;
+        }
         
         const qtdAnteriorInput = item.querySelector('.input-qtd-anterior');
         const qtdAnterior = parseFloat(qtdAnteriorInput?.value) || 0;
@@ -3975,7 +4040,11 @@ if (document.getElementById('contagemForm')) {
             return false;
         }
         
-        return qtdAtual !== qtdAnterior;
+        const mudou = qtdAtual !== qtdAnterior;
+        if (mudou) {
+            console.log(`✅ Item ${codigo} - QTD mudou de ${qtdAnterior} para ${qtdAtual}`);
+        }
+        return mudou;
     }
     
     function quantidadeMenorQueAnterior(qtdAtual, qtdAnterior) {
@@ -4109,10 +4178,12 @@ if (document.getElementById('contagemForm')) {
             if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) return;
             
             const qtdAtual = parseFloat(qtdInput.value) || 0;
+            
             if (!itemFoiModificado(qtdInput, item)) {
                 console.log(`⏭️ Trafo #${index} não foi modificado - pulando`);
                 return;
             }
+            
             if (qtdAtual === 0) return;
             
             const qtdAnteriorInput = item.querySelector('.input-qtd-anterior');
@@ -4204,10 +4275,12 @@ if (document.getElementById('contagemForm')) {
             if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) return;
             
             const qtdAtual = parseFloat(qtdInput.value) || 0;
+            
             if (!itemFoiModificado(qtdInput, item)) {
                 console.log(`⏭️ Bobina #${index} não foi modificada - pulando`);
                 return;
             }
+            
             if (qtdAtual === 0) return;
             
             const qtdAnteriorInput = item.querySelector('.input-qtd-anterior');
@@ -4386,15 +4459,23 @@ if (document.getElementById('contagemForm')) {
             }
         });
         
-        // MISCELÂNEAS (Contagem Semanal)
+        // MISCELÂNEAS (Contagem Semanal) - CORREÇÃO PRINCIPAL
         const miscelaneaItems = document.querySelectorAll('.miscelanea-item');
         miscelaneaItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
             
             const idUnico = `miscelaneas-${index}`;
-            const qtdInput = document.getElementById(`qtd-${idUnico}`);
-            if (!qtdInput) return;
+            let qtdInput = document.getElementById(`qtd-${idUnico}`);
+            
+            if (!qtdInput) {
+                qtdInput = item.querySelector('.input-qtd');
+            }
+            
+            if (!qtdInput) {
+                console.log(`⏭️ Miscelânea #${index} - input não encontrado`);
+                return;
+            }
             
             if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
                 console.log(`⏭️ Miscelânea #${index} - campo vazio, pulando`);
@@ -4404,24 +4485,31 @@ if (document.getElementById('contagemForm')) {
             const qtdAtual = parseFloat(qtdInput.value) || 0;
             const codigo = item.dataset.codigo;
             
-            if (!itemFoiModificado(qtdInput, item)) {
+            const foiModificado = itemFoiModificado(qtdInput, item);
+            
+            const qtdAnteriorInput = item.querySelector('.input-qtd-anterior');
+            const qtdAnterior = parseFloat(qtdAnteriorInput?.value) || 0;
+            const naoTemRegistroAnterior = qtdAnterior === 0 && qtdAtual > 0;
+            const itemNaoExisteNoBanco = !item.dataset.id || item.dataset.id === 'null' || item.dataset.id === '';
+            
+            if (!foiModificado && !naoTemRegistroAnterior && !itemNaoExisteNoBanco) {
                 console.log(`⏭️ Miscelânea ${codigo} não foi modificado - pulando`);
                 return;
             }
             
-            const idRegistro = item.dataset.id || null;
-            const existeNoBanco = idRegistro && idRegistro !== 'null' && idRegistro !== '' && idRegistro !== null;
+            if (qtdAtual === 0 && itemNaoExisteNoBanco) {
+                console.log(`⏭️ Miscelânea ${codigo} - QTD=0 e não existe no banco, pulando`);
+                return;
+            }
             
-            if (qtdAtual === 0 && existeNoBanco) {
-                const qtdAnteriorInput = item.querySelector('.input-qtd-anterior');
-                const qtdAnterior = parseFloat(qtdAnteriorInput?.value) || 0;
+            if (qtdAtual === 0 && !itemNaoExisteNoBanco) {
                 if (qtdAtual === qtdAnterior) {
-                    console.log(`⏭️ Miscelânea ${codigo} - QTD=0 e já existe no banco, sem alteração - pulando`);
+                    console.log(`⏭️ Miscelânea ${codigo} - QTD=0 e igual à anterior, pulando`);
                     return;
                 }
             }
             
-            console.log(`✅ Miscelânea ${codigo} - ${existeNoBanco ? 'modificado' : 'novo'} (QTD: ${qtdAtual})`);
+            console.log(`✅ Miscelânea ${codigo} - SERÁ ENVIADA (QTD: ${qtdAtual}, Primeira contagem: ${naoTemRegistroAnterior || itemNaoExisteNoBanco})`);
             
             const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
             let justificativaCompleta = '';
@@ -4476,7 +4564,9 @@ if (document.getElementById('contagemForm')) {
                     obs: obsFinal,
                     deposito: depositoAtual
                 });
-                console.log(`✅ Miscelânea ${codigo} adicionado para envio. QTD: ${qtdAtual}, Justificativa: ${obsFinal}`);
+                console.log(`✅ Miscelânea ${codigo} ADICIONADO para envio. QTD: ${qtdAtual}, Justificativa: ${obsFinal}`);
+            } else {
+                console.warn(`⚠️ Miscelânea ${codigo} - material não encontrado na categoria`);
             }
         });
         
@@ -4916,6 +5006,7 @@ if (document.getElementById('contagemForm')) {
     
     carregarDadosUsuarioSessao();
     carregarMateriais();
+    carregarPosicaoEstoqueGlobal();
     
     setTimeout(() => {
         ativarDeposito('1050');

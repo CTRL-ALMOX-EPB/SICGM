@@ -243,7 +243,7 @@ function aplicarOrdenacao() {
 window.aplicarOrdenacao = aplicarOrdenacao;
 
 // ============================================
-// CRIAR NOVO CONTROLE - CORRIGIDO
+// CRIAR NOVO CONTROLE
 // ============================================
 
 async function criarNovoControle() {
@@ -326,7 +326,7 @@ async function criarNovoControle() {
 window.criarNovoControle = criarNovoControle;
 
 // ============================================
-// CARREGAR CONTROLES - CORRIGIDO COM ORDENAÇÃO
+// CARREGAR CONTROLES
 // ============================================
 
 async function carregarControles(pagina = 1) {
@@ -716,7 +716,7 @@ function controlarBotoesNavegacao() {
 }
 
 // ============================================
-// INICIALIZAÇÃO - CORRIGIDA
+// INICIALIZAÇÃO
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {

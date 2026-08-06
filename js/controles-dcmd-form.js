@@ -6,6 +6,9 @@ console.log('🚀 Iniciando Controles DCMD - Formulário...');
 
 const API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
 
+// URL do Cloudflare R2
+const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
+
 // ============================================
 // MAPEAMENTO DOS TIPOS
 // ============================================
@@ -184,16 +187,14 @@ function carregarDadosUsuario() {
 }
 
 // ============================================
-// CARREGAR MATERIAIS - POR DEPÓSITO (SEM FALLBACK)
+// CARREGAR MATERIAIS - DO R2 (POR DEPÓSITO)
 // ============================================
 
 async function carregarMateriais() {
     try {
-        // Detecta o depósito atual da URL
         const params = new URLSearchParams(window.location.search);
         const tipo = params.get('tipo') || 'pendencia';
         
-        // Mapeamento de tipo para depósito
         const tipoDepositoMap = {
             'pendencia': '1050',
             'aditivo': '1050',
@@ -205,11 +206,12 @@ async function carregarMateriais() {
         
         const depositoAtual = tipoDepositoMap[tipo] || '1050';
         
-        // Carrega o arquivo do depósito específico
-        const response = await fetch(`../data/posicao-de-estoque-${depositoAtual}.txt`);
+        console.log(`🔄 Carregando materiais do R2 para depósito ${depositoAtual}...`);
+        
+        const response = await fetch(`${R2_URL}/posicao-de-estoque/posicao-de-estoque-${depositoAtual}.txt`);
         
         if (!response.ok) {
-            console.warn(`⚠️ Arquivo posicao-de-estoque-${depositoAtual}.txt não encontrado`);
+            console.warn(`⚠️ Arquivo posicao-de-estoque-${depositoAtual}.txt não encontrado no R2`);
             mostrarToast(`⚠️ Posição de estoque do depósito ${depositoAtual} não encontrada`, 'aviso');
             return;
         }
@@ -245,7 +247,7 @@ async function carregarMateriais() {
             }
         }
         
-        console.log(`✅ ${Object.keys(materiaisCache).length} materiais carregados para depósito ${depositoAtual}`);
+        console.log(`✅ ${Object.keys(materiaisCache).length} materiais carregados do R2 para depósito ${depositoAtual}`);
         
     } catch (error) {
         console.error('❌ Erro ao carregar materiais:', error);
@@ -302,6 +304,18 @@ async function buscarMaterial(input) {
 }
 
 window.buscarMaterial = buscarMaterial;
+
+// ============================================
+// VOLTAR PARA O PAINEL COM A ABA CORRETA
+// ============================================
+
+function voltarParaPainel() {
+    const params = new URLSearchParams(window.location.search);
+    const tipo = params.get('tipo') || 'pendencia';
+    window.location.href = `index.html?tipo=${tipo}`;
+}
+
+window.voltarParaPainel = voltarParaPainel;
 
 // ============================================
 // CARREGAR CONTROLE NO FORMULÁRIO
@@ -1343,6 +1357,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 // ============================================
 
 window.redirecionarParaHome = redirecionarParaHome;
+window.voltarParaPainel = voltarParaPainel;
 window.irParaTopo = irParaTopo;
 window.irParaFim = irParaFim;
 window.buscarMaterial = buscarMaterial;

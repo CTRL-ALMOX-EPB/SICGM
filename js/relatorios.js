@@ -4,6 +4,9 @@
 
 const API_URL = 'https://noisy-snow-0359.alefe-gomes-72f.workers.dev/api';
 
+// URL do Cloudflare R2
+const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
+
 // ============================================
 // VARIÁVEIS GLOBAIS
 // ============================================
@@ -203,26 +206,18 @@ function ativarDeposito(deposito) {
 }
 
 // ============================================
-// CARREGAR POSIÇÃO DE ESTOQUE POR DEPÓSITO - CORRIGIDO
+// CARREGAR POSIÇÃO DE ESTOQUE - DO R2 (POR DEPÓSITO)
 // ============================================
 
 async function carregarPosicaoEstoque() {
     try {
         console.log(`🔄 Carregando posição de estoque para depósito ${depositoAtual}...`);
         
-        // Tenta carregar o arquivo específico do depósito
-        let arquivo = `../data/posicao-de-estoque-${depositoAtual}.txt`;
-        let response = await fetch(arquivo);
-        
-        // Se não encontrar, tenta o arquivo principal
-        if (!response.ok) {
-            console.log(`⚠️ Arquivo ${arquivo} não encontrado, usando posicao-de-estoque.txt`);
-            response = await fetch('../data/posicao-de-estoque.txt');
-        }
+        const response = await fetch(`${R2_URL}/posicao-de-estoque/posicao-de-estoque-${depositoAtual}.txt`);
         
         if (!response.ok) {
-            console.warn('⚠️ Nenhum arquivo de posição de estoque encontrado');
-            mostrarToast('⚠️ Arquivo de posição de estoque não encontrado', 'aviso');
+            console.warn(`⚠️ Arquivo posicao-de-estoque-${depositoAtual}.txt não encontrado no R2`);
+            mostrarToast(`⚠️ Posição de estoque do depósito ${depositoAtual} não encontrada`, 'aviso');
             return;
         }
         
@@ -246,7 +241,7 @@ async function carregarPosicaoEstoque() {
             
             const partes = linha.split('\t');
             
-            // Nova estrutura: codmat | codreg | dscmat | codund_mda_mat | vlrult_cot | saldo_oper
+            // Estrutura: codmat | codreg | dscmat | codund_mda_mat | vlrult_cot | saldo_oper
             if (partes.length >= 6) {
                 const codmat = partes[0].trim();
                 const codreg = partes[1]?.trim() || '';
@@ -273,41 +268,6 @@ async function carregarPosicaoEstoque() {
                     posicaoEstoque[codmat] = {
                         codmat: codmat,
                         codreg: codreg,
-                        descricao: dscmat,
-                        und: codund,
-                        valor_unitario: vlrultCot,
-                        saldo_sistemico: saldoOper,
-                        deposito: depositoAtual
-                    };
-                    linhasProcessadas++;
-                }
-            } 
-            // Fallback para formato antigo (5 colunas)
-            else if (partes.length >= 5) {
-                const codmat = partes[0].trim();
-                const dscmat = partes[1]?.trim() || '';
-                const codund = partes[2]?.trim() || '';
-                
-                let vlrultCot = 0;
-                try {
-                    const valorStr = partes[3]?.trim().replace(',', '.') || '0';
-                    vlrultCot = parseFloat(valorStr) || 0;
-                } catch (e) {
-                    vlrultCot = 0;
-                }
-                
-                let saldoOper = 0;
-                try {
-                    const saldoStr = partes[4]?.trim().replace(',', '.') || '0';
-                    saldoOper = parseFloat(saldoStr) || 0;
-                } catch (e) {
-                    saldoOper = 0;
-                }
-                
-                if (codmat) {
-                    posicaoEstoque[codmat] = {
-                        codmat: codmat,
-                        codreg: '',
                         descricao: dscmat,
                         und: codund,
                         valor_unitario: vlrultCot,
