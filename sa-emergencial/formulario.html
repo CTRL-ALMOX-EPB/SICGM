@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SICGM - Formulário S.A. Emergencial</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/sa-emergencial.css">
+</head>
+<body>
+    <!-- Botões de navegação -->
+    <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
+        <span class="btn-navegacao-icone">⬆</span>
+        <span class="btn-navegacao-texto">Topo</span>
+    </button>
+    <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
+        <span class="btn-navegacao-icone">⬇</span>
+        <span class="btn-navegacao-texto">Fim</span>
+    </button>
+
+    <div class="container">
+        <div class="form-card">
+            <!-- Logo e Título -->
+            <div class="header-container">
+                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                <h1 class="title">🚨 Formulário S.A. Emergencial</h1>
+            </div>
+            
+            <!-- Botão Voltar -->
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
+                <button onclick="window.location.href='index.html'" class="btn-voltar-home">⬅ Voltar ao Painel</button>
+            </div>
+
+            <!-- Formulário -->
+            <form id="saForm" class="sa-form">
+                <div class="sa-form-header">
+                    <div>
+                        <h1>📋 S.A. Emergencial</h1>
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 5px;">
+                            <span class="sa-numero" id="saNumero">#0000</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    </div>
+                </div>
+
+                <div class="sa-form-body">
+                    <!-- Solicitante e Data -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="solicitante">👤 Solicitante *</label>
+                            <input type="text" id="solicitante" placeholder="Nome do solicitante" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="dataSolicitacao">📅 Data da Solicitação *</label>
+                            <input type="date" id="dataSolicitacao" readonly>
+                        </div>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- TIPO DE S.A. E GERAR DESCONTO                -->
+                    <!-- ============================================ -->
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label style="margin-bottom: 10px;">📌 Tipo de S.A. *</label>
+                            <div style="display: flex; gap: 20px; flex-wrap: wrap; padding: 10px 0;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500; color: #2D3748; font-size: 0.95em;">
+                                    <input type="radio" name="tipo_sa" value="EMERGENCIAL" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: #E53E3E;">
+                                    🚨 S.A. EMERGENCIAL
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500; color: #2D3748; font-size: 0.95em;">
+                                    <input type="radio" name="tipo_sa" value="EMPRESTIMO" style="width: 18px; height: 18px; cursor: pointer; accent-color: #4299E1;">
+                                    🔄 S.A. DE EMPRÉSTIMO
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500; color: #2D3748; font-size: 0.95em;">
+                                    <input type="radio" name="tipo_sa" value="AGUARDANDO_NOTA" style="width: 18px; height: 18px; cursor: pointer; accent-color: #ED8936;">
+                                    ⏳ S.A. AGUARDANDO NOTA
+                                </label>
+                            </div>
+                            <small style="color: #718096; font-size: 0.8em;">⚠️ Selecione apenas uma opção</small>
+                        </div>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- GERAR DESCONTO                               -->
+                    <!-- ============================================ -->
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label style="margin-bottom: 10px;">💰 Gerar Desconto?</label>
+                            <div style="display: flex; gap: 20px; flex-wrap: wrap; padding: 10px 0;">
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500; color: #2D3748; font-size: 0.95em;">
+                                    <input type="radio" name="gerar_desconto" value="SIM" style="width: 18px; height: 18px; cursor: pointer; accent-color: #E53E3E;">
+                                    ✅ SIM - Será descontado em folha
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500; color: #2D3748; font-size: 0.95em;">
+                                    <input type="radio" name="gerar_desconto" value="NAO" checked style="width: 18px; height: 18px; cursor: pointer; accent-color: #48BB78;">
+                                    ❌ NÃO - Não será descontado
+                                </label>
+                            </div>
+                            <small style="color: #718096; font-size: 0.8em;">📋 Selecione se esta S.A. vai gerar desconto em folha do colaborador</small>
+                        </div>
+                    </div>
+
+                    <!-- Dados do Colaborador -->
+                    <h3>👥 Dados do Colaborador</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="matricula">🔢 Matrícula *</label>
+                            <input type="text" id="matricula" placeholder="Digite a matrícula" onchange="buscarColaborador()">
+                        </div>
+                        <div class="form-group">
+                            <label for="colaborador">👤 Colaborador *</label>
+                            <input type="text" id="colaborador" placeholder="Nome do colaborador" readonly>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cpf">🆔 CPF</label>
+                            <input type="text" id="cpf" placeholder="CPF" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="funcao">💼 Função</label>
+                            <input type="text" id="funcao" placeholder="Função" readonly>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="filial">🏢 Filial</label>
+                            <input type="text" id="filial" placeholder="Filial" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="centroCusto">📊 Centro de Custo</label>
+                            <input type="text" id="centroCusto" placeholder="Centro de Custo" readonly>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Itens -->
+                    <h3>📦 Itens</h3>
+                    <div class="table-responsive">
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:15%;">Código</th>
+                                    <th style="width:30%;">Descrição</th>
+                                    <th style="width:10%;">UND</th>
+                                    <th style="width:12%;">QTD</th>
+                                    <th style="width:10%;">Armazém</th>
+                                    <th style="width:13%;">C.A</th>
+                                    <th style="width:10%;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsBody">
+                                <tr>
+                                    <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código"></td>
+                                    <td><input type="text" class="item-descricao input-descricao" readonly placeholder="Descrição"></td>
+                                    <td><input type="text" class="item-unidade" readonly placeholder="Unid."></td>
+                                    <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0"></td>
+                                    <td>
+                                        <select class="item-armazem">
+                                            <option value="">Selecione</option>
+                                            <option value="01">01</option><option value="02">02</option>
+                                            <option value="03">03</option><option value="04">04</option>
+                                            <option value="05">05</option><option value="06">06</option>
+                                            <option value="07">07</option><option value="08">08</option>
+                                            <option value="09">09</option><option value="10">10</option>
+                                            <option value="11">11</option><option value="12">12</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" class="item-ca" placeholder="C.A"></td>
+                                    <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="add-item-btn" onclick="adicionarLinhaItem()">➕ Adicionar Item</button>
+
+                    <hr>
+
+                    <!-- Termo de Responsabilidade -->
+                    <div class="termo-responsabilidade">
+                        <h3>📜 Termo de Responsabilidade</h3>
+                        <div class="termo-text">
+                            <p><strong>NR 06</strong> - 6.7. CABE AO EMPREGADO QUANTO AO EPI: USAR, UTILIZANDO-O APENAS PARA A FINALIDADE A QUE SE DESTINA; RESPONSABILIZAR-SE PELA GUARDA E CONSERVAÇÃO; COMUNICAR AO EMPREGADOR QUALQUER ALTERAÇÃO QUE O TORNE IMPRÓPRIO PARA USO.</p>
+                            <p><strong>NR 01</strong> - 1.8. CABE AO EMPREGADO: CUMPRIR AS DISPOSIÇÕES LEGAIS E REGULAMENTARES SOBRE SEGURANÇA E MEDICINA DO TRABALHO; USAR O EPI FORNECIDO PELO EMPREGADOR; SUBMETER-SE AOS EXAMES MÉDICOS PREVISTOS.</p>
+                            <p><strong>CLT</strong> - ART. 462, § 1º - EM CASO DE DANO CAUSADO PELO EMPREGADO, O DESCONTO SERÁ LÍCITO, DESDE QUE ESTA POSSIBILIDADE TENHA SIDO ACORDADA OU NA OCORRÊNCIA DE DOLO DO EMPREGADO.</p>
+                            <p style="margin-top: 10px; font-weight: bold;">Declaro que recebi os equipamentos acima descritos e estou ciente das obrigações contidas na NR 06 e NR 01.</p>
+                        </div>
+                    </div>
+
+                    <!-- Assinaturas -->
+                    <div class="assinaturas-section">
+                        <div class="assinaturas-header">
+                            <h3>✍️ Assinaturas</h3>
+                            <span class="assinaturas-status" id="assinaturasStatus">⏳ Aguardando assinaturas...</span>
+                        </div>
+                        <div class="assinaturas">
+                            <div class="assinatura-box" data-tipo="entregue">
+                                <h4>📤 Entregue por</h4>
+                                <p class="signatario-nome" id="entreguePorNome">
+                                    <span style="color: #718096; font-weight: normal;">Aguardando...</span>
+                                </p>
+                                <p class="signatario-data" id="entreguePorData">-</p>
+                                <div class="signature-preview" style="display:none;">
+                                    <img class="signature-img" src="" alt="Assinatura">
+                                </div>
+                                <button type="button" class="btn-assinar" onclick="abrirPaginaAssinatura('entregue'); return false;">✍️ Assinar</button>
+                                <button type="button" class="btn-reassinar" onclick="abrirPaginaAssinatura('entregue'); return false;" style="display:none;">🔄 Reassinar</button>
+                            </div>
+                            <div class="assinatura-box" data-tipo="recebido">
+                                <h4>📥 Recebido por</h4>
+                                <p class="signatario-nome" id="recebidoPorNome">
+                                    <span style="color: #718096; font-weight: normal;">Aguardando...</span>
+                                </p>
+                                <p class="signatario-data" id="recebidoPorData">-</p>
+                                <div class="signature-preview" style="display:none;">
+                                    <img class="signature-img" src="" alt="Assinatura">
+                                </div>
+                                <button type="button" class="btn-assinar" onclick="abrirPaginaAssinatura('recebido'); return false;">✍️ Assinar</button>
+                                <button type="button" class="btn-reassinar" onclick="abrirPaginaAssinatura('recebido'); return false;" style="display:none;">🔄 Reassinar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botões de Ação -->
+                    <button type="button" class="btn-finalizar" onclick="finalizarSA()">✅ FINALIZAR S.A.</button>
+                    <button type="button" class="btn-success" onclick="salvarSA()" style="width:100%; max-width:400px; display:block; margin:10px auto; padding:14px 30px; border:none; border-radius:10px; background:#4299E1; color:white; font-weight:700; font-size:16px; cursor:pointer; transition:all 0.3s ease;">💾 Salvar S.A.</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Pop-up Material -->
+    <div id="descricao-popup" class="descricao-popup"></div>
+    <div id="popup-overlay" class="popup-overlay"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script src="../js/script.js"></script>
+    <script src="../js/sa-emergencial.js"></script>
+</body>
+</html>

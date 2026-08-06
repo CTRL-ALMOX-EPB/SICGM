@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SICGM - S.A. Emergencial</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/sa-emergencial.css">
+</head>
+<body>
+    <!-- Botões de navegação -->
+    <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
+        <span class="btn-navegacao-icone">⬆</span>
+        <span class="btn-navegacao-texto">Topo</span>
+    </button>
+    <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
+        <span class="btn-navegacao-icone">⬇</span>
+        <span class="btn-navegacao-texto">Fim</span>
+    </button>
+
+    <div class="container">
+        <div class="form-card">
+            <!-- Logo e Título -->
+            <div class="header-container">
+                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                <h1 class="title">🚨 S.A. Emergencial</h1>
+            </div>
+            
+            <!-- Botão Voltar -->
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <button onclick="redirecionarParaHome()" class="btn-voltar-home">🏠 Voltar ao Início</button>
+                <button onclick="exportarSAPainel()" class="btn-exportar-pdf" id="btnExportarPDFPainel" style="display: none;">
+                    📄 Exportar PDF Selecionado
+                </button>
+            </div>
+
+            <!-- Header do Usuário -->
+            <div class="user-header" id="userHeader">
+                <div class="user-info">
+                    <div class="avatar" id="userAvatar">U</div>
+                    <div class="user-details">
+                        <h3 id="userName">Carregando...</h3>
+                        <p id="userRole">Carregando...</p>
+                        <p id="userMatricula">Matrícula: ---</p>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <button class="btn-primary" id="btnNovaSA">➕ Nova S.A.</button>
+                </div>
+            </div>
+
+            <!-- Lista de SA com Filtros -->
+            <div class="sa-list-container">
+                <div id="saList">
+                    <div class="sa-list-loading">
+                        <div class="spinner"></div>
+                        <p>⏳ Carregando S.A. Emergenciais...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rodapé -->
+        <div style="text-align: center; margin-top: 1rem;">
+            <button onclick="redirecionarParaHome()" style="background: transparent; color: #4299E1; border: none; cursor: pointer; font-weight: 500; font-size: 14px; text-decoration: underline;">
+                ← Voltar para Home
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script src="../js/script.js"></script>
+    <script src="../js/sa-emergencial.js"></script>
+</body>
+</html>

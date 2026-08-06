@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICGM - Busca Trafo</title>
+    
+    <!-- CSS Base -->
+    <link rel="stylesheet" href="../css/base.css">
+    
+    <!-- CSS Busca Trafo -->
+    <link rel="stylesheet" href="../css/busca-trafo.css">
+</head>
+<body>
+
+    <!-- ============================================ -->
+    <!-- BOTÃO IR PARA O TOPO                         -->
+    <!-- ============================================ -->
+    <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
+        <span class="btn-navegacao-icone">⬆</span>
+        <span class="btn-navegacao-texto">Topo</span>
+    </button>
+
+    <!-- ============================================ -->
+    <!-- BOTÃO IR PARA O FIM                         -->
+    <!-- ============================================ -->
+    <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
+        <span class="btn-navegacao-icone">⬇</span>
+        <span class="btn-navegacao-texto">Fim</span>
+    </button>
+
+    <!-- ============================================ -->
+    <!-- LOADING OVERLAY                              -->
+    <!-- ============================================ -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Validando acesso...</div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- CONTEÚDO PRINCIPAL                           -->
+    <!-- ============================================ -->
+    <div class="container" id="mainContent" style="display: none;">
+
+        <!-- ============================================ -->
+        <!-- CABEÇALHO COM LOGO E USUÁRIO                -->
+        <!-- ============================================ -->
+        <div class="page-header">
+            <div class="header-left">
+                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                <div>
+                    <h1>
+                        🔍 Busca Trafo
+                        <small>Índice geral de transformadores</small>
+                    </h1>
+                </div>
+            </div>
+            <div class="user-info">
+                <div class="user-details">
+                    <div class="user-name" id="nomeUsuario">Carregando...</div>
+                    <div class="user-matricula" id="matriculaUsuario">Matrícula: ---</div>
+                </div>
+                <span class="user-perfil" id="perfilUsuario">GESTÃO</span>
+                <button class="btn-voltar-home" onclick="redirecionarParaHome()">
+                    🏠 Voltar
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SUBTÍTULO                                    -->
+        <!-- ============================================ -->
+        <p class="subtitulo">
+            Índice geral de todos os transformadores registrados no sistema.
+        </p>
+
+        <!-- ============================================ -->
+        <!-- FILTROS E ORDENAÇÃO                          -->
+        <!-- ============================================ -->
+        <div class="filtros-container">
+            <div class="filtro-row">
+                <div class="filtro-item">
+                    <label for="filtroCodMat">Cód. Mat</label>
+                    <input type="text" id="filtroCodMat" placeholder="Ex: 90063" />
+                </div>
+                <div class="filtro-item">
+                    <label for="filtroDescricao">Descrição</label>
+                    <input type="text" id="filtroDescricao" placeholder="Ex: 75KVA" />
+                </div>
+                <div class="filtro-item">
+                    <label for="filtroFabricante">Fabricante</label>
+                    <input type="text" id="filtroFabricante" placeholder="Ex: ITAIPU" />
+                </div>
+                <div class="filtro-item">
+                    <label for="filtroSerie">Nº de Série</label>
+                    <input type="text" id="filtroSerie" placeholder="Ex: 232691" />
+                </div>
+                <div class="filtro-item">
+                    <label for="filtroTombamento">Tombamento</label>
+                    <input type="text" id="filtroTombamento" placeholder="Ex: 58158" />
+                </div>
+                <div class="filtro-item">
+                    <label for="filtroStatus">Status</label>
+                    <select id="filtroStatus">
+                        <option value="">Todos</option>
+                        <option value="Estoque">Estoque</option>
+                        <option value="Obra">Obra</option>
+                        <option value="Transferido">Transferido</option>
+                        <option value="Falta">Falta</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filtro-row" style="border-top: 1px solid #E2E8F0; padding-top: 16px; margin-top: 4px;">
+                <div class="filtro-item data-item">
+                    <label for="filtroDataInicio">Dt. Rec. Energisa (Início)</label>
+                    <input type="date" id="filtroDataInicio" />
+                </div>
+                <div class="filtro-item data-item">
+                    <label for="filtroDataFim">Dt. Rec. Energisa (Fim)</label>
+                    <input type="date" id="filtroDataFim" />
+                </div>
+                <div class="filtro-item" style="flex: 0 0 180px;">
+                    <label for="filtroOrdenacao">Ordenar por</label>
+                    <select id="filtroOrdenacao">
+                        <option value="codigo">Código (A-Z)</option>
+                        <option value="codigo-desc">Código (Z-A)</option>
+                        <option value="descricao">Descrição (A-Z)</option>
+                        <option value="descricao-desc">Descrição (Z-A)</option>
+                        <option value="data">Data Rec. (Mais recente)</option>
+                        <option value="data-desc">Data Rec. (Mais antiga)</option>
+                        <option value="status">Status (A-Z)</option>
+                        <option value="status-desc">Status (Z-A)</option>
+                    </select>
+                </div>
+                <button class="btn-filtrar" id="btnBuscar">🔍 Buscar</button>
+                <button class="btn-limpar-filtros" id="btnLimparFiltros">✕ Limpar Filtros</button>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- ESTATÍSTICAS                                  -->
+        <!-- ============================================ -->
+        <div class="stats" id="stats">
+            <div class="stats-info">
+                <span>📊 <span class="destaque" id="totalRegistros">0</span> registros encontrados</span>
+                <span>📌 <span class="destaque" id="statusEstoque">0</span> em estoque</span>
+                <span>🔧 <span class="destaque" id="statusObra">0</span> em obra</span>
+                <span>🔄 <span class="destaque" id="statusTransferido">0</span> transferidos</span>
+                <span>❌ <span class="destaque" id="statusFalta">0</span> em falta</span>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- TABELA                                        -->
+        <!-- ============================================ -->
+        <div class="tabela-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort="codigo" onclick="ordenarPor('codigo')">
+                            <span class="th-content">Cód. Mat <span class="th-icon">▼</span></span>
+                        </th>
+                        <th class="sortable" data-sort="descricao" onclick="ordenarPor('descricao')">
+                            <span class="th-content">Descrição <span class="th-icon">▼</span></span>
+                        </th>
+                        <th class="sortable" data-sort="fabricante" onclick="ordenarPor('fabricante')">
+                            <span class="th-content">Fabricante <span class="th-icon">▼</span></span>
+                        </th>
+                        <th class="sortable" data-sort="serie" onclick="ordenarPor('serie')">
+                            <span class="th-content">Nº Série <span class="th-icon">▼</span></span>
+                        </th>
+                        <th class="sortable" data-sort="tombamento" onclick="ordenarPor('tombamento')">
+                            <span class="th-content">Tombamento <span class="th-icon">▼</span></span>
+                        </th>
+                        <th class="sortable" data-sort="status" onclick="ordenarPor('status')">
+                            <span class="th-content">Status <span class="th-icon">▼</span></span>
+                        </th>
+                        <th class="sortable" data-sort="data" onclick="ordenarPor('data')">
+                            <span class="th-content">Dt. Rec. Energisa <span class="th-icon">▼</span></span>
+                        </th>
+                        <th>Dt. Saída</th>
+                        <th>Histórico</th>
+                        <th>Obra/SS</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCorpo">
+                    <tr>
+                        <td colspan="10" style="text-align: center; padding: 40px;">Carregando dados...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SCRIPTS                                        -->
+    <!-- ============================================ -->
+    <script src="../js/script.js"></script>
+    <script src="../js/busca-trafo.js"></script>
+    <script>
+        // ============================================
+        // REDIRECIONAMENTO BASEADO NO PERFIL
+        // ============================================
+        function redirecionarParaHome() {
+            const sessao = verificarSessao();
+            if (!sessao) {
+                window.location.href = '../login.html';
+                return;
+            }
+
+            const perfil = sessao.perfil || 'GESTAO';
+            const homePages = {
+                'GESTAO': '../home-gestao.html',
+                'OPERACIONAL': '../home-operacional.html',
+                'VISUALIZACAO': '../home-visualizacao.html'
+            };
+
+            window.location.href = homePages[perfil] || '../login.html';
+        }
+
+        // ============================================
+        // IR PARA O TOPO
+        // ============================================
+        function irParaTopo() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ============================================
+        // IR PARA O FIM
+        // ============================================
+        function irParaFim() {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        // ============================================
+        // MOSTRAR/OCULTAR BOTÕES DE NAVEGAÇÃO
+        // ============================================
+        function controlarBotoesNavegacao() {
+            const btnTopo = document.getElementById('btnTopo');
+            const btnFim = document.getElementById('btnFim');
+            const scrollY = window.scrollY;
+            const alturaTotal = document.body.scrollHeight - window.innerHeight;
+
+            if (scrollY > 200) {
+                btnTopo.classList.add('visivel');
+            } else {
+                btnTopo.classList.remove('visivel');
+            }
+
+            if (scrollY < alturaTotal - 100) {
+                btnFim.classList.add('visivel');
+            } else {
+                btnFim.classList.remove('visivel');
+            }
+        }
+
+        // ============================================
+        // CARREGAR DADOS DO USUÁRIO
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const mainContent = document.getElementById('mainContent');
+            
+            loadingOverlay.classList.add('active');
+
+            const sessao = verificarSessao();
+            
+            if (!sessao) {
+                console.log('🔒 Sessão inválida - Redirecionando para login');
+                window.location.href = '../login.html';
+                return;
+            }
+
+            console.log('✅ Sessão válida para:', sessao.nome, '(', sessao.perfil, ')');
+            
+            try {
+                document.getElementById('nomeUsuario').textContent = sessao.nome || 'Usuário';
+                document.getElementById('matriculaUsuario').textContent = `Matrícula: ${sessao.matricula || '---'}`;
+                document.getElementById('perfilUsuario').textContent = sessao.perfil || 'GESTÃO';
+            } catch (e) {
+                console.error('Erro ao carregar dados do usuário:', e);
+                window.location.href = '../login.html';
+                return;
+            }
+
+            window.addEventListener('scroll', controlarBotoesNavegacao);
+            window.addEventListener('resize', controlarBotoesNavegacao);
+            
+            setTimeout(controlarBotoesNavegacao, 100);
+
+            setTimeout(() => {
+                loadingOverlay.classList.remove('active');
+                mainContent.style.display = 'block';
+            }, 500);
+
+            atualizarTimestampSessao();
+        });
+
+        function atualizarTimestampSessao() {
+            const sessao = sessionStorage.getItem('sessaoSICGM');
+            if (sessao) {
+                try {
+                    const dados = JSON.parse(sessao);
+                    dados.timestamp = Date.now();
+                    sessionStorage.setItem('sessaoSICGM', JSON.stringify(dados));
+                } catch (e) {}
+            }
+        }
+
+        document.addEventListener('click', atualizarTimestampSessao);
+        document.addEventListener('keydown', atualizarTimestampSessao);
+
+        setInterval(function() {
+            const sessao = verificarSessao();
+            if (!sessao) {
+                console.log('🔒 Sessão expirada - Redirecionando para login');
+                window.location.href = '../login.html';
+            }
+        }, 5 * 60 * 1000);
+    </script>
+
+</body>
+</html>

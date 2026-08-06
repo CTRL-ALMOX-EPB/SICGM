@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICGM - Relatórios</title>
+    
+    <!-- CSS Base -->
+    <link rel="stylesheet" href="../css/base.css">
+    
+    <!-- CSS Relatório -->
+    <link rel="stylesheet" href="../css/relatorios.css">
+</head>
+<body>
+    <!-- ============================================ -->
+    <!-- BOTÃO IR PARA O TOPO (FIXO NO CANTO)        -->
+    <!-- ============================================ -->
+    <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
+        <span class="btn-navegacao-icone">⬆</span>
+        <span class="btn-navegacao-texto">Topo</span>
+    </button>
+
+    <!-- ============================================ -->
+    <!-- BOTÃO IR PARA O FIM (FIXO NO CANTO)         -->
+    <!-- ============================================ -->
+    <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
+        <span class="btn-navegacao-icone">⬇</span>
+        <span class="btn-navegacao-texto">Fim</span>
+    </button>
+
+    <div class="container">
+        <div class="form-card">
+            
+            <!-- Logo e Título -->
+            <div class="header-container">
+                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                <h1 class="title">📊 SICGM - Relatórios de Contagem</h1>
+            </div>
+            
+            <!-- Botão Voltar -->
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
+                <button onclick="redirecionarParaHome()" class="btn-voltar-home">
+                    🏠 Voltar ao Início
+                </button>
+            </div>
+
+            <!-- ============================================ -->
+            <!-- SELETOR DE DEPÓSITOS                        -->
+            <!-- ============================================ -->
+            <div class="seletor-deposito-container">
+                <div class="seletor-deposito-nav" id="seletor-deposito-nav">
+                    <button type="button" class="tab-deposito-btn active" data-deposito="1050" onclick="ativarDeposito('1050')">
+                        <span class="tab-icone">🏠</span>
+                        Depósito 1050
+                    </button>
+                    <button type="button" class="tab-deposito-btn" data-deposito="1855" onclick="ativarDeposito('1855')">
+                        <span class="tab-icone">📦</span>
+                        Depósito 1855
+                    </button>
+                    <button type="button" class="tab-deposito-btn" data-deposito="1854" onclick="ativarDeposito('1854')">
+                        <span class="tab-icone">📦</span>
+                        Depósito 1854
+                    </button>
+                    <button type="button" class="tab-deposito-btn" data-deposito="1853" onclick="ativarDeposito('1853')">
+                        <span class="tab-icone">📦</span>
+                        Depósito 1853
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filtros-relatorio">
+                <div class="filtro-row">
+                    <div class="filtro-group">
+                        <label for="filtro-data-inicio">Data Início</label>
+                        <input type="date" id="filtro-data-inicio">
+                    </div>
+                    <div class="filtro-group">
+                        <label for="filtro-data-fim">Data Fim</label>
+                        <input type="date" id="filtro-data-fim">
+                    </div>
+                    <div class="filtro-group">
+                        <label for="filtro-tipo-material">Tipo Material</label>
+                        <select id="filtro-tipo-material">
+                            <option value="">Todos</option>
+                            <option value="trafo">Trafos</option>
+                            <option value="bobina">Bobinas</option>
+                            <option value="concreto">Concretos</option>
+                            <option value="miscelanea">Miscelâneas</option>
+                            <option value="especifico">Específicos</option>
+                            <option value="laco">Laços</option>
+                            <option value="alca">Alças</option>
+                            <option value="parafuso">Parafusos</option>
+                            <option value="cabo">Cabos</option>
+                            <option value="medidor">Medidores</option>
+                        </select>
+                    </div>
+                    <div class="filtro-group">
+                        <label for="filtro-codigo">Código do Material</label>
+                        <input type="text" id="filtro-codigo" placeholder="Digite o código...">
+                    </div>
+                    <div class="filtro-group filtro-botoes">
+                        <button onclick="carregarRelatorios()" class="btn-filtrar">🔍 Filtrar</button>
+                        <button onclick="limparFiltros()" class="btn-limpar">✕ Limpar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estatísticas Rápidas -->
+            <div class="stats-container" id="stats-container">
+                <div class="stat-card">
+                    <span class="stat-label">📦 Total de Registros</span>
+                    <span class="stat-value" id="total-registros">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">🔢 Códigos Únicos</span>
+                    <span class="stat-value" id="total-codigos">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">✅ Códigos Contados</span>
+                    <span class="stat-value" id="total-codigos-contados">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">🔄 Última Contagem</span>
+                    <span class="stat-value" id="ultima-contagem" style="color: #2B6CB0; font-weight: 700;">-</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">⚡ Trafos</span>
+                    <span class="stat-value" id="total-trafos">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">🧵 Bobinas</span>
+                    <span class="stat-value" id="total-bobinas">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">🏗️ Concretos</span>
+                    <span class="stat-value" id="total-concretos">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">📦 Miscelâneas</span>
+                    <span class="stat-value" id="total-miscelaneas">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">🎯 Específicos</span>
+                    <span class="stat-value" id="total-especificos">0</span>
+                </div>
+            </div>
+
+            <!-- ============================================ -->
+            <!-- INDICADORES DO RELATÓRIO (VALORES EM R$)    -->
+            <!-- ============================================ -->
+            <div class="indicadores-relatorio" id="indicadores-relatorio" style="display: none;">
+                <h3 style="margin: 0 0 15px 0; font-size: 14px; color: #4A5568; display: flex; align-items: center; gap: 8px;">
+                    💰 Indicadores de Valor
+                </h3>
+                <div class="indicadores-grid">
+                    <div class="indicador-card">
+                        <span class="indicador-label">💰 Total Saldo Físico</span>
+                        <span class="indicador-valor" id="total-saldo-fisico">R$ 0,00</span>
+                    </div>
+                    <div class="indicador-card">
+                        <span class="indicador-label">📊 Total Saldo Sistêmico</span>
+                        <span class="indicador-valor" id="total-saldo-sistemico">R$ 0,00</span>
+                    </div>
+                    <div class="indicador-card">
+                        <span class="indicador-label">📉 Divergência de Valor</span>
+                        <span class="indicador-valor" id="total-divergencia-valor">R$ 0,00</span>
+                    </div>
+                    <div class="indicador-card">
+                        <span class="indicador-label">📦 Total de Itens</span>
+                        <span class="indicador-valor" id="total-itens-relatorio">0</span>
+                    </div>
+                    <div class="indicador-card">
+                        <span class="indicador-label">✅ Itens com Saldo Físico</span>
+                        <span class="indicador-valor" id="total-itens-fisico">0</span>
+                    </div>
+                    <div class="indicador-card">
+                        <span class="indicador-label">📊 Itens com Divergência</span>
+                        <span class="indicador-valor" id="total-itens-divergentes">0</span>
+                    </div>
+                    <div class="indicador-card">
+                        <span class="indicador-label">📈 % Cobertura</span>
+                        <span class="indicador-valor" id="percentual-cobertura">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================ -->
+            <!-- CONTAINER DO HISTÓRICO                       -->
+            <!-- ============================================ -->
+            <div id="historico-container" style="display: none; margin: 20px 0;">
+                <div class="historico-wrapper">
+                    <div class="historico-header-bar">
+                        <h3>📅 Histórico de Snapshots</h3>
+                        <button onclick="fecharHistorico()" class="btn-fechar-historico-header">✕</button>
+                    </div>
+                    <div id="historico-conteudo">
+                        <div class="historico-loading">⏳ Carregando...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================ -->
+            <!-- ABAS DE CONTAGEM (DIÁRIA, SEMANAL, ROTATIVAS) -->
+            <!-- ============================================ -->
+            <div class="tabs-contagem-container">
+                <div class="tabs-contagem-nav" id="tabs-contagem-nav">
+                    <button class="tab-contagem-btn active" data-tipo="diaria" onclick="ativarAbaContagem('diaria')">
+                        📋 Contagem Diária
+                        <span class="tab-contagem-badge" id="badge-diaria">0</span>
+                    </button>
+                    <button class="tab-contagem-btn" data-tipo="semanal" onclick="ativarAbaContagem('semanal')">
+                        📅 Contagem Semanal
+                        <span class="tab-contagem-badge" id="badge-semanal">0</span>
+                    </button>
+                    <button class="tab-contagem-btn" data-tipo="rotativas" onclick="ativarAbaContagem('rotativas')">
+                        🔄 Contagens Rotativas
+                        <span class="tab-contagem-badge" id="badge-rotativas">0</span>
+                    </button>
+                </div>
+                
+                <div class="tabs-contagem-content">
+                    <!-- Contagem Diária -->
+                    <div class="tab-contagem-panel active" id="panel-diaria">
+                        <div class="tabela-container">
+                            <div class="tabela-header">
+                                <h2>📋 Contagem Diária</h2>
+                                <div class="tabela-actions">
+                                    <button onclick="exportarExcel()" class="btn-exportar">📊 Exportar Excel</button>
+                                    <button onclick="exportarPDF()" class="btn-exportar btn-pdf">📄 Exportar PDF</button>
+                                    <button onclick="abrirHistorico()" class="btn-exportar btn-historico" style="background: #9F7AEA;">
+                                        📅 Histórico
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="relatorio-tabela" id="tabela-diaria">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Descrição</th>
+                                            <th>UND</th>
+                                            <th>Tipo</th>
+                                            <th>QTD Física</th>
+                                            <th>Saldo Sistêmico</th>
+                                            <th>Divergência QTD</th>
+                                            <th>Valor Unitário</th>
+                                            <th>Valor Divergência</th>
+                                            <th>Acuracidade</th>
+                                            <th>Status</th>
+                                            <th>Último Usuário</th>
+                                            <th>Data da Última</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="body-diaria">
+                                        <tr><td colspan="13" class="text-center">Carregando dados...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Contagem Semanal -->
+                    <div class="tab-contagem-panel" id="panel-semanal">
+                        <div class="tabela-container">
+                            <div class="tabela-header">
+                                <h2>📅 Contagem Semanal</h2>
+                                <div class="tabela-actions">
+                                    <button onclick="exportarExcel()" class="btn-exportar">📊 Exportar Excel</button>
+                                    <button onclick="exportarPDF()" class="btn-exportar btn-pdf">📄 Exportar PDF</button>
+                                    <button onclick="abrirHistorico()" class="btn-exportar btn-historico" style="background: #9F7AEA;">
+                                        📅 Histórico
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="relatorio-tabela" id="tabela-semanal">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Descrição</th>
+                                            <th>UND</th>
+                                            <th>Tipo</th>
+                                            <th>QTD Física</th>
+                                            <th>Saldo Sistêmico</th>
+                                            <th>Divergência QTD</th>
+                                            <th>Valor Unitário</th>
+                                            <th>Valor Divergência</th>
+                                            <th>Acuracidade</th>
+                                            <th>Status</th>
+                                            <th>Último Usuário</th>
+                                            <th>Data da Última</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="body-semanal">
+                                        <tr><td colspan="13" class="text-center">Carregando dados...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Contagens Rotativas -->
+                    <div class="tab-contagem-panel" id="panel-rotativas">
+                        <div class="tabela-container">
+                            <div class="tabela-header">
+                                <h2>🔄 Contagens Rotativas</h2>
+                                <div class="tabela-actions">
+                                    <button onclick="exportarExcel()" class="btn-exportar">📊 Exportar Excel</button>
+                                    <button onclick="exportarPDF()" class="btn-exportar btn-pdf">📄 Exportar PDF</button>
+                                    <button onclick="abrirHistorico()" class="btn-exportar btn-historico" style="background: #9F7AEA;">
+                                        📅 Histórico
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="relatorio-tabela" id="tabela-rotativas">
+                                    <thead>
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Descrição</th>
+                                            <th>UND</th>
+                                            <th>Tipo</th>
+                                            <th>QTD Física</th>
+                                            <th>Saldo Sistêmico</th>
+                                            <th>Divergência QTD</th>
+                                            <th>Valor Unitário</th>
+                                            <th>Valor Divergência</th>
+                                            <th>Acuracidade</th>
+                                            <th>Status</th>
+                                            <th>Último Usuário</th>
+                                            <th>Data da Última</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="body-rotativas">
+                                        <tr><td colspan="13" class="text-center">Carregando dados...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mensagem -->
+            <div id="mensagem" class="mensagem"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../js/script.js"></script>
+    <script src="../js/config-depositos.js"></script>
+    <script src="../js/relatorios.js"></script>
+    <script>
+        // ============================================
+        // CONTROLAR BOTÕES DE NAVEGAÇÃO
+        // ============================================
+        function controlarBotoesNavegacao() {
+            const btnTopo = document.getElementById('btnTopo');
+            const btnFim = document.getElementById('btnFim');
+            const scrollY = window.scrollY;
+            const alturaTotal = document.body.scrollHeight - window.innerHeight;
+
+            if (scrollY > 200) {
+                btnTopo.classList.add('visivel');
+            } else {
+                btnTopo.classList.remove('visivel');
+            }
+
+            if (scrollY < alturaTotal - 100) {
+                btnFim.classList.add('visivel');
+            } else {
+                btnFim.classList.remove('visivel');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            window.addEventListener('scroll', controlarBotoesNavegacao);
+            window.addEventListener('resize', controlarBotoesNavegacao);
+            setTimeout(controlarBotoesNavegacao, 100);
+        });
+    </script>
+</body>
+</html>

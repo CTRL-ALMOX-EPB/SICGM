@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SICGM - Controles DCMD</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/controles-dcmd.css">
+</head>
+<body>
+    <!-- Botões de navegação -->
+    <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
+        <span class="btn-navegacao-icone">⬆</span>
+        <span class="btn-navegacao-texto">Topo</span>
+    </button>
+    <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
+        <span class="btn-navegacao-icone">⬇</span>
+        <span class="btn-navegacao-texto">Fim</span>
+    </button>
+
+    <div class="container">
+        <div class="form-card">
+            <!-- Logo e Título -->
+            <div class="header-container">
+                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                <h1 class="title">📋 Controles DCMD</h1>
+            </div>
+            
+            <!-- Botão Voltar -->
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <button onclick="redirecionarParaHome()" class="btn-voltar-home">🏠 Voltar ao Início</button>
+            </div>
+
+            <!-- Header do Usuário -->
+            <div class="user-header" id="userHeader">
+                <div class="user-info">
+                    <div class="avatar" id="userAvatar">U</div>
+                    <div class="user-details">
+                        <h3 id="userName">Carregando...</h3>
+                        <p id="userRole">Carregando...</p>
+                        <p id="userMatricula">Matrícula: ---</p>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <button class="btn-primary" id="btnNovoControle">➕ Novo Controle</button>
+                </div>
+            </div>
+
+            <!-- Seletor de Tipo (6 opções) -->
+            <div class="tipo-selector">
+                <button class="tipo-btn active" data-tipo="pendencia" onclick="selecionarTipo('pendencia')">
+                    📌 Pendência de Requisição
+                </button>
+                <button class="tipo-btn" data-tipo="aditivo" onclick="selecionarTipo('aditivo')">
+                    📝 Aditivo Sistêmico
+                </button>
+                <button class="tipo-btn" data-tipo="aditivo-fisico" onclick="selecionarTipo('aditivo-fisico')">
+                    🔧 Aditivo Físico
+                </button>
+                <button class="tipo-btn" data-tipo="farol" onclick="selecionarTipo('farol')">
+                    🚦 Farol de Obras
+                </button>
+                <button class="tipo-btn" data-tipo="devolucao" onclick="selecionarTipo('devolucao')">
+                    📦 Pendências de Devolução
+                </button>
+                <button class="tipo-btn" data-tipo="movimento" onclick="selecionarTipo('movimento')">
+                    📄 Controle de Movimentações
+                </button>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filtros-container" id="filtrosContainer">
+                <div class="filtro-item">
+                    <label>🔢 Nº</label>
+                    <input type="text" id="filtro-numero" placeholder="Ex: 1234" oninput="aplicarFiltros()">
+                </div>
+                <div class="filtro-item">
+                    <label>🏗️ Obra</label>
+                    <input type="text" id="filtro-obra" placeholder="Digite a obra..." oninput="aplicarFiltros()">
+                </div>
+                <div class="filtro-item">
+                    <label>📅 Data</label>
+                    <input type="date" id="filtro-data" onchange="aplicarFiltros()">
+                </div>
+                <div class="filtro-item">
+                    <label>📌 Status</label>
+                    <select id="filtro-status" onchange="aplicarFiltros()">
+                        <option value="">Todos</option>
+                        <option value="PENDENTE">Pendente</option>
+                        <option value="FINALIZADO">Finalizado</option>
+                    </select>
+                </div>
+                <div class="filtro-item">
+                    <label>📊 Ordenar</label>
+                    <select id="filtro-ordenacao" onchange="aplicarOrdenacao()">
+                        <option value="data_desc">📅 Mais Recente</option>
+                        <option value="data_asc">📅 Mais Antiga</option>
+                        <option value="obra_asc">🏗️ Obra (A-Z)</option>
+                        <option value="obra_desc">🏗️ Obra (Z-A)</option>
+                        <option value="numero_asc">🔢 Nº Crescente</option>
+                        <option value="numero_desc">🔢 Nº Decrescente</option>
+                    </select>
+                </div>
+                <div class="filtro-item filtro-acoes">
+                    <button class="btn-limpar-filtros" onclick="limparFiltros()">✕ Limpar</button>
+                </div>
+                <div class="filtro-item filtro-contador">
+                    <span id="filtro-contador">Carregando...</span>
+                </div>
+            </div>
+
+            <!-- Lista de Controles -->
+            <div class="controles-list-container">
+                <div id="controlesList">
+                    <div class="controles-list-loading">
+                        <div class="spinner"></div>
+                        <p>⏳ Carregando controles...</p>
+                    </div>
+                </div>
+                <!-- Paginação -->
+                <div class="paginacao-container" id="paginacao-container">
+                    <!-- Renderizado via JavaScript -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rodapé -->
+        <div style="text-align: center; margin-top: 1rem;">
+            <button onclick="redirecionarParaHome()" style="background: transparent; color: #4299E1; border: none; cursor: pointer; font-weight: 500; font-size: 14px; text-decoration: underline;">
+                ← Voltar para Home
+            </button>
+        </div>
+    </div>
+
+    <script src="../js/script.js"></script>
+    <script src="../js/controles-dcmd.js"></script>
+</body>
+</html>

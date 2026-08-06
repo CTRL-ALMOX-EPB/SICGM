@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MGM - Formulário</title>
+    
+    <!-- CSS Base -->
+    <link rel="stylesheet" href="../css/base.css">
+    
+    <!-- CSS Contagem Diária (reutiliza estilos) -->
+    <link rel="stylesheet" href="../css/contagem-diaria.css">
+</head>
+<body>
+    <div class="container">
+        <div class="form-card">
+            
+            <!-- Logo e Título DENTRO do card -->
+            <div class="header-container">
+                <img src="../assets/img/logo-control.png" alt="Logo MGM" class="logo-empresa">
+                <h1 class="title">MGM</h1>
+            </div>
+            
+            <!-- Botão Voltar ao Início Baseado no Perfil -->
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
+                <button onclick="redirecionarParaHome()" class="btn-voltar-home">
+                    🏠 Voltar ao Início
+                </button>
+            </div>
+            
+            <form id="mgmForm">
+
+                <div class="form-row">
+                    <!-- Separador -->
+                    <div class="form-group">
+                        <label for="separador">Separador</label>
+                        <input 
+                            type="text" 
+                            id="separador" 
+                            name="separador" 
+                            placeholder="Nome do separador"
+                            required
+                        >
+                        <div class="matricula-field">
+                            <label for="matricula-separador">Matrícula</label>
+                            <input 
+                                type="text" 
+                                id="matricula-separador" 
+                                name="matricula-separador" 
+                                placeholder="Matrícula"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Encarregado -->
+                    <div class="form-group">
+                        <label for="encarregado">Encarregado</label>
+                        <input 
+                            type="text" 
+                            id="encarregado" 
+                            name="encarregado" 
+                            placeholder="Nome do encarregado"
+                            required
+                        >
+                        <div class="matricula-field">
+                            <label for="matricula-encarregado">Matrícula</label>
+                            <input 
+                                type="text" 
+                                id="matricula-encarregado" 
+                                name="matricula-encarregado" 
+                                placeholder="Matrícula"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Conferente -->
+                    <div class="form-group">
+                        <label for="conferente">Conferente</label>
+                        <input 
+                            type="text" 
+                            id="conferente" 
+                            name="conferente" 
+                            placeholder="Nome do conferente"
+                            required
+                        >
+                        <div class="matricula-field">
+                            <label for="matricula-conferente">Matrícula</label>
+                            <input 
+                                type="text" 
+                                id="matricula-conferente" 
+                                name="matricula-conferente" 
+                                placeholder="Matrícula"
+                                required
+                            >
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Seção Obra e Data lado a lado -->
+                <div class="obra-data-row">
+                    <!-- Número da Obra -->
+                    <div class="obra-field">
+                        <label for="numero-obra">Número da Obra</label>
+                        <input 
+                            type="text" 
+                            id="numero-obra" 
+                            name="numero-obra" 
+                            placeholder="Digite o número da obra"
+                            required
+                        >
+                    </div>
+
+                    <!-- Data -->
+                    <div class="data-field">
+                        <label for="data">Data</label>
+                        <input 
+                            type="date" 
+                            id="data" 
+                            name="data" 
+                            required
+                        >
+                    </div>
+                </div>
+
+                <!-- Seção de Materiais -->
+                <div class="materiais-section">
+                    <h2 class="section-title">Materiais</h2>
+                    
+                    <!-- Container onde os materiais serão adicionados -->
+                    <div id="materiais-container">
+                        <!-- Os materiais serão inseridos aqui dinamicamente -->
+                    </div>
+                    
+                    <!-- Botão Adicionar Material -->
+                    <button type="button" id="btn-add-material" class="btn-add-material">
+                        + Adicionar Material
+                    </button>
+                </div>
+
+                <button type="submit" class="submit-btn">Enviar</button>
+            </form>
+            
+        </div><!-- Fecha form-card -->
+        
+        <!-- Rodapé com link de voltar (fallback) -->
+        <div style="text-align: center; margin-top: 1rem;">
+            <button onclick="redirecionarParaHome()" style="
+                background: transparent;
+                color: #4299E1;
+                border: none;
+                cursor: pointer;
+                font-weight: 500;
+                font-size: 14px;
+                text-decoration: underline;
+            ">
+                ← Voltar para Home
+            </button>
+        </div>
+    </div><!-- Fecha container -->
+
+    <!-- Scripts -->
+    <script src="../js/script.js"></script>
+</body>
+</html>

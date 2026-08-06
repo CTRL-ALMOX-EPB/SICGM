@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICGM - Contagem Diária</title>
+    
+    <!-- CSS Base -->
+    <link rel="stylesheet" href="../css/base.css">
+    
+    <!-- CSS Contagem Diária -->
+    <link rel="stylesheet" href="../css/contagem-diaria.css">
+</head>
+<body>
+    <!-- ============================================ -->
+    <!-- BOTÃO IR PARA O TOPO (FIXO NO CANTO)        -->
+    <!-- ============================================ -->
+    <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
+        <span class="btn-navegacao-icone">⬆</span>
+        <span class="btn-navegacao-texto">Topo</span>
+    </button>
+
+    <!-- ============================================ -->
+    <!-- BOTÃO IR PARA O FIM (FIXO NO CANTO)         -->
+    <!-- ============================================ -->
+    <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
+        <span class="btn-navegacao-icone">⬇</span>
+        <span class="btn-navegacao-texto">Fim</span>
+    </button>
+
+    <!-- ============================================ -->
+    <!-- MODAL DE CONFIRMAÇÃO DE BAIXA - CORRIGIDO   -->
+    <!-- ============================================ -->
+    <div id="modal-baixa" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <span class="modal-icon" id="modal-icon">⚡</span>
+                <h2 id="modal-title">Dar Baixa no Trafo</h2>
+            </div>
+            <div class="modal-body">
+                <p>Confirme a baixa do item abaixo. Esta ação <strong>desativará</strong> o item no sistema e ele não poderá mais ser contado.</p>
+                <div class="item-info" id="modal-info">
+                    <span><span class="label">Código:</span> <span class="value" id="modal-codigo">-</span></span>
+                    <span><span class="label">Descrição:</span> <span class="value" id="modal-descricao">-</span></span>
+                    <span id="modal-tombamento-row" style="display: none;"><span class="label">Tombamento:</span> <span class="value" id="modal-tombamento">-</span></span>
+                </div>
+                <label for="modal-n-obra">Nº da Obra *</label>
+                <input type="text" id="modal-n-obra" placeholder="Digite o número da obra..." autocomplete="off">
+                <label for="modal-observacao" style="margin-top: 12px;">Observação (opcional)</label>
+                <input type="text" id="modal-observacao" placeholder="Digite uma observação..." autocomplete="off">
+                <div id="modal-error" class="modal-error">
+                    ⚠️ O Nº da Obra é obrigatório.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-cancelar" id="modal-cancelar">Cancelar</button>
+                <button class="btn-modal-confirmar" id="modal-confirmar">✅ Confirmar Baixa</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- CONTEÚDO PRINCIPAL                          -->
+    <!-- ============================================ -->
+    <div class="container">
+        <div class="form-card">
+            
+            <!-- Logo e Título -->
+            <div class="header-container">
+                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                <h1 class="title">SICGM - Contagem Diária</h1>
+            </div>
+            
+            <!-- Botão Voltar ao Início Baseado no Perfil -->
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
+                <button onclick="redirecionarParaHome()" class="btn-voltar-home">
+                    🏠 Voltar ao Início
+                </button>
+            </div>
+            
+            <form id="contagemForm">
+                
+                <!-- Nome, Matrícula e Data lado a lado -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nome">Nome *</label>
+                        <input type="text" id="nome" name="nome" placeholder="Digite seu nome" required readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="matricula">Matrícula *</label>
+                        <input type="text" id="matricula" name="matricula" placeholder="Digite sua matrícula" required readonly>
+                    </div>
+
+                    <div class="data-field">
+                        <label for="data">Data</label>
+                        <input type="date" id="data" name="data" readonly>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- SELETOR DE DEPÓSITOS                        -->
+                <!-- ============================================ -->
+                <div class="seletor-deposito-container">
+                    <div class="seletor-deposito-nav" id="seletor-deposito-nav">
+                        <button type="button" class="tab-deposito-btn active" data-deposito="1050" onclick="ativarDeposito('1050')">
+                            <span class="tab-icone">🏠</span>
+                            Depósito 1050
+                        </button>
+                        <button type="button" class="tab-deposito-btn" data-deposito="1855" onclick="ativarDeposito('1855')">
+                            <span class="tab-icone">📦</span>
+                            Depósito 1855
+                        </button>
+                        <button type="button" class="tab-deposito-btn" data-deposito="1854" onclick="ativarDeposito('1854')">
+                            <span class="tab-icone">📦</span>
+                            Depósito 1854
+                        </button>
+                        <button type="button" class="tab-deposito-btn" data-deposito="1853" onclick="ativarDeposito('1853')">
+                            <span class="tab-icone">📦</span>
+                            Depósito 1853
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- FILTRO DE PESQUISA                          -->
+                <!-- ============================================ -->
+                <div class="filtro-container">
+                    <div class="filtro-row">
+                        <div class="filtro-input-group">
+                            <label for="filtro-texto">🔍 Pesquisar</label>
+                            <input type="text" id="filtro-texto" placeholder="Digite para pesquisar..." oninput="aplicarFiltro()">
+                        </div>
+                        <div class="filtro-select-group">
+                            <label for="filtro-tipo">Filtrar por</label>
+                            <select id="filtro-tipo" onchange="aplicarFiltro()">
+                                <option value="codigo">Código</option>
+                                <option value="descricao">Descrição</option>
+                                <option value="tombamento">Tombamento</option>
+                                <option value="todos" selected>Todos os campos</option>
+                            </select>
+                        </div>
+                        <div class="filtro-clear-group">
+                            <button type="button" class="btn-limpar-filtro" onclick="limparFiltro()">
+                                ✕ Limpar
+                            </button>
+                        </div>
+                    </div>
+                    <div id="filtro-resultado" class="filtro-resultado">
+                        <span id="filtro-contagem">Mostrando 0 itens</span>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- ABAS PRINCIPAIS - TIPO DE CONTAGEM          -->
+                <!-- ============================================ -->
+                <div class="tabs-principais-container">
+                    <div class="tabs-principais-nav" id="tabs-principais-nav">
+                        <button type="button" class="tab-principal-btn active" data-tipo="diaria" onclick="ativarTipoContagem('diaria')">
+                            <span class="tab-icone">📋</span>
+                            Contagem Diária
+                        </button>
+                        <button type="button" class="tab-principal-btn" data-tipo="semanal" onclick="ativarTipoContagem('semanal')">
+                            <span class="tab-icone">📅</span>
+                            Contagem Semanal
+                        </button>
+                        <button type="button" class="tab-principal-btn" data-tipo="rotativas" onclick="ativarTipoContagem('rotativas')">
+                            <span class="tab-icone">🔄</span>
+                            Contagens Rotativas
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- CONTEÚDO DAS ABAS PRINCIPAIS                 -->
+                <!-- ============================================ -->
+                
+                <!-- CONTAGEM DIÁRIA -->
+                <div class="tab-principal-content active" id="tab-principal-diaria">
+                    <div class="sub-titulo-secao">
+                        <span class="sub-titulo-icone">📋</span>
+                        <span>Materiais contados diariamente: Concretos, Bobinas, Trafos, Específicos e Medidores</span>
+                    </div>
+                    <div class="tabs-container" id="tabs-diaria">
+                        <div class="tabs-nav" id="tabs-nav-diaria"></div>
+                        <div id="tabs-content-diaria"></div>
+                    </div>
+                </div>
+
+                <!-- CONTAGEM SEMANAL -->
+                <div class="tab-principal-content" id="tab-principal-semanal">
+                    <div class="sub-titulo-secao">
+                        <span class="sub-titulo-icone">📅</span>
+                        <span>Materiais contados semanalmente: Miscelâneas (antigo)</span>
+                    </div>
+                    <div class="tabs-container" id="tabs-semanal">
+                        <div class="tabs-nav" id="tabs-nav-semanal"></div>
+                        <div id="tabs-content-semanal"></div>
+                    </div>
+                </div>
+
+                <!-- CONTAGENS ROTATIVAS -->
+                <div class="tab-principal-content" id="tab-principal-rotativas">
+                    <div class="sub-titulo-secao">
+                        <span class="sub-titulo-icone">🔄</span>
+                        <span>Materiais contados em rotação: Laços, Alças, Parafusos, Cabos, Miscelâneas 1 e Miscelâneas 2</span>
+                    </div>
+                    <div class="tabs-container" id="tabs-rotativas">
+                        <div class="tabs-nav" id="tabs-nav-rotativas"></div>
+                        <div id="tabs-content-rotativas"></div>
+                    </div>
+                </div>
+                
+                <div id="loading-materiais" style="text-align: center; padding: 20px; color: #718096;">
+                    ⏳ Carregando materiais...
+                </div>
+                
+                <div id="mensagem" class="mensagem"></div>
+
+                <button type="submit" class="submit-btn">📝 Registrar Contagem</button>
+            </form>
+            
+        </div>
+        
+        <!-- Rodapé com link de voltar (fallback) -->
+        <div style="text-align: center; margin-top: 1rem;">
+            <button onclick="redirecionarParaHome()" style="
+                background: transparent;
+                color: #4299E1;
+                border: none;
+                cursor: pointer;
+                font-weight: 500;
+                font-size: 14px;
+                text-decoration: underline;
+            ">
+                ← Voltar para Home
+            </button>
+        </div>
+    </div>
+
+    <!-- Pop-up para descrição completa -->
+    <div id="descricao-popup" class="descricao-popup"></div>
+    <div id="popup-overlay" class="popup-overlay"></div>
+
+    <!-- Scripts -->
+    <script src="../js/script.js"></script>
+    <script src="../js/config-depositos.js"></script>
+    <script src="../js/contagem-diaria.js"></script>
+    
+    <!-- ============================================ -->
+    <!-- REDIRECIONAMENTO LOCAL - CORRIGIDO          -->
+    <!-- ============================================ -->
+    <script>
+        function redirecionarParaHome() {
+            const sessao = verificarSessao();
+            if (!sessao) {
+                window.location.href = '../login.html';
+                return;
+            }
+
+            const perfil = sessao.perfil || 'GESTAO';
+            const homePages = {
+                'GESTAO': '../home-gestao.html',
+                'OPERACIONAL': '../home-operacional.html',
+                'VISUALIZACAO': '../home-visualizacao.html'
+            };
+
+            window.location.href = homePages[perfil] || '../login.html';
+        }
+
+        function irParaTopo() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function irParaFim() {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        function controlarBotoesNavegacao() {
+            const btnTopo = document.getElementById('btnTopo');
+            const btnFim = document.getElementById('btnFim');
+            const scrollY = window.scrollY;
+            const alturaTotal = document.body.scrollHeight - window.innerHeight;
+
+            if (scrollY > 200) {
+                btnTopo.classList.add('visivel');
+            } else {
+                btnTopo.classList.remove('visivel');
+            }
+
+            if (scrollY < alturaTotal - 100) {
+                btnFim.classList.add('visivel');
+            } else {
+                btnFim.classList.remove('visivel');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            window.addEventListener('scroll', controlarBotoesNavegacao);
+            window.addEventListener('resize', controlarBotoesNavegacao);
+            setTimeout(controlarBotoesNavegacao, 100);
+        });
+    </script>
+
+</body>
+</html>

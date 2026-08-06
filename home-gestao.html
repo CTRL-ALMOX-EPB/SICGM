@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - SICGM (Gestão)</title>
+    
+    <!-- CSS Base -->
+    <link rel="stylesheet" href="css/base.css">
+    
+    <!-- CSS Home Gestão -->
+    <link rel="stylesheet" href="css/home-gestao.css">
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Validando acesso...</div>
+    </div>
+
+    <div class="home-container" id="homeContent" style="display: none;">
+        <!-- Header -->
+        <div class="home-header">
+            <h1>🏢 SICGM - Gestão</h1>
+            <div class="user-info">
+                <div>
+                    <div class="user-name" id="nomeUsuario">Carregando...</div>
+                    <div class="user-matricula" id="matriculaUsuario">Matrícula: ---</div>
+                </div>
+                <span class="user-perfil" id="perfilUsuario">GESTÃO</span>
+                <button class="btn-sair" onclick="sair()">🚪 Sair</button>
+            </div>
+        </div>
+
+        <!-- Welcome Card -->
+        <div class="welcome-card">
+            <h2 id="mensagemBoasVindas">Bem-vindo ao SICGM!</h2>
+            <p>Você está logado como <strong>Gestão</strong>. Selecione um departamento abaixo para acessar suas funções.</p>
+        </div>
+
+        <!-- Barra de Departamentos -->
+        <div class="departamentos-bar" id="departamentosBar">
+            <button class="departamento-btn active" data-depto="DCMD" onclick="selecionarDepartamento('DCMD')">
+                DCMD
+            </button>
+            <button class="departamento-btn" data-depto="DMPC" onclick="selecionarDepartamento('DMPC')">
+                DMPC
+            </button>
+            <button class="departamento-btn" data-depto="DECP" onclick="selecionarDepartamento('DECP')">
+                DECP
+            </button>
+            <button class="departamento-btn" data-depto="DEOP" onclick="selecionarDepartamento('DEOP')">
+                DEOP
+            </button>
+        </div>
+
+        <!-- Área de Conteúdo do Departamento -->
+        <div class="depto-content" id="deptoContent">
+            <!-- Renderizado via JavaScript -->
+        </div>
+
+        <!-- Mensagem de Acesso -->
+        <div class="restricted-msg">
+            ✅ Perfil <strong>Gestão</strong> - Acesso completo a todos os departamentos e funções.
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/script.js"></script>
+    <script src="js/home-gestao.js"></script>
+</body>
+</html>

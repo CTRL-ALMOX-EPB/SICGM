@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SICGM - Formulário Controle DCMD</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/controles-dcmd.css">
+</head>
+<body>
+    <!-- Botões de navegação -->
+    <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
+        <span class="btn-navegacao-icone">⬆</span>
+        <span class="btn-navegacao-texto">Topo</span>
+    </button>
+    <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
+        <span class="btn-navegacao-icone">⬇</span>
+        <span class="btn-navegacao-texto">Fim</span>
+    </button>
+
+    <div class="container">
+        <div class="form-card">
+            <!-- Logo e Título -->
+            <div class="header-container">
+                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                <h1 class="title">📋 Formulário Controle DCMD</h1>
+            </div>
+            
+            <!-- Botão Voltar -->
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
+                <button onclick="voltarParaPainel()" class="btn-voltar-home">⬅ Voltar ao Painel</button>
+            </div>
+
+            <!-- Header do Usuário -->
+            <div class="user-header" id="userHeader">
+                <div class="user-info">
+                    <div class="avatar" id="userAvatar">U</div>
+                    <div class="user-details">
+                        <h3 id="userName">Carregando...</h3>
+                        <p id="userRole">Carregando...</p>
+                        <p id="userMatricula">Matrícula: ---</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulário -->
+            <form id="controleForm" class="controle-form">
+                <div class="controle-form-header">
+                    <div>
+                        <h1 id="formTitulo">📌 Pendência de Baixa</h1>
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 5px;">
+                            <span class="controle-numero" id="controleNumero">#0000</span>
+                            <span class="controle-status" id="controleStatus">⏳ PENDENTE</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controle-form-body">
+                    <!-- Tipo de Controle (readonly) -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>📋 Tipo de Controle</label>
+                            <input type="text" id="formTipo" readonly>
+                        </div>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- CAMPOS COMUNS (todos os tipos)              -->
+                    <!-- ============================================ -->
+                    <div id="camposComuns">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formObra">🏗️ Obra *</label>
+                                <input type="text" id="formObra" placeholder="Digite o número da obra" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="formData">📅 Data de Programação *</label>
+                                <input type="date" id="formData" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- CAMPOS ESPECÍFICOS: ADITIVO FÍSICO          -->
+                    <!-- ============================================ -->
+                    <div id="camposAditivoFisico" style="display:none;">
+                        <hr>
+                        <h3>🔧 Dados do Aditivo Físico</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formTipoAditivoFisico">📋 Tipo</label>
+                                <select id="formTipoAditivoFisico">
+                                    <option value="SAÍDA">SAÍDA</option>
+                                    <option value="CAMPO">CAMPO</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="formDataExecucao">📅 Data de Execução</label>
+                                <input type="date" id="formDataExecucao">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- CAMPOS ESPECÍFICOS: FAROL DE OBRAS           -->
+                    <!-- ============================================ -->
+                    <div id="camposFarol" style="display:none;">
+                        <hr>
+                        <h3>🚦 Dados do Farol de Obras</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formSetor">📋 Setor</label>
+                                <select id="formSetor">
+                                    <option value="">Selecione...</option>
+                                    <option value="CONSTRUÇÃO">CONSTRUÇÃO</option>
+                                    <option value="MANUTENÇÃO">MANUTENÇÃO</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="formDataRecebimento">📅 Data de Recebimento</label>
+                                <input type="date" id="formDataRecebimento">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formSeparador">👤 Separador</label>
+                                <select id="formSeparador">
+                                    <option value="">Selecione...</option>
+                                    <option value="GABRIEL">GABRIEL</option>
+                                    <option value="GUSTAVO">GUSTAVO</option>
+                                    <option value="MARCOS">MARCOS</option>
+                                    <option value="VALMIR R.">VALMIR R.</option>
+                                    <option value="VALMIR S.">VALMIR S.</option>
+                                    <option value="KHARLOS">KHARLOS</option>
+                                    <option value="ERICK V.">ERICK V.</option>
+                                    <option value="ERIQUE L.">ERIQUE L.</option>
+                                    <option value="ARLINDO">ARLINDO</option>
+                                    <option value="NÃO PREENCHIDO">NÃO PREENCHIDO</option>
+                                    <option value="MATHEUS">MATHEUS</option>
+                                    <option value="NÃO SEPARADA">NÃO SEPARADA</option>
+                                    <option value="JOHN">JOHN</option>
+                                    <option value="JEFFERSON">JEFFERSON</option>
+                                    <option value="LUIZ G.">LUIZ G.</option>
+                                    <option value="CARLOS A.">CARLOS A.</option>
+                                    <option value="TRAJANO">TRAJANO</option>
+                                    <option value="GILZARTE">GILZARTE</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="formDataSeparacao">📅 Data de Separação</label>
+                                <input type="date" id="formDataSeparacao">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formObraTeveSaida">🚚 Obra teve saída?</label>
+                                <select id="formObraTeveSaida">
+                                    <option value="NÃO">NÃO</option>
+                                    <option value="SIM">SIM</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="formDataSaida">📅 Data de Saída</label>
+                                <input type="date" id="formDataSaida">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formAditivo">📝 Aditivo</label>
+                                <select id="formAditivo">
+                                    <option value="NÃO">NÃO</option>
+                                    <option value="SIM">SIM</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="formObraProgramada">📋 Obra Programada</label>
+                                <select id="formObraProgramada">
+                                    <option value="NÃO">NÃO</option>
+                                    <option value="SIM">SIM</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formDevolvida">🔄 Devolvida</label>
+                                <select id="formDevolvida">
+                                    <option value="NÃO">NÃO</option>
+                                    <option value="SIM">SIM</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="formCancelada">❌ Cancelada</label>
+                                <select id="formCancelada">
+                                    <option value="NÃO">NÃO</option>
+                                    <option value="SIM">SIM</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- CAMPOS ESPECÍFICOS: PENDÊNCIAS DE DEVOLUÇÃO  -->
+                    <!-- ============================================ -->
+                    <div id="camposDevolucao" style="display:none;">
+                        <hr>
+                        <h3>📦 Dados da Pendência de Devolução</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formDataDescarga">📅 Data da Descarga</label>
+                                <input type="date" id="formDataDescarga">
+                            </div>
+                            <div class="form-group">
+                                <label for="formEncarregado">👤 Encarregado</label>
+                                <select id="formEncarregado">
+                                    <option value="">Selecione...</option>
+                                    <option value="ROMARIO">ROMARIO</option>
+                                    <option value="ERIVANIO">ERIVANIO</option>
+                                    <option value="RIUSTON">RIUSTON</option>
+                                    <option value="E. MARCELO">E. MARCELO</option>
+                                    <option value="BRENO M.">BRENO M.</option>
+                                    <option value="FRANCINALDO(DEDÉ)">FRANCINALDO(DEDÉ)</option>
+                                    <option value="WALISSON">WALISSON</option>
+                                    <option value="VALENTIM">VALENTIM</option>
+                                    <option value="LUCIANO">LUCIANO</option>
+                                    <option value="MEYDSON">MEYDSON</option>
+                                    <option value="PAULÃO">PAULÃO</option>
+                                    <option value="DAMIÃO(MIMA)">DAMIÃO(MIMA)</option>
+                                    <option value="DEMILSON(PIM)">DEMILSON(PIM)</option>
+                                    <option value="JOSÉ JORDAN">JOSÉ JORDAN</option>
+                                    <option value="ALCIDES">ALCIDES</option>
+                                    <option value="EDILSON">EDILSON</option>
+                                    <option value="ANTONIO">ANTONIO</option>
+                                    <option value="JUNIOR C.">JUNIOR C.</option>
+                                    <option value="MARCOS">MARCOS</option>
+                                    <option value="ANTONIO D.">ANTONIO D.</option>
+                                    <option value="ANDERSON">ANDERSON</option>
+                                    <option value="LEANDRO">LEANDRO</option>
+                                    <option value="ROBSON">ROBSON</option>
+                                    <option value="MANOEL C.">MANOEL C.</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formDataDevolucaoFisica">📅 Data da Devolução Física</label>
+                                <input type="date" id="formDataDevolucaoFisica">
+                            </div>
+                            <div class="form-group">
+                                <label for="formMotivoPendencia">📝 Motivo da Pendência</label>
+                                <input type="text" id="formMotivoPendencia" placeholder="Motivo da pendência">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formSolucaoPendencia">✅ Solução da Pendência</label>
+                                <input type="text" id="formSolucaoPendencia" placeholder="Solução da pendência">
+                            </div>
+                            <div class="form-group">
+                                <label for="formPendenciaPor">👤 Pendência por</label>
+                                <select id="formPendenciaPor">
+                                    <option value="">Selecione...</option>
+                                    <option value="TÉCNICA">TÉCNICA</option>
+                                    <option value="ALMOXARIFADO">ALMOXARIFADO</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="formObservacaoDevolucao">📝 Observação Geral</label>
+                                <textarea id="formObservacaoDevolucao" rows="3" placeholder="Digite observações gerais..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- CAMPOS ESPECÍFICOS: MOVIMENTO               -->
+                    <!-- ============================================ -->
+                    <div id="camposMovimento" style="display:none;">
+                        <hr>
+                        <h3>📄 Dados da Movimentação</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formTipoMovimento">📋 Tipo de Movimento *</label>
+                                <select id="formTipoMovimento" required>
+                                    <option value="RMA">RMA - Controle de Movimentações</option>
+                                    <option value="DMA">DMA - Controle de Movimentações DMA</option>
+                                    <option value="DMA_SUCATA">DMA SUCATA - Controle de Movimentações Sucata</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="formCodMovimentacao">🔢 Cód. Movimentação</label>
+                                <input type="text" id="formCodMovimentacao" placeholder="Digite o código da movimentação">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- ITENS (APENAS PARA PENDÊNCIA, ADITIVO SISTÊMICO E ADITIVO FÍSICO) -->
+                    <!-- ============================================ -->
+                    <div id="secaoItens">
+                        <hr>
+                        <h3 id="tituloItens">📦 Itens</h3>
+                        <div class="table-responsive">
+                            <table class="items-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:7%;">Código</th>
+                                        <th style="width:12%;">Descrição</th>
+                                        <th style="width:4%;">UND</th>
+                                        <th style="width:6%;">QTD</th>
+                                        <!-- Pendência de Baixa -->
+                                        <th style="width:7%;" id="thPendenteAditivo" style="display:none;">Pend. Aditivo</th>
+                                        <th style="width:9%;" id="thDataBaixa" style="display:none;">Data Baixa</th>
+                                        <th style="width:7%;" id="thBaixado" style="display:none;">Baixado?</th>
+                                        <th style="width:10%;" id="thMotivo" style="display:none;">Motivo</th>
+                                        <th style="width:9%;" id="thColaboradorItem" style="display:none;">Colaborador</th>
+                                        <th style="width:12%;" id="thObservacaoItem" style="display:none;">Observação</th>
+                                        <!-- Aditivo Sistêmico -->
+                                        <th style="width:8%;" id="thStatusAditivo" style="display:none;">Status</th>
+                                        <th style="width:9%;" id="thNumDoc" style="display:none;">Nº Documento</th>
+                                        <th style="width:7%;" id="thUsuario" style="display:none;">Usuário</th>
+                                        <th style="width:10%;" id="thObservacao" style="display:none;">Observação</th>
+                                        <!-- Aditivo Físico -->
+                                        <th style="width:7%;" id="thAplicado" style="display:none;">Aplicado</th>
+                                        <th style="width:9%;" id="thColaborador" style="display:none;">Solicitante</th>
+                                        <th style="width:9%;" id="thEncarregado" style="display:none;">Encarregado</th>
+                                        <th style="width:6%;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemsBody">
+                                    <tr>
+                                        <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código"></td>
+                                        <td><input type="text" class="item-descricao input-descricao" readonly placeholder="Descrição"></td>
+                                        <td><input type="text" class="item-unidade" readonly placeholder="Unid."></td>
+                                        <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0"></td>
+                                        <!-- Pendência de Baixa -->
+                                        <td class="col-pendente-aditivo" style="display:none;">
+                                            <select class="item-pendente-aditivo">
+                                                <option value="">-</option>
+                                                <option value="SIM">SIM</option>
+                                                <option value="NÃO">NÃO</option>
+                                            </select>
+                                        </td>
+                                        <td class="col-data-baixa" style="display:none;">
+                                            <input type="date" class="item-data-baixa">
+                                        </td>
+                                        <td class="col-baixado" style="display:none;">
+                                            <select class="item-baixado">
+                                                <option value="NÃO">NÃO</option>
+                                                <option value="SIM">SIM</option>
+                                            </select>
+                                        </td>
+                                        <td class="col-motivo" style="display:none;">
+                                            <input type="text" class="item-motivo" placeholder="Motivo">
+                                        </td>
+                                        <td class="col-colaborador-item" style="display:none;">
+                                            <input type="text" class="item-colaborador-item" placeholder="Colaborador">
+                                        </td>
+                                        <td class="col-observacao-item" style="display:none;">
+                                            <input type="text" class="item-observacao-item" placeholder="Observação">
+                                        </td>
+                                        <!-- Aditivo Sistêmico -->
+                                        <td class="col-status-aditivo" style="display:none;">
+                                            <select class="item-status-aditivo">
+                                                <option value="ANALISE">📊 Análise</option>
+                                                <option value="APROVADO">✅ Aprovado</option>
+                                                <option value="REPROVADO">❌ Reprovado</option>
+                                                <option value="S/ SOLICITAÇÃO">📋 Sem Solicitação</option>
+                                            </select>
+                                        </td>
+                                        <td class="col-num-doc" style="display:none;">
+                                            <input type="text" class="item-num-doc" placeholder="Nº Documento">
+                                        </td>
+                                        <td class="col-usuario" style="display:none;">
+                                            <input type="text" class="item-usuario" placeholder="Usuário">
+                                        </td>
+                                        <td class="col-observacao" style="display:none;">
+                                            <input type="text" class="item-observacao" placeholder="Observação">
+                                        </td>
+                                        <!-- Aditivo Físico -->
+                                        <td class="col-aplicado" style="display:none;">
+                                            <select class="item-aplicado">
+                                                <option value="NÃO">NÃO</option>
+                                                <option value="SIM">SIM</option>
+                                                <option value="PARCIAL">PARCIAL</option>
+                                                <option value="PENDENTE">PENDENTE</option>
+                                            </select>
+                                        </td>
+                                        <td class="col-colaborador" style="display:none;">
+                                            <select class="item-colaborador">
+                                                <option value="">Selecione...</option>
+                                                <option value="MATEUS SANTANA">MATEUS SANTANA</option>
+                                                <option value="SALES JUNIOR">SALES JUNIOR</option>
+                                                <option value="VALENTIM">VALENTIM</option>
+                                                <option value="SIVANILDO">SIVANILDO</option>
+                                                <option value="ERICK VEGA">ERICK VEGA</option>
+                                                <option value="JOSÉ JORDAN">JOSÉ JORDAN</option>
+                                                <option value="ALCIDES">ALCIDES</option>
+                                                <option value="FRANCINALDO (DEDÉ)">FRANCINALDO (DEDÉ)</option>
+                                                <option value="ROMARIO">ROMARIO</option>
+                                                <option value="BRENO">BRENO</option>
+                                                <option value="MAYKE">MAYKE</option>
+                                                <option value="MARIO J.">MARIO J.</option>
+                                                <option value="MEYDSON">MEYDSON</option>
+                                            </select>
+                                        </td>
+                                        <td class="col-encarregado" style="display:none;">
+                                            <select class="item-encarregado">
+                                                <option value="">Selecione...</option>
+                                                <option value="ROMARIO">ROMARIO</option>
+                                                <option value="ERIVANIO">ERIVANIO</option>
+                                                <option value="RIUSTON">RIUSTON</option>
+                                                <option value="E. MARCELO">E. MARCELO</option>
+                                                <option value="BRENO M.">BRENO M.</option>
+                                                <option value="FRANCINALDO(DEDÉ)">FRANCINALDO(DEDÉ)</option>
+                                                <option value="WALISSON">WALISSON</option>
+                                                <option value="VALENTIM">VALENTIM</option>
+                                                <option value="LUCIANO">LUCIANO</option>
+                                                <option value="MEYDSON">MEYDSON</option>
+                                                <option value="PAULÃO">PAULÃO</option>
+                                                <option value="DAMIÃO(MIMA)">DAMIÃO(MIMA)</option>
+                                                <option value="DEMILSON(PIM)">DEMILSON(PIM)</option>
+                                                <option value="JOSÉ JORDAN">JOSÉ JORDAN</option>
+                                                <option value="ALCIDES">ALCIDES</option>
+                                                <option value="EDILSON">EDILSON</option>
+                                                <option value="ANTONIO">ANTONIO</option>
+                                                <option value="JUNIOR C.">JUNIOR C.</option>
+                                                <option value="MARCOS">MARCOS</option>
+                                                <option value="ANTONIO D.">ANTONIO D.</option>
+                                                <option value="ANDERSON">ANDERSON</option>
+                                                <option value="LEANDRO">LEANDRO</option>
+                                                <option value="ROBSON">ROBSON</option>
+                                                <option value="MANOEL C.">MANOEL C.</option>
+                                            </select>
+                                        </td>
+                                        <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="button" class="add-item-btn" onclick="adicionarLinhaItem()">➕ Adicionar Item</button>
+                    </div>
+
+                    <!-- ============================================ -->
+                    <!-- OBSERVAÇÃO GERAL (Farol)                    -->
+                    <!-- ============================================ -->
+                    <div id="campoObservacaoGeral" style="display:none;">
+                        <hr>
+                        <div class="form-row">
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="formObservacaoGeral">📝 Observação Geral</label>
+                                <textarea id="formObservacaoGeral" rows="3" placeholder="Digite observações..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Botões de Ação -->
+                    <div class="modal-actions">
+                        <button type="button" class="btn-salvar" onclick="salvarControle()">💾 Salvar</button>
+                        <button type="button" class="btn-finalizar" onclick="finalizarControle()">✅ Finalizar</button>
+                        <button type="button" class="btn-cancelar" onclick="window.location.href='index.html'">✕ Cancelar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Pop-up Material -->
+    <div id="descricao-popup" class="descricao-popup"></div>
+    <div id="popup-overlay" class="popup-overlay"></div>
+
+    <script src="../js/script.js"></script>
+    <script src="../js/controles-dcmd-form.js"></script>
+</body>
+</html>
