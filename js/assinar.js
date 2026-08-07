@@ -8,8 +8,12 @@ let resizeTimeout = null;
 let assinaturaConfirmada = false;
 
 const API_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/api';
-const R2_BUCKET_URL = 'https://pub-8c9c377ceaa648c2ad535ea1abba45f8.r2.dev';
-const R2_UPLOAD_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/upload';
+
+// CONFIGURAÇÕES CORRETAS DO R2
+const R2_ACCOUNT_ID = '72f94aa97cf81e272818af03994017aa';
+const R2_BUCKET_NAME = 'sicgm-assinaturas';
+const R2_ENDPOINT = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+const R2_PUBLIC_URL = 'https://pub-8c9c377ceaa648c2ad535ea1abba45f8.r2.dev';
 
 // ============================================
 // FUNÇÃO PARA VERIFICAR SESSÃO
@@ -54,12 +58,13 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
             nomeArquivo = `${timestamp}_${random}.png`;
         }
         
-        const path = `${pasta}/${nomeArquivo}`;
-        const url = `${R2_UPLOAD_URL}/${path}`;
+        // CAMINHO CORRETO: bucket/nome_pasta/arquivo
+        const path = `${R2_BUCKET_NAME}/${pasta}/${nomeArquivo}`;
+        const uploadUrl = `${R2_ENDPOINT}/${path}`;
         
-        console.log(`📤 Upload para: ${url}`);
+        console.log(`📤 Upload para: ${uploadUrl}`);
         
-        const uploadResponse = await fetch(url, {
+        const uploadResponse = await fetch(uploadUrl, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'image/png'
@@ -74,19 +79,20 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
             throw new Error(`Erro ao fazer upload: ${uploadResponse.status} - ${errorText}`);
         }
         
-        const publicUrl = `${R2_BUCKET_URL}/${path}`;
+        // URL PÚBLICA CORRETA
+        const publicUrl = `${R2_PUBLIC_URL}/${pasta}/${nomeArquivo}`;
         
         console.log(`✅ Upload concluído: ${publicUrl}`);
         
         return {
             success: true,
             url: publicUrl,
-            path: path,
+            path: `${pasta}/${nomeArquivo}`,
             nome: nomeArquivo
         };
         
     } catch (error) {
-        console.error('❌ Erro no upload para R2:', error);
+        console.error('❌ Erro no upload:', error);
         return {
             success: false,
             error: error.message

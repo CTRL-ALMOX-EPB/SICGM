@@ -3,8 +3,12 @@
 // ============================================
 
 const API_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/api';
-const R2_BUCKET_URL = 'https://pub-8c9c377ceaa648c2ad535ea1abba45f8.r2.dev';
-const R2_UPLOAD_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/upload';
+
+// CONFIGURAÇÕES CORRETAS DO R2
+const R2_ACCOUNT_ID = '72f94aa97cf81e272818af03994017aa';
+const R2_BUCKET_NAME = 'sicgm-assinaturas';
+const R2_ENDPOINT = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+const R2_PUBLIC_URL = 'https://pub-8c9c377ceaa648c2ad535ea1abba45f8.r2.dev';
 
 // ============================================
 // VARIÁVEIS GLOBAIS
@@ -620,42 +624,36 @@ function configurarPopupDescricao() {
 }
 
 // ============================================
-// FUNÇÃO PARA UPLOAD DIRETO PARA O R2 (CORRIGIDA)
+// FUNÇÃO PARA UPLOAD PARA O R2 (CORRIGIDA)
 // ============================================
 
 async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
     try {
-        console.log('📤 Iniciando upload direto para R2...');
+        console.log('📤 Iniciando upload para R2...');
         console.log('📤 Pasta:', pasta);
         console.log('📤 Arquivo:', nomeArquivo);
         
-        // Converte DataURL para Blob
         const response = await fetch(imagemDataURL);
         const blob = await response.blob();
         
         console.log('📤 Tamanho do blob:', blob.size, 'bytes');
         
-        // Gera nome único se não fornecido
         if (!nomeArquivo) {
             const timestamp = Date.now();
             const random = Math.random().toString(36).substring(2, 8);
             nomeArquivo = `${timestamp}_${random}.jpg`;
         }
         
-        // Garante extensão correta
         if (!nomeArquivo.endsWith('.jpg') && !nomeArquivo.endsWith('.jpeg') && !nomeArquivo.endsWith('.png')) {
             nomeArquivo = nomeArquivo + '.jpg';
         }
         
-        // Constrói o caminho completo
-        const path = `${pasta}/${nomeArquivo}`;
+        // CAMINHO CORRETO: bucket/nome_pasta/arquivo
+        const path = `${R2_BUCKET_NAME}/${pasta}/${nomeArquivo}`;
+        const uploadUrl = `${R2_ENDPOINT}/${path}`;
         
-        // UPLOAD DIRETO PARA O R2 (SEM PROXY)
-        const url = `https://pub-8c9c377ceaa648c2ad535ea1abba45f8.r2.dev/${path}`;
+        console.log(`📤 Upload para: ${uploadUrl}`);
         
-        console.log(`📤 Upload direto para: ${url}`);
-        
-        // Detecta o Content-Type
         let contentType = 'image/jpeg';
         if (imagemDataURL.startsWith('data:image/png')) {
             contentType = 'image/png';
@@ -663,8 +661,7 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
             contentType = 'image/webp';
         }
         
-        // Faz o upload direto
-        const uploadResponse = await fetch(url, {
+        const uploadResponse = await fetch(uploadUrl, {
             method: 'PUT',
             headers: {
                 'Content-Type': contentType
@@ -672,23 +669,23 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
             body: blob
         });
         
-        console.log('📤 Status do upload direto:', uploadResponse.status);
+        console.log('📤 Status do upload:', uploadResponse.status);
         
         if (!uploadResponse.ok) {
             const errorText = await uploadResponse.text();
-            console.error('❌ Erro no upload direto:', errorText);
+            console.error('❌ Erro no upload:', errorText);
             throw new Error(`Erro ao fazer upload: ${uploadResponse.status} - ${errorText}`);
         }
         
-        // A URL pública é a mesma
-        const publicUrl = `https://pub-8c9c377ceaa648c2ad535ea1abba45f8.r2.dev/${path}`;
+        // URL PÚBLICA CORRETA
+        const publicUrl = `${R2_PUBLIC_URL}/${pasta}/${nomeArquivo}`;
         
-        console.log(`✅ Upload direto concluído: ${publicUrl}`);
+        console.log(`✅ Upload concluído: ${publicUrl}`);
         
         return {
             success: true,
             url: publicUrl,
-            path: path,
+            path: `${pasta}/${nomeArquivo}`,
             nome: nomeArquivo
         };
         
