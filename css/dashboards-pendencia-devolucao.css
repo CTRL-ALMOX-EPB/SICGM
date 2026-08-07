@@ -1,0 +1,127 @@
+/* ============================================
+   DASHBOARD PENDÊNCIA DE DEVOLUÇÃO
+   ============================================ */
+
+.dashboard-main {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+}
+
+.dashboard-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+}
+
+.dashboard-card h3 {
+    font-size: 16px;
+    color: #2d3748;
+    margin: 0 0 15px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Lista de Encarregados (Filtro) */
+.encarregado-filter-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.encarregado-filter-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid #f7fafc;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-radius: 6px;
+}
+
+.encarregado-filter-item:hover {
+    background: #f7fafc;
+}
+
+.encarregado-filter-item.active {
+    background: #ebf8ff;
+    border-left: 3px solid #4299e1;
+}
+
+.encarregado-filter-item .name {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.encarregado-filter-item .count {
+    background: #e2e8f0;
+    padding: 1px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.encarregado-filter-item .count.pendente {
+    background: #fed7d7;
+    color: #9b2c2c;
+}
+
+/* Lista de Pendências */
+.pendencia-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.pendencia-item {
+    padding: 12px;
+    border-bottom: 1px solid #f7fafc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pendencia-item .obra-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.pendencia-item .obra-info .obra {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.pendencia-item .obra-info .encarregado {
+    font-size: 13px;
+    color: #718096;
+}
+
+.pendencia-item .obra-info .detalhes {
+    font-size: 12px;
+    color: #a0aec0;
+    margin-top: 2px;
+}
+
+.pendencia-item .status-pendente {
+    color: #e53e3e;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.pendencia-item .status-pendente::before {
+    content: "🔴 ";
+}
+
+/* KPI Cards específicos */
+.kpi-card.pendente .kpi-value { color: #e53e3e; }
+.kpi-card.total .kpi-value { color: #4299e1; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .dashboard-main {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Farol de Obras</title>
+    
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/dashboards-common.css">
+    <link rel="stylesheet" href="../css/dashboards-farol-obras.css">
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Carregando dashboard...</div>
+    </div>
+
+    <div class="dashboard-container" id="dashboardContent" style="display: none;">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <div>
+                <h1>🚦 Farol de Obras</h1>
+                <p style="font-size: 14px; opacity: 0.8; margin: 4px 0 0 0;">Visão geral do status das obras e indicadores</p>
+            </div>
+            <div class="user-info">
+                <div>
+                    <div class="user-name" id="userName">Carregando...</div>
+                    <div class="user-matricula" id="userMatricula">Matrícula: ---</div>
+                </div>
+                <span class="user-perfil" id="userPerfil">GESTÃO</span>
+                <button class="btn-sair" onclick="redirecionarParaHome()">🏠 Home</button>
+            </div>
+        </div>
+
+        <!-- Farol Cards -->
+        <div class="farol-grid" id="farolGrid">
+            <!-- Renderizado via JavaScript -->
+        </div>
+
+        <!-- Tabela de Obras -->
+        <div class="dashboard-card">
+            <h3>📋 Lista de Obras</h3>
+            <div id="obrasList" class="obras-list">
+                <div class="loading-dashboard" style="min-height: 200px;">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px;">Carregando obras...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/script.js"></script>
+    <script src="../js/dashboards-common.js"></script>
+    <script src="../js/dashboards-farol-obras.js"></script>
+</body>
+</html>

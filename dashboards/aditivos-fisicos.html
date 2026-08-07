@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Aditivos Físicos</title>
+    
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/dashboards-common.css">
+    <link rel="stylesheet" href="../css/dashboards-aditivos-fisicos.css">
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Carregando dashboard...</div>
+    </div>
+
+    <div class="dashboard-container" id="dashboardContent" style="display: none;">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <div>
+                <h1>🔧 Aditivos Físicos</h1>
+                <p style="font-size: 14px; opacity: 0.8; margin: 4px 0 0 0;">Análise de aplicação de aditivos físicos por obra e encarregado</p>
+            </div>
+            <div class="user-info">
+                <div>
+                    <div class="user-name" id="userName">Carregando...</div>
+                    <div class="user-matricula" id="userMatricula">Matrícula: ---</div>
+                </div>
+                <span class="user-perfil" id="userPerfil">GESTÃO</span>
+                <button class="btn-sair" onclick="redirecionarParaHome()">🏠 Home</button>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filters-bar">
+            <div class="filter-group">
+                <label>📅 Período:</label>
+                <input type="date" id="filterDataInicio">
+                <span>até</span>
+                <input type="date" id="filterDataFim">
+            </div>
+            <div class="filter-group">
+                <label>🔄 Aplicação:</label>
+                <select id="filterAplicacao">
+                    <option value="todos">Todos</option>
+                    <option value="SIM">✅ Aplicado</option>
+                    <option value="NÃO">❌ Não Aplicado</option>
+                    <option value="PARCIAL">🔄 Parcial</option>
+                    <option value="PENDENTE">⏳ Pendente</option>
+                </select>
+            </div>
+            <button class="btn-filter primary" onclick="aplicarFiltros()">🔍 Filtrar</button>
+            <button class="btn-filter secondary" onclick="limparFiltros()">🧹 Limpar</button>
+            <span id="totalRegistros" style="margin-left: auto; font-size: 13px; color: #718096;"></span>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-grid" id="kpiGrid"></div>
+
+        <!-- Conteúdo Principal -->
+        <div class="dashboard-main">
+            <div class="dashboard-left">
+                <div class="dashboard-card">
+                    <h3>📦 Itens Aditivados (Agrupados por Código)</h3>
+                    <div id="itemList" class="item-group-list">
+                        <div class="loading-dashboard">
+                            <div class="spinner"></div>
+                            <p style="margin-top: 10px;">Carregando itens...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dashboard-right">
+                <div class="dashboard-card">
+                    <h3>📋 Detalhes do Item</h3>
+                    <div id="itemDetails" class="item-details-panel">
+                        <div class="empty-state-dashboard">
+                            <div class="icon">👆</div>
+                            <p>Clique em um item da lista ao lado</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="dashboard-charts">
+            <div class="dashboard-card">
+                <h3>📊 Quantidade por Aplicação</h3>
+                <div id="aplicacaoChart" class="chart-container"></div>
+            </div>
+
+            <div class="dashboard-card">
+                <h3>👤 Aditivos por Encarregado</h3>
+                <div id="encarregadoList" class="encarregado-list">
+                    <div class="loading-dashboard" style="min-height: 100px;">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/script.js"></script>
+    <script src="../js/dashboards-common.js"></script>
+    <script src="../js/dashboards-aditivos-fisicos.js"></script>
+</body>
+</html>

@@ -36,6 +36,14 @@ const DEPARTAMENTOS = {
                 descricao: 'Gerencie pendências de baixa, aditivos, farol de obras e movimentações'
             },
             {
+                id: 'dashboards',
+                nome: 'Dashboards',
+                icone: '📊',
+                link: 'dashboards/index.html',
+                status: 'disponivel',
+                descricao: 'Acesse todos os dashboards do sistema'
+            },
+            {
                 id: 'relatorios-dcmd',
                 nome: 'Relatórios',
                 icone: '📈',

@@ -1,0 +1,106 @@
+/* ============================================
+   DASHBOARD FAROL DE OBRAS
+   ============================================ */
+
+.farol-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.farol-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+}
+
+.farol-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.farol-card .farol-value {
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.farol-card .farol-label {
+    font-size: 13px;
+    color: #718096;
+    margin-top: 4px;
+}
+
+.farol-card .farol-icon {
+    font-size: 28px;
+    margin-bottom: 6px;
+}
+
+.farol-card.verde .farol-value { color: #48bb78; }
+.farol-card.amarelo .farol-value { color: #ed8936; }
+.farol-card.vermelho .farol-value { color: #fc8181; }
+.farol-card.azul .farol-value { color: #4299e1; }
+
+/* Lista de Obras */
+.obras-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.obra-farol-item {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f7fafc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.obra-farol-item .obra-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.obra-farol-item .obra-info .obra {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.obra-farol-item .obra-info .detalhes {
+    font-size: 12px;
+    color: #a0aec0;
+}
+
+.obra-farol-item .badge-farol {
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.obra-farol-item .badge-farol.cancelada {
+    background: #fed7d7;
+    color: #9b2c2c;
+}
+
+.obra-farol-item .badge-farol.com-aditivo {
+    background: #fefcbf;
+    color: #975a16;
+}
+
+.obra-farol-item .badge-farol.fora-programacao {
+    background: #fefcbf;
+    color: #975a16;
+}
+
+.obra-farol-item .badge-farol.devolvida {
+    background: #c6f6d5;
+    color: #276749;
+}
+
+.obra-farol-item .badge-farol.normal {
+    background: #e2e8f0;
+    color: #4a5568;
+}
