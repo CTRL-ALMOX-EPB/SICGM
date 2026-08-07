@@ -19,8 +19,11 @@ let materiaisCache = {};
 let popupTimeout = null;
 let popupElement = null;
 let overlayElement = null;
+
+// Variáveis da câmera
 let streamAtual = null;
 let fotoCapturada = null;
+let cameraAtiva = 'environment'; // 'environment' = traseira, 'user' = frontal
 
 // ============================================
 // FUNÇÃO PARA REDIRECIONAR PARA HOME
@@ -621,13 +624,23 @@ function configurarPopupDescricao() {
 
 async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
     try {
+        console.log('📤 Iniciando upload para R2...');
+        console.log('📤 Pasta:', pasta);
+        console.log('📤 Arquivo:', nomeArquivo);
+        
         const response = await fetch(imagemDataURL);
         const blob = await response.blob();
+        
+        console.log('📤 Tamanho do blob:', blob.size, 'bytes');
         
         if (!nomeArquivo) {
             const timestamp = Date.now();
             const random = Math.random().toString(36).substring(2, 8);
-            nomeArquivo = `${timestamp}_${random}.png`;
+            nomeArquivo = `${timestamp}_${random}.jpg`;
+        }
+        
+        if (!nomeArquivo.endsWith('.jpg') && !nomeArquivo.endsWith('.png')) {
+            nomeArquivo = nomeArquivo + '.jpg';
         }
         
         const path = `${pasta}/${nomeArquivo}`;
@@ -638,14 +651,20 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
         const uploadResponse = await fetch(url, {
             method: 'PUT',
             headers: {
-                'Content-Type': 'image/png'
+                'Content-Type': imagemDataURL.startsWith('data:image/png') ? 'image/png' : 'image/jpeg'
             },
             body: blob
         });
         
+        console.log('📤 Status do upload:', uploadResponse.status);
+        
         if (!uploadResponse.ok) {
-            throw new Error(`Erro ao fazer upload: ${uploadResponse.status}`);
+            const errorText = await uploadResponse.text();
+            console.error('❌ Erro no upload:', errorText);
+            throw new Error(`Erro ao fazer upload: ${uploadResponse.status} - ${errorText}`);
         }
+        
+        console.log(`✅ Upload concluído: ${url}`);
         
         return {
             success: true,
@@ -1095,24 +1114,23 @@ function atualizarAssinaturaUI(tipo, dados) {
 function atualizarFotoUI(fotoData) {
     const preview = document.getElementById('fotoPreviewRecebido');
     const img = document.getElementById('fotoImgRecebido');
+    const btnExcluir = document.getElementById('btnExcluirFoto');
     
     if (fotoData && fotoData.url) {
         img.src = fotoData.url;
         preview.style.display = 'block';
+        if (btnExcluir) btnExcluir.style.display = 'inline-block';
         console.log('✅ Foto do colaborador carregada');
     } else {
         preview.style.display = 'none';
+        if (btnExcluir) btnExcluir.style.display = 'none';
         console.log('ℹ️ Nenhuma foto disponível');
     }
 }
 
 // ============================================
-// CAPTURAR FOTO DO COLABORADOR (COM CONTROLE DE CÂMERA)
+// FUNÇÕES DE CÂMERA
 // ============================================
-
-let streamAtual = null;
-let fotoCapturada = null;
-let cameraAtiva = 'environment'; // 'environment' = traseira, 'user' = frontal
 
 function capturarFoto(tipo) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1120,17 +1138,17 @@ function capturarFoto(tipo) {
         return;
     }
     
-    // Verifica se já tem foto capturada
     if (fotoCapturada) {
         if (!confirm('⚠️ Você já tirou uma foto. Deseja tirar outra?')) {
             return;
         }
-        // Limpa a foto anterior
         fotoCapturada = null;
         const preview = document.getElementById('fotoPreviewRecebido');
         const img = document.getElementById('fotoImgRecebido');
         if (preview) preview.style.display = 'none';
         if (img) img.src = '';
+        const btnExcluir = document.getElementById('btnExcluirFoto');
+        if (btnExcluir) btnExcluir.style.display = 'none';
     }
     
     const modal = document.createElement('div');
@@ -1158,18 +1176,12 @@ function capturarFoto(tipo) {
     iniciarCamera(video, status);
 }
 
-// ============================================
-// INICIAR CÂMERA
-// ============================================
-
 function iniciarCamera(video, status) {
-    // Fecha stream anterior se existir
     if (streamAtual) {
         streamAtual.getTracks().forEach(track => track.stop());
         streamAtual = null;
     }
     
-    // Configuração: prioriza câmera traseira (environment)
     const constraints = {
         video: {
             facingMode: cameraAtiva,
@@ -1201,7 +1213,6 @@ function iniciarCamera(video, status) {
             } else if (error.name === 'NotReadableError') {
                 mensagem += 'A câmera está sendo usada por outro aplicativo.';
             } else if (error.name === 'OverconstrainedError') {
-                // Tenta a câmera oposta
                 const facing = cameraAtiva === 'environment' ? 'user' : 'environment';
                 mensagem = `🔄 Tentando câmera ${facing === 'environment' ? 'traseira' : 'frontal'}...`;
                 if (status) {
@@ -1227,10 +1238,6 @@ function iniciarCamera(video, status) {
         });
 }
 
-// ============================================
-// TROCAR CÂMERA (FRONTAL/TRASEIRA)
-// ============================================
-
 function trocarCamera() {
     cameraAtiva = cameraAtiva === 'environment' ? 'user' : 'environment';
     const video = document.getElementById('cameraVideo');
@@ -1245,10 +1252,6 @@ function trocarCamera() {
     iniciarCamera(video, status);
 }
 
-// ============================================
-// CAPTURAR FRAME DA CÂMERA (COM QUALIDADE BAIXA)
-// ============================================
-
 function capturarFotoFrame() {
     const video = document.getElementById('cameraVideo');
     const status = document.getElementById('cameraStatus');
@@ -1258,27 +1261,36 @@ function capturarFotoFrame() {
         return;
     }
     
+    let width = Math.min(video.videoWidth || 640, 640);
+    let height = Math.min(video.videoHeight || 480, 480);
+    
+    const aspectRatio = (video.videoWidth || 640) / (video.videoHeight || 480);
+    if (width / height > aspectRatio) {
+        width = Math.round(height * aspectRatio);
+    } else {
+        height = Math.round(width / aspectRatio);
+    }
+    
     const canvas = document.createElement('canvas');
-    canvas.width = Math.min(video.videoWidth || 640, 640);
-    canvas.height = Math.min(video.videoHeight || 480, 480);
+    canvas.width = width;
+    canvas.height = height;
     
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, width, height);
     
-    // Qualidade mais baixa para reduzir tamanho (0.4 = 40%)
-    const imagemDataURL = canvas.toDataURL('image/jpeg', 0.4);
+    const qualidade = 0.35;
+    const imagemDataURL = canvas.toDataURL('image/jpeg', qualidade);
     
-    // Salvar a foto capturada
+    console.log(`📸 Foto capturada: ${Math.round(imagemDataURL.length / 1024)} KB`);
+    
     fotoCapturada = imagemDataURL;
     
-    // Mostrar preview
     const preview = document.getElementById('fotoPreviewRecebido');
     const img = document.getElementById('fotoImgRecebido');
     if (preview && img) {
         img.src = imagemDataURL;
         preview.style.display = 'block';
         
-        // Adiciona botão de excluir foto no preview
         const btnExcluir = document.getElementById('btnExcluirFoto');
         if (btnExcluir) {
             btnExcluir.style.display = 'inline-block';
@@ -1286,21 +1298,32 @@ function capturarFotoFrame() {
     }
     
     if (status) {
-        status.textContent = '✅ Foto capturada com sucesso!';
+        status.textContent = '✅ Foto capturada! Enviando...';
         status.style.color = '#48BB78';
     }
     
-    // Fechar a câmera após 1.5 segundos
     setTimeout(() => {
         fecharCamera();
-        // Enviar a foto para o R2
         enviarFotoParaR2(imagemDataURL);
-    }, 1500);
+    }, 1000);
 }
 
-// ============================================
-// EXCLUIR FOTO
-// ============================================
+function fecharCamera() {
+    if (streamAtual) {
+        streamAtual.getTracks().forEach(track => track.stop());
+        streamAtual = null;
+    }
+    
+    const modal = document.getElementById('cameraModal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
+    }
+    
+    console.log('🔒 Câmera fechada');
+}
 
 function excluirFoto() {
     if (!confirm('⚠️ Tem certeza que deseja excluir esta foto?')) {
@@ -1325,19 +1348,27 @@ function excluirFoto() {
 // ============================================
 
 async function enviarFotoParaR2(imagemDataURL) {
-    const numero = document.getElementById('saNumero').textContent.replace('#', '');
+    const numero = document.getElementById('saNumero')?.textContent?.replace('#', '') || '0000';
+    
+    console.log('📸 Iniciando envio de foto para S.A.', numero);
     
     try {
         mostrarToast('⏳ Enviando foto...', 'info');
         
         const nomeArquivo = `foto_${numero}_${Date.now()}.jpg`;
+        console.log('📸 Nome do arquivo:', nomeArquivo);
+        
         const resultadoUpload = await uploadParaR2(imagemDataURL, 'fotos', nomeArquivo);
         
         if (!resultadoUpload.success) {
+            console.error('❌ Falha no upload:', resultadoUpload.error);
             throw new Error(resultadoUpload.error || 'Erro ao fazer upload da foto');
         }
         
         const urlFoto = resultadoUpload.url;
+        console.log('✅ Foto enviada para R2:', urlFoto);
+        
+        console.log('📤 Salvando URL no banco...');
         
         const response = await fetch(`${API_URL}/sa/${numero}/foto`, {
             method: 'POST',
@@ -1350,10 +1381,16 @@ async function enviarFotoParaR2(imagemDataURL) {
             })
         });
         
+        console.log('📤 Resposta do servidor:', response.status);
+        
         if (!response.ok) {
             const error = await response.json();
+            console.error('❌ Erro do servidor:', error);
             throw new Error(error.error || 'Erro ao salvar foto');
         }
+        
+        const result = await response.json();
+        console.log('✅ Resposta do servidor:', result);
         
         mostrarToast('✅ Foto salva com sucesso!', 'sucesso');
         
@@ -1361,27 +1398,6 @@ async function enviarFotoParaR2(imagemDataURL) {
         console.error('❌ Erro ao enviar foto:', error);
         mostrarToast('❌ ' + error.message, 'erro');
     }
-}
-
-// ============================================
-// FECHAR CÂMERA
-// ============================================
-
-function fecharCamera() {
-    if (streamAtual) {
-        streamAtual.getTracks().forEach(track => track.stop());
-        streamAtual = null;
-    }
-    
-    const modal = document.getElementById('cameraModal');
-    if (modal) {
-        modal.classList.remove('active');
-        setTimeout(() => {
-            modal.remove();
-        }, 300);
-    }
-    
-    console.log('🔒 Câmera fechada');
 }
 
 // ============================================
@@ -2673,6 +2689,8 @@ window.atualizarFotoUI = atualizarFotoUI;
 window.capturarFoto = capturarFoto;
 window.capturarFotoFrame = capturarFotoFrame;
 window.fecharCamera = fecharCamera;
+window.trocarCamera = trocarCamera;
+window.excluirFoto = excluirFoto;
 window.enviarFotoParaR2 = enviarFotoParaR2;
 window.uploadParaR2 = uploadParaR2;
 window.marcarAtendidaProtheus = marcarAtendidaProtheus;
