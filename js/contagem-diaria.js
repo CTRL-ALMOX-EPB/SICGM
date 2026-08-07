@@ -28,58 +28,6 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CARREGAR POSIÇÃO DE ESTOQUE - DO R2
-    // ============================================
-    
-    async function carregarPosicaoEstoqueGlobal() {
-        try {
-            console.log(`🔄 Carregando posição de estoque para depósito ${depositoAtual}...`);
-            
-            const response = await fetch(`${R2_URL}/posicacao-de-estoque/posicao-de-estoque-${depositoAtual}.txt`);
-            
-            if (!response.ok) {
-                console.warn(`⚠️ Arquivo posicao-de-estoque-${depositoAtual}.txt não encontrado no R2`);
-                mostrarToast(`⚠️ Posição de estoque do depósito ${depositoAtual} não encontrada`, 'aviso');
-                return;
-            }
-            
-            const texto = await response.text();
-            const linhas = texto.trim().split('\n');
-            
-            posicaoEstoque = {};
-            
-            for (let i = 1; i < linhas.length; i++) {
-                const linha = linhas[i].trim();
-                if (!linha) continue;
-                
-                const partes = linha.split('\t');
-                
-                if (partes.length >= 6) {
-                    const codigo = partes[0].trim();
-                    const descricao = partes[2]?.trim() || '';
-                    const unidade = partes[3]?.trim() || 'UN';
-                    
-                    if (codigo && descricao) {
-                        posicaoEstoque[codigo] = {
-                            codigo: codigo,
-                            descricao: descricao,
-                            unidade: unidade,
-                            vlrult_cot: parseFloat(partes[4]?.trim().replace(',', '.') || '0') || 0,
-                            saldo_oper: parseFloat(partes[5]?.trim().replace(',', '.') || '0') || 0
-                        };
-                    }
-                }
-            }
-            
-            console.log(`📦 ${Object.keys(posicaoEstoque).length} materiais únicos carregados`);
-            
-        } catch (error) {
-            console.error('❌ Erro ao carregar posição de estoque:', error);
-            mostrarToast('❌ Erro ao carregar posição de estoque', 'erro');
-        }
-    }
-    
-    // ============================================
     // CATEGORIAS DE MATERIAIS
     // ============================================
         
@@ -632,6 +580,10 @@ if (document.getElementById('contagemForm')) {
         loading.style.display = 'none';
     }
     
+    // ============================================
+    // RENDERIZAR LISTA PERSONALIZADA - CORRIGIDO
+    // ============================================
+    
     function renderizarListaPersonalizada(itens, categoriaId, depositoId) {
         if (!itens || itens.length === 0) {
             return `<div style="text-align: center; padding: 30px; color: #A0AEC0;">
@@ -644,9 +596,25 @@ if (document.getElementById('contagemForm')) {
         let html = '';
         
         itens.forEach((codigo, index) => {
-            const material = buscarDadosCodigo(codigo);
-            const descricao = material ? material.descricao : 'Código não encontrado';
-            const und = material ? material.und : 'UN';
+            // CORREÇÃO: Busca primeiro no materiaisBanco, depois na posicaoEstoque
+            let material = buscarDadosCodigo(codigo);
+            
+            // Se não encontrar no materiais.txt, busca na posição de estoque
+            if (!material) {
+                material = posicaoEstoque[codigo];
+            }
+            
+            // Se ainda não encontrar, cria um placeholder
+            if (!material) {
+                material = {
+                    codigo: codigo,
+                    descricao: 'Código não encontrado',
+                    und: 'UN'
+                };
+            }
+            
+            const descricao = material.descricao || 'Código não encontrado';
+            const und = material.und || 'UN';
             const idUnico = `${categoriaId}-${index}`;
             
             html += `
@@ -3661,10 +3629,30 @@ if (document.getElementById('contagemForm')) {
         }
     }
     
+    // ============================================
+    // BUSCAR DADOS CÓDIGO - CORRIGIDO COM FALLBACK
+    // ============================================
+    
     function buscarDadosCodigo(codigo) {
-        if (!codigo || !materiaisBanco.length) return null;
-        const material = materiaisBanco.find(m => m.codigo === codigo.trim());
-        return material || null;
+        if (!codigo) return null;
+        
+        // Primeiro busca no materiaisBanco
+        if (materiaisBanco && materiaisBanco.length > 0) {
+            const material = materiaisBanco.find(m => m.codigo === codigo.trim());
+            if (material) return material;
+        }
+        
+        // Se não encontrar, busca na posição de estoque
+        if (posicaoEstoque && posicaoEstoque[codigo.trim()]) {
+            const est = posicaoEstoque[codigo.trim()];
+            return {
+                codigo: est.codigo,
+                descricao: est.descricao || codigo,
+                und: est.unidade || 'UN'
+            };
+        }
+        
+        return null;
     }
     
     // ============================================
@@ -4540,8 +4528,37 @@ if (document.getElementById('contagemForm')) {
                 }
             });
             
+            // CORREÇÃO: Busca o material na posição de estoque se não encontrar na categoria
             const materiaisDaCategoria = materiaisPorCategoria['miscelaneas'] || [];
-            const material = materiaisDaCategoria.find(m => m.codigo === codigo);
+            let material = materiaisDaCategoria.find(m => m.codigo === codigo);
+            
+            // Se não encontrar na categoria, busca na posição de estoque
+            if (!material && posicaoEstoque && posicaoEstoque[codigo]) {
+                const est = posicaoEstoque[codigo];
+                material = {
+                    codigo: est.codigo,
+                    descricao: est.descricao || codigo,
+                    und: est.unidade || 'UN'
+                };
+                console.log(`📦 Miscelânea ${codigo} - material encontrado na posição de estoque`);
+            }
+            
+            // Se ainda não encontrou, tenta buscar no materiaisBanco pelo código
+            if (!material) {
+                material = buscarDadosCodigo(codigo);
+            }
+            
+            // Se ainda não encontrou, cria um placeholder com os dados do item
+            if (!material) {
+                const descricaoInput = item.querySelector('.input-descricao');
+                const undInput = item.querySelector('.input-readonly:not(.input-qtd-anterior)');
+                material = {
+                    codigo: codigo,
+                    descricao: descricaoInput ? descricaoInput.value : codigo,
+                    und: undInput ? undInput.value : 'UN'
+                };
+                console.log(`📦 Miscelânea ${codigo} - usando dados do formulário como fallback`);
+            }
             
             if (material) {
                 const justificativaCampo = document.getElementById(`justificativa-${idUnico}`)?.value || '';
@@ -4566,7 +4583,7 @@ if (document.getElementById('contagemForm')) {
                 });
                 console.log(`✅ Miscelânea ${codigo} ADICIONADO para envio. QTD: ${qtdAtual}, Justificativa: ${obsFinal}`);
             } else {
-                console.warn(`⚠️ Miscelânea ${codigo} - material não encontrado na categoria`);
+                console.warn(`⚠️ Miscelânea ${codigo} - material não encontrado em lugar nenhum!`);
             }
         });
         
@@ -4953,6 +4970,58 @@ if (document.getElementById('contagemForm')) {
     });
     
     // ============================================
+    // FUNÇÃO PARA CARREGAR POSIÇÃO DE ESTOQUE - DO R2
+    // ============================================
+    
+    async function carregarPosicaoEstoqueGlobal() {
+        try {
+            console.log(`🔄 Carregando posição de estoque para depósito ${depositoAtual}...`);
+            
+            const response = await fetch(`${R2_URL}/posicacao-de-estoque/posicao-de-estoque-${depositoAtual}.txt`);
+            
+            if (!response.ok) {
+                console.warn(`⚠️ Arquivo posicao-de-estoque-${depositoAtual}.txt não encontrado no R2`);
+                mostrarToast(`⚠️ Posição de estoque do depósito ${depositoAtual} não encontrada`, 'aviso');
+                return;
+            }
+            
+            const texto = await response.text();
+            const linhas = texto.trim().split('\n');
+            
+            posicaoEstoque = {};
+            
+            for (let i = 1; i < linhas.length; i++) {
+                const linha = linhas[i].trim();
+                if (!linha) continue;
+                
+                const partes = linha.split('\t');
+                
+                if (partes.length >= 6) {
+                    const codigo = partes[0].trim();
+                    const descricao = partes[2]?.trim() || '';
+                    const unidade = partes[3]?.trim() || 'UN';
+                    
+                    if (codigo && descricao) {
+                        posicaoEstoque[codigo] = {
+                            codigo: codigo,
+                            descricao: descricao,
+                            unidade: unidade,
+                            vlrult_cot: parseFloat(partes[4]?.trim().replace(',', '.') || '0') || 0,
+                            saldo_oper: parseFloat(partes[5]?.trim().replace(',', '.') || '0') || 0
+                        };
+                    }
+                }
+            }
+            
+            console.log(`📦 ${Object.keys(posicaoEstoque).length} materiais únicos carregados`);
+            
+        } catch (error) {
+            console.error('❌ Erro ao carregar posição de estoque:', error);
+            mostrarToast('❌ Erro ao carregar posição de estoque', 'erro');
+        }
+    }
+    
+    // ============================================
     // EXPOR FUNÇÕES GLOBAIS
     // ============================================
     
@@ -4999,6 +5068,7 @@ if (document.getElementById('contagemForm')) {
     window.verificarStatusTrafoBusca = verificarStatusTrafoBusca;
     window.inserirMovimentacaoBuscaTrafo = inserirMovimentacaoBuscaTrafo;
     window.executarBaixa = executarBaixa;
+    window.buscarDadosCodigo = buscarDadosCodigo;
     
     // ============================================
     // INICIALIZAR
