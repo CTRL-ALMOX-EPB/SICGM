@@ -78,7 +78,7 @@ async function preCarregarDashboardsIndex() {
     try {
         // Verifica se a função de pré-carregamento está disponível
         if (typeof window.preCarregarDashboards === 'function') {
-            preloadText.textContent = 'Pré-carregando dados dos dashboards...';
+            preloadText.textContent = 'Pré-carregando dados...';
             if (preloadSpinner) preloadSpinner.style.display = 'inline-block';
             
             const startTime = Date.now();
@@ -108,28 +108,29 @@ async function preCarregarDashboardsIndex() {
                 });
                 
                 if (successCount === results.length) {
-                    preloadText.innerHTML = `<span class="check">✅</span> Todos os dashboards pré-carregados (${totalRegistros} registros em ${elapsed}ms)`;
+                    preloadText.innerHTML = `<span class="check">✅</span> ${totalRegistros} registros carregados (${elapsed}ms)`;
                     if (preloadSpinner) preloadSpinner.style.display = 'none';
-                    if (preloadStatus) preloadStatus.style.color = '#48bb78';
+                    if (preloadStatus) preloadStatus.style.borderColor = '#48BB78';
+                    preloadStatus.style.background = '#F0FFF4';
                 } else if (successCount > 0) {
-                    preloadText.innerHTML = `<span class="check">⚠️</span> ${successCount}/${results.length} dashboards pré-carregados (${elapsed}ms)`;
+                    preloadText.innerHTML = `<span class="check">⚠️</span> ${successCount}/${results.length} carregados (${elapsed}ms)`;
                     if (preloadSpinner) preloadSpinner.style.display = 'none';
-                    if (preloadStatus) preloadStatus.style.color = '#ed8936';
+                    if (preloadStatus) preloadStatus.style.borderColor = '#ED8936';
+                    preloadStatus.style.background = '#FFFAF0';
                 } else {
-                    preloadText.innerHTML = `<span class="error">❌</span> Erro ao pré-carregar dados (${elapsed}ms)`;
+                    preloadText.innerHTML = `<span class="error">❌</span> Erro ao carregar (${elapsed}ms)`;
                     if (preloadSpinner) preloadSpinner.style.display = 'none';
-                    if (preloadStatus) preloadStatus.style.color = '#fc8181';
+                    if (preloadStatus) preloadStatus.style.borderColor = '#FC8181';
+                    preloadStatus.style.background = '#FFF5F5';
                 }
             } else {
                 preloadText.textContent = '⚠️ Nenhum dado retornado';
                 if (preloadSpinner) preloadSpinner.style.display = 'none';
-                if (preloadStatus) preloadStatus.style.color = '#ed8936';
             }
         } else {
             console.warn('⚠️ Função preCarregarDashboards não disponível');
             preloadText.textContent = '⚠️ Carregamento automático indisponível';
             if (preloadSpinner) preloadSpinner.style.display = 'none';
-            if (preloadStatus) preloadStatus.style.color = '#ed8936';
             
             // Marca todos como disponíveis mesmo sem pré-carregamento
             Object.values(badges).forEach(badge => {
@@ -142,9 +143,12 @@ async function preCarregarDashboardsIndex() {
         
     } catch (error) {
         console.error('❌ Erro no pré-carregamento:', error);
-        preloadText.innerHTML = `<span class="error">❌</span> Erro: ${error.message || 'Desconhecido'}`;
+        preloadText.innerHTML = `<span class="error">❌</span> ${error.message || 'Erro desconhecido'}`;
         if (preloadSpinner) preloadSpinner.style.display = 'none';
-        if (preloadStatus) preloadStatus.style.color = '#fc8181';
+        if (preloadStatus) {
+            preloadStatus.style.borderColor = '#FC8181';
+            preloadStatus.style.background = '#FFF5F5';
+        }
         
         // Marca todos como disponíveis mesmo com erro
         Object.values(badges).forEach(badge => {

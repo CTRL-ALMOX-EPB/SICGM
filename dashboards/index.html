@@ -11,113 +11,112 @@
     <!-- CSS Específico do Index -->
     <link rel="stylesheet" href="../css/dashboards-index.css">
 </head>
-<body class="dashboards-index-body">
-    <!-- ============================================
-    HEADER SUPERIOR - LOGO + USUÁRIO
-    ============================================ -->
-    <header class="dashboards-top-header">
-        <div class="header-left">
-            <div class="logo-area">
-                <div class="logo">
-                    <img src="../assets/img/logo-control.png" alt="Control" onerror="this.style.display='none'; this.parentElement.textContent='C'">
-                </div>
-                <span class="logo-text">SICGM <span>| Dashboards</span></span>
-            </div>
-        </div>
-
-        <div class="user-info">
-            <div class="user-avatar" id="userAvatar">A</div>
-            <div class="user-details">
-                <span class="user-name" id="userName">Carregando...</span>
-                <span class="user-meta" id="userMatricula">Matrícula: ---</span>
-            </div>
-            <span class="user-perfil" id="userPerfil">GESTÃO</span>
-            <a href="../home-gestao.html" class="btn-home">
-                🏠 Home
-            </a>
-        </div>
-    </header>
-
-    <!-- ============================================
-    BANNER DA PÁGINA
-    ============================================ -->
-    <section class="dashboards-page-banner">
-        <div class="banner-content">
+<body>
+    <div class="dashboard-index-container">
+        <!-- ============================================
+        HEADER
+        ============================================ -->
+        <header class="dashboard-index-header">
             <h1>
                 <span class="icon">📊</span>
                 Dashboards SICGM
             </h1>
-            <p>Visualize e acompanhe os indicadores do sistema em tempo real</p>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">A</div>
+                <div class="user-details">
+                    <span class="user-name" id="userName">Carregando...</span>
+                    <span class="user-matricula" id="userMatricula">Matrícula: ---</span>
+                </div>
+                <span class="user-perfil" id="userPerfil">GESTÃO</span>
+                <a href="../home-gestao.html" class="btn-home">🏠 Home</a>
+            </div>
+        </header>
+
+        <!-- ============================================
+        BANNER
+        ============================================ -->
+        <section class="dashboard-index-banner">
+            <div class="banner-content">
+                <h2>📋 Visualize e acompanhe os indicadores</h2>
+                <p>Dashboards com análises em tempo real do sistema</p>
+            </div>
             <div class="preload-status" id="preloadStatus">
                 <span class="spinner-small" id="preloadSpinner"></span>
-                <span class="loading-text" id="preloadText">Preparando dados dos dashboards...</span>
+                <span class="loading-text" id="preloadText">Preparando dados...</span>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- ============================================
-    CARDS DOS DASHBOARDS
-    ============================================ -->
-    <div class="dashboards-container">
-        <div class="section-title">
-            📋 Dashboards Disponíveis
-            <span class="count" id="totalDashboards">5</span>
-        </div>
-        
-        <div class="dashboards-grid">
-            <!-- Dashboard 1 - Pendência de Requisição (Em produção) -->
-            <a href="#" class="dashboard-card-link" onclick="event.preventDefault(); alert('⏳ Dashboard em produção. Em breve disponível!')">
-                <div class="icon">📌</div>
-                <h3>Pendência de Requisição</h3>
-                <p>Acompanhamento de requisições pendentes</p>
-                <span class="badge em-breve">Em produção</span>
-            </a>
+        <!-- ============================================
+        CARDS DOS DASHBOARDS
+        ============================================ -->
+        <section class="dashboard-index-section">
+            <div class="section-header">
+                <h3>
+                    📋 Dashboards Disponíveis
+                    <span class="count" id="totalDashboards">5</span>
+                </h3>
+            </div>
             
-            <!-- Dashboard 2 - Aditivos Sistêmicos -->
-            <a href="aditivos-sistemicos.html" class="dashboard-card-link" id="linkSistemicos">
-                <div class="icon">📝</div>
-                <h3>Aditivos Sistêmicos</h3>
-                <p>Análise de itens aditivados, status e indicadores</p>
-                <span class="badge carregando" id="badgeSistemicos">⏳ Carregando...</span>
-            </a>
-            
-            <!-- Dashboard 3 - Aditivos Físicos -->
-            <a href="aditivos-fisicos.html" class="dashboard-card-link" id="linkFisicos">
-                <div class="icon">🔧</div>
-                <h3>Aditivos Físicos</h3>
-                <p>Análise de aplicação de aditivos por obra e encarregado</p>
-                <span class="badge carregando" id="badgeFisicos">⏳ Carregando...</span>
-            </a>
-            
-            <!-- Dashboard 4 - Pendência de Devolução -->
-            <a href="pendencia-devolucao.html" class="dashboard-card-link" id="linkDevolucao">
-                <div class="icon">📦</div>
-                <h3>Pendência de Devolução</h3>
-                <p>Acompanhamento de pendências por obra e encarregado</p>
-                <span class="badge carregando" id="badgeDevolucao">⏳ Carregando...</span>
-            </a>
-            
-            <!-- Dashboard 5 - Farol de Obras -->
-            <a href="farol-obras.html" class="dashboard-card-link" id="linkFarol">
-                <div class="icon">🚦</div>
-                <h3>Farol de Obras</h3>
-                <p>Visão geral dos indicadores das obras</p>
-                <span class="badge carregando" id="badgeFarol">⏳ Carregando...</span>
-            </a>
-        </div>
+            <div class="dashboards-grid">
+                <!-- Dashboard 1 - Pendência de Requisição (Em produção) -->
+                <a href="#" class="dashboard-card-link disabled" onclick="event.preventDefault(); alert('⏳ Dashboard em produção. Em breve disponível!')">
+                    <div class="icon">📌</div>
+                    <div class="card-content">
+                        <h4>Pendência de Requisição</h4>
+                        <p>Acompanhamento de requisições pendentes</p>
+                        <span class="badge em-breve">Em produção</span>
+                    </div>
+                </a>
+                
+                <!-- Dashboard 2 - Aditivos Sistêmicos -->
+                <a href="aditivos-sistemicos.html" class="dashboard-card-link" id="linkSistemicos">
+                    <div class="icon">📝</div>
+                    <div class="card-content">
+                        <h4>Aditivos Sistêmicos</h4>
+                        <p>Análise de itens aditivados, status e indicadores</p>
+                        <span class="badge carregando" id="badgeSistemicos">⏳ Carregando...</span>
+                    </div>
+                </a>
+                
+                <!-- Dashboard 3 - Aditivos Físicos -->
+                <a href="aditivos-fisicos.html" class="dashboard-card-link" id="linkFisicos">
+                    <div class="icon">🔧</div>
+                    <div class="card-content">
+                        <h4>Aditivos Físicos</h4>
+                        <p>Análise de aplicação de aditivos por obra e encarregado</p>
+                        <span class="badge carregando" id="badgeFisicos">⏳ Carregando...</span>
+                    </div>
+                </a>
+                
+                <!-- Dashboard 4 - Pendência de Devolução -->
+                <a href="pendencia-devolucao.html" class="dashboard-card-link" id="linkDevolucao">
+                    <div class="icon">📦</div>
+                    <div class="card-content">
+                        <h4>Pendência de Devolução</h4>
+                        <p>Acompanhamento de pendências por obra e encarregado</p>
+                        <span class="badge carregando" id="badgeDevolucao">⏳ Carregando...</span>
+                    </div>
+                </a>
+                
+                <!-- Dashboard 5 - Farol de Obras -->
+                <a href="farol-obras.html" class="dashboard-card-link" id="linkFarol">
+                    <div class="icon">🚦</div>
+                    <div class="card-content">
+                        <h4>Farol de Obras</h4>
+                        <p>Visão geral dos indicadores das obras</p>
+                        <span class="badge carregando" id="badgeFarol">⏳ Carregando...</span>
+                    </div>
+                </a>
+            </div>
+        </section>
     </div>
 
     <!-- ============================================
     SCRIPTS
     ============================================ -->
-    <!-- Scripts base do sistema -->
     <script src="../js/script.js"></script>
-    
-    <!-- Scripts dos dashboards -->
     <script src="../js/dashboards-common.js"></script>
     <script src="../js/dashboards-cache.js"></script>
-    
-    <!-- Script específico da página inicial -->
     <script src="../js/dashboards-index.js"></script>
 </body>
 </html>
