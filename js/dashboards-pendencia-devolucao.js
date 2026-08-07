@@ -1,6 +1,8 @@
 // ============================================
-// DASHBOARD PENDÊNCIA DE DEVOLUÇÃO
+// DASHBOARD PENDÊNCIA DE DEVOLUÇÃO (OTIMIZADO)
 // ============================================
+
+console.log('🚀 dashboards-pendencia-devolucao.js carregado!');
 
 let dadosCompletos = [];
 let dadosFiltrados = [];
@@ -11,34 +13,48 @@ let encarregadoSelecionado = null;
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
+    console.log('📋 DOM carregado, iniciando dashboard...');
+    
     const loadingOverlay = document.getElementById('loadingOverlay');
     const dashboardContent = document.getElementById('dashboardContent');
     
-    const sessao = getSessao();
-    if (!sessao) return;
+    if (!loadingOverlay || !dashboardContent) {
+        console.error('❌ Elementos não encontrados!');
+        return;
+    }
     
+    const sessao = getSessao();
+    if (!sessao) {
+        console.log('❌ Sessão inválida');
+        return;
+    }
+    
+    console.log('👤 Usuário:', sessao.nome, '- Perfil:', sessao.perfil);
+    
+    // Atualiza informações do usuário
     document.getElementById('userName').textContent = sessao.nome || 'Usuário';
     document.getElementById('userMatricula').textContent = `Matrícula: ${sessao.matricula || '---'}`;
     document.getElementById('userPerfil').textContent = sessao.perfil || 'GESTÃO';
     
     try {
-        // Busca todas as pendências de devolução
-        const response = await fetch(`${API_URL}/pendencia-devolucao?limit=1000`);
-        if (!response.ok) throw new Error('Erro ao buscar dados');
+        console.log('📡 Iniciando busca de dados...');
         
-        const data = await response.json();
-        dadosCompletos = data.data || [];
+        // Usa o cache para buscar todos os dados
+        const startTime = Date.now();
+        dadosCompletos = await buscarPendenciasDevolucao();
+        const elapsed = Date.now() - startTime;
         
-        console.log(`✅ ${dadosCompletos.length} pendências de devolução carregadas`);
+        console.log(`✅ ${dadosCompletos.length} pendências carregadas em ${elapsed}ms`);
         
         renderizarDashboard(dadosCompletos);
         
         loadingOverlay.classList.remove('active');
         dashboardContent.style.display = 'block';
+        console.log('✅ Dashboard renderizado com sucesso!');
         
     } catch (error) {
-        console.error('❌ Erro:', error);
-        mostrarToast('❌ Erro ao carregar dados', 'error');
+        console.error('❌ Erro ao carregar dados:', error);
+        mostrarToast(`❌ Erro ao carregar dados: ${error.message}`, 'error');
         loadingOverlay.classList.remove('active');
         dashboardContent.style.display = 'block';
     }
@@ -91,6 +107,8 @@ function renderizarKPIs(pendencias) {
 
 function renderizarEncarregados(pendencias) {
     const container = document.getElementById('encarregadoFilterList');
+    if (!container) return;
+    
     const encarregados = {};
     
     pendencias.forEach(p => {
@@ -171,7 +189,9 @@ function renderizarListaPendencias(pendencias) {
     const container = document.getElementById('pendenciaList');
     const countEl = document.getElementById('pendenciaCount');
     
-    countEl.textContent = `(${pendencias.length})`;
+    if (!container) return;
+    
+    if (countEl) countEl.textContent = `(${pendencias.length})`;
     
     if (pendencias.length === 0) {
         container.innerHTML = `
@@ -207,3 +227,5 @@ function renderizarListaPendencias(pendencias) {
 
 window.filtrarPorEncarregado = filtrarPorEncarregado;
 window.limparFiltroEncarregado = limparFiltroEncarregado;
+
+console.log('✅ dashboards-pendencia-devolucao.js inicializado!');

@@ -1,6 +1,8 @@
 // ============================================
-// DASHBOARD FAROL DE OBRAS
+// DASHBOARD FAROL DE OBRAS (OTIMIZADO)
 // ============================================
+
+console.log('🚀 dashboards-farol-obras.js carregado!');
 
 let dadosCompletos = [];
 
@@ -9,36 +11,64 @@ let dadosCompletos = [];
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
+    console.log('📋 DOM carregado, iniciando dashboard Farol de Obras...');
+    
     const loadingOverlay = document.getElementById('loadingOverlay');
     const dashboardContent = document.getElementById('dashboardContent');
     
+    if (!loadingOverlay || !dashboardContent) {
+        console.error('❌ Elementos não encontrados!');
+        return;
+    }
+    
     const sessao = getSessao();
-    if (!sessao) return;
+    if (!sessao) {
+        console.log('❌ Sessão inválida');
+        return;
+    }
+    
+    console.log('👤 Usuário:', sessao.nome, '- Perfil:', sessao.perfil);
     
     document.getElementById('userName').textContent = sessao.nome || 'Usuário';
     document.getElementById('userMatricula').textContent = `Matrícula: ${sessao.matricula || '---'}`;
     document.getElementById('userPerfil').textContent = sessao.perfil || 'GESTÃO';
     
     try {
-        // Busca todos os registros do farol
-        const response = await fetch(`${API_URL}/farol-obras?limit=1000`);
-        if (!response.ok) throw new Error('Erro ao buscar dados');
+        console.log('📡 Iniciando busca de dados...');
         
-        const data = await response.json();
-        dadosCompletos = data.data || [];
+        const startTime = Date.now();
+        dadosCompletos = await buscarFarolObrasCompleto();
+        const elapsed = Date.now() - startTime;
         
-        console.log(`✅ ${dadosCompletos.length} obras carregadas`);
+        console.log(`✅ ${dadosCompletos.length} obras carregadas em ${elapsed}ms`);
+        
+        if (dadosCompletos.length === 0) {
+            console.warn('⚠️ Nenhuma obra encontrada no farol');
+            mostrarToast('⚠️ Nenhuma obra encontrada no farol', 'warning');
+        }
         
         renderizarDashboard(dadosCompletos);
         
         loadingOverlay.classList.remove('active');
         dashboardContent.style.display = 'block';
+        console.log('✅ Dashboard renderizado com sucesso!');
         
     } catch (error) {
-        console.error('❌ Erro:', error);
-        mostrarToast('❌ Erro ao carregar dados', 'error');
+        console.error('❌ Erro ao carregar dados:', error);
+        mostrarToast(`❌ Erro ao carregar dados: ${error.message}`, 'error');
         loadingOverlay.classList.remove('active');
         dashboardContent.style.display = 'block';
+        
+        document.getElementById('obrasList').innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">❌</div>
+                <p>Erro ao carregar dados</p>
+                <p style="font-size: 12px; color: #a0aec0;">${error.message}</p>
+                <button onclick="location.reload()" style="margin-top: 10px; padding: 8px 20px; background: #4299e1; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    🔄 Tentar novamente
+                </button>
+            </div>
+        `;
     }
 });
 
@@ -47,6 +77,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 // ============================================
 
 function renderizarDashboard(obras) {
+    console.log(`📊 Renderizando farol com ${obras.length} obras...`);
     const ativas = obras.filter(o => o.status !== 'FINALIZADO');
     
     renderizarFarolCards(ativas);
@@ -58,13 +89,17 @@ function renderizarDashboard(obras) {
 // ============================================
 
 function renderizarFarolCards(obras) {
+    console.log('📊 Renderizando cards do farol...');
+    const container = document.getElementById('farolGrid');
+    if (!container) return;
+    
     const total = obras.length;
     const canceladas = obras.filter(o => o.cancelada === 'SIM').length;
     const comAditivo = obras.filter(o => o.aditivo === 'SIM').length;
     const foraProgramacao = obras.filter(o => o.obra_programada === 'NÃO').length;
     const devolvidas = obras.filter(o => o.devolvida === 'SIM').length;
+    const comSaida = obras.filter(o => o.obra_teve_saida === 'SIM').length;
     
-    // Contagem por encarregado
     const encarregados = {};
     obras.forEach(o => {
         const nome = o.encarregado || 'NÃO INFORMADO';
@@ -73,7 +108,7 @@ function renderizarFarolCards(obras) {
     });
     const totalEncarregados = Object.keys(encarregados).length;
     
-    document.getElementById('farolGrid').innerHTML = `
+    container.innerHTML = `
         <div class="farol-card azul">
             <div class="farol-icon">🏗️</div>
             <div class="farol-value">${total}</div>
@@ -99,6 +134,11 @@ function renderizarFarolCards(obras) {
             <div class="farol-value">${devolvidas}</div>
             <div class="farol-label">Obras Devolvidas</div>
         </div>
+        <div class="farol-card verde">
+            <div class="farol-icon">🚚</div>
+            <div class="farol-value">${comSaida}</div>
+            <div class="farol-label">Obras com Saída</div>
+        </div>
         <div class="farol-card azul">
             <div class="farol-icon">👤</div>
             <div class="farol-value">${totalEncarregados}</div>
@@ -113,6 +153,7 @@ function renderizarFarolCards(obras) {
 
 function renderizarListaObras(obras) {
     const container = document.getElementById('obrasList');
+    if (!container) return;
     
     if (obras.length === 0) {
         container.innerHTML = `
@@ -131,16 +172,20 @@ function renderizarListaObras(obras) {
         if (o.aditivo === 'SIM') badges.push('<span class="badge-farol com-aditivo">📝 Com Aditivo</span>');
         if (o.obra_programada === 'NÃO') badges.push('<span class="badge-farol fora-programacao">📅 Fora Programação</span>');
         if (o.devolvida === 'SIM') badges.push('<span class="badge-farol devolvida">📦 Devolvida</span>');
+        if (o.obra_teve_saida === 'SIM') badges.push('<span class="badge-farol com-saida">🚚 Com Saída</span>');
         if (badges.length === 0) badges.push('<span class="badge-farol normal">✅ Normal</span>');
+        
+        const encarregado = o.encarregado || 'NÃO INFORMADO';
+        const setor = o.setor || 'Sem setor';
         
         html += `
             <div class="obra-farol-item">
                 <div class="obra-info">
                     <span class="obra">${o.obra || 'SEM OBRA'}</span>
                     <span class="detalhes">
-                        👤 ${o.encarregado || 'NÃO INFORMADO'} | 
+                        👤 ${encarregado} | 
                         📅 ${formatarData(o.data_programacao)} | 
-                        ${o.setor || 'Sem setor'}
+                        📍 ${setor}
                     </span>
                 </div>
                 <div>
@@ -152,3 +197,9 @@ function renderizarListaObras(obras) {
     
     container.innerHTML = html;
 }
+
+// ============================================
+// EXPORTAR
+// ============================================
+
+console.log('✅ dashboards-farol-obras.js inicializado!');

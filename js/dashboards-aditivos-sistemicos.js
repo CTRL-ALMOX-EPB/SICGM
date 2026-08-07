@@ -1,6 +1,8 @@
 // ============================================
-// DASHBOARD ADITIVOS SISTÊMICOS
+// DASHBOARD ADITIVOS SISTÊMICOS (OTIMIZADO)
 // ============================================
+
+console.log('🚀 dashboards-aditivos-sistemicos.js carregado!');
 
 let dadosCompletos = [];
 let dadosFiltrados = [];
@@ -11,51 +13,57 @@ let itemSelecionado = null;
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
+    console.log('📋 DOM carregado, iniciando dashboard...');
+    
     const loadingOverlay = document.getElementById('loadingOverlay');
     const dashboardContent = document.getElementById('dashboardContent');
     
-    const sessao = getSessao();
-    if (!sessao) return;
+    if (!loadingOverlay || !dashboardContent) {
+        console.error('❌ Elementos não encontrados!');
+        return;
+    }
     
+    const sessao = getSessao();
+    if (!sessao) {
+        console.log('❌ Sessão inválida');
+        return;
+    }
+    
+    console.log('👤 Usuário:', sessao.nome, '- Perfil:', sessao.perfil);
+    
+    // Atualiza informações do usuário
     document.getElementById('userName').textContent = sessao.nome || 'Usuário';
     document.getElementById('userMatricula').textContent = `Matrícula: ${sessao.matricula || '---'}`;
     document.getElementById('userPerfil').textContent = sessao.perfil || 'GESTÃO';
     
     try {
-        // Busca todos os aditivos sistêmicos
-        const response = await fetch(`${API_URL}/aditivo-sistemico?limit=1000`);
-        if (!response.ok) throw new Error('Erro ao buscar dados');
+        console.log('📡 Iniciando busca de dados...');
         
-        const data = await response.json();
-        dadosCompletos = data.data || [];
+        // Usa o cache para buscar todos os dados de uma vez
+        const startTime = Date.now();
+        dadosCompletos = await buscarAditivosSistemicosCompleto();
+        const elapsed = Date.now() - startTime;
         
-        // Busca os itens de cada aditivo
-        let totalItens = 0;
-        for (const aditivo of dadosCompletos) {
-            try {
-                const itemResponse = await fetch(`${API_URL}/aditivo-sistemico/${aditivo.numero}`);
-                if (itemResponse.ok) {
-                    const itemData = await itemResponse.json();
-                    aditivo.itens = itemData.itens || [];
-                    totalItens += aditivo.itens.length;
-                } else {
-                    aditivo.itens = [];
-                }
-            } catch (e) {
-                aditivo.itens = [];
-            }
+        console.log(`✅ ${dadosCompletos.length} aditivos carregados em ${elapsed}ms`);
+        
+        // Verifica se tem dados
+        if (dadosCompletos.length === 0) {
+            console.warn('⚠️ Nenhum aditivo encontrado');
+            mostrarToast('⚠️ Nenhum aditivo encontrado no sistema', 'warning');
         }
         
-        console.log(`✅ ${dadosCompletos.length} aditivos, ${totalItens} itens carregados`);
-        
+        // Aplica filtros iniciais
+        console.log('🔄 Aplicando filtros iniciais...');
         aplicarFiltros();
         
+        // Mostra o conteúdo
         loadingOverlay.classList.remove('active');
         dashboardContent.style.display = 'block';
+        console.log('✅ Dashboard renderizado com sucesso!');
         
     } catch (error) {
-        console.error('❌ Erro:', error);
-        mostrarToast('❌ Erro ao carregar dados', 'error');
+        console.error('❌ Erro ao carregar dados:', error);
+        mostrarToast(`❌ Erro ao carregar dados: ${error.message}`, 'error');
         loadingOverlay.classList.remove('active');
         dashboardContent.style.display = 'block';
         
@@ -77,9 +85,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 // ============================================
 
 function aplicarFiltros() {
-    const dataInicio = document.getElementById('filterDataInicio').value;
-    const dataFim = document.getElementById('filterDataFim').value;
-    const statusFiltro = document.getElementById('filterStatus').value;
+    console.log('🔄 Aplicando filtros...');
+    const dataInicio = document.getElementById('filterDataInicio')?.value || '';
+    const dataFim = document.getElementById('filterDataFim')?.value || '';
+    const statusFiltro = document.getElementById('filterStatus')?.value || 'todos';
+    
+    console.log(`📅 Filtros: Início=${dataInicio}, Fim=${dataFim}, Status=${statusFiltro}`);
     
     let filtrados = [...dadosCompletos];
     
@@ -91,6 +102,7 @@ function aplicarFiltros() {
             if (dataFim && dataItem > new Date(dataFim)) return false;
             return true;
         });
+        console.log(`📅 Após filtro de período: ${filtrados.length} aditivos`);
     }
     
     // Filtro por status
@@ -100,16 +112,22 @@ function aplicarFiltros() {
             itens: (aditivo.itens || []).filter(item => 
                 (item.status_aditivo || 'ANALISE') === statusFiltro
             )
-        })).filter(aditivo => aditivo.itens.length > 0);
+        })).filter(aditivo => aditivo.itens && aditivo.itens.length > 0);
+        console.log(`📊 Após filtro de status: ${filtrados.length} aditivos`);
     }
     
     dadosFiltrados = filtrados;
-    document.getElementById('totalRegistros').textContent = `${filtrados.length} aditivos encontrados`;
+    
+    const totalRegistros = document.getElementById('totalRegistros');
+    if (totalRegistros) {
+        totalRegistros.textContent = `${filtrados.length} aditivos encontrados`;
+    }
     
     renderizarDashboard(filtrados);
 }
 
 function limparFiltros() {
+    console.log('🧹 Limpando filtros...');
     document.getElementById('filterDataInicio').value = '';
     document.getElementById('filterDataFim').value = '';
     document.getElementById('filterStatus').value = 'todos';
@@ -121,7 +139,22 @@ function limparFiltros() {
 // ============================================
 
 function renderizarDashboard(aditivos) {
+    console.log('📊 Renderizando dashboard com', aditivos.length, 'aditivos...');
+    
+    if (!aditivos || aditivos.length === 0) {
+        console.log('📭 Nenhum aditivo para renderizar');
+        document.getElementById('itemList').innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">📭</div>
+                <p>Nenhum aditivo encontrado</p>
+                <p style="font-size: 12px; color: #a0aec0;">Tente ajustar os filtros</p>
+            </div>
+        `;
+        return;
+    }
+    
     const itensAgrupados = agruparItensPorCodigo(aditivos);
+    console.log(`📦 ${itensAgrupados.length} grupos de itens criados`);
     
     renderizarKPIs(itensAgrupados);
     renderizarListaItens(itensAgrupados);
@@ -131,13 +164,6 @@ function renderizarDashboard(aditivos) {
         const encontrado = itensAgrupados.find(i => i.codigo === itemSelecionado.codigo);
         if (encontrado) {
             renderizarDetalhes(encontrado);
-        } else {
-            document.getElementById('itemDetails').innerHTML = `
-                <div class="empty-state-dashboard">
-                    <div class="icon">👆</div>
-                    <p>Item não encontrado nos filtros atuais</p>
-                </div>
-            `;
         }
     }
 }
@@ -147,6 +173,10 @@ function renderizarDashboard(aditivos) {
 // ============================================
 
 function renderizarKPIs(itensAgrupados) {
+    console.log('📊 Renderizando KPIs...');
+    const container = document.getElementById('kpiGrid');
+    if (!container) return;
+    
     const totalItens = itensAgrupados.reduce((sum, item) => sum + item.total, 0);
     const totalObras = new Set();
     const totalSaidas = new Set();
@@ -163,7 +193,7 @@ function renderizarKPIs(itensAgrupados) {
         });
     });
     
-    document.getElementById('kpiGrid').innerHTML = `
+    container.innerHTML = `
         <div class="kpi-card">
             <div class="kpi-icon">📦</div>
             <div class="kpi-value">${totalItens}</div>
@@ -202,7 +232,9 @@ function renderizarKPIs(itensAgrupados) {
 // ============================================
 
 function renderizarListaItens(itensAgrupados) {
+    console.log('📋 Renderizando lista de itens...');
     const container = document.getElementById('itemList');
+    if (!container) return;
     
     if (!itensAgrupados || itensAgrupados.length === 0) {
         container.innerHTML = `
@@ -235,6 +267,7 @@ function renderizarListaItens(itensAgrupados) {
 // ============================================
 
 function selecionarItem(codigo) {
+    console.log(`🔍 Selecionando item: ${codigo}`);
     const itensAgrupados = agruparItensPorCodigo(dadosFiltrados);
     const item = itensAgrupados.find(i => i.codigo === codigo);
     
@@ -246,7 +279,9 @@ function selecionarItem(codigo) {
 }
 
 function renderizarDetalhes(item) {
+    console.log(`📋 Renderizando detalhes do item: ${item.codigo}`);
     const container = document.getElementById('itemDetails');
+    if (!container) return;
     
     if (!item) {
         container.innerHTML = `
@@ -258,7 +293,6 @@ function renderizarDetalhes(item) {
         return;
     }
     
-    // Conta status
     const statusMap = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     item.itens.forEach(i => {
         const s = i.status || 'ANALISE';
@@ -287,7 +321,6 @@ function renderizarDetalhes(item) {
         </div>
     `;
     
-    // Obras
     if (item.obras.length > 0) {
         html += `<div class="detail-section-title">🏗️ Obras:</div>
         <div class="item-detail-obras">`;
@@ -303,7 +336,6 @@ function renderizarDetalhes(item) {
         html += `</div>`;
     }
     
-    // Saídas
     if (item.saidas.length > 0) {
         html += `<div class="detail-section-title">🚚 Saídas:</div>
         <div class="item-detail-obras">`;
@@ -337,7 +369,8 @@ function getStatusBadge(status) {
 // ============================================
 
 function renderizarGraficos(itensAgrupados) {
-    // Gráfico de quantidade por status
+    console.log('📊 Renderizando gráficos...');
+    
     const statusCount = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     itensAgrupados.forEach(item => {
         Object.keys(statusCount).forEach(status => {
@@ -361,6 +394,7 @@ function renderizarGraficos(itensAgrupados) {
         'S/ SOLICITAÇÃO': 'bar-s-solicitacao'
     };
     
+    // Gráfico de quantidade
     let htmlQtd = '';
     Object.keys(statusCount).forEach(status => {
         const value = statusCount[status];
@@ -373,15 +407,14 @@ function renderizarGraficos(itensAgrupados) {
         `;
     });
     
-    document.getElementById('statusChart').innerHTML = htmlQtd;
+    const statusChart = document.getElementById('statusChart');
+    if (statusChart) statusChart.innerHTML = htmlQtd;
     
-    // Gráfico de valores (simulado - usando quantidade como proxy)
-    // Como não temos valores reais, vamos usar a quantidade como indicador
+    // Gráfico de valores (simulado)
     const valorMap = {};
     itensAgrupados.forEach(item => {
         Object.keys(statusCount).forEach(status => {
             if (!valorMap[status]) valorMap[status] = 0;
-            // Simula valor baseado na quantidade
             valorMap[status] += (item.statusCount[status] || 0) * 1.5;
         });
     });
@@ -399,7 +432,8 @@ function renderizarGraficos(itensAgrupados) {
         `;
     });
     
-    document.getElementById('valorChart').innerHTML = htmlValor;
+    const valorChart = document.getElementById('valorChart');
+    if (valorChart) valorChart.innerHTML = htmlValor;
 }
 
 // ============================================
@@ -410,3 +444,5 @@ window.aplicarFiltros = aplicarFiltros;
 window.limparFiltros = limparFiltros;
 window.selecionarItem = selecionarItem;
 window.renderizarDashboard = renderizarDashboard;
+
+console.log('✅ dashboards-aditivos-sistemicos.js inicializado!');

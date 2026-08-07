@@ -1,6 +1,8 @@
 // ============================================
-// DASHBOARD ADITIVOS FÍSICOS
+// DASHBOARD ADITIVOS FÍSICOS (OTIMIZADO)
 // ============================================
+
+console.log('🚀 dashboards-aditivos-fisicos.js carregado!');
 
 let dadosCompletos = [];
 let dadosFiltrados = [];
@@ -11,51 +13,64 @@ let itemSelecionado = null;
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
+    console.log('📋 DOM carregado, iniciando dashboard Aditivos Físicos...');
+    
     const loadingOverlay = document.getElementById('loadingOverlay');
     const dashboardContent = document.getElementById('dashboardContent');
     
+    if (!loadingOverlay || !dashboardContent) {
+        console.error('❌ Elementos não encontrados!');
+        return;
+    }
+    
     const sessao = getSessao();
-    if (!sessao) return;
+    if (!sessao) {
+        console.log('❌ Sessão inválida');
+        return;
+    }
+    
+    console.log('👤 Usuário:', sessao.nome, '- Perfil:', sessao.perfil);
     
     document.getElementById('userName').textContent = sessao.nome || 'Usuário';
     document.getElementById('userMatricula').textContent = `Matrícula: ${sessao.matricula || '---'}`;
     document.getElementById('userPerfil').textContent = sessao.perfil || 'GESTÃO';
     
     try {
-        // Busca todos os aditivos físicos
-        const response = await fetch(`${API_URL}/aditivo-fisico?limit=1000`);
-        if (!response.ok) throw new Error('Erro ao buscar dados');
+        console.log('📡 Iniciando busca de dados...');
         
-        const data = await response.json();
-        dadosCompletos = data.data || [];
+        const startTime = Date.now();
+        dadosCompletos = await buscarAditivosFisicosCompleto();
+        const elapsed = Date.now() - startTime;
         
-        // Busca os itens de cada aditivo
-        for (const aditivo of dadosCompletos) {
-            try {
-                const itemResponse = await fetch(`${API_URL}/aditivo-fisico/${aditivo.numero}`);
-                if (itemResponse.ok) {
-                    const itemData = await itemResponse.json();
-                    aditivo.itens = itemData.itens || [];
-                } else {
-                    aditivo.itens = [];
-                }
-            } catch (e) {
-                aditivo.itens = [];
-            }
+        console.log(`✅ ${dadosCompletos.length} aditivos físicos carregados em ${elapsed}ms`);
+        
+        if (dadosCompletos.length === 0) {
+            console.warn('⚠️ Nenhum aditivo físico encontrado');
+            mostrarToast('⚠️ Nenhum aditivo físico encontrado no sistema', 'warning');
         }
-        
-        console.log(`✅ ${dadosCompletos.length} aditivos físicos carregados`);
         
         aplicarFiltros();
         
         loadingOverlay.classList.remove('active');
         dashboardContent.style.display = 'block';
+        console.log('✅ Dashboard renderizado com sucesso!');
         
     } catch (error) {
-        console.error('❌ Erro:', error);
-        mostrarToast('❌ Erro ao carregar dados', 'error');
+        console.error('❌ Erro ao carregar dados:', error);
+        mostrarToast(`❌ Erro ao carregar dados: ${error.message}`, 'error');
         loadingOverlay.classList.remove('active');
         dashboardContent.style.display = 'block';
+        
+        document.getElementById('itemList').innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">❌</div>
+                <p>Erro ao carregar dados</p>
+                <p style="font-size: 12px; color: #a0aec0;">${error.message}</p>
+                <button onclick="location.reload()" style="margin-top: 10px; padding: 8px 20px; background: #4299e1; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    🔄 Tentar novamente
+                </button>
+            </div>
+        `;
     }
 });
 
@@ -64,9 +79,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 // ============================================
 
 function aplicarFiltros() {
-    const dataInicio = document.getElementById('filterDataInicio').value;
-    const dataFim = document.getElementById('filterDataFim').value;
-    const filtroAplicacao = document.getElementById('filterAplicacao').value;
+    console.log('🔄 Aplicando filtros...');
+    const dataInicio = document.getElementById('filterDataInicio')?.value || '';
+    const dataFim = document.getElementById('filterDataFim')?.value || '';
+    const filtroAplicacao = document.getElementById('filterAplicacao')?.value || 'todos';
+    
+    console.log(`📅 Filtros: Início=${dataInicio}, Fim=${dataFim}, Aplicação=${filtroAplicacao}`);
     
     let filtrados = [...dadosCompletos];
     
@@ -77,6 +95,7 @@ function aplicarFiltros() {
             if (dataFim && dataItem > new Date(dataFim)) return false;
             return true;
         });
+        console.log(`📅 Após filtro de período: ${filtrados.length} aditivos`);
     }
     
     if (filtroAplicacao !== 'todos') {
@@ -85,16 +104,22 @@ function aplicarFiltros() {
             itens: (aditivo.itens || []).filter(item => 
                 (item.aplicado || 'PENDENTE') === filtroAplicacao
             )
-        })).filter(aditivo => aditivo.itens.length > 0);
+        })).filter(aditivo => aditivo.itens && aditivo.itens.length > 0);
+        console.log(`📊 Após filtro de aplicação: ${filtrados.length} aditivos`);
     }
     
     dadosFiltrados = filtrados;
-    document.getElementById('totalRegistros').textContent = `${filtrados.length} aditivos encontrados`;
+    
+    const totalRegistros = document.getElementById('totalRegistros');
+    if (totalRegistros) {
+        totalRegistros.textContent = `${filtrados.length} aditivos encontrados`;
+    }
     
     renderizarDashboard(filtrados);
 }
 
 function limparFiltros() {
+    console.log('🧹 Limpando filtros...');
     document.getElementById('filterDataInicio').value = '';
     document.getElementById('filterDataFim').value = '';
     document.getElementById('filterAplicacao').value = 'todos';
@@ -106,10 +131,14 @@ function limparFiltros() {
 // ============================================
 
 function agruparItensFisicos(controles) {
+    console.log(`📦 Agrupando itens físicos de ${controles.length} controles...`);
     const grupos = {};
+    let totalItens = 0;
     
     controles.forEach(controle => {
         const itens = controle.itens || [];
+        totalItens += itens.length;
+        
         itens.forEach(item => {
             const codigo = item.codigo || 'SEM_CODIGO';
             const descricao = item.descricao || 'Sem descrição';
@@ -170,7 +199,9 @@ function agruparItensFisicos(controles) {
         });
     });
     
-    return Object.values(grupos).sort((a, b) => b.total - a.total);
+    const resultado = Object.values(grupos).sort((a, b) => b.total - a.total);
+    console.log(`✅ ${resultado.length} grupos de itens criados a partir de ${totalItens} itens`);
+    return resultado;
 }
 
 // ============================================
@@ -178,7 +209,20 @@ function agruparItensFisicos(controles) {
 // ============================================
 
 function renderizarDashboard(aditivos) {
+    if (!aditivos || aditivos.length === 0) {
+        console.log('📭 Nenhum aditivo para renderizar');
+        document.getElementById('itemList').innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">📭</div>
+                <p>Nenhum aditivo físico encontrado</p>
+                <p style="font-size: 12px; color: #a0aec0;">Tente ajustar os filtros</p>
+            </div>
+        `;
+        return;
+    }
+    
     const itensAgrupados = agruparItensFisicos(aditivos);
+    console.log(`📦 ${itensAgrupados.length} grupos de itens criados`);
     
     renderizarKPIs(itensAgrupados);
     renderizarListaItens(itensAgrupados);
@@ -198,6 +242,10 @@ function renderizarDashboard(aditivos) {
 // ============================================
 
 function renderizarKPIs(itensAgrupados) {
+    console.log('📊 Renderizando KPIs...');
+    const container = document.getElementById('kpiGrid');
+    if (!container) return;
+    
     const totalItens = itensAgrupados.reduce((sum, item) => sum + item.total, 0);
     const totalObras = new Set();
     const totalEncarregados = new Set();
@@ -217,7 +265,7 @@ function renderizarKPIs(itensAgrupados) {
         });
     });
     
-    document.getElementById('kpiGrid').innerHTML = `
+    container.innerHTML = `
         <div class="kpi-card">
             <div class="kpi-icon">🔧</div>
             <div class="kpi-value">${totalItens}</div>
@@ -257,6 +305,7 @@ function renderizarKPIs(itensAgrupados) {
 
 function renderizarListaItens(itensAgrupados) {
     const container = document.getElementById('itemList');
+    if (!container) return;
     
     if (!itensAgrupados || itensAgrupados.length === 0) {
         container.innerHTML = `
@@ -288,6 +337,7 @@ function renderizarListaItens(itensAgrupados) {
 // ============================================
 
 function selecionarItem(codigo) {
+    console.log(`🔍 Selecionando item: ${codigo}`);
     const itensAgrupados = agruparItensFisicos(dadosFiltrados);
     const item = itensAgrupados.find(i => i.codigo === codigo);
     
@@ -300,6 +350,7 @@ function selecionarItem(codigo) {
 
 function renderizarDetalhes(item) {
     const container = document.getElementById('itemDetails');
+    if (!container) return;
     
     if (!item) {
         container.innerHTML = `
@@ -389,6 +440,8 @@ function getAplicacaoBadge(status) {
 // ============================================
 
 function renderizarGraficos(itensAgrupados) {
+    console.log('📊 Renderizando gráficos...');
+    
     const aplicacaoCount = { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 };
     itensAgrupados.forEach(item => {
         Object.keys(aplicacaoCount).forEach(key => {
@@ -424,7 +477,8 @@ function renderizarGraficos(itensAgrupados) {
         `;
     });
     
-    document.getElementById('aplicacaoChart').innerHTML = html;
+    const chartContainer = document.getElementById('aplicacaoChart');
+    if (chartContainer) chartContainer.innerHTML = html;
 }
 
 // ============================================
@@ -433,6 +487,8 @@ function renderizarGraficos(itensAgrupados) {
 
 function renderizarEncarregados(aditivos) {
     const container = document.getElementById('encarregadoList');
+    if (!container) return;
+    
     const encarregados = {};
     
     aditivos.forEach(aditivo => {

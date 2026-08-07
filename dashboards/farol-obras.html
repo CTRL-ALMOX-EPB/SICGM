@@ -34,7 +34,10 @@
 
         <!-- Farol Cards -->
         <div class="farol-grid" id="farolGrid">
-            <!-- Renderizado via JavaScript -->
+            <div class="loading-dashboard" style="min-height: 100px; grid-column: 1 / -1;">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px;">Carregando indicadores...</p>
+            </div>
         </div>
 
         <!-- Tabela de Obras -->
@@ -51,6 +54,7 @@
 
     <script src="../js/script.js"></script>
     <script src="../js/dashboards-common.js"></script>
+    <script src="../js/dashboards-cache.js"></script>
     <script src="../js/dashboards-farol-obras.js"></script>
 </body>
 </html>

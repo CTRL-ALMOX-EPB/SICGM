@@ -33,7 +33,11 @@
         </div>
 
         <!-- KPIs -->
-        <div class="kpi-grid" id="kpiGrid"></div>
+        <div class="kpi-grid" id="kpiGrid">
+            <div class="loading-dashboard" style="min-height: 60px;">
+                <div class="spinner"></div>
+            </div>
+        </div>
 
         <!-- Conteúdo Principal -->
         <div class="dashboard-main">
@@ -43,6 +47,7 @@
                     <div id="encarregadoFilterList" class="encarregado-filter-list">
                         <div class="loading-dashboard" style="min-height: 100px;">
                             <div class="spinner"></div>
+                            <p style="margin-top: 10px;">Carregando encarregados...</p>
                         </div>
                     </div>
                     <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center;">
@@ -69,6 +74,7 @@
 
     <script src="../js/script.js"></script>
     <script src="../js/dashboards-common.js"></script>
+    <script src="../js/dashboards-cache.js"></script>
     <script src="../js/dashboards-pendencia-devolucao.js"></script>
 </body>
 </html>

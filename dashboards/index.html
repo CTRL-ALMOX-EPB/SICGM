@@ -76,6 +76,11 @@
             color: #975a16;
         }
         
+        .dashboard-card-link .badge.carregando {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
         .page-header {
             background: linear-gradient(135deg, #1a202c, #2d3748);
             color: white;
@@ -118,6 +123,33 @@
             box-shadow: 0 6px 20px rgba(66, 153, 225, 0.5);
         }
         
+        .preload-status {
+            text-align: center;
+            padding: 10px;
+            font-size: 13px;
+            color: #718096;
+        }
+        
+        .preload-status .loading-text {
+            display: inline-block;
+        }
+        
+        .preload-status .spinner-small {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e2e8f0;
+            border-top-color: #4299e1;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
         @media (max-width: 768px) {
             .dashboards-grid {
                 grid-template-columns: 1fr;
@@ -130,9 +162,13 @@
     <div class="page-header">
         <h1>📊 Dashboards SICGM</h1>
         <p>Visualize e acompanhe os indicadores do sistema</p>
+        <div class="preload-status" id="preloadStatus">
+            <span class="spinner-small" id="preloadSpinner"></span>
+            <span class="loading-text" id="preloadText">Carregando dados dos dashboards...</span>
+        </div>
     </div>
     
-    <div class="dashboards-grid">
+    <div class="dashboards-grid" id="dashboardsGrid">
         <!-- Dashboard 1 - Pendência de Requisição (Em produção) -->
         <a href="#" class="dashboard-card-link" onclick="event.preventDefault(); alert('⏳ Dashboard em produção. Em breve disponível!')">
             <div class="icon">📌</div>
@@ -142,40 +178,127 @@
         </a>
         
         <!-- Dashboard 2 - Aditivos Sistêmicos -->
-        <a href="aditivos-sistemicos.html" class="dashboard-card-link">
+        <a href="aditivos-sistemicos.html" class="dashboard-card-link" id="linkSistemicos">
             <div class="icon">📝</div>
             <h3>Aditivos Sistêmicos</h3>
             <p>Análise de itens aditivados, status e indicadores</p>
-            <span class="badge disponivel">✓ Disponível</span>
+            <span class="badge carregando" id="badgeSistemicos">🔄 Carregando...</span>
         </a>
         
         <!-- Dashboard 3 - Aditivos Físicos -->
-        <a href="aditivos-fisicos.html" class="dashboard-card-link">
+        <a href="aditivos-fisicos.html" class="dashboard-card-link" id="linkFisicos">
             <div class="icon">🔧</div>
             <h3>Aditivos Físicos</h3>
             <p>Análise de aplicação de aditivos por obra e encarregado</p>
-            <span class="badge disponivel">✓ Disponível</span>
+            <span class="badge carregando" id="badgeFisicos">🔄 Carregando...</span>
         </a>
         
         <!-- Dashboard 4 - Pendência de Devolução -->
-        <a href="pendencia-devolucao.html" class="dashboard-card-link">
+        <a href="pendencia-devolucao.html" class="dashboard-card-link" id="linkDevolucao">
             <div class="icon">📦</div>
             <h3>Pendência de Devolução</h3>
             <p>Acompanhamento de pendências por obra e encarregado</p>
-            <span class="badge disponivel">✓ Disponível</span>
+            <span class="badge carregando" id="badgeDevolucao">🔄 Carregando...</span>
         </a>
         
         <!-- Dashboard 5 - Farol de Obras -->
-        <a href="farol-obras.html" class="dashboard-card-link">
+        <a href="farol-obras.html" class="dashboard-card-link" id="linkFarol">
             <div class="icon">🚦</div>
             <h3>Farol de Obras</h3>
             <p>Visão geral dos indicadores das obras</p>
-            <span class="badge disponivel">✓ Disponível</span>
+            <span class="badge carregando" id="badgeFarol">🔄 Carregando...</span>
         </a>
     </div>
     
     <a href="../home-gestao.html" class="btn-voltar">
         🏠 Voltar para Home
     </a>
+
+    <script>
+        // ============================================
+        // PRÉ-CARREGAMENTO DOS DASHBOARDS
+        // ============================================
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 Iniciando pré-carregamento dos dashboards...');
+            
+            const preloadText = document.getElementById('preloadText');
+            const preloadSpinner = document.getElementById('preloadSpinner');
+            const badges = {
+                sistemicos: document.getElementById('badgeSistemicos'),
+                fisicos: document.getElementById('badgeFisicos'),
+                devolucao: document.getElementById('badgeDevolucao'),
+                farol: document.getElementById('badgeFarol')
+            };
+            
+            try {
+                // Carrega os scripts de cache
+                const cacheScript = document.createElement('script');
+                cacheScript.src = '../js/dashboards-cache.js';
+                document.head.appendChild(cacheScript);
+                
+                // Aguarda o script carregar
+                await new Promise(resolve => {
+                    cacheScript.onload = resolve;
+                    cacheScript.onerror = resolve;
+                    setTimeout(resolve, 3000);
+                });
+                
+                // Verifica se a função de pré-carregamento está disponível
+                if (typeof preCarregarDashboards === 'function') {
+                    preloadText.textContent = 'Pré-carregando dados dos dashboards...';
+                    
+                    const results = await preCarregarDashboards();
+                    
+                    if (results) {
+                        const names = ['Aditivos Sistêmicos', 'Aditivos Físicos', 'Farol de Obras', 'Pendências Devolução'];
+                        const badgeKeys = ['sistemicos', 'fisicos', 'farol', 'devolucao'];
+                        
+                        results.forEach((result, index) => {
+                            const badge = badges[badgeKeys[index]];
+                            if (badge) {
+                                if (result.status === 'fulfilled') {
+                                    const count = result.value?.length || 0;
+                                    badge.textContent = `✓ ${count} registros`;
+                                    badge.className = 'badge disponivel';
+                                } else {
+                                    badge.textContent = '⚠️ Erro';
+                                    badge.className = 'badge em-breve';
+                                }
+                            }
+                        });
+                        
+                        preloadText.textContent = '✅ Dados pré-carregados com sucesso!';
+                        preloadSpinner.style.display = 'none';
+                    }
+                } else {
+                    console.warn('⚠️ Função preCarregarDashboards não disponível');
+                    preloadText.textContent = '⚠️ Carregamento automático indisponível';
+                    preloadSpinner.style.display = 'none';
+                    
+                    // Marca todos como disponíveis mesmo sem pré-carregamento
+                    Object.values(badges).forEach(badge => {
+                        if (badge) {
+                            badge.textContent = '✓ Disponível';
+                            badge.className = 'badge disponivel';
+                        }
+                    });
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro no pré-carregamento:', error);
+                preloadText.textContent = '⚠️ Erro no pré-carregamento';
+                preloadSpinner.style.display = 'none';
+                
+                // Marca todos como disponíveis mesmo com erro
+                Object.values(badges).forEach(badge => {
+                    if (badge) {
+                        badge.textContent = '✓ Disponível';
+                        badge.className = 'badge disponivel';
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>

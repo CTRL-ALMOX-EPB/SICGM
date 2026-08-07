@@ -56,7 +56,11 @@
         </div>
 
         <!-- KPIs -->
-        <div class="kpi-grid" id="kpiGrid"></div>
+        <div class="kpi-grid" id="kpiGrid">
+            <div class="loading-dashboard" style="min-height: 60px;">
+                <div class="spinner"></div>
+            </div>
+        </div>
 
         <!-- Conteúdo Principal -->
         <div class="dashboard-main">
@@ -89,18 +93,27 @@
         <div class="dashboard-charts">
             <div class="dashboard-card">
                 <h3>📊 Quantidade de Itens por Status</h3>
-                <div id="statusChart" class="chart-container"></div>
+                <div id="statusChart" class="chart-container">
+                    <div class="loading-dashboard" style="min-height: 100px;">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="dashboard-card">
                 <h3>💰 Valores por Status</h3>
-                <div id="valorChart" class="chart-container"></div>
+                <div id="valorChart" class="chart-container">
+                    <div class="loading-dashboard" style="min-height: 100px;">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="../js/script.js"></script>
     <script src="../js/dashboards-common.js"></script>
+    <script src="../js/dashboards-cache.js"></script>
     <script src="../js/dashboards-aditivos-sistemicos.js"></script>
 </body>
 </html>
