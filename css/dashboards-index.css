@@ -8,16 +8,62 @@
     padding: 20px;
 }
 
-/* ===== HEADER ===== */
+/* ============================================ */
+/* LOADING OVERLAY                              */
+/* ============================================ */
+
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.loading-overlay.active {
+    display: flex;
+}
+
+.loading-overlay .spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #ED8936;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+.loading-overlay .loading-text {
+    margin-top: 15px;
+    color: #4A5568;
+    font-weight: 500;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ============================================ */
+/* HEADER                                       */
+/* ============================================ */
+
 .dashboard-index-header {
     background: white;
     padding: 20px 30px;
     border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 30px;
+    min-height: 80px;
 }
 
 .dashboard-index-header h1 {
@@ -26,6 +72,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    margin: 0;
 }
 
 .dashboard-index-header h1 .icon {
@@ -36,24 +83,13 @@
     display: flex;
     align-items: center;
     gap: 20px;
-}
-
-.dashboard-index-header .user-info .user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #ED8936, #DD6B20);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 18px;
+    padding: 8px 0;
 }
 
 .dashboard-index-header .user-info .user-details {
     display: flex;
     flex-direction: column;
+    min-width: 120px;
 }
 
 .dashboard-index-header .user-info .user-name {
@@ -76,6 +112,8 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    min-width: 60px;
+    text-align: center;
 }
 
 .dashboard-index-header .btn-home {
@@ -92,6 +130,8 @@
     align-items: center;
     gap: 8px;
     font-size: 14px;
+    min-width: 80px;
+    justify-content: center;
 }
 
 .dashboard-index-header .btn-home:hover {
@@ -100,12 +140,15 @@
     box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
 }
 
-/* ===== BANNER ===== */
+/* ============================================ */
+/* BANNER                                       */
+/* ============================================ */
+
 .dashboard-index-banner {
     background: white;
     padding: 25px 30px;
     border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin-bottom: 30px;
     border-left: 4px solid #ED8936;
     display: flex;
@@ -113,6 +156,7 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 15px;
+    min-height: 80px;
 }
 
 .dashboard-index-banner .banner-content h2 {
@@ -137,6 +181,8 @@
     border: 1px solid #E2E8F0;
     font-size: 13px;
     color: #4A5568;
+    min-height: 40px;
+    transition: all 0.3s ease;
 }
 
 .dashboard-index-banner .preload-status .spinner-small {
@@ -160,15 +206,14 @@
     font-size: 16px;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
+/* ============================================ */
+/* SEÇÃO DE CARDS                               */
+/* ============================================ */
 
-/* ===== SEÇÃO DE CARDS ===== */
 .dashboard-index-section {
     background: white;
     border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     padding: 25px 30px;
 }
 
@@ -199,7 +244,10 @@
     font-weight: 500;
 }
 
-/* ===== GRID DE CARDS ===== */
+/* ============================================ */
+/* GRID DE CARDS                                */
+/* ============================================ */
+
 .dashboards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -219,11 +267,12 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    min-height: 160px;
 }
 
 .dashboard-card-link:hover {
     transform: translateY(-3px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     border-color: #ED8936;
     background: #FFFFFF;
 }
@@ -231,6 +280,11 @@
 .dashboard-card-link .icon {
     font-size: 36px;
     margin-bottom: 10px;
+    transition: transform 0.3s ease;
+}
+
+.dashboard-card-link:hover .icon {
+    transform: scale(1.08);
 }
 
 .dashboard-card-link h4 {
@@ -293,27 +347,128 @@
     background: #F7FAFC;
 }
 
+.dashboard-card-link.disabled:hover .icon {
+    transform: none;
+}
+
 /* ============================================ */
-/* RESPONSIVIDADE                               */
+/* TOAST / NOTIFICAÇÕES                         */
+/* ============================================ */
+
+.toast-dashboard {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    font-size: 14px;
+    z-index: 9999;
+    animation: slideInUp 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.toast-dashboard.success {
+    background: #48BB78;
+}
+
+.toast-dashboard.error {
+    background: #FC8181;
+}
+
+.toast-dashboard.info {
+    background: #4299E1;
+}
+
+.toast-dashboard.warning {
+    background: #ED8936;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE - TABLET                      */
+/* ============================================ */
+
+@media (max-width: 1024px) {
+    .dashboards-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 18px;
+    }
+
+    .dashboard-card-link {
+        min-height: 150px;
+        padding: 22px 18px;
+    }
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE - MOBILE                      */
 /* ============================================ */
 
 @media (max-width: 768px) {
+    .dashboard-index-container {
+        padding: 15px;
+    }
+
     .dashboard-index-header {
         flex-direction: column;
         gap: 15px;
         text-align: center;
         padding: 15px 20px;
+        min-height: 100px;
+    }
+
+    .dashboard-index-header h1 {
+        font-size: 20px;
     }
 
     .dashboard-index-header .user-info {
         flex-wrap: wrap;
         justify-content: center;
+        gap: 15px;
+        padding: 4px 0;
+    }
+
+    .dashboard-index-header .user-info .user-details {
+        min-width: 100px;
+    }
+
+    .dashboard-index-header .user-info .user-name {
+        font-size: 13px;
+    }
+
+    .dashboard-index-header .user-info .user-matricula {
+        font-size: 11px;
+    }
+
+    .dashboard-index-header .user-info .user-perfil {
+        font-size: 10px;
+        padding: 3px 12px;
+        min-width: 50px;
+    }
+
+    .dashboard-index-header .btn-home {
+        font-size: 13px;
+        padding: 8px 18px;
+        min-width: 60px;
     }
 
     .dashboard-index-banner {
         flex-direction: column;
         text-align: center;
         padding: 20px;
+        min-height: 100px;
     }
 
     .dashboard-index-banner .banner-content h2 {
@@ -324,14 +479,24 @@
         font-size: 13px;
     }
 
+    .dashboard-index-banner .preload-status {
+        font-size: 12px;
+        padding: 6px 14px;
+        min-height: 36px;
+    }
+
     .dashboard-index-section {
-        padding: 15px 20px;
+        padding: 18px 20px;
     }
 
     .dashboard-index-section .section-header {
         flex-direction: column;
         gap: 8px;
         text-align: center;
+    }
+
+    .dashboard-index-section .section-header h3 {
+        font-size: 16px;
     }
 
     .dashboards-grid {
@@ -341,6 +506,7 @@
 
     .dashboard-card-link {
         padding: 20px 15px;
+        min-height: 140px;
     }
 
     .dashboard-card-link .icon {
@@ -354,7 +520,16 @@
     .dashboard-card-link p {
         font-size: 12px;
     }
+
+    .dashboard-card-link .badge {
+        font-size: 10px;
+        padding: 2px 12px;
+    }
 }
+
+/* ============================================ */
+/* RESPONSIVIDADE - MOBILE PEQUENO              */
+/* ============================================ */
 
 @media (max-width: 480px) {
     .dashboard-index-container {
@@ -363,16 +538,26 @@
 
     .dashboard-index-header {
         padding: 12px 15px;
+        min-height: 90px;
+        gap: 12px;
     }
 
     .dashboard-index-header h1 {
-        font-size: 18px;
+        font-size: 17px;
     }
 
-    .dashboard-index-header .user-info .user-avatar {
-        width: 32px;
-        height: 32px;
-        font-size: 14px;
+    .dashboard-index-header h1 .icon {
+        font-size: 22px;
+    }
+
+    .dashboard-index-header .user-info {
+        gap: 10px;
+        padding: 2px 0;
+        flex-wrap: wrap;
+    }
+
+    .dashboard-index-header .user-info .user-details {
+        min-width: 70px;
     }
 
     .dashboard-index-header .user-info .user-name {
@@ -385,29 +570,53 @@
 
     .dashboard-index-header .user-info .user-perfil {
         font-size: 9px;
-        padding: 3px 10px;
+        padding: 2px 10px;
+        min-width: 45px;
     }
 
     .dashboard-index-header .btn-home {
-        font-size: 12px;
-        padding: 8px 16px;
+        font-size: 11px;
+        padding: 6px 14px;
+        min-width: 45px;
     }
 
     .dashboard-index-banner {
         padding: 15px;
+        min-height: 80px;
+        gap: 10px;
     }
 
     .dashboard-index-banner .banner-content h2 {
         font-size: 16px;
     }
 
+    .dashboard-index-banner .banner-content p {
+        font-size: 12px;
+    }
+
     .dashboard-index-banner .preload-status {
         font-size: 11px;
-        padding: 5px 12px;
+        padding: 4px 12px;
+        min-height: 32px;
+        gap: 8px;
+    }
+
+    .dashboard-index-banner .preload-status .spinner-small {
+        width: 14px;
+        height: 14px;
     }
 
     .dashboard-index-section {
         padding: 12px 15px;
+    }
+
+    .dashboard-index-section .section-header h3 {
+        font-size: 15px;
+    }
+
+    .dashboard-index-section .section-header .count {
+        font-size: 11px;
+        padding: 1px 10px;
     }
 
     .dashboards-grid {
@@ -416,11 +625,12 @@
     }
 
     .dashboard-card-link {
-        padding: 16px 12px;
+        padding: 16px 14px;
         flex-direction: row;
         text-align: left;
         gap: 15px;
         align-items: center;
+        min-height: 80px;
     }
 
     .dashboard-card-link .icon {
@@ -431,6 +641,8 @@
 
     .dashboard-card-link .card-content {
         flex: 1;
+        display: flex;
+        flex-direction: column;
     }
 
     .dashboard-card-link h4 {
@@ -446,5 +658,100 @@
     .dashboard-card-link .badge {
         font-size: 9px;
         padding: 2px 10px;
+        align-self: flex-start;
+    }
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE - TELAS MUITO PEQUENAS       */
+/* ============================================ */
+
+@media (max-width: 360px) {
+    .dashboard-index-header {
+        padding: 10px 12px;
+        min-height: 80px;
+    }
+
+    .dashboard-index-header h1 {
+        font-size: 15px;
+    }
+
+    .dashboard-index-header h1 .icon {
+        font-size: 18px;
+    }
+
+    .dashboard-index-header .user-info {
+        gap: 6px;
+    }
+
+    .dashboard-index-header .user-info .user-details {
+        min-width: 60px;
+    }
+
+    .dashboard-index-header .user-info .user-name {
+        font-size: 11px;
+    }
+
+    .dashboard-index-header .user-info .user-matricula {
+        font-size: 9px;
+    }
+
+    .dashboard-index-header .user-info .user-perfil {
+        font-size: 8px;
+        padding: 2px 8px;
+        min-width: 40px;
+    }
+
+    .dashboard-index-header .btn-home {
+        font-size: 10px;
+        padding: 5px 10px;
+        min-width: 40px;
+        gap: 4px;
+    }
+
+    .dashboard-index-banner {
+        padding: 12px;
+        min-height: 70px;
+    }
+
+    .dashboard-index-banner .banner-content h2 {
+        font-size: 14px;
+    }
+
+    .dashboard-index-banner .banner-content p {
+        font-size: 11px;
+    }
+
+    .dashboard-index-banner .preload-status {
+        font-size: 10px;
+        padding: 3px 10px;
+        min-height: 28px;
+    }
+
+    .dashboard-index-section {
+        padding: 10px 12px;
+    }
+
+    .dashboard-card-link {
+        padding: 12px 10px;
+        min-height: 70px;
+        gap: 10px;
+    }
+
+    .dashboard-card-link .icon {
+        font-size: 24px;
+    }
+
+    .dashboard-card-link h4 {
+        font-size: 12px;
+    }
+
+    .dashboard-card-link p {
+        font-size: 10px;
+    }
+
+    .dashboard-card-link .badge {
+        font-size: 8px;
+        padding: 1px 8px;
     }
 }
