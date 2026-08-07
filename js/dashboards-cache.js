@@ -4,8 +4,15 @@
 
 console.log('🚀 dashboards-cache.js carregado!');
 
-// Usa a API_URL do dashboards-common.js ou define um fallback
-const API_URL = window.API_URL || 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
+// Usa a API_URL do dashboards-common.js (já declarada globalmente)
+// Não redeclarar com const/let, apenas usar a existente
+if (typeof API_URL === 'undefined') {
+    // Fallback apenas se não existir
+    var API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
+    console.log('⚠️ API_URL não encontrada, usando fallback:', API_URL);
+} else {
+    console.log('📡 Usando API_URL existente:', API_URL);
+}
 
 const CACHE_VERSION = 'v2';
 const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutos
@@ -20,7 +27,7 @@ class DashboardCache {
             misses: 0,
             totalRequests: 0
         };
-        console.log('📊 DashboardCache inicializado com API_URL:', API_URL);
+        console.log('📊 DashboardCache inicializado');
     }
 
     // Busca dados com cache
@@ -212,11 +219,9 @@ async function preCarregarDashboards() {
 }
 
 // ============================================
-// EXPORTAR
+// EXPORTAR (tornar disponível globalmente)
 // ============================================
 
-// Torna as funções disponíveis globalmente
-window.API_URL = API_URL;
 window.dashboardCache = dashboardCache;
 window.buscarAditivosSistemicosCompleto = buscarAditivosSistemicosCompleto;
 window.buscarAditivosFisicosCompleto = buscarAditivosFisicosCompleto;

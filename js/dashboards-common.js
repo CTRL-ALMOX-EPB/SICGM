@@ -2,10 +2,10 @@
 // DASHBOARDS - FUNÇÕES COMPARTILHADAS
 // ============================================
 
-const API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
-
-// Torna a API_URL global
-window.API_URL = API_URL;
+// Só declara se não existir
+if (typeof API_URL === 'undefined') {
+    var API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
+}
 
 console.log('🚀 dashboards-common.js carregado!');
 console.log(`📡 API_URL: ${API_URL}`);
@@ -239,10 +239,9 @@ function filtrarPorPeriodo(dados, dataInicio, dataFim) {
 }
 
 // ============================================
-// EXPORTAR
+// EXPORTAR (tornar disponível globalmente)
 // ============================================
 
-// Torna as funções disponíveis globalmente
 window.API_URL = API_URL;
 window.mostrarToast = mostrarToast;
 window.formatarData = formatarData;
