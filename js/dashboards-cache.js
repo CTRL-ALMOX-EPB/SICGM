@@ -4,6 +4,9 @@
 
 console.log('🚀 dashboards-cache.js carregado!');
 
+// Usa a API_URL do dashboards-common.js ou define um fallback
+const API_URL = window.API_URL || 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
+
 const CACHE_VERSION = 'v2';
 const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutos
 
@@ -17,6 +20,7 @@ class DashboardCache {
             misses: 0,
             totalRequests: 0
         };
+        console.log('📊 DashboardCache inicializado com API_URL:', API_URL);
     }
 
     // Busca dados com cache
@@ -176,6 +180,7 @@ async function buscarPendenciasBaixa(forceRefresh = false) {
 
 async function preCarregarDashboards() {
     console.log('🚀 Pré-carregando dados dos dashboards...');
+    console.log(`📡 Usando API_URL: ${API_URL}`);
     const startTime = Date.now();
     
     try {
@@ -190,8 +195,8 @@ async function preCarregarDashboards() {
         const elapsed = Date.now() - startTime;
         console.log(`✅ Pré-carregamento concluído em ${elapsed}ms`);
         
+        const names = ['Aditivos Sistêmicos', 'Aditivos Físicos', 'Farol de Obras', 'Pendências Devolução'];
         results.forEach((result, index) => {
-            const names = ['Aditivos Sistêmicos', 'Aditivos Físicos', 'Farol de Obras', 'Pendências Devolução'];
             if (result.status === 'fulfilled') {
                 console.log(`   ✅ ${names[index]}: ${result.value?.length || 0} registros`);
             } else {
@@ -210,6 +215,8 @@ async function preCarregarDashboards() {
 // EXPORTAR
 // ============================================
 
+// Torna as funções disponíveis globalmente
+window.API_URL = API_URL;
 window.dashboardCache = dashboardCache;
 window.buscarAditivosSistemicosCompleto = buscarAditivosSistemicosCompleto;
 window.buscarAditivosFisicosCompleto = buscarAditivosFisicosCompleto;
@@ -219,4 +226,5 @@ window.buscarPendenciasBaixa = buscarPendenciasBaixa;
 window.preCarregarDashboards = preCarregarDashboards;
 
 console.log('✅ dashboards-cache.js inicializado!');
+console.log(`📡 API_URL configurada: ${API_URL}`);
 console.log('💡 Use preCarregarDashboards() para carregar todos os dados antecipadamente');

@@ -30,6 +30,7 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
+            position: relative;
         }
         
         .dashboard-card-link:hover {
@@ -61,8 +62,6 @@
             font-size: 11px;
             padding: 4px 12px;
             border-radius: 20px;
-            background: #ebf8ff;
-            color: #2b6cb0;
             font-weight: 500;
         }
         
@@ -79,6 +78,17 @@
         .dashboard-card-link .badge.carregando {
             background: #e2e8f0;
             color: #4a5568;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .dashboard-card-link .badge.erro {
+            background: #fed7d7;
+            color: #9b2c2c;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
         
         .page-header {
@@ -116,6 +126,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            z-index: 1000;
         }
         
         .btn-voltar:hover {
@@ -125,9 +136,13 @@
         
         .preload-status {
             text-align: center;
-            padding: 10px;
-            font-size: 13px;
-            color: #718096;
+            padding: 12px 20px;
+            font-size: 14px;
+            color: #a0aec0;
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            display: inline-block;
         }
         
         .preload-status .loading-text {
@@ -138,11 +153,25 @@
             display: inline-block;
             width: 16px;
             height: 16px;
-            border: 2px solid #e2e8f0;
-            border-top-color: #4299e1;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #ffffff;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
             margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        .preload-status .check {
+            color: #48bb78;
+            margin-right: 8px;
+            font-size: 18px;
+            vertical-align: middle;
+        }
+        
+        .preload-status .error {
+            color: #fc8181;
+            margin-right: 8px;
+            font-size: 18px;
             vertical-align: middle;
         }
         
@@ -150,21 +179,40 @@
             to { transform: rotate(360deg); }
         }
         
+        .header-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
         @media (max-width: 768px) {
             .dashboards-grid {
                 grid-template-columns: 1fr;
                 padding: 20px;
+            }
+            
+            .btn-voltar {
+                bottom: 10px;
+                right: 10px;
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+            
+            .page-header h1 {
+                font-size: 22px;
             }
         }
     </style>
 </head>
 <body>
     <div class="page-header">
-        <h1>📊 Dashboards SICGM</h1>
-        <p>Visualize e acompanhe os indicadores do sistema</p>
-        <div class="preload-status" id="preloadStatus">
-            <span class="spinner-small" id="preloadSpinner"></span>
-            <span class="loading-text" id="preloadText">Carregando dados dos dashboards...</span>
+        <div class="header-content">
+            <h1>📊 Dashboards SICGM</h1>
+            <p>Visualize e acompanhe os indicadores do sistema</p>
+            <div class="preload-status" id="preloadStatus">
+                <span class="spinner-small" id="preloadSpinner"></span>
+                <span class="loading-text" id="preloadText">Preparando dados dos dashboards...</span>
+            </div>
         </div>
     </div>
     
@@ -182,7 +230,7 @@
             <div class="icon">📝</div>
             <h3>Aditivos Sistêmicos</h3>
             <p>Análise de itens aditivados, status e indicadores</p>
-            <span class="badge carregando" id="badgeSistemicos">🔄 Carregando...</span>
+            <span class="badge carregando" id="badgeSistemicos">⏳ Carregando...</span>
         </a>
         
         <!-- Dashboard 3 - Aditivos Físicos -->
@@ -190,7 +238,7 @@
             <div class="icon">🔧</div>
             <h3>Aditivos Físicos</h3>
             <p>Análise de aplicação de aditivos por obra e encarregado</p>
-            <span class="badge carregando" id="badgeFisicos">🔄 Carregando...</span>
+            <span class="badge carregando" id="badgeFisicos">⏳ Carregando...</span>
         </a>
         
         <!-- Dashboard 4 - Pendência de Devolução -->
@@ -198,7 +246,7 @@
             <div class="icon">📦</div>
             <h3>Pendência de Devolução</h3>
             <p>Acompanhamento de pendências por obra e encarregado</p>
-            <span class="badge carregando" id="badgeDevolucao">🔄 Carregando...</span>
+            <span class="badge carregando" id="badgeDevolucao">⏳ Carregando...</span>
         </a>
         
         <!-- Dashboard 5 - Farol de Obras -->
@@ -206,7 +254,7 @@
             <div class="icon">🚦</div>
             <h3>Farol de Obras</h3>
             <p>Visão geral dos indicadores das obras</p>
-            <span class="badge carregando" id="badgeFarol">🔄 Carregando...</span>
+            <span class="badge carregando" id="badgeFarol">⏳ Carregando...</span>
         </a>
     </div>
     
@@ -214,6 +262,11 @@
         🏠 Voltar para Home
     </a>
 
+    <!-- Carrega os scripts na ordem correta -->
+    <script src="../js/script.js"></script>
+    <script src="../js/dashboards-common.js"></script>
+    <script src="../js/dashboards-cache.js"></script>
+    
     <script>
         // ============================================
         // PRÉ-CARREGAMENTO DOS DASHBOARDS
@@ -224,6 +277,8 @@
             
             const preloadText = document.getElementById('preloadText');
             const preloadSpinner = document.getElementById('preloadSpinner');
+            const preloadStatus = document.getElementById('preloadStatus');
+            
             const badges = {
                 sistemicos: document.getElementById('badgeSistemicos'),
                 fisicos: document.getElementById('badgeFisicos'),
@@ -231,28 +286,31 @@
                 farol: document.getElementById('badgeFarol')
             };
             
+            // Aguarda um pouco para garantir que todos os scripts foram carregados
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Verifica se a API_URL está disponível
+            if (typeof window.API_URL === 'undefined') {
+                console.warn('⚠️ API_URL não definida, usando fallback');
+                window.API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
+            }
+            
+            console.log('📡 API_URL:', window.API_URL);
+            
             try {
-                // Carrega os scripts de cache
-                const cacheScript = document.createElement('script');
-                cacheScript.src = '../js/dashboards-cache.js';
-                document.head.appendChild(cacheScript);
-                
-                // Aguarda o script carregar
-                await new Promise(resolve => {
-                    cacheScript.onload = resolve;
-                    cacheScript.onerror = resolve;
-                    setTimeout(resolve, 3000);
-                });
-                
                 // Verifica se a função de pré-carregamento está disponível
-                if (typeof preCarregarDashboards === 'function') {
+                if (typeof window.preCarregarDashboards === 'function') {
                     preloadText.textContent = 'Pré-carregando dados dos dashboards...';
+                    preloadSpinner.style.display = 'inline-block';
                     
-                    const results = await preCarregarDashboards();
+                    const startTime = Date.now();
+                    const results = await window.preCarregarDashboards();
+                    const elapsed = Date.now() - startTime;
                     
                     if (results) {
                         const names = ['Aditivos Sistêmicos', 'Aditivos Físicos', 'Farol de Obras', 'Pendências Devolução'];
                         const badgeKeys = ['sistemicos', 'fisicos', 'farol', 'devolucao'];
+                        let successCount = 0;
                         
                         results.forEach((result, index) => {
                             const badge = badges[badgeKeys[index]];
@@ -261,20 +319,33 @@
                                     const count = result.value?.length || 0;
                                     badge.textContent = `✓ ${count} registros`;
                                     badge.className = 'badge disponivel';
+                                    successCount++;
                                 } else {
                                     badge.textContent = '⚠️ Erro';
-                                    badge.className = 'badge em-breve';
+                                    badge.className = 'badge erro';
                                 }
                             }
                         });
                         
-                        preloadText.textContent = '✅ Dados pré-carregados com sucesso!';
-                        preloadSpinner.style.display = 'none';
+                        if (successCount === results.length) {
+                            preloadText.textContent = `✅ Todos os dashboards pré-carregados (${elapsed}ms)`;
+                            preloadSpinner.style.display = 'none';
+                            preloadStatus.style.color = '#48bb78';
+                        } else if (successCount > 0) {
+                            preloadText.textContent = `⚠️ ${successCount}/${results.length} dashboards pré-carregados (${elapsed}ms)`;
+                            preloadSpinner.style.display = 'none';
+                            preloadStatus.style.color = '#ed8936';
+                        } else {
+                            preloadText.textContent = `❌ Erro ao pré-carregar dados (${elapsed}ms)`;
+                            preloadSpinner.style.display = 'none';
+                            preloadStatus.style.color = '#fc8181';
+                        }
                     }
                 } else {
                     console.warn('⚠️ Função preCarregarDashboards não disponível');
                     preloadText.textContent = '⚠️ Carregamento automático indisponível';
                     preloadSpinner.style.display = 'none';
+                    preloadStatus.style.color = '#ed8936';
                     
                     // Marca todos como disponíveis mesmo sem pré-carregamento
                     Object.values(badges).forEach(badge => {
@@ -287,8 +358,9 @@
                 
             } catch (error) {
                 console.error('❌ Erro no pré-carregamento:', error);
-                preloadText.textContent = '⚠️ Erro no pré-carregamento';
+                preloadText.textContent = `⚠️ Erro: ${error.message || 'Desconhecido'}`;
                 preloadSpinner.style.display = 'none';
+                preloadStatus.style.color = '#fc8181';
                 
                 // Marca todos como disponíveis mesmo com erro
                 Object.values(badges).forEach(badge => {

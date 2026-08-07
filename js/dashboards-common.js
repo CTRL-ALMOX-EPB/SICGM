@@ -4,6 +4,12 @@
 
 const API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
 
+// Torna a API_URL global
+window.API_URL = API_URL;
+
+console.log('🚀 dashboards-common.js carregado!');
+console.log(`📡 API_URL: ${API_URL}`);
+
 // ============================================
 // UTILIDADES
 // ============================================
@@ -21,7 +27,7 @@ function mostrarToast(mensagem, tipo = 'info') {
         toast.style.opacity = '0';
         toast.style.transition = 'opacity 0.3s';
         setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, 4000);
 }
 
 function formatarData(dataString) {
@@ -39,14 +45,19 @@ function formatarData(dataString) {
 }
 
 function getSessao() {
+    console.log('🔍 Verificando sessão...');
     const sessao = sessionStorage.getItem('sessaoSICGM');
     if (!sessao) {
+        console.log('❌ Sessão não encontrada');
         window.location.href = '../login.html';
         return null;
     }
     try {
-        return JSON.parse(sessao);
-    } catch {
+        const dados = JSON.parse(sessao);
+        console.log('✅ Sessão carregada:', dados.nome, '-', dados.perfil);
+        return dados;
+    } catch (e) {
+        console.error('❌ Erro ao parsear sessão:', e);
         window.location.href = '../login.html';
         return null;
     }
@@ -60,48 +71,79 @@ function redirecionarParaHome() {
             'GESTAO': '../home-gestao.html',
             'VISUALIZACAO': '../home-visualizacao.html'
         };
-        window.location.href = homeMap[sessao.perfil] || '../index.html';
+        const homePage = homeMap[sessao.perfil] || '../index.html';
+        console.log('🏠 Redirecionando para:', homePage);
+        window.location.href = homePage;
     } else {
         window.location.href = '../index.html';
     }
 }
 
 // ============================================
-// BUSCA DE DADOS
+// BUSCA DE DADOS COM LOGS
 // ============================================
 
 async function buscarTodosRegistros(endpoint) {
+    console.log(`📡 Buscando todos registros de: ${endpoint}`);
     try {
         let todos = [];
         let pagina = 1;
         let totalPaginas = 1;
         
         do {
-            const response = await fetch(`${API_URL}${endpoint}?page=${pagina}&limit=100`);
-            if (!response.ok) throw new Error('Erro ao buscar dados');
+            console.log(`📄 Buscando página ${pagina}...`);
+            const url = `${API_URL}${endpoint}?page=${pagina}&limit=100`;
+            console.log(`🌐 URL: ${url}`);
+            
+            const response = await fetch(url);
+            console.log(`📊 Status da resposta: ${response.status}`);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`❌ Erro na resposta: ${errorText}`);
+                throw new Error(`Erro ao buscar dados: ${response.status} - ${errorText}`);
+            }
             
             const data = await response.json();
+            console.log(`📦 Dados recebidos:`, data);
+            
             const registros = data.data || [];
+            console.log(`📋 ${registros.length} registros na página ${pagina}`);
             todos = todos.concat(registros);
             
             totalPaginas = data.pagination?.totalPages || 1;
+            console.log(`📊 Total de páginas: ${totalPaginas}`);
             pagina++;
             
         } while (pagina <= totalPaginas);
         
+        console.log(`✅ Total de registros carregados: ${todos.length}`);
         return todos;
     } catch (error) {
         console.error('❌ Erro ao buscar registros:', error);
-        mostrarToast('❌ Erro ao carregar dados', 'error');
+        mostrarToast(`❌ Erro ao carregar dados: ${error.message}`, 'error');
         return [];
     }
 }
 
 async function buscarRegistroComItens(endpoint, numero) {
+    console.log(`📡 Buscando registro #${numero} de: ${endpoint}`);
     try {
-        const response = await fetch(`${API_URL}${endpoint}/${numero}`);
-        if (!response.ok) throw new Error('Erro ao buscar registro');
-        return await response.json();
+        const url = `${API_URL}${endpoint}/${numero}`;
+        console.log(`🌐 URL: ${url}`);
+        
+        const response = await fetch(url);
+        console.log(`📊 Status da resposta: ${response.status}`);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ Erro na resposta: ${errorText}`);
+            return null;
+        }
+        
+        const data = await response.json();
+        console.log(`✅ Registro #${numero} carregado com ${data.itens?.length || 0} itens`);
+        return data;
     } catch (error) {
         console.error(`❌ Erro ao buscar registro #${numero}:`, error);
         return null;
@@ -113,10 +155,14 @@ async function buscarRegistroComItens(endpoint, numero) {
 // ============================================
 
 function agruparItensPorCodigo(controles) {
+    console.log(`📦 Agrupando itens de ${controles.length} controles...`);
     const grupos = {};
+    let totalItens = 0;
     
     controles.forEach(controle => {
         const itens = controle.itens || [];
+        totalItens += itens.length;
+        
         itens.forEach(item => {
             const codigo = item.codigo || 'SEM_CODIGO';
             const descricao = item.descricao || 'Sem descrição';
@@ -146,7 +192,6 @@ function agruparItensPorCodigo(controles) {
             const isSaida = obra.toUpperCase().includes('SAÍDA') || obra.toUpperCase().includes('SAIDA');
             const status = item.status_aditivo || 'ANALISE';
             
-            // Conta status
             if (grupos[codigo].statusCount[status] !== undefined) {
                 grupos[codigo].statusCount[status] += quantidade;
             }
@@ -170,7 +215,9 @@ function agruparItensPorCodigo(controles) {
         });
     });
     
-    return Object.values(grupos).sort((a, b) => b.total - a.total);
+    const resultado = Object.values(grupos).sort((a, b) => b.total - a.total);
+    console.log(`✅ ${resultado.length} grupos de itens criados a partir de ${totalItens} itens`);
+    return resultado;
 }
 
 // ============================================
@@ -195,6 +242,8 @@ function filtrarPorPeriodo(dados, dataInicio, dataFim) {
 // EXPORTAR
 // ============================================
 
+// Torna as funções disponíveis globalmente
+window.API_URL = API_URL;
 window.mostrarToast = mostrarToast;
 window.formatarData = formatarData;
 window.getSessao = getSessao;
@@ -203,3 +252,5 @@ window.buscarTodosRegistros = buscarTodosRegistros;
 window.buscarRegistroComItens = buscarRegistroComItens;
 window.agruparItensPorCodigo = agruparItensPorCodigo;
 window.filtrarPorPeriodo = filtrarPorPeriodo;
+
+console.log('✅ dashboards-common.js inicializado!');
