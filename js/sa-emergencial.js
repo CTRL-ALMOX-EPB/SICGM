@@ -1,8 +1,9 @@
 // ============================================
-// S.A. EMERGENCIAL - SICGM (COMPLETO)
+// S.A. EMERGENCIAL - SICGM (COMPLETO COM R2)
 // ============================================
 
 const API_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/api';
+const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
 
 // ============================================
 // VARIÁVEIS GLOBAIS
@@ -18,6 +19,8 @@ let materiaisCache = {};
 let popupTimeout = null;
 let popupElement = null;
 let overlayElement = null;
+let streamAtual = null;
+let fotoCapturada = null;
 
 // ============================================
 // FUNÇÃO PARA REDIRECIONAR PARA HOME
@@ -613,6 +616,54 @@ function configurarPopupDescricao() {
 }
 
 // ============================================
+// FUNÇÃO PARA UPLOAD PARA O R2
+// ============================================
+
+async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
+    try {
+        const response = await fetch(imagemDataURL);
+        const blob = await response.blob();
+        
+        if (!nomeArquivo) {
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2, 8);
+            nomeArquivo = `${timestamp}_${random}.png`;
+        }
+        
+        const path = `${pasta}/${nomeArquivo}`;
+        const url = `${R2_URL}/${path}`;
+        
+        console.log(`📤 Uploading to R2: ${url}`);
+        
+        const uploadResponse = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'image/png'
+            },
+            body: blob
+        });
+        
+        if (!uploadResponse.ok) {
+            throw new Error(`Erro ao fazer upload: ${uploadResponse.status}`);
+        }
+        
+        return {
+            success: true,
+            url: url,
+            path: path,
+            nome: nomeArquivo
+        };
+        
+    } catch (error) {
+        console.error('❌ Erro no upload para R2:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+// ============================================
 // CRIAR NOVA S.A.
 // ============================================
 
@@ -926,11 +977,10 @@ async function marcarAtendidaProtheus() {
 window.marcarAtendidaProtheus = marcarAtendidaProtheus;
 
 // ============================================
-// ABRIR PÁGINA DE ASSINATURA (CORRIGIDO)
+// ABRIR PÁGINA DE ASSINATURA
 // ============================================
 
 function abrirPaginaAssinatura(tipo) {
-    // Impedir propagação do evento para não recarregar a página
     if (window.event) {
         window.event.preventDefault();
         window.event.stopPropagation();
@@ -938,15 +988,11 @@ function abrirPaginaAssinatura(tipo) {
     
     const numero = document.getElementById('saNumero').textContent.replace('#', '');
     
-    // Para "Entregue por": usa o usuário logado
-    // Para "Recebido por": usa o colaborador da S.A.
     let nome = '';
     
     if (tipo === 'entregue') {
-        // Quem está entregando = usuário logado (atendente)
         nome = dadosSessao?.nome || document.getElementById('solicitante')?.value || '';
     } else {
-        // Quem está recebendo = colaborador da S.A.
         nome = document.getElementById('colaborador')?.value || '';
     }
     
@@ -955,10 +1001,8 @@ function abrirPaginaAssinatura(tipo) {
         return false;
     }
     
-    // Usar window.open em vez de window.location para não perder a sessão
     const url = `assinar.html?tipo=${tipo}&numero=${numero}&nome=${encodeURIComponent(nome)}`;
     
-    // Abrir em uma nova janela com tamanho adequado
     const janela = window.open(
         url, 
         'AssinaturaSA', 
@@ -969,7 +1013,6 @@ function abrirPaginaAssinatura(tipo) {
         mostrarToast('⚠️ Permita pop-ups para realizar a assinatura.', 'aviso');
     }
     
-    // Retornar false para evitar que o evento continue
     return false;
 }
 
@@ -989,18 +1032,15 @@ function verificarAssinaturaConcluida() {
         try {
             const info = JSON.parse(dados);
             const agora = Date.now();
-            // Verificar se foi nos últimos 30 segundos
             if (agora - info.timestamp < 30000) {
                 console.log(`✅ Assinatura ${info.tipo} concluída detectada!`);
                 sessionStorage.removeItem(chave);
                 
-                // Recarregar a S.A. para atualizar as assinaturas
                 setTimeout(() => {
                     carregarSAFormulario();
                     mostrarToast(`✅ Assinatura ${info.tipo === 'entregue' ? 'de entrega' : 'de recebimento'} concluída!`, 'sucesso');
                 }, 500);
             } else {
-                // Remover se for antigo
                 sessionStorage.removeItem(chave);
             }
         } catch (e) {
@@ -1049,6 +1089,197 @@ function atualizarAssinaturaUI(tipo, dados) {
 }
 
 // ============================================
+// ATUALIZAR UI DE FOTO
+// ============================================
+
+function atualizarFotoUI(fotoData) {
+    const preview = document.getElementById('fotoPreviewRecebido');
+    const img = document.getElementById('fotoImgRecebido');
+    
+    if (fotoData && fotoData.url) {
+        img.src = fotoData.url;
+        preview.style.display = 'block';
+        console.log('✅ Foto do colaborador carregada');
+    } else {
+        preview.style.display = 'none';
+        console.log('ℹ️ Nenhuma foto disponível');
+    }
+}
+
+// ============================================
+// CAPTURAR FOTO DO COLABORADOR
+// ============================================
+
+function capturarFoto(tipo) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        mostrarToast('❌ Seu navegador não suporta acesso à câmera.', 'erro');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'camera-modal active';
+    modal.id = 'cameraModal';
+    modal.innerHTML = `
+        <video id="cameraVideo" autoplay playsinline></video>
+        <div class="camera-actions">
+            <button class="btn-capturar" onclick="capturarFotoFrame()">📸 Capturar</button>
+            <button class="btn-fechar-camera" onclick="fecharCamera()">✕ Fechar</button>
+        </div>
+        <div class="camera-status" id="cameraStatus">🔄 Iniciando câmera...</div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const video = document.getElementById('cameraVideo');
+    const status = document.getElementById('cameraStatus');
+    
+    const constraints = {
+        video: {
+            facingMode: 'user',
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            frameRate: { ideal: 15 }
+        },
+        audio: false
+    };
+    
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then(function(stream) {
+            streamAtual = stream;
+            video.srcObject = stream;
+            status.textContent = '📷 Câmera pronta. Clique em Capturar para tirar a foto.';
+            status.style.color = '#48BB78';
+            console.log('✅ Câmera iniciada com sucesso');
+        })
+        .catch(function(error) {
+            console.error('❌ Erro ao acessar câmera:', error);
+            
+            let mensagem = '❌ Não foi possível acessar a câmera. ';
+            if (error.name === 'NotAllowedError') {
+                mensagem += 'Permissão negada. Autorize o acesso à câmera.';
+            } else if (error.name === 'NotFoundError') {
+                mensagem += 'Nenhuma câmera encontrada.';
+            } else if (error.name === 'NotReadableError') {
+                mensagem += 'A câmera está sendo usada por outro aplicativo.';
+            } else {
+                mensagem += error.message;
+            }
+            
+            status.textContent = mensagem;
+            status.style.color = '#FC8181';
+            mostrarToast(mensagem, 'erro');
+            
+            setTimeout(() => {
+                fecharCamera();
+            }, 3000);
+        });
+}
+
+// ============================================
+// CAPTURAR FRAME DA CÂMERA
+// ============================================
+
+function capturarFotoFrame() {
+    const video = document.getElementById('cameraVideo');
+    const status = document.getElementById('cameraStatus');
+    
+    if (!video || !video.srcObject) {
+        mostrarToast('❌ Câmera não está disponível.', 'erro');
+        return;
+    }
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    const imagemDataURL = canvas.toDataURL('image/jpeg', 0.5);
+    
+    fotoCapturada = imagemDataURL;
+    
+    const preview = document.getElementById('fotoPreviewRecebido');
+    const img = document.getElementById('fotoImgRecebido');
+    if (preview && img) {
+        img.src = imagemDataURL;
+        preview.style.display = 'block';
+    }
+    
+    status.textContent = '✅ Foto capturada com sucesso!';
+    status.style.color = '#48BB78';
+    
+    setTimeout(() => {
+        fecharCamera();
+        enviarFotoParaR2(imagemDataURL);
+    }, 1000);
+}
+
+// ============================================
+// ENVIAR FOTO PARA O R2
+// ============================================
+
+async function enviarFotoParaR2(imagemDataURL) {
+    const numero = document.getElementById('saNumero').textContent.replace('#', '');
+    
+    try {
+        mostrarToast('⏳ Enviando foto...', 'info');
+        
+        const nomeArquivo = `foto_${numero}_${Date.now()}.jpg`;
+        const resultadoUpload = await uploadParaR2(imagemDataURL, 'fotos', nomeArquivo);
+        
+        if (!resultadoUpload.success) {
+            throw new Error(resultadoUpload.error || 'Erro ao fazer upload da foto');
+        }
+        
+        const urlFoto = resultadoUpload.url;
+        
+        const response = await fetch(`${API_URL}/sa/${numero}/foto`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                foto_url: urlFoto,
+                data_captura: new Date().toISOString()
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao salvar foto');
+        }
+        
+        mostrarToast('✅ Foto salva com sucesso!', 'sucesso');
+        
+    } catch (error) {
+        console.error('❌ Erro ao enviar foto:', error);
+        mostrarToast('❌ ' + error.message, 'erro');
+    }
+}
+
+// ============================================
+// FECHAR CÂMERA
+// ============================================
+
+function fecharCamera() {
+    if (streamAtual) {
+        streamAtual.getTracks().forEach(track => track.stop());
+        streamAtual = null;
+    }
+    
+    const modal = document.getElementById('cameraModal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
+    }
+    
+    console.log('🔒 Câmera fechada');
+}
+
+// ============================================
 // VERIFICAR ASSINATURAS
 // ============================================
 
@@ -1080,6 +1311,10 @@ async function verificarAssinaturas() {
             }
         }
         
+        if (sa.foto) {
+            atualizarFotoUI(sa.foto);
+        }
+        
         atualizarBotoesAcao(sa);
         
         if (sa.status === 'assinado' || sa.status === 'ASSINADO') {
@@ -1092,7 +1327,7 @@ async function verificarAssinaturas() {
 }
 
 // ============================================
-// ATUALIZAR BOTÕES DE AÇÃO (CORRIGIDO)
+// ATUALIZAR BOTÕES DE AÇÃO
 // ============================================
 
 function atualizarBotoesAcao(sa) {
@@ -1101,13 +1336,11 @@ function atualizarBotoesAcao(sa) {
     
     if (!btnFinalizar || !btnContainer) return;
     
-    // Remover botão antigo "Atendida no Protheus" se existir
     const btnAntigo = btnContainer.querySelector('.btn-atendida-protheus');
     if (btnAntigo) btnAntigo.remove();
     
     console.log(`🔄 Atualizando botões para status: ${sa.status}`);
     
-    // Resetar estilos do botão finalizar
     btnFinalizar.style.display = 'block';
     btnFinalizar.style.width = '100%';
     btnFinalizar.style.maxWidth = '400px';
@@ -1122,10 +1355,8 @@ function atualizarBotoesAcao(sa) {
     btnFinalizar.style.textTransform = 'uppercase';
     btnFinalizar.style.letterSpacing = '1px';
     btnFinalizar.style.boxSizing = 'border-box';
-    btnFinalizar.style.position = 'relative';
     btnFinalizar.style.textAlign = 'center';
     
-    // Status: ATENDIDA_PROTHEUS
     if (sa.status === 'ATENDIDA_PROTHEUS' || sa.status === 'atendida_protheus') {
         btnFinalizar.textContent = '✅ ATENDIDA NO PROTHEUS';
         btnFinalizar.disabled = true;
@@ -1138,7 +1369,6 @@ function atualizarBotoesAcao(sa) {
         return;
     }
     
-    // Status: FINALIZADA
     if (sa.status === 'FINALIZADA' || sa.status === 'finalizado') {
         btnFinalizar.textContent = '✅ S.A. FINALIZADA';
         btnFinalizar.disabled = true;
@@ -1149,7 +1379,6 @@ function atualizarBotoesAcao(sa) {
         btnFinalizar.style.boxShadow = '0 4px 15px rgba(72, 187, 120, 0.3)';
         btnFinalizar.style.transform = 'none';
         
-        // Botão "Atendida no Protheus"
         const btnAtendida = document.createElement('button');
         btnAtendida.className = 'btn-atendida-protheus';
         btnAtendida.textContent = '🔄 Atendida no Protheus';
@@ -1190,7 +1419,6 @@ function atualizarBotoesAcao(sa) {
         return;
     }
     
-    // Status: ASSINADO
     if (sa.status === 'ASSINADO' || sa.status === 'assinado') {
         console.log('✅ S.A. assinada, habilitando botão finalizar');
         btnFinalizar.textContent = '✅ FINALIZAR S.A.';
@@ -1204,7 +1432,6 @@ function atualizarBotoesAcao(sa) {
         return;
     }
     
-    // Status: PENDENTE - verificar se tem assinaturas
     const temAssinaturas = sa.assinaturas?.entregue && sa.assinaturas?.recebido;
     
     if (temAssinaturas) {
@@ -1231,7 +1458,7 @@ function atualizarBotoesAcao(sa) {
 }
 
 // ============================================
-// EXPORTAR PDF DO PAINEL (SELECIONAR S.A.)
+// EXPORTAR PDF DO PAINEL
 // ============================================
 
 let saSelecionadaParaExportar = null;
@@ -1261,16 +1488,13 @@ async function exportarSAPainel() {
         
         const sa = await response.json();
         
-        // Verificar se pode exportar (apenas ATENDIDA_PROTHEUS)
         if (sa.status !== 'ATENDIDA_PROTHEUS' && sa.status !== 'atendida_protheus') {
             mostrarToast('⚠️ A S.A. precisa estar com status ATENDIDA PROTHEUS para exportar.', 'aviso');
             return;
         }
         
-        // Gerar conteúdo do PDF
         const conteudoPDF = gerarConteudoPDF(sa);
         
-        // Criar uma janela de impressão
         const janela = window.open('', '_blank', 'width=800,height=600');
         if (!janela) {
             mostrarToast('⚠️ Permita pop-ups para exportar o PDF.', 'aviso');
@@ -1303,7 +1527,6 @@ function gerarConteudoPDF(sa) {
     const dataAtual = new Date().toLocaleString('pt-BR');
     const numeroFormatado = String(sa.numero).padStart(4, '0');
     
-    // Mapeamento de tipos para exibição no PDF
     const tipoMap = {
         'EMERGENCIAL': { label: '🚨 Emergencial' },
         'EMPRESTIMO': { label: '🔄 Empréstimo' },
@@ -1311,7 +1534,6 @@ function gerarConteudoPDF(sa) {
     };
     const tipoInfo = tipoMap[sa.tipo_sa] || tipoMap['EMERGENCIAL'];
     
-    // Formatar itens
     let itensHTML = '';
     if (sa.itens && sa.itens.length > 0) {
         sa.itens.forEach((item, index) => {
@@ -1335,7 +1557,6 @@ function gerarConteudoPDF(sa) {
         `;
     }
     
-    // Formatar assinaturas
     const entregue = sa.assinaturas?.entregue || null;
     const recebido = sa.assinaturas?.recebido || null;
     
@@ -1365,7 +1586,6 @@ function gerarConteudoPDF(sa) {
         `;
     }
     
-    // Status de desconto
     const descontoLabel = sa.gerar_desconto === 'SIM' 
         ? '✅ SIM - Será descontado em folha' 
         : '❌ NÃO - Não será descontado';
@@ -1513,7 +1733,6 @@ function gerarConteudoPDF(sa) {
         </head>
         <body>
             <div class="documento">
-                <!-- Cabeçalho -->
                 <div class="header">
                     <div>
                         <h1>📋 S.A. Emergencial</h1>
@@ -1522,14 +1741,12 @@ function gerarConteudoPDF(sa) {
                     <div class="numero">#${numeroFormatado}</div>
                 </div>
                 
-                <!-- Status e Tipo -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
                     <span class="status-badge atendida">🔄 ATENDIDA PROTHEUS</span>
                     <span style="font-size: 13px; color: #1a237e; font-weight: 600;">${tipoInfo.label}</span>
                     <span style="font-size: 12px; color: #666;">Gerado em: ${dataAtual}</span>
                 </div>
                 
-                <!-- Informações -->
                 <div class="info-grid">
                     <div class="item">
                         <span class="label">Solicitante</span>
@@ -1569,7 +1786,6 @@ function gerarConteudoPDF(sa) {
                     </div>
                 </div>
                 
-                <!-- Itens -->
                 <div class="section-title">📦 Itens Solicitados</div>
                 <table>
                     <thead>
@@ -1588,7 +1804,6 @@ function gerarConteudoPDF(sa) {
                     </tbody>
                 </table>
                 
-                <!-- Termo de Responsabilidade -->
                 <div class="section-title">📜 Termo de Responsabilidade</div>
                 <div class="termo">
                     <p><strong>NR 06</strong> - 6.7. CABE AO EMPREGADO QUANTO AO EPI: USAR, UTILIZANDO-O APENAS PARA A FINALIDADE A QUE SE DESTINA; RESPONSABILIZAR-SE PELA GUARDA E CONSERVAÇÃO; COMUNICAR AO EMPREGADOR QUALQUER ALTERAÇÃO QUE O TORNE IMPRÓPRIO PARA USO.</p>
@@ -1597,13 +1812,11 @@ function gerarConteudoPDF(sa) {
                     <p style="margin-top: 10px; font-weight: bold;">Declaro que recebi os equipamentos acima descritos e estou ciente das obrigações contidas na NR 06 e NR 01.</p>
                 </div>
                 
-                <!-- Assinaturas -->
                 <div class="assinaturas-container">
                     <div class="section-title">✍️ Assinaturas</div>
                     ${assinaturasHTML}
                 </div>
                 
-                <!-- Rodapé -->
                 <div class="footer">
                     <p>Documento gerado automaticamente pelo sistema SICGM - S.A. Emergencial</p>
                     <p>Este documento é uma via válida para comprovação de atendimento</p>
@@ -1641,10 +1854,6 @@ async function carregarListaSA() {
         sasCarregadas = sas;
         
         console.log('📋 S.A. carregadas:', sas.length);
-        
-        // ============================================
-        // BUSCAR CONTAGEM DE ITENS PARA CADA S.A.
-        // ============================================
         
         for (const sa of sas) {
             try {
@@ -1685,16 +1894,7 @@ async function carregarListaSA() {
             return;
         }
         
-        // ============================================
-        // RENDERIZAR LISTA COM FILTROS
-        // ============================================
-        
         renderizarListaSA(sas);
-        
-        // ============================================
-        // CONFIGURAR FILTROS
-        // ============================================
-        
         configurarFiltros(sas);
         
         const btnNovaSA = document.getElementById('btnNovaSA');
@@ -1708,7 +1908,6 @@ async function carregarListaSA() {
             }
         }
         
-        // Resetar seleção de PDF
         const btnExportar = document.getElementById('btnExportarPDFPainel');
         if (btnExportar) {
             btnExportar.style.display = 'none';
@@ -1736,7 +1935,6 @@ function renderizarListaSA(sas, filtros = {}) {
     const container = document.getElementById('saList');
     if (!container) return;
     
-    // Aplicar filtros
     let sasFiltradas = sas;
     
     if (filtros.numero) {
@@ -1808,7 +2006,6 @@ function renderizarListaSA(sas, filtros = {}) {
         });
     }
     
-    // Atualizar contador de resultados
     const contador = document.getElementById('filtro-contador');
     if (contador) {
         contador.textContent = `Mostrando ${sasFiltradas.length} de ${sas.length} S.A.`;
@@ -1826,7 +2023,6 @@ function renderizarListaSA(sas, filtros = {}) {
         return;
     }
     
-    // Mapeamento de ícones e cores para tipos de S.A.
     const tipoMap = {
         'EMERGENCIAL': { icone: '🚨', cor: '#E53E3E', label: 'Emergencial' },
         'EMPRESTIMO': { icone: '🔄', cor: '#4299E1', label: 'Empréstimo' },
@@ -1874,11 +2070,9 @@ function renderizarListaSA(sas, filtros = {}) {
             matriculaColaborador = '-';
         }
         
-        // Dados do solicitante
         const nomeSolicitante = sa.solicitante || '-';
         const matriculaSolicitante = sa.criado_por || '-';
         
-        // Status de desconto
         const descontoLabel = sa.gerar_desconto === 'SIM' ? '💰 SIM' : '💰 NÃO';
         
         const podeExcluir = perfilUsuario === 'GESTAO' && 
@@ -2073,7 +2267,7 @@ function abrirSA(numero) {
 window.abrirSA = abrirSA;
 
 // ============================================
-// REMOVER S.A. (APENAS GESTÃO E NÃO FINALIZADA/ATENDIDA)
+// REMOVER S.A.
 // ============================================
 
 async function removerSA(numero) {
@@ -2147,9 +2341,6 @@ async function carregarSAFormulario() {
         
         document.getElementById('dataSolicitacao').value = sa.data_solicitacao || getDataBrasil();
         
-        // ============================================
-        // CARREGAR TIPO DE S.A.
-        // ============================================
         if (sa.tipo_sa) {
             const radios = document.querySelectorAll('input[name="tipo_sa"]');
             radios.forEach(radio => {
@@ -2157,16 +2348,12 @@ async function carregarSAFormulario() {
             });
         }
         
-        // ============================================
-        // CARREGAR GERAR DESCONTO
-        // ============================================
         if (sa.gerar_desconto) {
             const radios = document.querySelectorAll('input[name="gerar_desconto"]');
             radios.forEach(radio => {
                 radio.checked = (radio.value === sa.gerar_desconto);
             });
         } else {
-            // Valor padrão se não tiver
             const radios = document.querySelectorAll('input[name="gerar_desconto"]');
             radios.forEach(radio => {
                 if (radio.value === 'NAO') {
@@ -2210,7 +2397,6 @@ async function carregarSAFormulario() {
             });
         }
         
-        // Atualizar nomes dos signatários
         const entreguePorNome = document.getElementById('entreguePorNome');
         const recebidoPorNome = document.getElementById('recebidoPorNome');
         
@@ -2232,6 +2418,10 @@ async function carregarSAFormulario() {
             }
         }
         
+        if (sa.foto) {
+            atualizarFotoUI(sa.foto);
+        }
+        
         atualizarBotoesAcao(sa);
         
         const botoesAssinar = document.querySelectorAll('.btn-assinar');
@@ -2244,13 +2434,11 @@ async function carregarSAFormulario() {
         
         configurarPopupDescricao();
         
-        // Iniciar verificação periódica de assinaturas
         if (!window._verificadorAssinaturas) {
             window._verificadorAssinaturas = setInterval(verificarAssinaturas, 3000);
             setTimeout(verificarAssinaturas, 1000);
         }
         
-        // Verificar assinatura concluída
         setTimeout(verificarAssinaturaConcluida, 500);
         
     } catch (error) {
@@ -2285,7 +2473,7 @@ function controlarBotoesNavegacao() {
 }
 
 // ============================================
-// CONFIGURAR BOTÕES DE ASSINATURA (NOVO)
+// CONFIGURAR BOTÕES DE ASSINATURA
 // ============================================
 
 function configurarBotoesAssinatura() {
@@ -2293,7 +2481,6 @@ function configurarBotoesAssinatura() {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            // O onclick já faz o trabalho
         });
     });
 }
@@ -2377,6 +2564,12 @@ window.mostrarPopup = mostrarPopup;
 window.fecharPopup = fecharPopup;
 window.configurarPopupDescricao = configurarPopupDescricao;
 window.atualizarAssinaturaUI = atualizarAssinaturaUI;
+window.atualizarFotoUI = atualizarFotoUI;
+window.capturarFoto = capturarFoto;
+window.capturarFotoFrame = capturarFotoFrame;
+window.fecharCamera = fecharCamera;
+window.enviarFotoParaR2 = enviarFotoParaR2;
+window.uploadParaR2 = uploadParaR2;
 window.marcarAtendidaProtheus = marcarAtendidaProtheus;
 window.atualizarBotoesAcao = atualizarBotoesAcao;
 window.exportarSAPainel = exportarSAPainel;

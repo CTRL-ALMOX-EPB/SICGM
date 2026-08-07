@@ -218,6 +218,12 @@
                                 <div class="signature-preview" style="display:none;">
                                     <img class="signature-img" src="" alt="Assinatura">
                                 </div>
+                                <!-- NOVO: Botão para foto -->
+                                <button type="button" class="btn-foto" onclick="capturarFoto('recebido'); return false;">📸 Foto do Colaborador</button>
+                                <div class="foto-preview" id="fotoPreviewRecebido" style="display:none; margin-top: 10px;">
+                                    <img class="foto-img" id="fotoImgRecebido" src="" alt="Foto do Colaborador" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 2px solid #48BB78;">
+                                    <p style="font-size: 11px; color: #48BB78; margin-top: 4px;">✅ Foto capturada</p>
+                                </div>
                                 <button type="button" class="btn-assinar" onclick="abrirPaginaAssinatura('recebido'); return false;">✍️ Assinar</button>
                                 <button type="button" class="btn-reassinar" onclick="abrirPaginaAssinatura('recebido'); return false;" style="display:none;">🔄 Reassinar</button>
                             </div>
