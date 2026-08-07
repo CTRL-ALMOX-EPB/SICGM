@@ -5,372 +5,114 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboards - SICGM</title>
     
+    <!-- CSS Base -->
     <link rel="stylesheet" href="../css/base.css">
     
-    <style>
-        .dashboards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            padding: 40px 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        
-        .dashboard-card-link {
-            background: white;
-            border-radius: 16px;
-            padding: 30px 25px;
-            text-decoration: none;
-            color: #2d3748;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            border: 1px solid #e2e8f0;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            position: relative;
-        }
-        
-        .dashboard-card-link:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-            border-color: #4299e1;
-        }
-        
-        .dashboard-card-link .icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-        
-        .dashboard-card-link h3 {
-            font-size: 18px;
-            margin: 0 0 8px 0;
-            color: #2d3748;
-        }
-        
-        .dashboard-card-link p {
-            font-size: 14px;
-            color: #718096;
-            margin: 0;
-            line-height: 1.5;
-        }
-        
-        .dashboard-card-link .badge {
-            margin-top: 12px;
-            font-size: 11px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-weight: 500;
-        }
-        
-        .dashboard-card-link .badge.disponivel {
-            background: #c6f6d5;
-            color: #276749;
-        }
-        
-        .dashboard-card-link .badge.em-breve {
-            background: #fefcbf;
-            color: #975a16;
-        }
-        
-        .dashboard-card-link .badge.carregando {
-            background: #e2e8f0;
-            color: #4a5568;
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-        
-        .dashboard-card-link .badge.erro {
-            background: #fed7d7;
-            color: #9b2c2c;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .page-header {
-            background: linear-gradient(135deg, #1a202c, #2d3748);
-            color: white;
-            padding: 30px 20px;
-            text-align: center;
-        }
-        
-        .page-header h1 {
-            font-size: 28px;
-            margin: 0;
-        }
-        
-        .page-header p {
-            font-size: 16px;
-            opacity: 0.8;
-            margin: 8px 0 0 0;
-        }
-        
-        .btn-voltar {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 12px 24px;
-            background: #4299e1;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-weight: 500;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
-            transition: all 0.2s;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            z-index: 1000;
-        }
-        
-        .btn-voltar:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(66, 153, 225, 0.5);
-        }
-        
-        .preload-status {
-            text-align: center;
-            padding: 12px 20px;
-            font-size: 14px;
-            color: #a0aec0;
-            margin-top: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            display: inline-block;
-        }
-        
-        .preload-status .loading-text {
-            display: inline-block;
-        }
-        
-        .preload-status .spinner-small {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-top-color: #ffffff;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-        
-        .preload-status .check {
-            color: #48bb78;
-            margin-right: 8px;
-            font-size: 18px;
-            vertical-align: middle;
-        }
-        
-        .preload-status .error {
-            color: #fc8181;
-            margin-right: 8px;
-            font-size: 18px;
-            vertical-align: middle;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .header-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        
-        @media (max-width: 768px) {
-            .dashboards-grid {
-                grid-template-columns: 1fr;
-                padding: 20px;
-            }
-            
-            .btn-voltar {
-                bottom: 10px;
-                right: 10px;
-                padding: 10px 16px;
-                font-size: 13px;
-            }
-            
-            .page-header h1 {
-                font-size: 22px;
-            }
-        }
-    </style>
+    <!-- CSS Específico do Index -->
+    <link rel="stylesheet" href="../css/dashboards-index.css">
 </head>
-<body>
-    <div class="page-header">
-        <div class="header-content">
-            <h1>📊 Dashboards SICGM</h1>
-            <p>Visualize e acompanhe os indicadores do sistema</p>
+<body class="dashboards-index-body">
+    <!-- ============================================
+    HEADER SUPERIOR - LOGO + USUÁRIO
+    ============================================ -->
+    <header class="dashboards-top-header">
+        <div class="header-left">
+            <div class="logo-area">
+                <div class="logo">
+                    <img src="../assets/img/logo-control.png" alt="Control" onerror="this.style.display='none'; this.parentElement.textContent='C'">
+                </div>
+                <span class="logo-text">SICGM <span>| Dashboards</span></span>
+            </div>
+        </div>
+
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">A</div>
+            <div class="user-details">
+                <span class="user-name" id="userName">Carregando...</span>
+                <span class="user-meta" id="userMatricula">Matrícula: ---</span>
+            </div>
+            <span class="user-perfil" id="userPerfil">GESTÃO</span>
+            <a href="../home-gestao.html" class="btn-home">
+                🏠 Home
+            </a>
+        </div>
+    </header>
+
+    <!-- ============================================
+    BANNER DA PÁGINA
+    ============================================ -->
+    <section class="dashboards-page-banner">
+        <div class="banner-content">
+            <h1>
+                <span class="icon">📊</span>
+                Dashboards SICGM
+            </h1>
+            <p>Visualize e acompanhe os indicadores do sistema em tempo real</p>
             <div class="preload-status" id="preloadStatus">
                 <span class="spinner-small" id="preloadSpinner"></span>
                 <span class="loading-text" id="preloadText">Preparando dados dos dashboards...</span>
             </div>
         </div>
-    </div>
-    
-    <div class="dashboards-grid" id="dashboardsGrid">
-        <!-- Dashboard 1 - Pendência de Requisição (Em produção) -->
-        <a href="#" class="dashboard-card-link" onclick="event.preventDefault(); alert('⏳ Dashboard em produção. Em breve disponível!')">
-            <div class="icon">📌</div>
-            <h3>Pendência de Requisição</h3>
-            <p>Acompanhamento de requisições pendentes</p>
-            <span class="badge em-breve">Em produção</span>
-        </a>
-        
-        <!-- Dashboard 2 - Aditivos Sistêmicos -->
-        <a href="aditivos-sistemicos.html" class="dashboard-card-link" id="linkSistemicos">
-            <div class="icon">📝</div>
-            <h3>Aditivos Sistêmicos</h3>
-            <p>Análise de itens aditivados, status e indicadores</p>
-            <span class="badge carregando" id="badgeSistemicos">⏳ Carregando...</span>
-        </a>
-        
-        <!-- Dashboard 3 - Aditivos Físicos -->
-        <a href="aditivos-fisicos.html" class="dashboard-card-link" id="linkFisicos">
-            <div class="icon">🔧</div>
-            <h3>Aditivos Físicos</h3>
-            <p>Análise de aplicação de aditivos por obra e encarregado</p>
-            <span class="badge carregando" id="badgeFisicos">⏳ Carregando...</span>
-        </a>
-        
-        <!-- Dashboard 4 - Pendência de Devolução -->
-        <a href="pendencia-devolucao.html" class="dashboard-card-link" id="linkDevolucao">
-            <div class="icon">📦</div>
-            <h3>Pendência de Devolução</h3>
-            <p>Acompanhamento de pendências por obra e encarregado</p>
-            <span class="badge carregando" id="badgeDevolucao">⏳ Carregando...</span>
-        </a>
-        
-        <!-- Dashboard 5 - Farol de Obras -->
-        <a href="farol-obras.html" class="dashboard-card-link" id="linkFarol">
-            <div class="icon">🚦</div>
-            <h3>Farol de Obras</h3>
-            <p>Visão geral dos indicadores das obras</p>
-            <span class="badge carregando" id="badgeFarol">⏳ Carregando...</span>
-        </a>
-    </div>
-    
-    <a href="../home-gestao.html" class="btn-voltar">
-        🏠 Voltar para Home
-    </a>
+    </section>
 
-    <!-- Carrega os scripts na ordem correta -->
+    <!-- ============================================
+    CARDS DOS DASHBOARDS
+    ============================================ -->
+    <div class="dashboards-container">
+        <div class="dashboards-grid">
+            <!-- Dashboard 1 - Pendência de Requisição (Em produção) -->
+            <a href="#" class="dashboard-card-link" onclick="event.preventDefault(); alert('⏳ Dashboard em produção. Em breve disponível!')">
+                <div class="icon">📌</div>
+                <h3>Pendência de Requisição</h3>
+                <p>Acompanhamento de requisições pendentes</p>
+                <span class="badge em-breve">Em produção</span>
+            </a>
+            
+            <!-- Dashboard 2 - Aditivos Sistêmicos -->
+            <a href="aditivos-sistemicos.html" class="dashboard-card-link" id="linkSistemicos">
+                <div class="icon">📝</div>
+                <h3>Aditivos Sistêmicos</h3>
+                <p>Análise de itens aditivados, status e indicadores</p>
+                <span class="badge carregando" id="badgeSistemicos">⏳ Carregando...</span>
+            </a>
+            
+            <!-- Dashboard 3 - Aditivos Físicos -->
+            <a href="aditivos-fisicos.html" class="dashboard-card-link" id="linkFisicos">
+                <div class="icon">🔧</div>
+                <h3>Aditivos Físicos</h3>
+                <p>Análise de aplicação de aditivos por obra e encarregado</p>
+                <span class="badge carregando" id="badgeFisicos">⏳ Carregando...</span>
+            </a>
+            
+            <!-- Dashboard 4 - Pendência de Devolução -->
+            <a href="pendencia-devolucao.html" class="dashboard-card-link" id="linkDevolucao">
+                <div class="icon">📦</div>
+                <h3>Pendência de Devolução</h3>
+                <p>Acompanhamento de pendências por obra e encarregado</p>
+                <span class="badge carregando" id="badgeDevolucao">⏳ Carregando...</span>
+            </a>
+            
+            <!-- Dashboard 5 - Farol de Obras -->
+            <a href="farol-obras.html" class="dashboard-card-link" id="linkFarol">
+                <div class="icon">🚦</div>
+                <h3>Farol de Obras</h3>
+                <p>Visão geral dos indicadores das obras</p>
+                <span class="badge carregando" id="badgeFarol">⏳ Carregando...</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- ============================================
+    SCRIPTS
+    ============================================ -->
+    <!-- Scripts base do sistema -->
     <script src="../js/script.js"></script>
+    
+    <!-- Scripts dos dashboards -->
     <script src="../js/dashboards-common.js"></script>
     <script src="../js/dashboards-cache.js"></script>
     
-    <script>
-        // ============================================
-        // PRÉ-CARREGAMENTO DOS DASHBOARDS
-        // ============================================
-        
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🚀 Iniciando pré-carregamento dos dashboards...');
-            
-            const preloadText = document.getElementById('preloadText');
-            const preloadSpinner = document.getElementById('preloadSpinner');
-            const preloadStatus = document.getElementById('preloadStatus');
-            
-            const badges = {
-                sistemicos: document.getElementById('badgeSistemicos'),
-                fisicos: document.getElementById('badgeFisicos'),
-                devolucao: document.getElementById('badgeDevolucao'),
-                farol: document.getElementById('badgeFarol')
-            };
-            
-            // Aguarda um pouco para garantir que todos os scripts foram carregados
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            // Verifica se a API_URL está disponível
-            if (typeof window.API_URL === 'undefined') {
-                console.warn('⚠️ API_URL não definida, usando fallback');
-                window.API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
-            }
-            
-            console.log('📡 API_URL:', window.API_URL);
-            
-            try {
-                // Verifica se a função de pré-carregamento está disponível
-                if (typeof window.preCarregarDashboards === 'function') {
-                    preloadText.textContent = 'Pré-carregando dados dos dashboards...';
-                    preloadSpinner.style.display = 'inline-block';
-                    
-                    const startTime = Date.now();
-                    const results = await window.preCarregarDashboards();
-                    const elapsed = Date.now() - startTime;
-                    
-                    if (results) {
-                        const names = ['Aditivos Sistêmicos', 'Aditivos Físicos', 'Farol de Obras', 'Pendências Devolução'];
-                        const badgeKeys = ['sistemicos', 'fisicos', 'farol', 'devolucao'];
-                        let successCount = 0;
-                        
-                        results.forEach((result, index) => {
-                            const badge = badges[badgeKeys[index]];
-                            if (badge) {
-                                if (result.status === 'fulfilled') {
-                                    const count = result.value?.length || 0;
-                                    badge.textContent = `✓ ${count} registros`;
-                                    badge.className = 'badge disponivel';
-                                    successCount++;
-                                } else {
-                                    badge.textContent = '⚠️ Erro';
-                                    badge.className = 'badge erro';
-                                }
-                            }
-                        });
-                        
-                        if (successCount === results.length) {
-                            preloadText.textContent = `✅ Todos os dashboards pré-carregados (${elapsed}ms)`;
-                            preloadSpinner.style.display = 'none';
-                            preloadStatus.style.color = '#48bb78';
-                        } else if (successCount > 0) {
-                            preloadText.textContent = `⚠️ ${successCount}/${results.length} dashboards pré-carregados (${elapsed}ms)`;
-                            preloadSpinner.style.display = 'none';
-                            preloadStatus.style.color = '#ed8936';
-                        } else {
-                            preloadText.textContent = `❌ Erro ao pré-carregar dados (${elapsed}ms)`;
-                            preloadSpinner.style.display = 'none';
-                            preloadStatus.style.color = '#fc8181';
-                        }
-                    }
-                } else {
-                    console.warn('⚠️ Função preCarregarDashboards não disponível');
-                    preloadText.textContent = '⚠️ Carregamento automático indisponível';
-                    preloadSpinner.style.display = 'none';
-                    preloadStatus.style.color = '#ed8936';
-                    
-                    // Marca todos como disponíveis mesmo sem pré-carregamento
-                    Object.values(badges).forEach(badge => {
-                        if (badge) {
-                            badge.textContent = '✓ Disponível';
-                            badge.className = 'badge disponivel';
-                        }
-                    });
-                }
-                
-            } catch (error) {
-                console.error('❌ Erro no pré-carregamento:', error);
-                preloadText.textContent = `⚠️ Erro: ${error.message || 'Desconhecido'}`;
-                preloadSpinner.style.display = 'none';
-                preloadStatus.style.color = '#fc8181';
-                
-                // Marca todos como disponíveis mesmo com erro
-                Object.values(badges).forEach(badge => {
-                    if (badge) {
-                        badge.textContent = '✓ Disponível';
-                        badge.className = 'badge disponivel';
-                    }
-                });
-            }
-        });
-    </script>
+    <!-- Script específico da página inicial -->
+    <script src="../js/dashboards-index.js"></script>
 </body>
 </html>
