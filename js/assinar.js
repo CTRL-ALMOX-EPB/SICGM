@@ -1,5 +1,5 @@
 // ============================================
-// ASSINATURA - JavaScript (COM R2)
+// ASSINATURA - JavaScript (COM R2 CORRIGIDO)
 // ============================================
 
 let signaturePad = null;
@@ -8,7 +8,8 @@ let resizeTimeout = null;
 let assinaturaConfirmada = false;
 
 const API_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/api';
-const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
+const R2_BUCKET_URL = 'https://pub-8c9c377ceaa648c2ad535ea1abba45f8.r2.dev';
+const R2_UPLOAD_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/upload';
 
 // ============================================
 // FUNÇÃO PARA VERIFICAR SESSÃO
@@ -33,30 +34,31 @@ function verificarSessaoAssinatura() {
 }
 
 // ============================================
-// FUNÇÃO PARA UPLOAD PARA O R2
+// FUNÇÃO PARA UPLOAD PARA O R2 (CORRIGIDA)
 // ============================================
 
 async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
     try {
-        // Converte base64 para blob
+        console.log('📤 Iniciando upload para R2 (assinatura)...');
+        console.log('📤 Pasta:', pasta);
+        console.log('📤 Arquivo:', nomeArquivo);
+        
         const response = await fetch(imagemDataURL);
         const blob = await response.blob();
         
-        // Gera um nome único se não for fornecido
+        console.log('📤 Tamanho do blob:', blob.size, 'bytes');
+        
         if (!nomeArquivo) {
             const timestamp = Date.now();
             const random = Math.random().toString(36).substring(2, 8);
             nomeArquivo = `${timestamp}_${random}.png`;
         }
         
-        // Caminho completo no R2
         const path = `${pasta}/${nomeArquivo}`;
-        const url = `${R2_URL}/${path}`;
+        const url = `${R2_UPLOAD_URL}/${path}`;
         
-        console.log(`📤 Uploading to R2: ${url}`);
-        console.log(`📤 Tamanho do arquivo: ${blob.size} bytes`);
+        console.log(`📤 Upload para: ${url}`);
         
-        // Upload para o R2 usando PUT
         const uploadResponse = await fetch(url, {
             method: 'PUT',
             headers: {
@@ -65,17 +67,20 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
             body: blob
         });
         
+        console.log('📤 Status do upload:', uploadResponse.status);
+        
         if (!uploadResponse.ok) {
             const errorText = await uploadResponse.text();
             throw new Error(`Erro ao fazer upload: ${uploadResponse.status} - ${errorText}`);
         }
         
-        console.log(`✅ Upload concluído: ${url}`);
+        const publicUrl = `${R2_BUCKET_URL}/${path}`;
         
-        // Retorna a URL pública
+        console.log(`✅ Upload concluído: ${publicUrl}`);
+        
         return {
             success: true,
-            url: url,
+            url: publicUrl,
             path: path,
             nome: nomeArquivo
         };
@@ -111,27 +116,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('📝 Dados da assinatura:', dadosAssinatura);
 
-    // Atualiza o header com o tipo de assinatura
     const tipoLabel = tipo === 'entregue' ? '📤 ENTREGUE POR' : '📥 RECEBIDO POR';
     const tipoElement = document.getElementById('tipoAssinatura');
     if (tipoElement) tipoElement.textContent = tipoLabel;
     
-    // Nome do signatário (vindo da URL)
     const nomeElement = document.getElementById('nomeSignatario');
     if (nomeElement) nomeElement.textContent = nome || 'Aguardando...';
     
-    // Input do nome
     const nomeInput = document.getElementById('nomeInput');
     if (nomeInput) {
         nomeInput.value = nome || '';
         nomeInput.placeholder = 'Digite seu nome completo';
     }
     
-    // Informação adicional (Nº da S.A.)
     const infoElement = document.getElementById('infoAdicional');
     if (infoElement) infoElement.textContent = `S.A. Emergencial #${String(numero).padStart(4, '0')}`;
 
-    // Inicializar o canvas de assinatura
     const canvas = document.getElementById('signatureCanvas');
     const container = document.getElementById('signatureArea');
     
@@ -159,7 +159,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Inicializar o SignaturePad
     signaturePad = new SignaturePad(canvas, {
         backgroundColor: 'rgba(255, 255, 255, 0)',
         penColor: '#1a237e',
@@ -168,10 +167,8 @@ document.addEventListener('DOMContentLoaded', function() {
         throttle: 16
     });
 
-    // Redimensionar o canvas
     setTimeout(resizeCanvas, 100);
 
-    // Evento de resize
     const handleResize = function() {
         if (resizeTimeout) {
             clearTimeout(resizeTimeout);
@@ -187,7 +184,6 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(resizeCanvas, 300);
     });
 
-    // Observer para mudanças no container
     if (window.ResizeObserver) {
         const resizeObserver = new ResizeObserver(function() {
             handleResize();
@@ -195,7 +191,6 @@ document.addEventListener('DOMContentLoaded', function() {
         resizeObserver.observe(container);
     }
 
-    // Enter no input de nome = confirmar
     if (nomeInput) {
         nomeInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
@@ -205,12 +200,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Prevenir scroll durante o desenho
     canvas.addEventListener('touchstart', function(e) {
         e.preventDefault();
     }, { passive: false });
 
-    // Scroll para o final quando o input de nome recebe foco
     if (nomeInput) {
         nomeInput.addEventListener('focus', function() {
             setTimeout(function() {
@@ -253,7 +246,6 @@ async function confirmarAssinatura() {
     const nomeInput = document.getElementById('nomeInput');
     const nome = nomeInput ? nomeInput.value.trim() : '';
     
-    // Validação do nome
     if (!nome) {
         mostrarStatus('⚠️ Por favor, informe o nome do signatário.', 'error');
         if (nomeInput) {
@@ -264,7 +256,6 @@ async function confirmarAssinatura() {
         return;
     }
 
-    // Validação da assinatura
     if (!signaturePad || signaturePad.isEmpty()) {
         mostrarStatus('⚠️ Por favor, assine no campo acima.', 'error');
         return;
@@ -277,13 +268,11 @@ async function confirmarAssinatura() {
         btnConfirmar.style.opacity = '0.7';
     }
 
-    // Capturar a assinatura como imagem
     const assinaturaDataURL = signaturePad.toDataURL();
 
     try {
         console.log('📤 Enviando assinatura para R2 e API...');
         
-        // PASSO 1: Upload da assinatura para o R2
         const nomeArquivo = `assinatura_${dadosAssinatura.tipo}_${dadosAssinatura.numero}_${Date.now()}.png`;
         const resultadoUpload = await uploadParaR2(assinaturaDataURL, 'assinaturas', nomeArquivo);
         
@@ -294,7 +283,6 @@ async function confirmarAssinatura() {
         const urlAssinatura = resultadoUpload.url;
         console.log(`✅ Assinatura enviada para R2: ${urlAssinatura}`);
         
-        // PASSO 2: Salvar a URL da assinatura no banco
         console.log('📤 Enviando URL da assinatura para API...');
         
         const response = await fetch(`${API_URL}/sa/${dadosAssinatura.numero}/assinatura`, {
@@ -305,7 +293,7 @@ async function confirmarAssinatura() {
             body: JSON.stringify({
                 tipo: dadosAssinatura.tipo,
                 nome: nome,
-                assinatura_url: urlAssinatura  // Agora é uma URL, não base64
+                assinatura_url: urlAssinatura
             })
         });
 
@@ -321,7 +309,6 @@ async function confirmarAssinatura() {
         
         mostrarStatus('✅ Assinatura salva com sucesso! Fechando...', 'success');
 
-        // Salvar no sessionStorage para notificar a página principal
         try {
             sessionStorage.setItem('assinatura_concluida_' + dadosAssinatura.numero, JSON.stringify({
                 tipo: dadosAssinatura.tipo,
@@ -334,7 +321,6 @@ async function confirmarAssinatura() {
             console.warn('⚠️ Erro ao salvar no sessionStorage:', e);
         }
 
-        // Fechar a janela após 1.5 segundos
         setTimeout(function() {
             fecharJanelaAssinatura();
         }, 1500);
@@ -358,7 +344,6 @@ async function confirmarAssinatura() {
 function fecharJanelaAssinatura() {
     console.log('🔒 Fechando janela de assinatura...');
     
-    // Tentar fechar a janela diretamente
     try {
         window.close();
         console.log('✅ window.close() executado');
@@ -366,7 +351,6 @@ function fecharJanelaAssinatura() {
         console.warn('⚠️ window.close() falhou:', e);
     }
     
-    // Fallback: mostrar mensagem se a janela não fechar
     setTimeout(function() {
         if (!window.closed) {
             console.log('ℹ️ Janela ainda aberta. O usuário pode fechá-la manualmente.');
@@ -378,7 +362,6 @@ function fecharJanelaAssinatura() {
                 status.style.fontSize = '16px';
                 status.style.padding = '15px';
             }
-            // Mostrar botão de fechar
             const actions = document.querySelector('.signature-actions');
             if (actions && !document.getElementById('btnFecharJanela')) {
                 const btnFechar = document.createElement('button');

@@ -1,9 +1,10 @@
 // ============================================
-// S.A. EMERGENCIAL - SICGM (COMPLETO COM R2)
+// S.A. EMERGENCIAL - SICGM (COMPLETO COM R2 CORRIGIDO)
 // ============================================
 
 const API_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/api';
-const R2_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/upload';
+const R2_BUCKET_URL = 'https://pub-8c9c377ceaa648c2ad535ea1abba45f8.r2.dev';
+const R2_UPLOAD_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/upload';
 
 // ============================================
 // VARIÁVEIS GLOBAIS
@@ -23,7 +24,7 @@ let overlayElement = null;
 // Variáveis da câmera
 let streamAtual = null;
 let fotoCapturada = null;
-let cameraAtiva = 'environment'; // 'environment' = traseira, 'user' = frontal
+let cameraAtiva = 'environment';
 
 // ============================================
 // FUNÇÃO PARA REDIRECIONAR PARA HOME
@@ -619,7 +620,7 @@ function configurarPopupDescricao() {
 }
 
 // ============================================
-// FUNÇÃO PARA UPLOAD PARA O R2
+// FUNÇÃO PARA UPLOAD PARA O R2 (CORRIGIDA)
 // ============================================
 
 async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
@@ -639,19 +640,26 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
             nomeArquivo = `${timestamp}_${random}.jpg`;
         }
         
-        if (!nomeArquivo.endsWith('.jpg') && !nomeArquivo.endsWith('.png')) {
+        if (!nomeArquivo.endsWith('.jpg') && !nomeArquivo.endsWith('.jpeg') && !nomeArquivo.endsWith('.png')) {
             nomeArquivo = nomeArquivo + '.jpg';
         }
         
         const path = `${pasta}/${nomeArquivo}`;
-        const url = `${R2_URL}/${path}`;
+        const url = `${R2_UPLOAD_URL}/${path}`;
         
-        console.log(`📤 Uploading to R2: ${url}`);
+        console.log(`📤 Upload para: ${url}`);
+        
+        let contentType = 'image/jpeg';
+        if (imagemDataURL.startsWith('data:image/png')) {
+            contentType = 'image/png';
+        } else if (imagemDataURL.startsWith('data:image/webp')) {
+            contentType = 'image/webp';
+        }
         
         const uploadResponse = await fetch(url, {
             method: 'PUT',
             headers: {
-                'Content-Type': imagemDataURL.startsWith('data:image/png') ? 'image/png' : 'image/jpeg'
+                'Content-Type': contentType
             },
             body: blob
         });
@@ -664,11 +672,13 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
             throw new Error(`Erro ao fazer upload: ${uploadResponse.status} - ${errorText}`);
         }
         
-        console.log(`✅ Upload concluído: ${url}`);
+        const publicUrl = `${R2_BUCKET_URL}/${path}`;
+        
+        console.log(`✅ Upload concluído: ${publicUrl}`);
         
         return {
             success: true,
-            url: url,
+            url: publicUrl,
             path: path,
             nome: nomeArquivo
         };
@@ -680,6 +690,50 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
             error: error.message
         };
     }
+}
+
+// ============================================
+// COMPRIMIR IMAGEM ANTES DO UPLOAD
+// ============================================
+
+async function comprimirImagem(dataURL, qualidade = 0.7) {
+    return new Promise((resolve, reject) => {
+        try {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                const MAX_HEIGHT = 800;
+                
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height = height * (MAX_WIDTH / width);
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width = width * (MAX_HEIGHT / height);
+                        height = MAX_HEIGHT;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                resolve(canvas.toDataURL('image/jpeg', qualidade));
+            };
+            img.onerror = reject;
+            img.src = dataURL;
+        } catch (error) {
+            reject(error);
+        }
+    });
 }
 
 // ============================================
@@ -1278,7 +1332,7 @@ function capturarFotoFrame() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, width, height);
     
-    const qualidade = 0.35;
+    const qualidade = 0.6;
     const imagemDataURL = canvas.toDataURL('image/jpeg', qualidade);
     
     console.log(`📸 Foto capturada: ${Math.round(imagemDataURL.length / 1024)} KB`);
@@ -1344,7 +1398,7 @@ function excluirFoto() {
 }
 
 // ============================================
-// ENVIAR FOTO PARA O R2
+// ENVIAR FOTO PARA O R2 (CORRIGIDA)
 // ============================================
 
 async function enviarFotoParaR2(imagemDataURL) {
@@ -1352,13 +1406,20 @@ async function enviarFotoParaR2(imagemDataURL) {
     
     console.log('📸 Iniciando envio de foto para S.A.', numero);
     
+    if (!imagemDataURL || imagemDataURL.length < 100) {
+        mostrarToast('❌ Imagem inválida ou muito pequena', 'erro');
+        return;
+    }
+    
     try {
         mostrarToast('⏳ Enviando foto...', 'info');
+        
+        const imagemComprimida = await comprimirImagem(imagemDataURL, 0.7);
         
         const nomeArquivo = `foto_${numero}_${Date.now()}.jpg`;
         console.log('📸 Nome do arquivo:', nomeArquivo);
         
-        const resultadoUpload = await uploadParaR2(imagemDataURL, 'fotos', nomeArquivo);
+        const resultadoUpload = await uploadParaR2(imagemComprimida, 'fotos', nomeArquivo);
         
         if (!resultadoUpload.success) {
             console.error('❌ Falha no upload:', resultadoUpload.error);
@@ -1393,6 +1454,14 @@ async function enviarFotoParaR2(imagemDataURL) {
         console.log('✅ Resposta do servidor:', result);
         
         mostrarToast('✅ Foto salva com sucesso!', 'sucesso');
+        
+        const preview = document.getElementById('fotoPreviewRecebido');
+        const img = document.getElementById('fotoImgRecebido');
+        if (preview && img) {
+            img.src = urlFoto;
+            preview.style.display = 'block';
+            document.getElementById('btnExcluirFoto').style.display = 'inline-block';
+        }
         
     } catch (error) {
         console.error('❌ Erro ao enviar foto:', error);
