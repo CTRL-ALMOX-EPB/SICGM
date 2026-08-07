@@ -2338,3 +2338,172 @@
         font-size: 12px;
     }
 }
+/* ============================================ */
+/* BOTÃO EXCLUIR FOTO                           */
+/* ============================================ */
+
+.btn-excluir-foto {
+    background: #FC8181;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-excluir-foto:hover {
+    background: #E53E3E;
+    transform: scale(1.05);
+}
+
+/* ============================================ */
+/* CONTROLES DA CÂMERA                          */
+/* ============================================ */
+
+.camera-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 640px;
+    padding: 20px;
+}
+
+.camera-container video {
+    width: 100%;
+    max-height: 60vh;
+    border-radius: 12px;
+    background: #000;
+    border: 3px solid #fff;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    object-fit: cover;
+}
+
+.camera-controls {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+}
+
+.camera-controls button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 100px;
+    flex: 1;
+    max-width: 180px;
+}
+
+.btn-switch-camera {
+    background: #4299E1;
+    color: white;
+}
+
+.btn-switch-camera:hover {
+    background: #3182CE;
+    transform: scale(1.05);
+}
+
+.btn-capturar {
+    background: #48BB78;
+    color: white;
+}
+
+.btn-capturar:hover {
+    background: #38A169;
+    transform: scale(1.05);
+}
+
+.btn-fechar-camera {
+    background: #FC8181;
+    color: white;
+}
+
+.btn-fechar-camera:hover {
+    background: #F56565;
+    transform: scale(1.05);
+}
+
+.camera-status {
+    color: white;
+    font-size: 14px;
+    margin-top: 10px;
+    text-align: center;
+    background: rgba(0,0,0,0.5);
+    padding: 8px 20px;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 400px;
+}
+
+/* ============================================ */
+/* RESPONSIVO DA CÂMERA                         */
+/* ============================================ */
+
+@media (max-width: 768px) {
+    .camera-container video {
+        max-height: 50vh;
+    }
+    
+    .camera-controls button {
+        padding: 10px 16px;
+        font-size: 12px;
+        min-width: 80px;
+    }
+}
+
+@media (max-width: 480px) {
+    .camera-container {
+        padding: 10px;
+    }
+    
+    .camera-container video {
+        max-height: 40vh;
+        border-radius: 8px;
+    }
+    
+    .camera-controls {
+        gap: 8px;
+    }
+    
+    .camera-controls button {
+        padding: 8px 12px;
+        font-size: 11px;
+        min-width: 60px;
+        max-width: 140px;
+    }
+    
+    .camera-status {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+    .camera-container video {
+        max-height: 40vh;
+        max-width: 60%;
+    }
+    
+    .camera-controls {
+        gap: 8px;
+        margin-top: 10px;
+    }
+    
+    .camera-controls button {
+        padding: 6px 12px;
+        font-size: 11px;
+        min-width: 60px;
+    }
+}

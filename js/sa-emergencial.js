@@ -1107,8 +1107,12 @@ function atualizarFotoUI(fotoData) {
 }
 
 // ============================================
-// CAPTURAR FOTO DO COLABORADOR
+// CAPTURAR FOTO DO COLABORADOR (COM CONTROLE DE CÂMERA)
 // ============================================
+
+let streamAtual = null;
+let fotoCapturada = null;
+let cameraAtiva = 'environment'; // 'environment' = traseira, 'user' = frontal
 
 function capturarFoto(tipo) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1116,16 +1120,34 @@ function capturarFoto(tipo) {
         return;
     }
     
+    // Verifica se já tem foto capturada
+    if (fotoCapturada) {
+        if (!confirm('⚠️ Você já tirou uma foto. Deseja tirar outra?')) {
+            return;
+        }
+        // Limpa a foto anterior
+        fotoCapturada = null;
+        const preview = document.getElementById('fotoPreviewRecebido');
+        const img = document.getElementById('fotoImgRecebido');
+        if (preview) preview.style.display = 'none';
+        if (img) img.src = '';
+    }
+    
     const modal = document.createElement('div');
     modal.className = 'camera-modal active';
     modal.id = 'cameraModal';
     modal.innerHTML = `
-        <video id="cameraVideo" autoplay playsinline></video>
-        <div class="camera-actions">
-            <button class="btn-capturar" onclick="capturarFotoFrame()">📸 Capturar</button>
-            <button class="btn-fechar-camera" onclick="fecharCamera()">✕ Fechar</button>
+        <div class="camera-container">
+            <video id="cameraVideo" autoplay playsinline></video>
+            <div class="camera-controls">
+                <button class="btn-switch-camera" onclick="trocarCamera()" title="Trocar câmera">
+                    🔄 Trocar Câmera
+                </button>
+                <button class="btn-capturar" onclick="capturarFotoFrame()">📸 Capturar</button>
+                <button class="btn-fechar-camera" onclick="fecharCamera()">✕ Fechar</button>
+            </div>
+            <div class="camera-status" id="cameraStatus">🔄 Iniciando câmera...</div>
         </div>
-        <div class="camera-status" id="cameraStatus">🔄 Iniciando câmera...</div>
     `;
     
     document.body.appendChild(modal);
@@ -1133,9 +1155,24 @@ function capturarFoto(tipo) {
     const video = document.getElementById('cameraVideo');
     const status = document.getElementById('cameraStatus');
     
+    iniciarCamera(video, status);
+}
+
+// ============================================
+// INICIAR CÂMERA
+// ============================================
+
+function iniciarCamera(video, status) {
+    // Fecha stream anterior se existir
+    if (streamAtual) {
+        streamAtual.getTracks().forEach(track => track.stop());
+        streamAtual = null;
+    }
+    
+    // Configuração: prioriza câmera traseira (environment)
     const constraints = {
         video: {
-            facingMode: 'user',
+            facingMode: cameraAtiva,
             width: { ideal: 640 },
             height: { ideal: 480 },
             frameRate: { ideal: 15 }
@@ -1147,9 +1184,11 @@ function capturarFoto(tipo) {
         .then(function(stream) {
             streamAtual = stream;
             video.srcObject = stream;
-            status.textContent = '📷 Câmera pronta. Clique em Capturar para tirar a foto.';
-            status.style.color = '#48BB78';
-            console.log('✅ Câmera iniciada com sucesso');
+            if (status) {
+                status.textContent = '📷 Câmera pronta. Clique em Capturar para tirar a foto.';
+                status.style.color = '#48BB78';
+            }
+            console.log(`✅ Câmera iniciada (${cameraAtiva})`);
         })
         .catch(function(error) {
             console.error('❌ Erro ao acessar câmera:', error);
@@ -1161,12 +1200,25 @@ function capturarFoto(tipo) {
                 mensagem += 'Nenhuma câmera encontrada.';
             } else if (error.name === 'NotReadableError') {
                 mensagem += 'A câmera está sendo usada por outro aplicativo.';
+            } else if (error.name === 'OverconstrainedError') {
+                // Tenta a câmera oposta
+                const facing = cameraAtiva === 'environment' ? 'user' : 'environment';
+                mensagem = `🔄 Tentando câmera ${facing === 'environment' ? 'traseira' : 'frontal'}...`;
+                if (status) {
+                    status.textContent = mensagem;
+                    status.style.color = '#ED8936';
+                }
+                cameraAtiva = facing;
+                setTimeout(() => iniciarCamera(video, status), 500);
+                return;
             } else {
                 mensagem += error.message;
             }
             
-            status.textContent = mensagem;
-            status.style.color = '#FC8181';
+            if (status) {
+                status.textContent = mensagem;
+                status.style.color = '#FC8181';
+            }
             mostrarToast(mensagem, 'erro');
             
             setTimeout(() => {
@@ -1176,7 +1228,25 @@ function capturarFoto(tipo) {
 }
 
 // ============================================
-// CAPTURAR FRAME DA CÂMERA
+// TROCAR CÂMERA (FRONTAL/TRASEIRA)
+// ============================================
+
+function trocarCamera() {
+    cameraAtiva = cameraAtiva === 'environment' ? 'user' : 'environment';
+    const video = document.getElementById('cameraVideo');
+    const status = document.getElementById('cameraStatus');
+    const nomeCamera = cameraAtiva === 'environment' ? 'traseira' : 'frontal';
+    
+    if (status) {
+        status.textContent = `🔄 Mudando para câmera ${nomeCamera}...`;
+        status.style.color = '#ED8936';
+    }
+    
+    iniciarCamera(video, status);
+}
+
+// ============================================
+// CAPTURAR FRAME DA CÂMERA (COM QUALIDADE BAIXA)
 // ============================================
 
 function capturarFotoFrame() {
@@ -1189,30 +1259,65 @@ function capturarFotoFrame() {
     }
     
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    canvas.width = Math.min(video.videoWidth || 640, 640);
+    canvas.height = Math.min(video.videoHeight || 480, 480);
     
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     
-    const imagemDataURL = canvas.toDataURL('image/jpeg', 0.5);
+    // Qualidade mais baixa para reduzir tamanho (0.4 = 40%)
+    const imagemDataURL = canvas.toDataURL('image/jpeg', 0.4);
     
+    // Salvar a foto capturada
     fotoCapturada = imagemDataURL;
     
+    // Mostrar preview
     const preview = document.getElementById('fotoPreviewRecebido');
     const img = document.getElementById('fotoImgRecebido');
     if (preview && img) {
         img.src = imagemDataURL;
         preview.style.display = 'block';
+        
+        // Adiciona botão de excluir foto no preview
+        const btnExcluir = document.getElementById('btnExcluirFoto');
+        if (btnExcluir) {
+            btnExcluir.style.display = 'inline-block';
+        }
     }
     
-    status.textContent = '✅ Foto capturada com sucesso!';
-    status.style.color = '#48BB78';
+    if (status) {
+        status.textContent = '✅ Foto capturada com sucesso!';
+        status.style.color = '#48BB78';
+    }
     
+    // Fechar a câmera após 1.5 segundos
     setTimeout(() => {
         fecharCamera();
+        // Enviar a foto para o R2
         enviarFotoParaR2(imagemDataURL);
-    }, 1000);
+    }, 1500);
+}
+
+// ============================================
+// EXCLUIR FOTO
+// ============================================
+
+function excluirFoto() {
+    if (!confirm('⚠️ Tem certeza que deseja excluir esta foto?')) {
+        return;
+    }
+    
+    fotoCapturada = null;
+    
+    const preview = document.getElementById('fotoPreviewRecebido');
+    const img = document.getElementById('fotoImgRecebido');
+    const btnExcluir = document.getElementById('btnExcluirFoto');
+    
+    if (preview) preview.style.display = 'none';
+    if (img) img.src = '';
+    if (btnExcluir) btnExcluir.style.display = 'none';
+    
+    mostrarToast('🗑️ Foto excluída com sucesso.', 'info');
 }
 
 // ============================================

@@ -218,17 +218,24 @@
                                 <div class="signature-preview" style="display:none;">
                                     <img class="signature-img" src="" alt="Assinatura">
                                 </div>
-                                <!-- NOVO: Botão para foto -->
+                                
+                                <!-- BOTÃO DE FOTO -->
                                 <button type="button" class="btn-foto" onclick="capturarFoto('recebido'); return false;">📸 Foto do Colaborador</button>
+                                
+                                <!-- PREVIEW DA FOTO COM BOTÃO EXCLUIR -->
                                 <div class="foto-preview" id="fotoPreviewRecebido" style="display:none; margin-top: 10px;">
                                     <img class="foto-img" id="fotoImgRecebido" src="" alt="Foto do Colaborador" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 2px solid #48BB78;">
-                                    <p style="font-size: 11px; color: #48BB78; margin-top: 4px;">✅ Foto capturada</p>
+                                    <div style="display: flex; gap: 8px; margin-top: 6px; align-items: center; justify-content: center;">
+                                        <span style="font-size: 11px; color: #48BB78;">✅ Foto capturada</span>
+                                        <button type="button" id="btnExcluirFoto" class="btn-excluir-foto" onclick="excluirFoto()" style="display: none; background: #FC8181; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;">
+                                            🗑️ Excluir
+                                        </button>
+                                    </div>
                                 </div>
+                                
                                 <button type="button" class="btn-assinar" onclick="abrirPaginaAssinatura('recebido'); return false;">✍️ Assinar</button>
                                 <button type="button" class="btn-reassinar" onclick="abrirPaginaAssinatura('recebido'); return false;" style="display:none;">🔄 Reassinar</button>
                             </div>
-                        </div>
-                    </div>
 
                     <!-- Botões de Ação -->
                     <button type="button" class="btn-finalizar" onclick="finalizarSA()">✅ FINALIZAR S.A.</button>
