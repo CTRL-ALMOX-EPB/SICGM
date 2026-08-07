@@ -2,7 +2,7 @@
    DASHBOARDS INDEX - ESTILOS DA PÁGINA INICIAL
    ============================================ */
 
-/* LAYOUT GERAL */
+/* RESET ESPECÍFICO PARA ESTA PÁGINA */
 .dashboards-index-body {
     background: #f7fafc;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -11,10 +11,16 @@
     padding: 0;
 }
 
-/* HEADER SUPERIOR */
+.dashboards-index-body * {
+    box-sizing: border-box;
+}
+
+/* ============================================
+   HEADER SUPERIOR
+   ============================================ */
 .dashboards-top-header {
     background: linear-gradient(135deg, #1a202c, #2d3748);
-    padding: 16px 30px;
+    padding: 12px 30px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -23,44 +29,46 @@
     top: 0;
     z-index: 100;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .dashboards-top-header .header-left {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 15px;
 }
 
 .dashboards-top-header .logo-area {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 .dashboards-top-header .logo-area .logo {
-    width: 45px;
-    height: 45px;
-    border-radius: 10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
     background: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
-    font-size: 20px;
-    color: #1a202c;
+    overflow: hidden;
+    flex-shrink: 0;
 }
 
 .dashboards-top-header .logo-area .logo img {
-    width: 40px;
-    height: 40px;
+    width: 35px;
+    height: 35px;
     object-fit: contain;
 }
 
 .dashboards-top-header .logo-area .logo-text {
     color: white;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
 }
 
 .dashboards-top-header .logo-area .logo-text span {
@@ -70,16 +78,17 @@
 .dashboards-top-header .user-info {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 15px;
     background: rgba(255, 255, 255, 0.08);
-    padding: 8px 16px 8px 20px;
+    padding: 6px 14px 6px 16px;
     border-radius: 30px;
     backdrop-filter: blur(10px);
+    flex-wrap: wrap;
 }
 
 .dashboards-top-header .user-info .user-avatar {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     background: linear-gradient(135deg, #4299e1, #2b6cb0);
     display: flex;
@@ -87,7 +96,7 @@
     justify-content: center;
     color: white;
     font-weight: 700;
-    font-size: 16px;
+    font-size: 14px;
     flex-shrink: 0;
 }
 
@@ -99,21 +108,21 @@
 .dashboards-top-header .user-info .user-details .user-name {
     color: white;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.2;
 }
 
 .dashboards-top-header .user-info .user-details .user-meta {
     color: #a0aec0;
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.2;
 }
 
 .dashboards-top-header .user-info .user-perfil {
     background: rgba(66, 153, 225, 0.2);
-    padding: 4px 14px;
+    padding: 3px 12px;
     border-radius: 20px;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     color: #63b3ed;
     border: 1px solid rgba(66, 153, 225, 0.2);
@@ -125,16 +134,17 @@
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: white;
-    padding: 8px 18px;
+    padding: 6px 16px;
     border-radius: 20px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     transition: all 0.2s;
     display: flex;
     align-items: center;
     gap: 6px;
     text-decoration: none;
+    white-space: nowrap;
 }
 
 .dashboards-top-header .btn-home:hover {
@@ -142,11 +152,12 @@
     transform: translateY(-1px);
 }
 
-/* BANNER DA PÁGINA */
+/* ============================================
+   BANNER DA PÁGINA
+   ============================================ */
 .dashboards-page-banner {
     background: linear-gradient(135deg, #2d3748, #1a202c);
-    padding: 30px 40px;
-    margin: 0;
+    padding: 25px 40px;
     border-bottom: 1px solid #e2e8f0;
     position: relative;
     overflow: hidden;
@@ -157,9 +168,9 @@
     position: absolute;
     top: -50%;
     right: -10%;
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, rgba(66, 153, 225, 0.08) 0%, transparent 70%);
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(66, 153, 225, 0.06) 0%, transparent 70%);
     border-radius: 50%;
 }
 
@@ -172,41 +183,41 @@
 
 .dashboards-page-banner h1 {
     color: white;
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 700;
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 .dashboards-page-banner h1 .icon {
-    font-size: 32px;
+    font-size: 28px;
 }
 
 .dashboards-page-banner p {
     color: #a0aec0;
-    font-size: 16px;
-    margin: 6px 0 0 0;
+    font-size: 15px;
+    margin: 4px 0 0 0;
     padding-left: 4px;
 }
 
 .dashboards-page-banner .preload-status {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    margin-top: 12px;
-    padding: 6px 16px 6px 12px;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 4px 14px 4px 10px;
     background: rgba(255, 255, 255, 0.06);
     border-radius: 20px;
-    font-size: 13px;
+    font-size: 12px;
     color: #a0aec0;
 }
 
 .dashboards-page-banner .preload-status .spinner-small {
     display: inline-block;
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     border: 2px solid rgba(255, 255, 255, 0.15);
     border-top-color: #63b3ed;
     border-radius: 50%;
@@ -216,40 +227,64 @@
 
 .dashboards-page-banner .preload-status .check {
     color: #48bb78;
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .dashboards-page-banner .preload-status .error {
     color: #fc8181;
-    font-size: 16px;
+    font-size: 14px;
 }
 
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
 
-/* CARDS DOS DASHBOARDS */
+/* ============================================
+   CARDS DOS DASHBOARDS - CONTAINER PRINCIPAL
+   ============================================ */
 .dashboards-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 30px 20px;
 }
 
-.dashboards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 25px;
+.dashboards-container .section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
+.dashboards-container .section-title .count {
+    font-size: 13px;
+    font-weight: 400;
+    color: #718096;
+    background: #e2e8f0;
+    padding: 2px 12px;
+    border-radius: 20px;
+}
+
+.dashboards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+/* ============================================
+   CARD INDIVIDUAL
+   ============================================ */
 .dashboard-card-link {
     background: white;
-    border-radius: 16px;
-    padding: 30px 25px;
+    border-radius: 14px;
+    padding: 25px 20px;
     text-decoration: none;
     color: #2d3748;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
     border: 1px solid #e2e8f0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.25s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -264,7 +299,7 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 4px;
+    height: 3px;
     background: linear-gradient(90deg, #4299e1, #63b3ed);
     opacity: 0;
     transition: opacity 0.3s;
@@ -275,45 +310,42 @@
 }
 
 .dashboard-card-link:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
     border-color: #bee3f8;
 }
 
-.dashboard-card-link:active {
-    transform: translateY(-2px);
-}
-
 .dashboard-card-link .icon {
-    font-size: 44px;
-    margin-bottom: 14px;
+    font-size: 38px;
+    margin-bottom: 12px;
     transition: transform 0.3s;
 }
 
 .dashboard-card-link:hover .icon {
-    transform: scale(1.08);
+    transform: scale(1.06);
 }
 
 .dashboard-card-link h3 {
-    font-size: 17px;
-    margin: 0 0 6px 0;
+    font-size: 16px;
+    margin: 0 0 4px 0;
     color: #2d3748;
     font-weight: 600;
 }
 
 .dashboard-card-link p {
-    font-size: 14px;
+    font-size: 13px;
     color: #718096;
-    margin: 0 0 14px 0;
-    line-height: 1.5;
+    margin: 0 0 12px 0;
+    line-height: 1.4;
 }
 
 .dashboard-card-link .badge {
-    font-size: 11px;
-    padding: 4px 14px;
+    font-size: 10px;
+    padding: 3px 14px;
     border-radius: 20px;
     font-weight: 500;
     transition: all 0.3s;
+    display: inline-block;
 }
 
 .dashboard-card-link .badge.disponivel {
@@ -347,99 +379,125 @@
    ============================================ */
 @media (max-width: 1024px) {
     .dashboards-grid {
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 20px;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 16px;
     }
 }
 
 @media (max-width: 768px) {
     .dashboards-top-header {
-        padding: 12px 16px;
-        flex-wrap: wrap;
-        gap: 10px;
+        padding: 10px 16px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
     }
 
     .dashboards-top-header .header-left {
-        gap: 12px;
-        flex-wrap: wrap;
+        justify-content: center;
     }
 
     .dashboards-top-header .logo-area .logo-text {
-        font-size: 15px;
+        font-size: 14px;
     }
 
     .dashboards-top-header .user-info {
-        padding: 6px 12px 6px 14px;
-        gap: 12px;
-        flex-wrap: wrap;
+        justify-content: center;
+        padding: 6px 12px;
+        gap: 10px;
+        border-radius: 20px;
+        width: 100%;
     }
 
     .dashboards-top-header .user-info .user-details .user-name {
-        font-size: 13px;
+        font-size: 12px;
     }
 
     .dashboards-top-header .user-info .user-details .user-meta {
-        font-size: 11px;
+        font-size: 10px;
     }
 
     .dashboards-top-header .user-info .user-perfil {
-        font-size: 10px;
-        padding: 3px 10px;
+        font-size: 9px;
+        padding: 2px 10px;
     }
 
     .dashboards-top-header .btn-home {
-        font-size: 12px;
-        padding: 6px 14px;
+        font-size: 11px;
+        padding: 4px 12px;
     }
 
     .dashboards-page-banner {
-        padding: 20px;
+        padding: 16px 20px;
     }
 
     .dashboards-page-banner h1 {
+        font-size: 20px;
+    }
+
+    .dashboards-page-banner h1 .icon {
         font-size: 22px;
     }
 
     .dashboards-page-banner p {
-        font-size: 14px;
+        font-size: 13px;
     }
 
     .dashboards-container {
-        padding: 20px 16px;
+        padding: 16px;
     }
 
     .dashboards-grid {
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: 14px;
     }
 
     .dashboard-card-link {
-        padding: 24px 20px;
+        padding: 20px 16px;
     }
 }
 
 @media (max-width: 480px) {
     .dashboards-top-header .logo-area .logo {
-        width: 36px;
-        height: 36px;
-        font-size: 16px;
+        width: 32px;
+        height: 32px;
+    }
+
+    .dashboards-top-header .logo-area .logo img {
+        width: 28px;
+        height: 28px;
     }
 
     .dashboards-top-header .logo-area .logo-text {
-        font-size: 13px;
+        font-size: 12px;
     }
 
     .dashboards-top-header .user-info .user-avatar {
-        width: 30px;
-        height: 30px;
-        font-size: 13px;
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
     }
 
     .dashboards-page-banner h1 {
-        font-size: 18px;
+        font-size: 17px;
     }
 
     .dashboards-page-banner h1 .icon {
-        font-size: 24px;
+        font-size: 20px;
+    }
+
+    .dashboards-page-banner p {
+        font-size: 12px;
+    }
+
+    .dashboard-card-link .icon {
+        font-size: 32px;
+    }
+
+    .dashboard-card-link h3 {
+        font-size: 14px;
+    }
+
+    .dashboard-card-link p {
+        font-size: 12px;
     }
 }

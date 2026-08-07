@@ -65,7 +65,7 @@ async function preCarregarDashboardsIndex() {
     };
     
     // Aguarda um pouco para garantir que todos os scripts foram carregados
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Verifica se a API_URL está disponível
     if (typeof window.API_URL === 'undefined') {
@@ -79,22 +79,24 @@ async function preCarregarDashboardsIndex() {
         // Verifica se a função de pré-carregamento está disponível
         if (typeof window.preCarregarDashboards === 'function') {
             preloadText.textContent = 'Pré-carregando dados dos dashboards...';
-            preloadSpinner.style.display = 'inline-block';
+            if (preloadSpinner) preloadSpinner.style.display = 'inline-block';
             
             const startTime = Date.now();
             const results = await window.preCarregarDashboards();
             const elapsed = Date.now() - startTime;
             
-            if (results) {
+            if (results && results.length > 0) {
                 const names = ['Aditivos Sistêmicos', 'Aditivos Físicos', 'Farol de Obras', 'Pendências Devolução'];
                 const badgeKeys = ['sistemicos', 'fisicos', 'farol', 'devolucao'];
                 let successCount = 0;
+                let totalRegistros = 0;
                 
                 results.forEach((result, index) => {
                     const badge = badges[badgeKeys[index]];
                     if (badge) {
                         if (result.status === 'fulfilled') {
                             const count = result.value?.length || 0;
+                            totalRegistros += count;
                             badge.textContent = `✓ ${count} registros`;
                             badge.className = 'badge disponivel';
                             successCount++;
@@ -106,24 +108,28 @@ async function preCarregarDashboardsIndex() {
                 });
                 
                 if (successCount === results.length) {
-                    preloadText.innerHTML = `<span class="check">✅</span> Todos os dashboards pré-carregados (${elapsed}ms)`;
-                    preloadSpinner.style.display = 'none';
-                    preloadStatus.style.color = '#48bb78';
+                    preloadText.innerHTML = `<span class="check">✅</span> Todos os dashboards pré-carregados (${totalRegistros} registros em ${elapsed}ms)`;
+                    if (preloadSpinner) preloadSpinner.style.display = 'none';
+                    if (preloadStatus) preloadStatus.style.color = '#48bb78';
                 } else if (successCount > 0) {
                     preloadText.innerHTML = `<span class="check">⚠️</span> ${successCount}/${results.length} dashboards pré-carregados (${elapsed}ms)`;
-                    preloadSpinner.style.display = 'none';
-                    preloadStatus.style.color = '#ed8936';
+                    if (preloadSpinner) preloadSpinner.style.display = 'none';
+                    if (preloadStatus) preloadStatus.style.color = '#ed8936';
                 } else {
                     preloadText.innerHTML = `<span class="error">❌</span> Erro ao pré-carregar dados (${elapsed}ms)`;
-                    preloadSpinner.style.display = 'none';
-                    preloadStatus.style.color = '#fc8181';
+                    if (preloadSpinner) preloadSpinner.style.display = 'none';
+                    if (preloadStatus) preloadStatus.style.color = '#fc8181';
                 }
+            } else {
+                preloadText.textContent = '⚠️ Nenhum dado retornado';
+                if (preloadSpinner) preloadSpinner.style.display = 'none';
+                if (preloadStatus) preloadStatus.style.color = '#ed8936';
             }
         } else {
             console.warn('⚠️ Função preCarregarDashboards não disponível');
             preloadText.textContent = '⚠️ Carregamento automático indisponível';
-            preloadSpinner.style.display = 'none';
-            preloadStatus.style.color = '#ed8936';
+            if (preloadSpinner) preloadSpinner.style.display = 'none';
+            if (preloadStatus) preloadStatus.style.color = '#ed8936';
             
             // Marca todos como disponíveis mesmo sem pré-carregamento
             Object.values(badges).forEach(badge => {
@@ -137,8 +143,8 @@ async function preCarregarDashboardsIndex() {
     } catch (error) {
         console.error('❌ Erro no pré-carregamento:', error);
         preloadText.innerHTML = `<span class="error">❌</span> Erro: ${error.message || 'Desconhecido'}`;
-        preloadSpinner.style.display = 'none';
-        preloadStatus.style.color = '#fc8181';
+        if (preloadSpinner) preloadSpinner.style.display = 'none';
+        if (preloadStatus) preloadStatus.style.color = '#fc8181';
         
         // Marca todos como disponíveis mesmo com erro
         Object.values(badges).forEach(badge => {
@@ -170,3 +176,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
 window.carregarDadosUsuario = carregarDadosUsuario;
 window.preCarregarDashboardsIndex = preCarregarDashboardsIndex;
+
+console.log('✅ dashboards-index.js inicializado!');
