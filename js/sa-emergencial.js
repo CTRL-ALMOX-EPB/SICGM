@@ -629,31 +629,26 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
         console.log('📤 Pasta:', pasta);
         console.log('📤 Arquivo:', nomeArquivo);
         
-        // Converte DataURL para Blob
         const response = await fetch(imagemDataURL);
         const blob = await response.blob();
         
         console.log('📤 Tamanho do blob:', blob.size, 'bytes');
         
-        // Gera nome único se não fornecido
         if (!nomeArquivo) {
             const timestamp = Date.now();
             const random = Math.random().toString(36).substring(2, 8);
             nomeArquivo = `${timestamp}_${random}.jpg`;
         }
         
-        // Garante extensão correta
         if (!nomeArquivo.endsWith('.jpg') && !nomeArquivo.endsWith('.jpeg') && !nomeArquivo.endsWith('.png')) {
             nomeArquivo = nomeArquivo + '.jpg';
         }
         
-        // CAMINHO: pasta/nome_arquivo (o Worker adiciona o bucket)
         const path = `${pasta}/${nomeArquivo}`;
         const url = `${R2_PROXY_URL}/${path}`;
         
         console.log(`📤 Upload via proxy: ${url}`);
         
-        // Detecta o Content-Type
         let contentType = 'image/jpeg';
         if (imagemDataURL.startsWith('data:image/png')) {
             contentType = 'image/png';
@@ -661,7 +656,6 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
             contentType = 'image/webp';
         }
         
-        // Faz o upload via Worker proxy
         const uploadResponse = await fetch(url, {
             method: 'PUT',
             headers: {
@@ -678,8 +672,9 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
             throw new Error(`Erro ao fazer upload: ${uploadResponse.status} - ${errorText}`);
         }
         
-        // URL pública
-        const publicUrl = `${R2_PUBLIC_URL}/${path}`;
+        // A RESPOSTA DO WORKER AGORA VEM COM A URL
+        const result = await uploadResponse.json();
+        const publicUrl = result.url || `${R2_PUBLIC_URL}/${path}`;
         
         console.log(`✅ Upload concluído: ${publicUrl}`);
         
