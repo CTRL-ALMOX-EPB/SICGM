@@ -1,5 +1,5 @@
 // ============================================
-// ASSINATURA - JavaScript (COM R2 CORRIGIDO)
+// ASSINATURA - JavaScript (COM R2 VIA API PROXY)
 // ============================================
 
 let signaturePad = null;
@@ -8,11 +8,7 @@ let resizeTimeout = null;
 let assinaturaConfirmada = false;
 
 const API_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/api';
-
-// CONFIGURAÇÕES CORRETAS DO R2
-const R2_ACCOUNT_ID = '72f94aa97cf81e272818af03994017aa';
-const R2_BUCKET_NAME = 'sicgm-assinaturas';
-const R2_ENDPOINT = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+const R2_PROXY_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/upload';
 const R2_PUBLIC_URL = 'https://pub-8c9c377ceaa648c2ad535ea1abba45f8.r2.dev';
 
 // ============================================
@@ -38,12 +34,12 @@ function verificarSessaoAssinatura() {
 }
 
 // ============================================
-// FUNÇÃO PARA UPLOAD PARA O R2 (CORRIGIDA)
+// FUNÇÃO PARA UPLOAD VIA API PROXY (CORRIGIDA)
 // ============================================
 
 async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
     try {
-        console.log('📤 Iniciando upload para R2 (assinatura)...');
+        console.log('📤 Iniciando upload via API proxy (assinatura)...');
         console.log('📤 Pasta:', pasta);
         console.log('📤 Arquivo:', nomeArquivo);
         
@@ -58,13 +54,12 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
             nomeArquivo = `${timestamp}_${random}.png`;
         }
         
-        // CAMINHO CORRETO: bucket/nome_pasta/arquivo
-        const path = `${R2_BUCKET_NAME}/${pasta}/${nomeArquivo}`;
-        const uploadUrl = `${R2_ENDPOINT}/${path}`;
+        const path = `${pasta}/${nomeArquivo}`;
+        const url = `${R2_PROXY_URL}/${path}`;
         
-        console.log(`📤 Upload para: ${uploadUrl}`);
+        console.log(`📤 Upload via proxy: ${url}`);
         
-        const uploadResponse = await fetch(uploadUrl, {
+        const uploadResponse = await fetch(url, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'image/png'
@@ -79,15 +74,14 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
             throw new Error(`Erro ao fazer upload: ${uploadResponse.status} - ${errorText}`);
         }
         
-        // URL PÚBLICA CORRETA
-        const publicUrl = `${R2_PUBLIC_URL}/${pasta}/${nomeArquivo}`;
+        const publicUrl = `${R2_PUBLIC_URL}/${path}`;
         
         console.log(`✅ Upload concluído: ${publicUrl}`);
         
         return {
             success: true,
             url: publicUrl,
-            path: `${pasta}/${nomeArquivo}`,
+            path: path,
             nome: nomeArquivo
         };
         
