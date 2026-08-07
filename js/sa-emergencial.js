@@ -3,7 +3,7 @@
 // ============================================
 
 const API_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/api';
-const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
+const R2_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/upload';
 
 // ============================================
 // VARIÁVEIS GLOBAIS
