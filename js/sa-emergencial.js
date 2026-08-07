@@ -1,5 +1,5 @@
 // ============================================
-// S.A. EMERGENCIAL - SICGM (COM R2 VIA API PROXY)
+// S.A. EMERGENCIAL - SICGM (COMPLETO COM R2)
 // ============================================
 
 const API_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/api';
@@ -620,7 +620,7 @@ function configurarPopupDescricao() {
 }
 
 // ============================================
-// FUNÇÃO PARA UPLOAD VIA API PROXY (CORRIGIDA)
+// FUNÇÃO PARA UPLOAD VIA API PROXY
 // ============================================
 
 async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
@@ -672,7 +672,6 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
             throw new Error(`Erro ao fazer upload: ${uploadResponse.status} - ${errorText}`);
         }
         
-        // A RESPOSTA DO WORKER AGORA VEM COM A URL
         const result = await uploadResponse.json();
         const publicUrl = result.url || `${R2_PUBLIC_URL}/${path}`;
         
@@ -1381,23 +1380,59 @@ function fecharCamera() {
     console.log('🔒 Câmera fechada');
 }
 
-function excluirFoto() {
+// ============================================
+// EXCLUIR FOTO (CORRIGIDA)
+// ============================================
+
+async function excluirFoto() {
     if (!confirm('⚠️ Tem certeza que deseja excluir esta foto?')) {
         return;
     }
     
-    fotoCapturada = null;
+    const numero = document.getElementById('saNumero')?.textContent?.replace('#', '') || '0000';
     
-    const preview = document.getElementById('fotoPreviewRecebido');
-    const img = document.getElementById('fotoImgRecebido');
-    const btnExcluir = document.getElementById('btnExcluirFoto');
-    
-    if (preview) preview.style.display = 'none';
-    if (img) img.src = '';
-    if (btnExcluir) btnExcluir.style.display = 'none';
-    
-    mostrarToast('🗑️ Foto excluída com sucesso.', 'info');
+    try {
+        mostrarToast('⏳ Excluindo foto...', 'info');
+        
+        // Chama a API para excluir a foto
+        const response = await fetch(`${API_URL}/sa/${numero}/foto`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao excluir foto');
+        }
+        
+        // Limpa a variável global
+        fotoCapturada = null;
+        
+        // Remove da UI imediatamente
+        const preview = document.getElementById('fotoPreviewRecebido');
+        const img = document.getElementById('fotoImgRecebido');
+        const btnExcluir = document.getElementById('btnExcluirFoto');
+        
+        if (preview) preview.style.display = 'none';
+        if (img) img.src = '';
+        if (btnExcluir) btnExcluir.style.display = 'none';
+        
+        // Atualiza o status da S.A. local
+        if (saAtual) {
+            saAtual.foto = null;
+        }
+        
+        mostrarToast('🗑️ Foto excluída com sucesso!', 'sucesso');
+        
+    } catch (error) {
+        console.error('❌ Erro ao excluir foto:', error);
+        mostrarToast('❌ ' + error.message, 'erro');
+    }
 }
+
+window.excluirFoto = excluirFoto;
 
 // ============================================
 // ENVIAR FOTO PARA O R2 (VIA API PROXY)
@@ -1650,6 +1685,385 @@ function atualizarBotoesAcao(sa) {
 }
 
 // ============================================
+// EXPORTAR PDF DO PAINEL
+// ============================================
+
+let saSelecionadaParaExportar = null;
+
+function selecionarSAExportar(numero) {
+    saSelecionadaParaExportar = numero;
+    const btnExportar = document.getElementById('btnExportarPDFPainel');
+    if (btnExportar) {
+        btnExportar.style.display = 'inline-flex';
+        btnExportar.textContent = `📄 Exportar PDF #${String(numero).padStart(4, '0')}`;
+    }
+}
+
+async function exportarSAPainel() {
+    if (!saSelecionadaParaExportar) {
+        mostrarToast('⚠️ Selecione uma S.A. para exportar.', 'aviso');
+        return;
+    }
+    
+    const numero = saSelecionadaParaExportar;
+    
+    try {
+        mostrarToast('⏳ Gerando PDF...', 'info');
+        
+        const response = await fetch(`${API_URL}/sa/${numero}`);
+        if (!response.ok) throw new Error('Erro ao carregar S.A.');
+        
+        const sa = await response.json();
+        
+        if (sa.status !== 'ATENDIDA_PROTHEUS' && sa.status !== 'atendida_protheus') {
+            mostrarToast('⚠️ A S.A. precisa estar com status ATENDIDA PROTHEUS para exportar.', 'aviso');
+            return;
+        }
+        
+        const conteudoPDF = gerarConteudoPDF(sa);
+        
+        const janela = window.open('', '_blank', 'width=800,height=600');
+        if (!janela) {
+            mostrarToast('⚠️ Permita pop-ups para exportar o PDF.', 'aviso');
+            return;
+        }
+        
+        janela.document.write(conteudoPDF);
+        janela.document.close();
+        
+        setTimeout(function() {
+            janela.print();
+        }, 500);
+        
+        mostrarToast('✅ PDF gerado com sucesso!', 'sucesso');
+        
+    } catch (error) {
+        console.error('❌ Erro ao gerar PDF:', error);
+        mostrarToast('❌ ' + error.message, 'erro');
+    }
+}
+
+window.exportarSAPainel = exportarSAPainel;
+window.selecionarSAExportar = selecionarSAExportar;
+
+// ============================================
+// GERAR CONTEÚDO DO PDF
+// ============================================
+
+function gerarConteudoPDF(sa) {
+    const dataAtual = new Date().toLocaleString('pt-BR');
+    const numeroFormatado = String(sa.numero).padStart(4, '0');
+    
+    const tipoMap = {
+        'EMERGENCIAL': { label: '🚨 Emergencial' },
+        'EMPRESTIMO': { label: '🔄 Empréstimo' },
+        'AGUARDANDO_NOTA': { label: '⏳ Aguardando Nota' }
+    };
+    const tipoInfo = tipoMap[sa.tipo_sa] || tipoMap['EMERGENCIAL'];
+    
+    let itensHTML = '';
+    if (sa.itens && sa.itens.length > 0) {
+        sa.itens.forEach((item, index) => {
+            itensHTML += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${item.codigo || '-'}</td>
+                    <td>${item.descricao || '-'}</td>
+                    <td>${item.unidade || '-'}</td>
+                    <td style="text-align: center;">${item.quantidade || 0}</td>
+                    <td style="text-align: center;">${item.armazem || '-'}</td>
+                    <td style="text-align: center;">${item.ca || '-'}</td>
+                </tr>
+            `;
+        });
+    } else {
+        itensHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; color: #999;">Nenhum item cadastrado</td>
+            </tr>
+        `;
+    }
+    
+    const entregue = sa.assinaturas?.entregue || null;
+    const recebido = sa.assinaturas?.recebido || null;
+    
+    let assinaturasHTML = '';
+    if (entregue && recebido) {
+        assinaturasHTML = `
+            <div style="display: flex; justify-content: space-between; margin-top: 30px; padding-top: 20px; border-top: 2px solid #333;">
+                <div style="text-align: center; width: 45%;">
+                    <p style="font-weight: bold; margin-bottom: 5px;">📤 ENTREGUE POR</p>
+                    <p style="font-size: 16px; font-weight: bold;">${entregue.nome || '-'}</p>
+                    <p style="font-size: 12px; color: #666;">${entregue.data ? formatarDataHora(entregue.data) : '-'}</p>
+                    ${entregue.assinatura ? `<img src="${entregue.assinatura}" style="max-width: 150px; max-height: 60px; border: 1px solid #ddd; border-radius: 4px; padding: 5px; margin-top: 5px;" />` : ''}
+                </div>
+                <div style="text-align: center; width: 45%;">
+                    <p style="font-weight: bold; margin-bottom: 5px;">📥 RECEBIDO POR</p>
+                    <p style="font-size: 16px; font-weight: bold;">${recebido.nome || '-'}</p>
+                    <p style="font-size: 12px; color: #666;">${recebido.data ? formatarDataHora(recebido.data) : '-'}</p>
+                    ${recebido.assinatura ? `<img src="${recebido.assinatura}" style="max-width: 150px; max-height: 60px; border: 1px solid #ddd; border-radius: 4px; padding: 5px; margin-top: 5px;" />` : ''}
+                </div>
+            </div>
+        `;
+    } else {
+        assinaturasHTML = `
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #333; text-align: center; color: #999;">
+                <p>⚠️ Assinaturas pendentes</p>
+            </div>
+        `;
+    }
+    
+    const descontoLabel = sa.gerar_desconto === 'SIM' 
+        ? '✅ SIM - Será descontado em folha' 
+        : '❌ NÃO - Não será descontado';
+    
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>S.A. Emergencial #${numeroFormatado}</title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { 
+                    font-family: 'Arial', sans-serif; 
+                    padding: 40px; 
+                    color: #333;
+                    background: #fff;
+                }
+                .documento {
+                    max-width: 1000px;
+                    margin: 0 auto;
+                    padding: 30px;
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    background: #fff;
+                }
+                .header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-bottom: 3px solid #1a237e;
+                    padding-bottom: 20px;
+                    margin-bottom: 25px;
+                }
+                .header h1 {
+                    font-size: 24px;
+                    color: #1a237e;
+                    margin: 0;
+                }
+                .header .numero {
+                    background: #1a237e;
+                    color: white;
+                    padding: 8px 20px;
+                    border-radius: 20px;
+                    font-weight: bold;
+                    font-size: 18px;
+                }
+                .status-badge {
+                    display: inline-block;
+                    padding: 4px 16px;
+                    border-radius: 20px;
+                    font-weight: bold;
+                    font-size: 14px;
+                    background: #EBF8FF;
+                    color: #2A69AC;
+                    border: 1px solid #90CDF4;
+                }
+                .status-badge.atendida {
+                    background: #E8F4FD;
+                    color: #1a56a0;
+                    border-color: #7ec8e3;
+                }
+                .info-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 15px;
+                    margin-bottom: 25px;
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 8px;
+                }
+                .info-grid .item {
+                    display: flex;
+                    flex-direction: column;
+                }
+                .info-grid .item .label {
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    color: #666;
+                    font-weight: bold;
+                    letter-spacing: 0.5px;
+                }
+                .info-grid .item .value {
+                    font-size: 15px;
+                    font-weight: 600;
+                    margin-top: 2px;
+                }
+                .section-title {
+                    font-size: 16px;
+                    font-weight: bold;
+                    color: #1a237e;
+                    margin: 20px 0 10px;
+                    padding-bottom: 8px;
+                    border-bottom: 2px solid #eee;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 13px;
+                    margin: 10px 0 20px;
+                }
+                table th {
+                    background: #1a237e;
+                    color: white;
+                    padding: 10px 12px;
+                    text-align: left;
+                    font-weight: 600;
+                }
+                table td {
+                    padding: 8px 12px;
+                    border-bottom: 1px solid #eee;
+                }
+                table tr:nth-child(even) {
+                    background: #f8f9fa;
+                }
+                .termo {
+                    background: #f8f9fa;
+                    padding: 15px 20px;
+                    border-radius: 8px;
+                    font-size: 12px;
+                    line-height: 1.6;
+                    margin: 20px 0;
+                    border-left: 4px solid #1a237e;
+                }
+                .termo p {
+                    margin: 5px 0;
+                }
+                .footer {
+                    margin-top: 30px;
+                    padding-top: 15px;
+                    border-top: 2px solid #eee;
+                    text-align: center;
+                    font-size: 11px;
+                    color: #999;
+                }
+                .assinaturas-container {
+                    margin-top: 25px;
+                }
+                @media print {
+                    body { padding: 20px; }
+                    .documento { border: none; padding: 0; }
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="documento">
+                <div class="header">
+                    <div>
+                        <h1>📋 S.A. Emergencial</h1>
+                        <p style="color: #666; font-size: 14px; margin-top: 5px;">Solicitação de Atendimento</p>
+                    </div>
+                    <div class="numero">#${numeroFormatado}</div>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                    <span class="status-badge atendida">🔄 ATENDIDA PROTHEUS</span>
+                    <span style="font-size: 13px; color: #1a237e; font-weight: 600;">${tipoInfo.label}</span>
+                    <span style="font-size: 12px; color: #666;">Gerado em: ${dataAtual}</span>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="item">
+                        <span class="label">Solicitante</span>
+                        <span class="value">${sa.solicitante || '-'}</span>
+                    </div>
+                    <div class="item">
+                        <span class="label">Data da Solicitação</span>
+                        <span class="value">${formatarDataHora(sa.data_solicitacao)}</span>
+                    </div>
+                    <div class="item">
+                        <span class="label">💰 Gerar Desconto</span>
+                        <span class="value">${descontoLabel}</span>
+                    </div>
+                    <div class="item">
+                        <span class="label">Colaborador</span>
+                        <span class="value">${sa.colaborador?.nome || 'Aguardando'}</span>
+                    </div>
+                    <div class="item">
+                        <span class="label">Matrícula</span>
+                        <span class="value">${sa.colaborador?.matricula || '-'}</span>
+                    </div>
+                    <div class="item">
+                        <span class="label">CPF</span>
+                        <span class="value">${sa.colaborador?.cpf || '-'}</span>
+                    </div>
+                    <div class="item">
+                        <span class="label">Função</span>
+                        <span class="value">${sa.colaborador?.funcao || '-'}</span>
+                    </div>
+                    <div class="item">
+                        <span class="label">Filial</span>
+                        <span class="value">${sa.colaborador?.filial || '-'}</span>
+                    </div>
+                    <div class="item">
+                        <span class="label">Centro de Custo</span>
+                        <span class="value">${sa.colaborador?.centro_custo || '-'}</span>
+                    </div>
+                </div>
+                
+                <div class="section-title">📦 Itens Solicitados</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 8%;">#</th>
+                            <th style="width: 15%;">Código</th>
+                            <th style="width: 30%;">Descrição</th>
+                            <th style="width: 10%;">UND</th>
+                            <th style="width: 10%;">QTD</th>
+                            <th style="width: 10%;">Armazém</th>
+                            <th style="width: 12%;">C.A</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itensHTML}
+                    </tbody>
+                </table>
+                
+                <div class="section-title">📜 Termo de Responsabilidade</div>
+                <div class="termo">
+                    <p><strong>NR 06</strong> - 6.7. CABE AO EMPREGADO QUANTO AO EPI: USAR, UTILIZANDO-O APENAS PARA A FINALIDADE A QUE SE DESTINA; RESPONSABILIZAR-SE PELA GUARDA E CONSERVAÇÃO; COMUNICAR AO EMPREGADOR QUALQUER ALTERAÇÃO QUE O TORNE IMPRÓPRIO PARA USO.</p>
+                    <p><strong>NR 01</strong> - 1.8. CABE AO EMPREGADO: CUMPRIR AS DISPOSIÇÕES LEGAIS E REGULAMENTARES SOBRE SEGURANÇA E MEDICINA DO TRABALHO; USAR O EPI FORNECIDO PELO EMPREGADOR; SUBMETER-SE AOS EXAMES MÉDICOS PREVISTOS.</p>
+                    <p><strong>CLT</strong> - ART. 462, § 1º - EM CASO DE DANO CAUSADO PELO EMPREGADO, O DESCONTO SERÁ LÍCITO, DESDE QUE ESTA POSSIBILIDADE TENHA SIDO ACORDADA OU NA OCORRÊNCIA DE DOLO DO EMPREGADO.</p>
+                    <p style="margin-top: 10px; font-weight: bold;">Declaro que recebi os equipamentos acima descritos e estou ciente das obrigações contidas na NR 06 e NR 01.</p>
+                </div>
+                
+                <div class="assinaturas-container">
+                    <div class="section-title">✍️ Assinaturas</div>
+                    ${assinaturasHTML}
+                </div>
+                
+                <div class="footer">
+                    <p>Documento gerado automaticamente pelo sistema SICGM - S.A. Emergencial</p>
+                    <p>Este documento é uma via válida para comprovação de atendimento</p>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;" class="no-print">
+                <button onclick="window.print()" style="background: #1a237e; color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px;">
+                    🖨️ Imprimir / Salvar PDF
+                </button>
+                <button onclick="window.close()" style="background: #718096; color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; margin-left: 10px;">
+                    ✕ Fechar
+                </button>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+// ============================================
 // CARREGAR LISTA DE S.A.
 // ============================================
 
@@ -1667,6 +2081,25 @@ async function carregarListaSA() {
         sasCarregadas = sas;
         
         console.log('📋 S.A. carregadas:', sas.length);
+        
+        for (const sa of sas) {
+            try {
+                const detalhesResponse = await fetch(`${API_URL}/sa/${sa.numero}`);
+                if (detalhesResponse.ok) {
+                    const detalhes = await detalhesResponse.json();
+                    sa._itensCount = detalhes.itens ? detalhes.itens.length : 0;
+                    sa._itens = detalhes.itens || [];
+                } else {
+                    sa._itensCount = 0;
+                    sa._itens = [];
+                }
+            } catch (e) {
+                sa._itensCount = 0;
+                sa._itens = [];
+            }
+        }
+        
+        console.log('📊 S.A. com contagem de itens:', sas.map(s => `${s.numero}: ${s._itensCount} itens`));
         
         const podeCriar = usuarioPodeCriarSA(dadosSessao?.matricula);
         
@@ -1700,6 +2133,12 @@ async function carregarListaSA() {
             } else {
                 btnNovaSA.style.display = 'none';
             }
+        }
+        
+        const btnExportar = document.getElementById('btnExportarPDFPainel');
+        if (btnExportar) {
+            btnExportar.style.display = 'none';
+            saSelecionadaParaExportar = null;
         }
         
     } catch (error) {
@@ -1837,6 +2276,8 @@ function renderizarListaSA(sas, filtros = {}) {
             statusText = 'ASSINADA';
         }
         
+        const qtdItens = sa._itensCount || 0;
+        
         const tipo = sa.tipo_sa || 'EMERGENCIAL';
         const tipoInfo = tipoMap[tipo] || tipoMap['EMERGENCIAL'];
         
@@ -1850,6 +2291,12 @@ function renderizarListaSA(sas, filtros = {}) {
             matriculaColaborador = sa.colaborador_matricula || '-';
         }
         
+        const temMatricula = sa.colaborador_matricula || sa.colaborador?.matricula || false;
+        if (!temMatricula || nomeColaborador === 'Aguardando') {
+            nomeColaborador = 'Aguardando';
+            matriculaColaborador = '-';
+        }
+        
         const nomeSolicitante = sa.solicitante || '-';
         const matriculaSolicitante = sa.criado_por || '-';
         
@@ -1861,11 +2308,16 @@ function renderizarListaSA(sas, filtros = {}) {
             sa.status !== 'ATENDIDA_PROTHEUS' && 
             sa.status !== 'atendida_protheus';
         
+        const podeExportar = sa.status === 'ATENDIDA_PROTHEUS' || sa.status === 'atendida_protheus';
+        
         html += `
-            <div class="sa-card" onclick="abrirSA('${sa.numero}')">
+            <div class="sa-card" onclick="abrirSA('${sa.numero}')" 
+                 onmouseenter="${podeExportar ? `selecionarSAExportar('${sa.numero}')` : ''}"
+                 onmouseleave="${podeExportar ? `document.getElementById('btnExportarPDFPainel').style.display = 'none'; saSelecionadaParaExportar = null;` : ''}">
                 <div class="sa-card-header">
                     <span class="sa-card-numero">#${String(sa.numero).padStart(4, '0')}</span>
                     <span class="sa-card-status ${statusClass}">${statusIcon} ${statusText}</span>
+                    ${podeExportar ? `<button class="btn-exportar-pequeno" onclick="event.stopPropagation(); exportarSAPainel();" title="Exportar PDF">📄</button>` : ''}
                 </div>
                 <div class="sa-card-body">
                     <p><strong>Tipo:</strong> <span style="color: ${tipoInfo.cor}; font-weight: 600;">${tipoInfo.icone} ${tipoInfo.label}</span></p>
@@ -1874,6 +2326,7 @@ function renderizarListaSA(sas, filtros = {}) {
                     <p><strong>Matr. Sol.:</strong> <span>${matriculaSolicitante}</span></p>
                     <p><strong>Colaborador:</strong> <span>${nomeColaborador}</span></p>
                     <p><strong>Matr. Colab.:</strong> <span>${matriculaColaborador}</span></p>
+                    <p><strong>Itens:</strong> <span>${qtdItens} item(ns)</span></p>
                 </div>
                 <div class="sa-card-footer">
                     <span class="sa-card-data">${formatarDataHora(sa.criado_em || sa.created_at)}</span>
@@ -2348,6 +2801,9 @@ window.enviarFotoParaR2 = enviarFotoParaR2;
 window.uploadParaR2 = uploadParaR2;
 window.marcarAtendidaProtheus = marcarAtendidaProtheus;
 window.atualizarBotoesAcao = atualizarBotoesAcao;
+window.exportarSAPainel = exportarSAPainel;
+window.selecionarSAExportar = selecionarSAExportar;
+window.gerarConteudoPDF = gerarConteudoPDF;
 window.renderizarListaSA = renderizarListaSA;
 window.configurarFiltros = configurarFiltros;
 window.aplicarFiltrosSA = aplicarFiltrosSA;
