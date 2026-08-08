@@ -370,14 +370,11 @@
 }
 
 .item-group-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
     border-bottom: 1px solid #F7FAFC;
     cursor: pointer;
     transition: all 0.15s;
     border-radius: 6px;
+    padding: 8px 12px;
 }
 
 .item-group-item:hover {
@@ -393,26 +390,13 @@
     font-weight: 600;
     color: #2D3748;
     font-size: 13px;
-    min-width: 80px;
 }
 
 .item-group-item .item-desc {
     color: #4A5568;
     font-size: 13px;
-    flex: 1;
-    margin: 0 10px;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.item-group-item .item-total {
-    font-weight: 700;
-    color: #2B6CB0;
-    background: #EBF8FF;
-    padding: 2px 10px;
-    border-radius: 20px;
-    font-size: 13px;
     white-space: nowrap;
 }
 
@@ -513,53 +497,6 @@
 .badge-aplicacao.nao-aplicado { background: #FED7D7; color: #9B2C2C; }
 .badge-aplicacao.parcial { background: #FEFCBF; color: #975A16; }
 .badge-aplicacao.pendente { background: #E2E8F0; color: #4A5568; }
-
-/* ===== LISTA DE ENCARREGADOS ===== */
-.encarregado-list {
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.encarregado-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    border-bottom: 1px solid #F7FAFC;
-}
-
-.encarregado-item .name {
-    font-weight: 500;
-    color: #2D3748;
-    font-size: 13px;
-}
-
-.encarregado-item .stats {
-    display: flex;
-    gap: 12px;
-    font-size: 12px;
-}
-
-.encarregado-item .stats .total {
-    color: #2B6CB0;
-    font-weight: 600;
-}
-
-.encarregado-item .stats .aplicado {
-    color: #48BB78;
-}
-
-.encarregado-item .stats .nao-aplicado {
-    color: #FC8181;
-}
-
-.encarregado-item .stats .parcial {
-    color: #ED8936;
-}
-
-.encarregado-item .stats .pendente {
-    color: #A0AEC0;
-}
 
 /* ===== GRÁFICOS ===== */
 .dashboard-charts {
@@ -879,33 +816,7 @@
         padding: 8px 10px;
         flex-wrap: wrap;
         gap: 4px;
-    }
-
-    .item-group-item .item-code {
         font-size: 12px;
-        min-width: 60px;
-    }
-
-    .item-group-item .item-desc {
-        font-size: 11px;
-        margin: 0 6px;
-    }
-
-    .item-group-item .item-total {
-        font-size: 11px;
-        padding: 1px 8px;
-    }
-
-    .encarregado-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-        padding: 8px 10px;
-    }
-
-    .encarregado-item .stats {
-        flex-wrap: wrap;
-        gap: 8px;
     }
 
     .chart-bar-indicator .label {

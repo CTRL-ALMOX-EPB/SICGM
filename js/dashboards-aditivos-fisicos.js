@@ -336,7 +336,6 @@ function agruparPorObra(controles) {
             obras[obra].totalItens += qtd;
             
             if (item.codigo) {
-                // CONTAGEM: Cada ocorrência do SKU conta como 1
                 obras[obra].skus.push(item.codigo);
                 obras[obra].skusSet.add(item.codigo);
             }
@@ -349,8 +348,8 @@ function agruparPorObra(controles) {
     const resultado = Object.values(obras).map(obra => ({
         ...obra,
         datas: Array.from(obra.datas).sort(),
-        skusCount: obra.skus.length, // COUNT de ocorrências
-        skusUnico: obra.skusSet.size, // SKUs únicos
+        skusCount: obra.skus.length,
+        skusUnico: obra.skusSet.size,
         encarregadosCount: obra.encarregadosSet.size
     })).sort((a, b) => b.skusCount - a.skusCount);
     
@@ -394,7 +393,6 @@ function agruparPorEncarregado(controles) {
             });
             
             if (item.codigo) {
-                // CONTAGEM: Cada ocorrência do SKU conta como 1
                 encarregados[nome].skus.push(item.codigo);
                 encarregados[nome].skusSet.add(item.codigo);
             }
@@ -410,8 +408,8 @@ function agruparPorEncarregado(controles) {
     const resultado = Object.values(encarregados).map(enc => ({
         ...enc,
         obras: Array.from(enc.obras),
-        skusCount: enc.skus.length, // COUNT de ocorrências
-        skusUnico: enc.skusSet.size // SKUs únicos
+        skusCount: enc.skus.length,
+        skusUnico: enc.skusSet.size
     })).sort((a, b) => b.skusCount - a.skusCount);
     
     console.log(`✅ ${resultado.length} encarregados agrupados`);
@@ -441,11 +439,14 @@ function renderizarDashboard(aditivos) {
         return;
     }
     
+    // Determina quais dados usar para o gráfico baseado na aba atual
+    let dadosParaGrafico = [];
+    
     if (abaAtual === 'materiais') {
         const itensAgrupados = agruparItensFisicos(aditivos);
+        dadosParaGrafico = itensAgrupados;
         renderizarKPIsMateriais(itensAgrupados);
         renderizarListaItens(itensAgrupados);
-        renderizarGraficos(itensAgrupados, aditivos);
         renderizarTopSkus(itensAgrupados);
         
         if (itemSelecionado && itemSelecionado.tipo === 'material') {
@@ -463,6 +464,7 @@ function renderizarDashboard(aditivos) {
         }
     } else if (abaAtual === 'obras') {
         const obrasAgrupadas = agruparPorObra(aditivos);
+        dadosParaGrafico = obrasAgrupadas;
         renderizarListaObras(obrasAgrupadas);
         renderizarKPIsObras(obrasAgrupadas);
         
@@ -474,6 +476,7 @@ function renderizarDashboard(aditivos) {
         }
     } else if (abaAtual === 'encarregados') {
         const encarregadosAgrupados = agruparPorEncarregado(aditivos);
+        dadosParaGrafico = encarregadosAgrupados;
         renderizarListaEncarregados(encarregadosAgrupados);
         renderizarKPIsEncarregados(encarregadosAgrupados);
         
@@ -484,6 +487,9 @@ function renderizarDashboard(aditivos) {
             }
         }
     }
+    
+    // Renderiza o gráfico com os dados da aba atual
+    renderizarGraficoStatus(dadosParaGrafico);
 }
 
 // ============================================
@@ -494,7 +500,6 @@ function renderizarKPIsMateriais(itensAgrupados) {
     const container = document.getElementById('kpiGrid');
     if (!container) return;
     
-    // COUNT de SKUs (cada ocorrência)
     const totalSkus = itensAgrupados.reduce((sum, item) => sum + item.total, 0);
     const totalSkusUnicos = itensAgrupados.length;
     
@@ -629,6 +634,94 @@ function renderizarKPIsEncarregados(encarregadosAgrupados) {
 }
 
 // ============================================
+// GRÁFICO DE STATUS (baseado na aba atual)
+// ============================================
+
+function renderizarGraficoStatus(dados) {
+    console.log('📊 Renderizando gráfico de status baseado na aba:', abaAtual);
+    
+    // Calcula a contagem de status baseado nos dados atuais
+    const aplicacaoCount = { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 };
+    
+    if (abaAtual === 'materiais') {
+        // Para materiais, usa o aplicacaoCount já calculado
+        dados.forEach(item => {
+            Object.keys(aplicacaoCount).forEach(key => {
+                aplicacaoCount[key] += item.aplicacaoCount[key] || 0;
+            });
+        });
+    } else if (abaAtual === 'obras') {
+        // Para obras, conta os itens de cada obra
+        dados.forEach(obra => {
+            obra.itens.forEach(item => {
+                const status = item.aplicado || 'PENDENTE';
+                const key = status === 'SIM' ? 'SIM' : 
+                           status === 'NÃO' ? 'NAO' : 
+                           status === 'PARCIAL' ? 'PARCIAL' : 'PENDENTE';
+                aplicacaoCount[key] += 1;
+            });
+        });
+    } else if (abaAtual === 'encarregados') {
+        // Para encarregados, usa o aplicacaoCount já calculado
+        dados.forEach(enc => {
+            Object.keys(aplicacaoCount).forEach(key => {
+                aplicacaoCount[key] += enc.aplicacaoCount[key] || 0;
+            });
+        });
+    }
+    
+    const totalGeral = Object.values(aplicacaoCount).reduce((sum, v) => sum + v, 0);
+    const maxValue = totalGeral > 0 ? totalGeral : 1;
+    
+    const labels = {
+        'SIM': 'Aplicado',
+        'NAO': 'Não Aplicado',
+        'PARCIAL': 'Parcial',
+        'PENDENTE': 'Pendente'
+    };
+    
+    const classes = {
+        'SIM': 'bar-aplicado',
+        'NAO': 'bar-nao-aplicado',
+        'PARCIAL': 'bar-parcial',
+        'PENDENTE': 'bar-pendente'
+    };
+    
+    let html = '';
+    Object.keys(aplicacaoCount).forEach(key => {
+        const value = aplicacaoCount[key];
+        const percentual = maxValue > 0 ? (value / maxValue) * 100 : 0;
+        const colorClass = classes[key];
+        
+        html += `
+            <div class="chart-bar-indicator">
+                <span class="label">${labels[key]}</span>
+                <div class="bar-track">
+                    <div class="bar-fill ${colorClass}" style="width: ${percentual}%;">
+                        <span class="value">${value}</span>
+                    </div>
+                </div>
+                <span class="percent">${percentual.toFixed(0)}%</span>
+            </div>
+        `;
+    });
+    
+    html += `
+        <div class="chart-bar-indicator" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #E2E8F0;">
+            <span class="label" style="font-weight: 700;">Total</span>
+            <div class="bar-track">
+                <div class="bar-fill bar-total" style="width: 100%;">
+                    <span class="value">${totalGeral}</span>
+                </div>
+            </div>
+            <span class="percent" style="font-weight: 700;">100%</span>
+        </div>
+    `;
+    
+    document.getElementById('statusChart').innerHTML = html;
+}
+
+// ============================================
 // LISTA DE ITENS (MATERIAIS)
 // ============================================
 
@@ -700,7 +793,6 @@ function renderizarListaObras(obrasAgrupadas) {
     obrasAgrupadas.forEach(obra => {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'obra' && itemSelecionado.obra === obra.obra;
         const obraFormatada = formatarObraParaExibicao(obra.obra);
-        const descricao = obra.itens.length > 0 ? obra.itens[0].descricao || '' : '';
         html += `
             <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')" style="display: grid; grid-template-columns: 100px 1fr 80px 80px; gap: 8px; padding: 8px 12px;">
                 <span class="item-code">🏗️ ${obraFormatada}</span>
@@ -781,6 +873,25 @@ function renderizarDetalhesEncarregado(enc) {
     const container = document.getElementById('itemDetails');
     if (!container) return;
     
+    // Ordena obras por nome
+    const obrasOrdenadas = [...enc.obras].sort();
+    
+    // Ordena materiais por código
+    const materiaisMap = {};
+    enc.itens.forEach(item => {
+        const codigo = item.codigo || 'SEM_CODIGO';
+        if (!materiaisMap[codigo]) {
+            materiaisMap[codigo] = {
+                codigo: codigo,
+                descricao: item.descricao || 'Sem descrição',
+                ocorrencias: 0,
+                aplicado: item.aplicado || 'PENDENTE'
+            };
+        }
+        materiaisMap[codigo].ocorrencias += 1;
+    });
+    const materiaisOrdenados = Object.values(materiaisMap).sort((a, b) => a.codigo.localeCompare(b.codigo));
+    
     const aplicacaoCount = enc.aplicacaoCount || { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 };
     
     let html = `
@@ -795,7 +906,7 @@ function renderizarDetalhesEncarregado(enc) {
         </div>
         <div class="detail-row">
             <span class="label">Obras:</span>
-            <span class="value">${enc.obras.length}</span>
+            <span class="value">${obrasOrdenadas.length}</span>
         </div>
         <div class="detail-status-count">
             <span class="status-item"><span class="count status-aplicado">${aplicacaoCount.SIM}</span> ✅ Aplicado</span>
@@ -807,52 +918,24 @@ function renderizarDetalhesEncarregado(enc) {
         <div class="item-detail-obras">
     `;
     
-    // Agrupa itens por obra
-    const obrasMap = {};
-    enc.itens.forEach(item => {
-        const obra = item.obra || 'SEM OBRA';
-        if (!obrasMap[obra]) {
-            obrasMap[obra] = {
-                obra: obra,
-                itens: [],
-                skusCount: 0
-            };
-        }
-        obrasMap[obra].itens.push(item);
-        obrasMap[obra].skusCount += 1;
-    });
-    
-    Object.values(obrasMap).forEach(obra => {
-        const obraFormatada = formatarObraParaExibicao(obra.obra);
+    obrasOrdenadas.forEach(obra => {
+        const obraFormatada = formatarObraParaExibicao(obra);
+        // Conta quantos SKUs tem nessa obra para este encarregado
+        const count = enc.itens.filter(i => i.obra === obra).length;
         html += `
             <div class="obra-row">
                 <span>🏗️ ${obraFormatada}</span>
-                <span>${obra.skusCount} SKUs</span>
+                <span>${count} SKUs</span>
             </div>
         `;
     });
     
     html += `</div>`;
     
-    // Lista de materiais
     html += `<div class="detail-section-title">📦 Materiais:</div>
     <div class="item-detail-obras">`;
     
-    const materiaisMap = {};
-    enc.itens.forEach(item => {
-        const codigo = item.codigo || 'SEM_CODIGO';
-        if (!materiaisMap[codigo]) {
-            materiaisMap[codigo] = {
-                codigo: codigo,
-                descricao: item.descricao || 'Sem descrição',
-                ocorrencias: 0,
-                aplicado: item.aplicado || 'PENDENTE'
-            };
-        }
-        materiaisMap[codigo].ocorrencias += 1;
-    });
-    
-    Object.values(materiaisMap).forEach(item => {
+    materiaisOrdenados.forEach(item => {
         const badge = getAplicacaoBadge(item.aplicado);
         html += `
             <div class="obra-row">
@@ -893,6 +976,28 @@ function renderizarDetalhesObra(obra) {
     
     const obraFormatada = formatarObraParaExibicao(obra.obra);
     
+    // Ordena materiais por código
+    const itensPorCodigo = {};
+    obra.itens.forEach(item => {
+        const codigo = item.codigo || 'SEM_CODIGO';
+        if (!itensPorCodigo[codigo]) {
+            itensPorCodigo[codigo] = {
+                codigo: codigo,
+                descricao: item.descricao || 'Sem descrição',
+                quantidade: 0,
+                aplicado: item.aplicado || 'PENDENTE',
+                ocorrencias: 0,
+                encarregado: item.encarregado_obra || 'NÃO INFORMADO'
+            };
+        }
+        itensPorCodigo[codigo].quantidade += parseFloat(item.quantidade) || 0;
+        itensPorCodigo[codigo].ocorrencias += 1;
+    });
+    const materiaisOrdenados = Object.values(itensPorCodigo).sort((a, b) => a.codigo.localeCompare(b.codigo));
+    
+    // Ordena datas
+    const datasOrdenadas = [...obra.datas].sort();
+    
     let html = `
         <div class="detail-title">🏗️ ${obraFormatada}</div>
         <div class="detail-row">
@@ -911,7 +1016,7 @@ function renderizarDetalhesObra(obra) {
         <div class="item-detail-obras">
     `;
     
-    obra.datas.forEach(data => {
+    datasOrdenadas.forEach(data => {
         html += `
             <div class="obra-row">
                 <span>📅 ${formatarData(data)}</span>
@@ -924,24 +1029,7 @@ function renderizarDetalhesObra(obra) {
     html += `<div class="detail-section-title">📦 Materiais Aditivados:</div>
     <div class="item-detail-obras">`;
     
-    const itensPorCodigo = {};
-    obra.itens.forEach(item => {
-        const codigo = item.codigo || 'SEM_CODIGO';
-        if (!itensPorCodigo[codigo]) {
-            itensPorCodigo[codigo] = {
-                codigo: codigo,
-                descricao: item.descricao || 'Sem descrição',
-                quantidade: 0,
-                aplicado: item.aplicado || 'PENDENTE',
-                ocorrencias: 0,
-                encarregado: item.encarregado_obra || 'NÃO INFORMADO'
-            };
-        }
-        itensPorCodigo[codigo].quantidade += parseFloat(item.quantidade) || 0;
-        itensPorCodigo[codigo].ocorrencias += 1;
-    });
-    
-    Object.values(itensPorCodigo).forEach(item => {
+    materiaisOrdenados.forEach(item => {
         const qtdFormatada = Number.isInteger(item.quantidade) ? item.quantidade : item.quantidade.toFixed(2);
         const badge = getAplicacaoBadge(item.aplicado);
         html += `
@@ -991,12 +1079,16 @@ function renderizarDetalhes(item) {
         return;
     }
     
+    // Ordena obras por nome
+    const obrasOrdenadas = [...item.obras].sort((a, b) => a.obra.localeCompare(b.obra));
+    const saidasOrdenadas = [...item.saidas].sort((a, b) => a.obra.localeCompare(b.obra));
+    
     const aplicacaoMap = { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 };
     item.itens.forEach(i => {
         const key = i.aplicado === 'SIM' ? 'SIM' : 
                    i.aplicado === 'NÃO' ? 'NAO' : 
                    i.aplicado === 'PARCIAL' ? 'PARCIAL' : 'PENDENTE';
-        aplicacaoMap[key] += 1; // COUNT, não soma
+        aplicacaoMap[key] += 1;
     });
     
     let html = `
@@ -1007,11 +1099,11 @@ function renderizarDetalhes(item) {
         </div>
         <div class="detail-row">
             <span class="label">Obras:</span>
-            <span class="value">${item.obras.length}</span>
+            <span class="value">${obrasOrdenadas.length}</span>
         </div>
         <div class="detail-row">
             <span class="label">Saídas:</span>
-            <span class="value">${item.saidas.length}</span>
+            <span class="value">${saidasOrdenadas.length}</span>
         </div>
         <div class="detail-row">
             <span class="label">Encarregados:</span>
@@ -1025,10 +1117,10 @@ function renderizarDetalhes(item) {
         </div>
     `;
     
-    if (item.obras.length > 0) {
+    if (obrasOrdenadas.length > 0) {
         html += `<div class="detail-section-title">🏗️ Obras:</div>
         <div class="item-detail-obras">`;
-        item.obras.forEach(o => {
+        obrasOrdenadas.forEach(o => {
             const badge = getAplicacaoBadge(o.aplicado);
             const obraFormatada = formatarObraParaExibicao(o.obra);
             html += `
@@ -1041,10 +1133,10 @@ function renderizarDetalhes(item) {
         html += `</div>`;
     }
     
-    if (item.saidas.length > 0) {
+    if (saidasOrdenadas.length > 0) {
         html += `<div class="detail-section-title">🚚 Saídas:</div>
         <div class="item-detail-obras">`;
-        item.saidas.forEach(o => {
+        saidasOrdenadas.forEach(o => {
             const badge = getAplicacaoBadge(o.aplicado);
             const obraFormatada = formatarObraParaExibicao(o.obra);
             html += `
@@ -1068,142 +1160,6 @@ function getAplicacaoBadge(status) {
         'PENDENTE': '<span class="badge-aplicacao pendente">⏳ Pendente</span>'
     };
     return map[status] || `<span class="badge-aplicacao">${status}</span>`;
-}
-
-// ============================================
-// GRÁFICOS
-// ============================================
-
-function renderizarGraficos(itensAgrupados, aditivos) {
-    console.log('📊 Renderizando gráficos...');
-    
-    // Gráfico 1: Distribuição por Status de Aplicação (COUNT)
-    const aplicacaoCount = { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 };
-    itensAgrupados.forEach(item => {
-        Object.keys(aplicacaoCount).forEach(key => {
-            aplicacaoCount[key] += item.aplicacaoCount[key] || 0;
-        });
-    });
-    
-    const totalGeral = Object.values(aplicacaoCount).reduce((sum, v) => sum + v, 0);
-    const maxValue = totalGeral > 0 ? totalGeral : 1;
-    
-    const labels = {
-        'SIM': 'Aplicado',
-        'NAO': 'Não Aplicado',
-        'PARCIAL': 'Parcial',
-        'PENDENTE': 'Pendente'
-    };
-    
-    const classes = {
-        'SIM': 'bar-aplicado',
-        'NAO': 'bar-nao-aplicado',
-        'PARCIAL': 'bar-parcial',
-        'PENDENTE': 'bar-pendente'
-    };
-    
-    let html = '';
-    Object.keys(aplicacaoCount).forEach(key => {
-        const value = aplicacaoCount[key];
-        const percentual = maxValue > 0 ? (value / maxValue) * 100 : 0;
-        const colorClass = classes[key];
-        
-        html += `
-            <div class="chart-bar-indicator">
-                <span class="label">${labels[key]}</span>
-                <div class="bar-track">
-                    <div class="bar-fill ${colorClass}" style="width: ${percentual}%;">
-                        <span class="value">${value}</span>
-                    </div>
-                </div>
-                <span class="percent">${percentual.toFixed(0)}%</span>
-            </div>
-        `;
-    });
-    
-    html += `
-        <div class="chart-bar-indicator" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #E2E8F0;">
-            <span class="label" style="font-weight: 700;">Total</span>
-            <div class="bar-track">
-                <div class="bar-fill bar-total" style="width: 100%;">
-                    <span class="value">${totalGeral}</span>
-                </div>
-            </div>
-            <span class="percent" style="font-weight: 700;">100%</span>
-        </div>
-    `;
-    
-    document.getElementById('statusChart').innerHTML = html;
-    
-    // Gráfico 2: Encarregados
-    renderizarEncarregados(aditivos);
-}
-
-// ============================================
-// ENCARREGADOS (Gráfico resumido)
-// ============================================
-
-function renderizarEncarregados(aditivos) {
-    const container = document.getElementById('encarregadoList');
-    if (!container) return;
-    
-    const encarregados = {};
-    
-    aditivos.forEach(aditivo => {
-        (aditivo.itens || []).forEach(item => {
-            const nome = item.encarregado_obra || 'NÃO INFORMADO';
-            if (!encarregados[nome]) {
-                encarregados[nome] = { total: 0, aplicado: 0, naoAplicado: 0, parcial: 0, pendente: 0 };
-            }
-            
-            // COUNT, não soma
-            encarregados[nome].total += 1;
-            
-            const status = item.aplicado || 'PENDENTE';
-            if (status === 'SIM') encarregados[nome].aplicado += 1;
-            else if (status === 'NÃO') encarregados[nome].naoAplicado += 1;
-            else if (status === 'PARCIAL') encarregados[nome].parcial += 1;
-            else encarregados[nome].pendente += 1;
-        });
-    });
-    
-    const sorted = Object.entries(encarregados)
-        .sort((a, b) => b[1].total - a[1].total)
-        .slice(0, 15);
-    
-    if (sorted.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state-dashboard">
-                <div class="icon">👤</div>
-                <p>Nenhum encarregado encontrado</p>
-            </div>
-        `;
-        return;
-    }
-    
-    let html = `
-        <div style="display: grid; grid-template-columns: 1fr 40px 40px 40px 40px; gap: 4px; padding: 6px 10px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 11px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
-            <span>Encarregado</span>
-            <span style="text-align: right;">Total</span>
-            <span style="text-align: right; color: #48BB78;">✅</span>
-            <span style="text-align: right; color: #FC8181;">❌</span>
-            <span style="text-align: right; color: #ED8936;">🔄</span>
-        </div>
-    `;
-    
-    sorted.forEach(([nome, stats]) => {
-        html += `
-            <div class="encarregado-item" style="display: grid; grid-template-columns: 1fr 40px 40px 40px 40px; gap: 4px; padding: 6px 10px; border-bottom: 1px solid #F7FAFC; cursor: pointer;" onclick="selecionarEncarregado('${nome}')">
-                <span class="name">${nome}</span>
-                <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${stats.total}</span>
-                <span style="text-align: right; font-weight: 600; color: #48BB78;">${stats.aplicado}</span>
-                <span style="text-align: right; font-weight: 600; color: #FC8181;">${stats.naoAplicado}</span>
-                <span style="text-align: right; font-weight: 600; color: #ED8936;">${stats.parcial}</span>
-            </div>
-        `;
-    });
-    
-    container.innerHTML = html;
 }
 
 // ============================================
