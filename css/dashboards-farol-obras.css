@@ -1,106 +1,845 @@
-/* ============================================
-   DASHBOARD FAROL DE OBRAS
-   ============================================ */
+/* ============================================ */
+/* DASHBOARD FAROL DE OBRAS - ESTILOS            */
+/* ============================================ */
 
-.farol-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.farol-card {
-    background: white;
-    border-radius: 10px;
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
     padding: 20px;
-    text-align: center;
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s;
 }
 
-.farol-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.farol-card .farol-value {
-    font-size: 32px;
-    font-weight: 700;
-}
-
-.farol-card .farol-label {
-    font-size: 13px;
-    color: #718096;
-    margin-top: 4px;
-}
-
-.farol-card .farol-icon {
-    font-size: 28px;
-    margin-bottom: 6px;
-}
-
-.farol-card.verde .farol-value { color: #48bb78; }
-.farol-card.amarelo .farol-value { color: #ed8936; }
-.farol-card.vermelho .farol-value { color: #fc8181; }
-.farol-card.azul .farol-value { color: #4299e1; }
-
-/* Lista de Obras */
-.obras-list {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.obra-farol-item {
-    padding: 10px 12px;
-    border-bottom: 1px solid #f7fafc;
-    display: flex;
-    justify-content: space-between;
+/* ===== LOADING OVERLAY ===== */
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 9999;
+    justify-content: center;
     align-items: center;
-}
-
-.obra-farol-item .obra-info {
-    display: flex;
     flex-direction: column;
 }
 
-.obra-farol-item .obra-info .obra {
+.loading-overlay.active {
+    display: flex;
+}
+
+.loading-overlay .spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #ED8936;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+
+.loading-overlay .loading-text {
+    margin-top: 15px;
+    color: #4A5568;
+    font-weight: 500;
+    font-size: 16px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ===== HEADER ===== */
+.dashboard-header {
+    background: white;
+    padding: 20px 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    min-height: 80px;
+}
+
+.dashboard-header h1 {
+    color: #2D3748;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.dashboard-header h1 .icon {
+    font-size: 28px;
+}
+
+.dashboard-header .user-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 8px 0;
+}
+
+.dashboard-header .user-info .user-details {
+    display: flex;
+    flex-direction: column;
+    min-width: 120px;
+}
+
+.dashboard-header .user-info .user-name {
     font-weight: 600;
-    color: #2d3748;
+    color: #2D3748;
+    font-size: 14px;
 }
 
-.obra-farol-item .obra-info .detalhes {
+.dashboard-header .user-info .user-matricula {
+    color: #718096;
     font-size: 12px;
-    color: #a0aec0;
 }
 
-.obra-farol-item .badge-farol {
+.dashboard-header .user-info .user-perfil {
+    background: #ED8936;
+    color: white;
+    padding: 4px 14px;
+    border-radius: 12px;
     font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.dashboard-header .btn-voltar {
+    background: #FC8181;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    min-width: 80px;
+    justify-content: center;
+}
+
+.dashboard-header .btn-voltar:hover {
+    background: #F56565;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
+}
+
+/* ===== BANNER ===== */
+.dashboard-banner {
+    background: white;
+    padding: 20px 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    border-left: 4px solid #ED8936;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    min-height: 70px;
+}
+
+.dashboard-banner .banner-content h2 {
+    color: #2D3748;
+    margin: 0 0 4px 0;
+    font-size: 20px;
+}
+
+.dashboard-banner .banner-content p {
+    color: #718096;
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ===== FILTROS ===== */
+.filters-bar {
+    background: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 25px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    border: 1px solid #E2E8F0;
+}
+
+.filters-bar .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filters-bar label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #4A5568;
+    white-space: nowrap;
+}
+
+.filters-bar input,
+.filters-bar select {
+    padding: 6px 12px;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+}
+
+.filters-bar input[type="date"] {
+    width: 140px;
+}
+
+.filters-bar input[type="text"] {
+    width: 180px;
+}
+
+.filters-bar .btn-filter {
+    padding: 6px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.filters-bar .btn-filter.primary {
+    background: #4299E1;
+    color: white;
+}
+
+.filters-bar .btn-filter.primary:hover {
+    background: #3182CE;
+}
+
+.filters-bar .btn-filter.secondary {
+    background: #E2E8F0;
+    color: #4A5568;
+}
+
+.filters-bar .btn-filter.secondary:hover {
+    background: #CBD5E0;
+}
+
+.filters-bar .total-registros {
+    margin-left: auto;
+    font-size: 13px;
+    color: #718096;
+}
+
+/* ===== KPI CARDS ===== */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.kpi-card {
+    background: white;
+    border-radius: 10px;
+    padding: 15px 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    border: 1px solid #E2E8F0;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.kpi-card .kpi-icon {
+    font-size: 24px;
+    margin-bottom: 4px;
+}
+
+.kpi-card .kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2B6CB0;
+}
+
+.kpi-card .kpi-label {
+    font-size: 12px;
+    color: #718096;
+    margin-top: 2px;
+}
+
+.kpi-card.status-cancelada .kpi-value { color: #FC8181; }
+.kpi-card.status-aditivo .kpi-value { color: #ED8936; }
+.kpi-card.status-programacao .kpi-value { color: #ED8936; }
+.kpi-card.status-devolvida .kpi-value { color: #48BB78; }
+.kpi-card.status-total .kpi-value { color: #4299E1; }
+
+/* ===== CONTEÚDO PRINCIPAL ===== */
+.dashboard-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.dashboard-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    border: 1px solid #E2E8F0;
+}
+
+.dashboard-card h3 {
+    font-size: 16px;
+    color: #2D3748;
+    margin: 0 0 15px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+/* ===== LISTA DE OBRAS ===== */
+.obras-list {
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+.obras-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.obras-list::-webkit-scrollbar-track {
+    background: #F7FAFC;
+    border-radius: 3px;
+}
+
+.obras-list::-webkit-scrollbar-thumb {
+    background: #CBD5E0;
+    border-radius: 3px;
+}
+
+.obra-item {
+    display: grid;
+    grid-template-columns: 100px 1fr 80px;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #F7FAFC;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-radius: 6px;
+    align-items: center;
+}
+
+.obra-item:hover {
+    background: #F7FAFC;
+}
+
+.obra-item.active {
+    background: #EBF8FF;
+    border-left: 3px solid #4299E1;
+}
+
+.obra-item .obra-numero {
+    font-weight: 600;
+    color: #2D3748;
+    font-size: 13px;
+}
+
+.obra-item .obra-info {
+    color: #4A5568;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.obra-item .obra-badge {
+    text-align: right;
+}
+
+/* Badges de Status */
+.badge-status-farol {
+    font-size: 10px;
     padding: 2px 10px;
     border-radius: 12px;
     font-weight: 500;
+    display: inline-block;
+    white-space: nowrap;
 }
 
-.obra-farol-item .badge-farol.cancelada {
-    background: #fed7d7;
-    color: #9b2c2c;
+.badge-status-farol.pendente {
+    background: #FEFCBF;
+    color: #975A16;
 }
 
-.obra-farol-item .badge-farol.com-aditivo {
-    background: #fefcbf;
-    color: #975a16;
-}
-
-.obra-farol-item .badge-farol.fora-programacao {
-    background: #fefcbf;
-    color: #975a16;
-}
-
-.obra-farol-item .badge-farol.devolvida {
-    background: #c6f6d5;
+.badge-status-farol.finalizado {
+    background: #C6F6D5;
     color: #276749;
 }
 
-.obra-farol-item .badge-farol.normal {
-    background: #e2e8f0;
-    color: #4a5568;
+.badge-status-farol.cancelada {
+    background: #FED7D7;
+    color: #9B2C2C;
+}
+
+.badge-status-farol.com-aditivo {
+    background: #FEFCBF;
+    color: #975A16;
+}
+
+.badge-status-farol.fora-programacao {
+    background: #FEFCBF;
+    color: #975A16;
+}
+
+.badge-status-farol.devolvida {
+    background: #C6F6D5;
+    color: #276749;
+}
+
+.badge-status-farol.saida {
+    background: #EBF8FF;
+    color: #2B6CB0;
+}
+
+/* ===== DETALHES DA OBRA ===== */
+.obra-details-panel {
+    min-height: 150px;
+}
+
+.obra-details-panel .detail-title {
+    font-weight: 600;
+    color: #2D3748;
+    font-size: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.obra-details-panel .detail-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid #F7FAFC;
+}
+
+.obra-details-panel .detail-row .label {
+    color: #718096;
+    font-size: 13px;
+}
+
+.obra-details-panel .detail-row .value {
+    font-weight: 500;
+    color: #2D3748;
+    font-size: 13px;
+}
+
+.obra-details-panel .detail-section-title {
+    font-weight: 600;
+    color: #4A5568;
+    margin: 10px 0 6px 0;
+    font-size: 13px;
+}
+
+.obra-detail-itens {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.obra-detail-itens .item-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background: #F7FAFC;
+    border-radius: 4px;
+    font-size: 13px;
+    border-bottom: 1px solid #EDF2F7;
+}
+
+.obra-detail-itens .item-row .qtd {
+    font-weight: 600;
+    color: #2B6CB0;
+}
+
+/* ===== GRÁFICOS ===== */
+.dashboard-charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.chart-container {
+    min-height: 250px;
+    padding: 10px 0;
+}
+
+.chart-bar-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.chart-bar-indicator .label {
+    font-size: 12px;
+    color: #4A5568;
+    min-width: 100px;
+    font-weight: 500;
+}
+
+.chart-bar-indicator .bar-track {
+    flex: 1;
+    background: #EDF2F7;
+    border-radius: 10px;
+    height: 28px;
+    overflow: hidden;
+    position: relative;
+}
+
+.chart-bar-indicator .bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.8s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 10px;
+    min-width: 30px;
+}
+
+.chart-bar-indicator .bar-fill .value {
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+}
+
+.chart-bar-indicator .percent {
+    font-size: 12px;
+    color: #718096;
+    min-width: 45px;
+    text-align: right;
+    font-weight: 500;
+}
+
+.bar-fill.bar-cancelada { background: linear-gradient(90deg, #FC8181, #C53030); }
+.bar-fill.bar-aditivo { background: linear-gradient(90deg, #ED8936, #C05621); }
+.bar-fill.bar-programacao { background: linear-gradient(90deg, #ED8936, #C05621); }
+.bar-fill.bar-devolvida { background: linear-gradient(90deg, #48BB78, #276749); }
+.bar-fill.bar-saida { background: linear-gradient(90deg, #4299E1, #2B6CB0); }
+.bar-fill.bar-normal { background: linear-gradient(90deg, #A0AEC0, #718096); }
+.bar-fill.bar-total { background: linear-gradient(90deg, #4299E1, #2B6CB0); }
+
+/* Encarregados na lista */
+.encarregado-item-chart {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.encarregado-item-chart .name {
+    font-size: 11px;
+    color: #2D3748;
+    min-width: 100px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.encarregado-item-chart .bar-track {
+    flex: 1;
+    background: #EDF2F7;
+    border-radius: 6px;
+    height: 18px;
+    overflow: hidden;
+}
+
+.encarregado-item-chart .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4299E1, #2B6CB0);
+    border-radius: 6px;
+    transition: width 0.8s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 6px;
+    min-width: 20px;
+}
+
+.encarregado-item-chart .bar-fill .value {
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+}
+
+.encarregado-item-chart .count {
+    font-size: 11px;
+    color: #718096;
+    min-width: 30px;
+    text-align: right;
+    font-weight: 500;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state-dashboard {
+    text-align: center;
+    padding: 40px 20px;
+    color: #718096;
+}
+
+.empty-state-dashboard .icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+.empty-state-dashboard p {
+    font-size: 14px;
+    margin: 0;
+}
+
+.empty-state-dashboard .sub {
+    font-size: 12px;
+    color: #A0AEC0;
+}
+
+/* ===== LOADING ===== */
+.loading-dashboard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+.loading-dashboard .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #E2E8F0;
+    border-top-color: #ED8936;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.loading-dashboard p {
+    margin-top: 12px;
+    color: #718096;
+    font-size: 14px;
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE                               */
+/* ============================================ */
+
+@media (max-width: 1024px) {
+    .dashboard-main {
+        grid-template-columns: 1fr;
+    }
+    
+    .dashboard-charts {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 15px;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+        padding: 15px 20px;
+        min-height: 100px;
+    }
+
+    .dashboard-header .user-info {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .dashboard-banner {
+        flex-direction: column;
+        text-align: center;
+        padding: 15px 20px;
+        min-height: 80px;
+    }
+
+    .filters-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 15px;
+    }
+
+    .filters-bar .filter-group {
+        flex-wrap: wrap;
+    }
+
+    .filters-bar input[type="date"],
+    .filters-bar input[type="text"] {
+        width: 100%;
+    }
+
+    .filters-bar .total-registros {
+        margin-left: 0;
+        text-align: center;
+    }
+
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .kpi-card .kpi-value {
+        font-size: 22px;
+    }
+
+    .obra-item {
+        grid-template-columns: 80px 1fr 60px;
+        gap: 6px;
+        font-size: 12px;
+        padding: 8px 10px;
+    }
+
+    .chart-bar-indicator .label {
+        min-width: 70px;
+        font-size: 11px;
+    }
+    
+    .chart-bar-indicator .bar-track {
+        height: 24px;
+    }
+    
+    .chart-bar-indicator .bar-fill .value {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-container {
+        padding: 10px;
+    }
+
+    .dashboard-header {
+        padding: 12px 15px;
+        min-height: 80px;
+    }
+
+    .dashboard-header h1 {
+        font-size: 18px;
+    }
+
+    .dashboard-header .user-info .user-details {
+        min-width: 80px;
+    }
+
+    .dashboard-header .user-info .user-name {
+        font-size: 12px;
+    }
+
+    .dashboard-header .user-info .user-matricula {
+        font-size: 10px;
+    }
+
+    .dashboard-header .user-info .user-perfil {
+        font-size: 9px;
+        padding: 3px 10px;
+        min-width: 50px;
+    }
+
+    .dashboard-header .btn-voltar {
+        font-size: 12px;
+        padding: 8px 16px;
+        min-width: 60px;
+    }
+
+    .dashboard-banner .banner-content h2 {
+        font-size: 16px;
+    }
+
+    .dashboard-banner .banner-content p {
+        font-size: 12px;
+    }
+
+    .kpi-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .kpi-card {
+        padding: 12px 10px;
+    }
+
+    .kpi-card .kpi-value {
+        font-size: 18px;
+    }
+
+    .kpi-card .kpi-label {
+        font-size: 10px;
+    }
+
+    .dashboard-card {
+        padding: 15px;
+    }
+
+    .dashboard-card h3 {
+        font-size: 14px;
+    }
+
+    .obra-item {
+        grid-template-columns: 1fr;
+        gap: 4px;
+        padding: 8px 10px;
+    }
+
+    .obra-item .obra-badge {
+        text-align: left;
+    }
+
+    .chart-bar-indicator .label {
+        min-width: 60px;
+        font-size: 10px;
+    }
+    
+    .chart-bar-indicator .bar-track {
+        height: 20px;
+    }
+    
+    .chart-bar-indicator .bar-fill .value {
+        font-size: 10px;
+        padding-right: 6px;
+    }
+    
+    .chart-bar-indicator .percent {
+        font-size: 10px;
+        min-width: 35px;
+    }
+
+    .encarregado-item-chart .name {
+        min-width: 60px;
+        font-size: 10px;
+    }
 }
