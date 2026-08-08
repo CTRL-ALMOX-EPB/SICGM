@@ -491,6 +491,8 @@
     padding: 2px 10px;
     border-radius: 12px;
     font-weight: 500;
+    display: inline-block;
+    white-space: nowrap;
 }
 
 .badge-aplicacao.aplicado { background: #C6F6D5; color: #276749; }

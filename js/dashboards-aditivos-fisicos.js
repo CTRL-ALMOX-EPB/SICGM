@@ -138,6 +138,9 @@ function trocarAba(aba) {
         listTitle.textContent = titles[aba] || '📦 Itens Aditivados';
     }
     
+    // Limpa o item selecionado ao trocar de aba
+    itemSelecionado = null;
+    
     renderizarDashboard(dadosFiltrados);
 }
 
@@ -436,10 +439,17 @@ function renderizarDashboard(aditivos) {
                 <p>Nenhum dado para exibir</p>
             </div>
         `;
+        // Atualiza gráfico vazio
+        document.getElementById('statusChart').innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">📊</div>
+                <p>Sem dados para exibir</p>
+            </div>
+        `;
         return;
     }
     
-    // Determina quais dados usar para o gráfico baseado na aba atual
+    // Determina quais dados usar baseado na aba atual
     let dadosParaGrafico = [];
     
     if (abaAtual === 'materiais') {
@@ -640,6 +650,16 @@ function renderizarKPIsEncarregados(encarregadosAgrupados) {
 function renderizarGraficoStatus(dados) {
     console.log('📊 Renderizando gráfico de status baseado na aba:', abaAtual);
     
+    if (!dados || dados.length === 0) {
+        document.getElementById('statusChart').innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">📊</div>
+                <p>Sem dados para exibir</p>
+            </div>
+        `;
+        return;
+    }
+    
     // Calcula a contagem de status baseado nos dados atuais
     const aplicacaoCount = { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 };
     
@@ -763,7 +783,7 @@ function renderizarListaItens(itensAgrupados) {
 }
 
 // ============================================
-// LISTA DE OBRAS
+// LISTA DE OBRAS (com colunas definidas)
 // ============================================
 
 function renderizarListaObras(obrasAgrupadas) {
@@ -782,9 +802,9 @@ function renderizarListaObras(obrasAgrupadas) {
     }
     
     let html = `
-        <div style="display: grid; grid-template-columns: 100px 1fr 80px 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div style="display: grid; grid-template-columns: 100px 1fr 70px 70px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
-            <span>Descrição</span>
+            <span>Informações</span>
             <span style="text-align: right;">Ocorr.</span>
             <span style="text-align: right;">SKUs Ún.</span>
         </div>
@@ -794,7 +814,7 @@ function renderizarListaObras(obrasAgrupadas) {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'obra' && itemSelecionado.obra === obra.obra;
         const obraFormatada = formatarObraParaExibicao(obra.obra);
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')" style="display: grid; grid-template-columns: 100px 1fr 80px 80px; gap: 8px; padding: 8px 12px;">
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')" style="display: grid; grid-template-columns: 100px 1fr 70px 70px; gap: 8px; padding: 8px 12px;">
                 <span class="item-code">🏗️ ${obraFormatada}</span>
                 <span class="item-desc">${obra.skusCount} SKUs • ${obra.encarregadosCount} encarregados</span>
                 <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${obra.skusCount}</span>
@@ -826,7 +846,7 @@ function renderizarListaEncarregados(encarregadosAgrupados) {
     }
     
     let html = `
-        <div style="display: grid; grid-template-columns: 1fr 80px 80px 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div style="display: grid; grid-template-columns: 1fr 70px 70px 70px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Encarregado</span>
             <span style="text-align: right;">Ocorr.</span>
             <span style="text-align: right;">SKUs Ún.</span>
@@ -837,7 +857,7 @@ function renderizarListaEncarregados(encarregadosAgrupados) {
     encarregadosAgrupados.forEach(enc => {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'encarregado' && itemSelecionado.nome === enc.nome;
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarEncarregado('${enc.nome}')" style="display: grid; grid-template-columns: 1fr 80px 80px 80px; gap: 8px; padding: 8px 12px;">
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarEncarregado('${enc.nome}')" style="display: grid; grid-template-columns: 1fr 70px 70px 70px; gap: 8px; padding: 8px 12px;">
                 <span class="item-code">👤 ${enc.nome}</span>
                 <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${enc.skusCount}</span>
                 <span style="text-align: right; font-weight: 600; color: #48BB78;">${enc.skusUnico}</span>
@@ -920,7 +940,6 @@ function renderizarDetalhesEncarregado(enc) {
     
     obrasOrdenadas.forEach(obra => {
         const obraFormatada = formatarObraParaExibicao(obra);
-        // Conta quantos SKUs tem nessa obra para este encarregado
         const count = enc.itens.filter(i => i.obra === obra).length;
         html += `
             <div class="obra-row">
@@ -933,14 +952,14 @@ function renderizarDetalhesEncarregado(enc) {
     html += `</div>`;
     
     html += `<div class="detail-section-title">📦 Materiais:</div>
-    <div class="item-detail-obras">`;
+    <div class="item-detail-obras" style="display: flex; flex-direction: column; gap: 4px;">`;
     
     materiaisOrdenados.forEach(item => {
         const badge = getAplicacaoBadge(item.aplicado);
         html += `
-            <div class="obra-row">
+            <div class="obra-row" style="display: flex; justify-content: space-between; padding: 4px 8px; background: #F7FAFC; border-radius: 4px; font-size: 13px; border-bottom: 1px solid #EDF2F7;">
                 <span><strong>${item.codigo}</strong> - ${item.descricao}</span>
-                <span>${item.ocorrencias}x ${badge}</span>
+                <span style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">${item.ocorrencias}x ${badge}</span>
             </div>
         `;
     });
@@ -1027,15 +1046,15 @@ function renderizarDetalhesObra(obra) {
     html += `</div>`;
     
     html += `<div class="detail-section-title">📦 Materiais Aditivados:</div>
-    <div class="item-detail-obras">`;
+    <div class="item-detail-obras" style="display: flex; flex-direction: column; gap: 4px;">`;
     
     materiaisOrdenados.forEach(item => {
         const qtdFormatada = Number.isInteger(item.quantidade) ? item.quantidade : item.quantidade.toFixed(2);
         const badge = getAplicacaoBadge(item.aplicado);
         html += `
-            <div class="obra-row">
+            <div class="obra-row" style="display: flex; justify-content: space-between; padding: 4px 8px; background: #F7FAFC; border-radius: 4px; font-size: 13px; border-bottom: 1px solid #EDF2F7;">
                 <span><strong>${item.codigo}</strong> - ${item.descricao} (${item.ocorrencias}x) 👤 ${item.encarregado}</span>
-                <span>${qtdFormatada} ${badge}</span>
+                <span style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">${qtdFormatada} ${badge}</span>
             </div>
         `;
     });
@@ -1152,14 +1171,18 @@ function renderizarDetalhes(item) {
     container.innerHTML = html;
 }
 
+// ============================================
+// BADGE DE APLICAÇÃO (sem quebra de texto)
+// ============================================
+
 function getAplicacaoBadge(status) {
     const map = {
-        'SIM': '<span class="badge-aplicacao aplicado">✅ Aplicado</span>',
-        'NÃO': '<span class="badge-aplicacao nao-aplicado">❌ Não Aplicado</span>',
-        'PARCIAL': '<span class="badge-aplicacao parcial">🔄 Parcial</span>',
-        'PENDENTE': '<span class="badge-aplicacao pendente">⏳ Pendente</span>'
+        'SIM': '<span class="badge-aplicacao aplicado" style="display: inline-block; white-space: nowrap;">✅ Aplicado</span>',
+        'NÃO': '<span class="badge-aplicacao nao-aplicado" style="display: inline-block; white-space: nowrap;">❌ Não Aplicado</span>',
+        'PARCIAL': '<span class="badge-aplicacao parcial" style="display: inline-block; white-space: nowrap;">🔄 Parcial</span>',
+        'PENDENTE': '<span class="badge-aplicacao pendente" style="display: inline-block; white-space: nowrap;">⏳ Pendente</span>'
     };
-    return map[status] || `<span class="badge-aplicacao">${status}</span>`;
+    return map[status] || `<span class="badge-aplicacao" style="display: inline-block; white-space: nowrap;">${status}</span>`;
 }
 
 // ============================================
