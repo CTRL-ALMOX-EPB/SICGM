@@ -64,6 +64,16 @@ document.addEventListener('DOMContentLoaded', async function() {
             mostrarToast('⚠️ Nenhuma pendência de baixa encontrada', 'warning');
         }
         
+        // Cria o container de KPIs com loading
+        const kpiGrid = document.getElementById('kpiGrid');
+        if (kpiGrid) {
+            kpiGrid.innerHTML = `
+                <div class="loading-dashboard" style="min-height: 60px; grid-column: 1 / -1;">
+                    <div class="spinner"></div>
+                </div>
+            `;
+        }
+        
         aplicarFiltros();
         
         loadingOverlay.classList.remove('active');
@@ -274,6 +284,20 @@ function renderizarDashboard(pendencias) {
                 <p>Selecione um item para ver os detalhes</p>
             </div>
         `;
+        
+        // Atualiza gráficos vazios
+        document.getElementById('statusChart').innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">📊</div>
+                <p>Sem dados para exibir</p>
+            </div>
+        `;
+        document.getElementById('topSkusChart').innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">📊</div>
+                <p>Sem dados para exibir</p>
+            </div>
+        `;
         return;
     }
     
@@ -413,7 +437,6 @@ function renderizarDetalhes(item) {
         return;
     }
     
-    // Agrupa por obra
     const obrasMap = {};
     item.itens.forEach(i => {
         const obra = i.obra || 'SEM OBRA';
@@ -468,7 +491,6 @@ function renderizarDetalhes(item) {
     
     html += `</div>`;
     
-    // Lista detalhada dos itens por obra
     html += `<div class="detail-section-title">📋 Detalhes por Obra:</div>
     <div class="item-detail-obras">`;
     
@@ -507,7 +529,6 @@ function renderizarDetalhes(item) {
 function renderizarGraficos(itensAgrupados) {
     console.log('📊 Renderizando gráficos...');
     
-    // Gráfico 1: Distribuição por Status de Baixa
     const totalBaixados = itensAgrupados.reduce((sum, item) => sum + item.baixados, 0);
     const totalNaoBaixados = itensAgrupados.reduce((sum, item) => sum + item.naoBaixados, 0);
     const totalGeral = totalBaixados + totalNaoBaixados || 1;
@@ -547,7 +568,6 @@ function renderizarGraficos(itensAgrupados) {
     
     document.getElementById('statusChart').innerHTML = html;
     
-    // Gráfico 2: Top 10 SKUs com maior pendência
     const topSkus = [...itensAgrupados]
         .sort((a, b) => b.total - a.total)
         .slice(0, 10);
