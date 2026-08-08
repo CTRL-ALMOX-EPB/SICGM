@@ -59,6 +59,14 @@
                     <option value="S/ SOLICITAÇÃO">📋 Sem Solicitação</option>
                 </select>
             </div>
+            <div class="filter-group">
+                <label>🔍 Buscar:</label>
+                <input type="text" id="filterBusca" placeholder="Código ou descrição..." style="width: 180px;">
+            </div>
+            <div class="filter-group">
+                <label>🏗️ Obra:</label>
+                <input type="text" id="filterObra" placeholder="Número da obra..." style="width: 140px;">
+            </div>
             <button class="btn-filter primary" onclick="aplicarFiltros()">🔍 Filtrar</button>
             <button class="btn-filter secondary" onclick="limparFiltros()">🧹 Limpar</button>
             <span class="total-registros" id="totalRegistros">0 aditivos</span>
@@ -71,7 +79,9 @@
             </div>
         </div>
 
-        <!-- Conteúdo Principal (Abas serão inseridas via JS) -->
+        <!-- Abas serão inseridas via JS -->
+
+        <!-- Conteúdo Principal -->
         <div class="dashboard-main">
             <div class="dashboard-card">
                 <h3 id="listTitle">📦 Itens Aditivados</h3>
@@ -97,7 +107,7 @@
         <!-- Gráficos -->
         <div class="dashboard-charts">
             <div class="dashboard-card">
-                <h3>📊 Distribuição de SKUs por Status</h3>
+                <h3>📊 Distribuição por Status</h3>
                 <div id="statusChart" class="chart-container">
                     <div class="loading-dashboard" style="min-height: 100px;">
                         <div class="spinner"></div>
@@ -106,7 +116,7 @@
             </div>
 
             <div class="dashboard-card">
-                <h3>🏆 Top 10 SKUs com Maior Quantidade</h3>
+                <h3>🏆 Top 10 SKUs</h3>
                 <div id="valorChart" class="chart-container">
                     <div class="loading-dashboard" style="min-height: 100px;">
                         <div class="spinner"></div>

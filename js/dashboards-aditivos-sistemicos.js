@@ -1,5 +1,5 @@
 // ============================================
-// DASHBOARD ADITIVOS SISTÊMICOS (REFORMULADO)
+// DASHBOARD ADITIVOS SISTÊMICOS (CORRIGIDO)
 // ============================================
 
 console.log('🚀 dashboards-aditivos-sistemicos.js carregado!');
@@ -84,41 +84,27 @@ document.addEventListener('DOMContentLoaded', async function() {
 // ============================================
 
 function criarAbas() {
-    const container = document.querySelector('.dashboard-main');
-    if (!container) return;
+    const mainContainer = document.querySelector('.dashboard-main');
+    if (!mainContainer) return;
     
-    // Adiciona o container de abas antes do grid
+    // Remove abas existentes
+    const existingAbas = document.querySelector('.abas-container');
+    if (existingAbas) existingAbas.remove();
+    
+    // Cria container de abas
     const abaContainer = document.createElement('div');
-    abaContainer.className = 'dashboard-card';
-    abaContainer.style.gridColumn = '1 / -1';
-    abaContainer.style.marginBottom = '0';
-    abaContainer.style.padding = '10px 20px';
+    abaContainer.className = 'abas-container';
     abaContainer.innerHTML = `
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="btn-aba active" data-aba="materiais" onclick="trocarAba('materiais')" style="padding: 8px 20px; border: 2px solid #E2E8F0; border-radius: 8px; background: #F7FAFC; color: #4A5568; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.3s;">
-                📦 Materiais
-            </button>
-            <button class="btn-aba" data-aba="obras" onclick="trocarAba('obras')" style="padding: 8px 20px; border: 2px solid #E2E8F0; border-radius: 8px; background: #F7FAFC; color: #4A5568; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.3s;">
-                🏗️ Obras
-            </button>
-        </div>
+        <button class="btn-aba active" data-aba="materiais" onclick="trocarAba('materiais')">
+            📦 Materiais
+        </button>
+        <button class="btn-aba" data-aba="obras" onclick="trocarAba('obras')">
+            🏗️ Obras
+        </button>
     `;
     
-    container.parentNode.insertBefore(abaContainer, container);
-    
-    // Adiciona estilos para as abas ativas
-    const style = document.createElement('style');
-    style.textContent = `
-        .btn-aba.active {
-            background: #ED8936 !important;
-            color: white !important;
-            border-color: #ED8936 !important;
-        }
-        .btn-aba:hover:not(.active) {
-            background: #EDF2F7 !important;
-        }
-    `;
-    document.head.appendChild(style);
+    // Insere antes do dashboard-main
+    mainContainer.parentNode.insertBefore(abaContainer, mainContainer);
 }
 
 // ============================================
@@ -128,12 +114,16 @@ function criarAbas() {
 function trocarAba(aba) {
     abaAtual = aba;
     
-    // Atualiza botões
     document.querySelectorAll('.btn-aba').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.aba === aba);
     });
     
-    // Re-renderiza com a aba atual
+    // Atualiza o título da lista
+    const listTitle = document.getElementById('listTitle');
+    if (listTitle) {
+        listTitle.textContent = aba === 'materiais' ? '📦 Itens Aditivados' : '🏗️ Obras com Aditivos';
+    }
+    
     renderizarDashboard(dadosFiltrados);
 }
 
@@ -146,8 +136,10 @@ function aplicarFiltros() {
     const dataInicio = document.getElementById('filterDataInicio')?.value || '';
     const dataFim = document.getElementById('filterDataFim')?.value || '';
     const statusFiltro = document.getElementById('filterStatus')?.value || 'todos';
+    const buscaTexto = document.getElementById('filterBusca')?.value?.toLowerCase() || '';
+    const buscaObra = document.getElementById('filterObra')?.value || '';
     
-    console.log(`📅 Filtros: Início=${dataInicio}, Fim=${dataFim}, Status=${statusFiltro}`);
+    console.log(`📅 Filtros: Início=${dataInicio}, Fim=${dataFim}, Status=${statusFiltro}, Busca=${buscaTexto}, Obra=${buscaObra}`);
     
     let filtrados = [...dadosCompletos];
     
@@ -171,6 +163,26 @@ function aplicarFiltros() {
         console.log(`📊 Após filtro de status: ${filtrados.length} aditivos`);
     }
     
+    if (buscaTexto) {
+        filtrados = filtrados.map(aditivo => ({
+            ...aditivo,
+            itens: (aditivo.itens || []).filter(item => {
+                const codigo = (item.codigo || '').toLowerCase();
+                const descricao = (item.descricao || '').toLowerCase();
+                return codigo.includes(buscaTexto) || descricao.includes(buscaTexto);
+            })
+        })).filter(aditivo => aditivo.itens && aditivo.itens.length > 0);
+        console.log(`🔍 Após filtro de busca: ${filtrados.length} aditivos`);
+    }
+    
+    if (buscaObra) {
+        filtrados = filtrados.filter(aditivo => {
+            const obra = (aditivo.obra || '').toLowerCase();
+            return obra.includes(buscaObra.toLowerCase());
+        });
+        console.log(`🏗️ Após filtro de obra: ${filtrados.length} aditivos`);
+    }
+    
     dadosFiltrados = filtrados;
     
     const totalRegistros = document.getElementById('totalRegistros');
@@ -186,6 +198,8 @@ function limparFiltros() {
     document.getElementById('filterDataInicio').value = '';
     document.getElementById('filterDataFim').value = '';
     document.getElementById('filterStatus').value = 'todos';
+    document.getElementById('filterBusca').value = '';
+    document.getElementById('filterObra').value = '';
     aplicarFiltros();
 }
 
@@ -264,12 +278,13 @@ function agruparItensPorCodigo(controles) {
 }
 
 // ============================================
-// AGRUPAR POR OBRA
+// AGRUPAR POR OBRA (com contagem de SKUs por ocorrência)
 // ============================================
 
 function agruparPorObra(controles) {
     console.log(`🏗️ Agrupando por obra...`);
     const obras = {};
+    let totalSkusContados = 0;
     
     controles.forEach(controle => {
         const obra = controle.obra || 'SEM OBRA';
@@ -282,7 +297,8 @@ function agruparPorObra(controles) {
                 datas: new Set(),
                 itens: [],
                 totalItens: 0,
-                skus: new Set()
+                skus: [], // Array para contar cada ocorrência
+                skusSet: new Set() // Para SKUs únicos
             };
         }
         
@@ -294,18 +310,26 @@ function agruparPorObra(controles) {
                 data: dataProgramacao,
                 numero: controle.numero
             });
-            obras[obra].totalItens += parseFloat(item.quantidade) || 0;
-            if (item.codigo) obras[obra].skus.add(item.codigo);
+            const qtd = parseFloat(item.quantidade) || 0;
+            obras[obra].totalItens += qtd;
+            
+            // Conta CADA ocorrência do SKU (mesmo que repetido em datas diferentes)
+            if (item.codigo) {
+                obras[obra].skus.push(item.codigo);
+                obras[obra].skusSet.add(item.codigo);
+            }
         });
     });
     
     const resultado = Object.values(obras).map(obra => ({
         ...obra,
         datas: Array.from(obra.datas).sort(),
-        skusCount: obra.skus.size
-    })).sort((a, b) => b.totalItens - a.totalItens);
+        skusCount: obra.skus.length, // Total de ocorrências de SKUs
+        skusUnico: obra.skusSet.size // SKUs únicos
+    })).sort((a, b) => b.skusCount - a.skusCount);
     
-    console.log(`✅ ${resultado.length} obras agrupadas`);
+    const totalSkusOcorrencias = resultado.reduce((sum, o) => sum + o.skusCount, 0);
+    console.log(`✅ ${resultado.length} obras agrupadas, ${totalSkusOcorrencias} ocorrências de SKUs`);
     return resultado;
 }
 
@@ -323,6 +347,12 @@ function renderizarDashboard(aditivos) {
                 <p class="sub">Tente ajustar os filtros</p>
             </div>
         `;
+        document.getElementById('itemDetails').innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">👆</div>
+                <p>Nenhum dado para exibir</p>
+            </div>
+        `;
         return;
     }
     
@@ -334,16 +364,30 @@ function renderizarDashboard(aditivos) {
         renderizarListaItens(itensAgrupados);
         renderizarGraficos(itensAgrupados);
         
-        if (itemSelecionado) {
+        if (itemSelecionado && itemSelecionado.tipo === 'material') {
             const encontrado = itensAgrupados.find(i => i.codigo === itemSelecionado.codigo);
             if (encontrado) {
                 renderizarDetalhes(encontrado);
+            } else {
+                document.getElementById('itemDetails').innerHTML = `
+                    <div class="empty-state-dashboard">
+                        <div class="icon">👆</div>
+                        <p>Selecione um item para ver os detalhes</p>
+                    </div>
+                `;
             }
         }
     } else {
         const obrasAgrupadas = agruparPorObra(aditivos);
         renderizarListaObras(obrasAgrupadas);
         renderizarKPIsObras(obrasAgrupadas);
+        
+        if (itemSelecionado && itemSelecionado.tipo === 'obra') {
+            const encontrado = obrasAgrupadas.find(o => o.obra === itemSelecionado.obra);
+            if (encontrado) {
+                renderizarDetalhesObra(encontrado);
+            }
+        }
     }
 }
 
@@ -355,8 +399,8 @@ function renderizarKPIsMateriais(itensAgrupados) {
     const container = document.getElementById('kpiGrid');
     if (!container) return;
     
-    // Conta quantos SKUs diferentes (itens) existem
-    const totalSkus = itensAgrupados.length;
+    // Soma total de itens (quantidades)
+    const totalItens = itensAgrupados.reduce((sum, item) => sum + item.total, 0);
     
     // Conta quantas obras diferentes têm aditivos
     const obrasSet = new Set();
@@ -366,20 +410,17 @@ function renderizarKPIsMateriais(itensAgrupados) {
     });
     const totalObras = obrasSet.size;
     
-    // Conta quantos SKUs por status (usando COUNT, não soma)
+    // Conta quantos SKUs por status (usando COUNT de ocorrências)
     const statusCount = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     itensAgrupados.forEach(item => {
-        // Para cada SKU, verifica se tem pelo menos um item com aquele status
-        const statusPorSku = new Set();
+        // Para cada SKU, conta cada ocorrência com status
         item.itens.forEach(i => {
             const s = i.status || 'ANALISE';
-            statusPorSku.add(s);
-        });
-        // Cada SKU conta apenas uma vez por status
-        statusPorSku.forEach(s => {
             if (statusCount[s] !== undefined) statusCount[s]++;
         });
     });
+    
+    const totalSkus = itensAgrupados.length;
     
     container.innerHTML = `
         <div class="kpi-card status-total">
@@ -395,17 +436,17 @@ function renderizarKPIsMateriais(itensAgrupados) {
         <div class="kpi-card status-analise">
             <div class="kpi-icon">📊</div>
             <div class="kpi-value">${statusCount.ANALISE}</div>
-            <div class="kpi-label">SKUs em Análise</div>
+            <div class="kpi-label">Ocorrências em Análise</div>
         </div>
         <div class="kpi-card status-aprovado">
             <div class="kpi-icon">✅</div>
             <div class="kpi-value">${statusCount.APROVADO}</div>
-            <div class="kpi-label">SKUs Aprovados</div>
+            <div class="kpi-label">Ocorrências Aprovadas</div>
         </div>
         <div class="kpi-card status-reprovado">
             <div class="kpi-icon">❌</div>
             <div class="kpi-value">${statusCount.REPROVADO}</div>
-            <div class="kpi-label">SKUs Reprovados</div>
+            <div class="kpi-label">Ocorrências Reprovadas</div>
         </div>
     `;
 }
@@ -419,7 +460,8 @@ function renderizarKPIsObras(obrasAgrupadas) {
     if (!container) return;
     
     const totalObras = obrasAgrupadas.length;
-    const totalSkus = obrasAgrupadas.reduce((sum, o) => sum + o.skusCount, 0);
+    const totalSkusOcorrencias = obrasAgrupadas.reduce((sum, o) => sum + o.skusCount, 0);
+    const totalSkusUnicos = obrasAgrupadas.reduce((sum, o) => sum + o.skusUnico, 0);
     const totalItens = obrasAgrupadas.reduce((sum, o) => sum + o.totalItens, 0);
     
     container.innerHTML = `
@@ -430,12 +472,17 @@ function renderizarKPIsObras(obrasAgrupadas) {
         </div>
         <div class="kpi-card">
             <div class="kpi-icon">📦</div>
-            <div class="kpi-value">${totalSkus}</div>
-            <div class="kpi-label">SKUs Aditivados</div>
+            <div class="kpi-value">${totalSkusOcorrencias}</div>
+            <div class="kpi-label">Ocorrências de SKUs</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-icon">📊</div>
-            <div class="kpi-value">${Math.round(totalItens * 100) / 100}</div>
+            <div class="kpi-value">${totalSkusUnicos}</div>
+            <div class="kpi-label">SKUs Únicos</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-value">${totalItens.toFixed(1)}</div>
             <div class="kpi-label">Total de Itens</div>
         </div>
     `;
@@ -462,7 +509,7 @@ function renderizarListaItens(itensAgrupados) {
     
     let html = '';
     itensAgrupados.forEach(item => {
-        const isActive = itemSelecionado && itemSelecionado.codigo === item.codigo;
+        const isActive = itemSelecionado && itemSelecionado.tipo === 'material' && itemSelecionado.codigo === item.codigo;
         const totalFormatado = Number.isInteger(item.total) ? item.total : item.total.toFixed(2);
         html += `
             <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarItem('${item.codigo}')">
@@ -497,13 +544,12 @@ function renderizarListaObras(obrasAgrupadas) {
     
     let html = '';
     obrasAgrupadas.forEach(obra => {
-        const isActive = itemSelecionado && itemSelecionado.obra === obra.obra;
-        const totalFormatado = Number.isInteger(obra.totalItens) ? obra.totalItens : obra.totalItens.toFixed(2);
+        const isActive = itemSelecionado && itemSelecionado.tipo === 'obra' && itemSelecionado.obra === obra.obra;
         html += `
             <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')">
                 <span class="item-code">🏗️</span>
                 <span class="item-desc">${obra.obra}</span>
-                <span class="item-total">${obra.skusCount} SKUs | ${totalFormatado} itens</span>
+                <span class="item-total">${obra.skusCount} SKUs</span>
             </div>
         `;
     });
@@ -538,12 +584,16 @@ function renderizarDetalhesObra(obra) {
     let html = `
         <div class="detail-title">🏗️ ${obra.obra}</div>
         <div class="detail-row">
-            <span class="label">SKUs Aditivados:</span>
+            <span class="label">Ocorrências de SKUs:</span>
             <span class="value">${obra.skusCount}</span>
         </div>
         <div class="detail-row">
+            <span class="label">SKUs Únicos:</span>
+            <span class="value">${obra.skusUnico}</span>
+        </div>
+        <div class="detail-row">
             <span class="label">Total de Itens:</span>
-            <span class="value">${Number.isInteger(obra.totalItens) ? obra.totalItens : obra.totalItens.toFixed(2)}</span>
+            <span class="value">${obra.totalItens.toFixed(2)}</span>
         </div>
         <div class="detail-section-title">📅 Datas de Programação:</div>
         <div class="item-detail-obras">
@@ -559,11 +609,10 @@ function renderizarDetalhesObra(obra) {
     
     html += `</div>`;
     
-    // Lista todos os materiais pendentes
+    // Lista todos os materiais agrupados por código
     html += `<div class="detail-section-title">📦 Materiais Aditivados:</div>
     <div class="item-detail-obras">`;
     
-    // Agrupa itens por código para mostrar resumo
     const itensPorCodigo = {};
     obra.itens.forEach(item => {
         const codigo = item.codigo || 'SEM_CODIGO';
@@ -572,10 +621,12 @@ function renderizarDetalhesObra(obra) {
                 codigo: codigo,
                 descricao: item.descricao || 'Sem descrição',
                 quantidade: 0,
-                status: item.status_aditivo || 'ANALISE'
+                status: item.status_aditivo || 'ANALISE',
+                ocorrencias: 0
             };
         }
         itensPorCodigo[codigo].quantidade += parseFloat(item.quantidade) || 0;
+        itensPorCodigo[codigo].ocorrencias++;
     });
     
     Object.values(itensPorCodigo).forEach(item => {
@@ -583,7 +634,7 @@ function renderizarDetalhesObra(obra) {
         const badge = getStatusBadge(item.status);
         html += `
             <div class="obra-row">
-                <span><strong>${item.codigo}</strong> - ${item.descricao}</span>
+                <span><strong>${item.codigo}</strong> - ${item.descricao} (${item.ocorrencias}x)</span>
                 <span>${qtdFormatada} ${badge}</span>
             </div>
         `;
@@ -649,10 +700,10 @@ function renderizarDetalhes(item) {
             <span class="value">${item.saidas.length}</span>
         </div>
         <div class="detail-status-count">
-            <span class="status-item"><span class="count status-analise">${statusMap.ANALISE}</span> 📊 Análise</span>
-            <span class="status-item"><span class="count status-aprovado">${statusMap.APROVADO}</span> ✅ Aprovado</span>
-            <span class="status-item"><span class="count status-reprovado">${statusMap.REPROVADO}</span> ❌ Reprovado</span>
-            <span class="status-item"><span class="count status-s-solicitacao">${statusMap['S/ SOLICITAÇÃO']}</span> 📋 S/ Solicitação</span>
+            <span class="status-item"><span class="count status-analise">${statusMap.ANALISE.toFixed(1)}</span> 📊 Análise</span>
+            <span class="status-item"><span class="count status-aprovado">${statusMap.APROVADO.toFixed(1)}</span> ✅ Aprovado</span>
+            <span class="status-item"><span class="count status-reprovado">${statusMap.REPROVADO.toFixed(1)}</span> ❌ Reprovado</span>
+            <span class="status-item"><span class="count status-s-solicitacao">${statusMap['S/ SOLICITAÇÃO'].toFixed(1)}</span> 📋 S/ Solicitação</span>
         </div>
     `;
     
@@ -708,21 +759,17 @@ function getStatusBadge(status) {
 function renderizarGraficos(itensAgrupados) {
     console.log('📊 Renderizando gráficos de indicadores...');
     
-    // Calcula totais por status (usando COUNT de SKUs)
+    // Calcula totais por status (contando ocorrências)
     const statusCount = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     itensAgrupados.forEach(item => {
-        const statusPorSku = new Set();
         item.itens.forEach(i => {
             const s = i.status || 'ANALISE';
-            statusPorSku.add(s);
-        });
-        statusPorSku.forEach(s => {
-            if (statusCount[s] !== undefined) statusCount[s]++;
+            if (statusCount[s] !== undefined) statusCount[s] += parseFloat(i.quantidade) || 0;
         });
     });
     
-    const totalSkus = itensAgrupados.length;
-    const maxValue = totalSkus > 0 ? totalSkus : 1;
+    const totalGeral = Object.values(statusCount).reduce((sum, v) => sum + v, 0);
+    const maxValue = totalGeral > 0 ? totalGeral : 1;
     
     const statusLabels = {
         'ANALISE': 'Análise',
@@ -738,72 +785,70 @@ function renderizarGraficos(itensAgrupados) {
         'S/ SOLICITAÇÃO': 'bar-s-solicitacao'
     };
     
-    // Gráfico 1: Distribuição de SKUs por Status (barras horizontais estilo indicador)
-    let htmlStatus = `
-        <div style="width: 100%; display: flex; flex-direction: column; gap: 8px; padding: 10px 0;">
-    `;
-    
+    // Gráfico 1: Distribuição por Status
+    let htmlStatus = '';
     Object.keys(statusCount).forEach(status => {
         const value = statusCount[status];
         const percentual = maxValue > 0 ? (value / maxValue) * 100 : 0;
         const colorClass = statusClasses[status];
+        const valueFormat = Number.isInteger(value) ? value : value.toFixed(1);
         
         htmlStatus += `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 12px; color: #4A5568; min-width: 90px;">${statusLabels[status]}</span>
-                <div style="flex: 1; background: #EDF2F7; border-radius: 10px; height: 24px; overflow: hidden; position: relative;">
-                    <div class="${colorClass}" style="width: ${percentual}%; height: 100%; border-radius: 10px; transition: width 0.8s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; min-width: ${value > 0 ? '30px' : '0'};">
-                        <span style="font-size: 12px; font-weight: 600; color: white;">${value}</span>
+            <div class="chart-bar-indicator">
+                <span class="label">${statusLabels[status]}</span>
+                <div class="bar-track">
+                    <div class="bar-fill ${colorClass}" style="width: ${percentual}%;">
+                        <span class="value">${valueFormat}</span>
                     </div>
                 </div>
-                <span style="font-size: 12px; color: #718096; min-width: 40px;">${percentual.toFixed(0)}%</span>
+                <span class="percent">${percentual.toFixed(0)}%</span>
             </div>
         `;
     });
     
+    // Barra total
     htmlStatus += `
-            <div style="display: flex; align-items: center; gap: 10; margin-top: 4px;">
-                <span style="font-size: 12px; color: #4A5568; min-width: 90px; font-weight: 600;">Total</span>
-                <div style="flex: 1; background: #EDF2F7; border-radius: 10px; height: 24px; overflow: hidden; position: relative;">
-                    <div style="width: 100%; height: 100%; background: #4299E1; border-radius: 10px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px;">
-                        <span style="font-size: 12px; font-weight: 700; color: white;">${totalSkus}</span>
-                    </div>
+        <div class="chart-bar-indicator" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #E2E8F0;">
+            <span class="label" style="font-weight: 700;">Total</span>
+            <div class="bar-track">
+                <div class="bar-fill bar-total" style="width: 100%;">
+                    <span class="value">${Number.isInteger(totalGeral) ? totalGeral : totalGeral.toFixed(1)}</span>
                 </div>
-                <span style="font-size: 12px; color: #718096; min-width: 40px;">100%</span>
             </div>
+            <span class="percent" style="font-weight: 700;">100%</span>
         </div>
     `;
     
     document.getElementById('statusChart').innerHTML = htmlStatus;
     
-    // Gráfico 2: Top 10 SKUs com maior quantidade
+    // Gráfico 2: Top 10 SKUs
     const topSkus = [...itensAgrupados]
         .sort((a, b) => b.total - a.total)
         .slice(0, 10);
     
     const maxTotal = topSkus.length > 0 ? Math.max(...topSkus.map(s => s.total)) : 1;
     
-    let htmlTop = `
-        <div style="width: 100%; display: flex; flex-direction: column; gap: 6px; padding: 10px 0;">
-    `;
-    
+    let htmlTop = '';
     topSkus.forEach((item, index) => {
         const percentual = (item.total / maxTotal) * 100;
         const qtdFormatada = Number.isInteger(item.total) ? item.total : item.total.toFixed(1);
         htmlTop += `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 11px; color: #4A5568; min-width: 60px; font-weight: 500;">#${index + 1}</span>
-                <span style="font-size: 11px; color: #2D3748; min-width: 70px; font-weight: 600;">${item.codigo}</span>
-                <div style="flex: 1; background: #EDF2F7; border-radius: 6px; height: 18px; overflow: hidden;">
-                    <div style="width: ${percentual}%; height: 100%; background: linear-gradient(90deg, #4299E1, #2B6CB0); border-radius: 6px; transition: width 0.8s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; min-width: ${item.total > 0 ? '20px' : '0'};">
-                        <span style="font-size: 10px; font-weight: 600; color: white;">${qtdFormatada}</span>
+            <div class="top-sku-item">
+                <span class="rank">#${index + 1}</span>
+                <span class="code">${item.codigo}</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width: ${percentual}%;">
+                        <span class="value">${qtdFormatada}</span>
                     </div>
                 </div>
             </div>
         `;
     });
     
-    htmlTop += `</div>`;
+    if (topSkus.length === 0) {
+        htmlTop = `<div class="empty-state-dashboard"><p>Nenhum SKU encontrado</p></div>`;
+    }
+    
     document.getElementById('valorChart').innerHTML = htmlTop;
 }
 
