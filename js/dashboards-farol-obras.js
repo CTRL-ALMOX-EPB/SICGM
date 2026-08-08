@@ -8,8 +8,9 @@ let dadosCompletos = [];
 let dadosFiltrados = [];
 let dadosExibidos = [];
 let obraSelecionada = null;
+let saidaSelecionada = null;
 let abaAtual = 'obras';
-let filtroAtivo = null; // Armazena o filtro ativo dos cards
+let filtroAtivo = null;
 
 // ============================================
 // FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO
@@ -122,7 +123,9 @@ function criarAbas() {
 
 function trocarAba(aba) {
     abaAtual = aba;
-    filtroAtivo = null; // Reseta filtro ao trocar de aba
+    filtroAtivo = null;
+    obraSelecionada = null;
+    saidaSelecionada = null;
     
     document.querySelectorAll('.btn-aba').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.aba === aba);
@@ -146,7 +149,6 @@ function trocarAba(aba) {
         chartTitle.textContent = titles[aba] || '📦 Top Separadores';
     }
     
-    obraSelecionada = null;
     renderizarDashboard(dadosFiltrados);
 }
 
@@ -188,7 +190,9 @@ function aplicarFiltros() {
     
     dadosFiltrados = filtrados;
     dadosExibidos = filtrados;
-    filtroAtivo = null; // Reseta filtro ativo
+    filtroAtivo = null;
+    obraSelecionada = null;
+    saidaSelecionada = null;
     
     const totalRegistros = document.getElementById('totalRegistros');
     if (totalRegistros) {
@@ -205,6 +209,8 @@ function limparFiltros() {
     document.getElementById('filterObra').value = '';
     document.getElementById('filterStatus').value = 'todos';
     filtroAtivo = null;
+    obraSelecionada = null;
+    saidaSelecionada = null;
     aplicarFiltros();
 }
 
@@ -215,7 +221,6 @@ function limparFiltros() {
 function aplicarFiltroCard(tipo, valor) {
     console.log(`🔍 Aplicando filtro do card: ${tipo} = ${valor}`);
     
-    // Se já está com esse filtro, remove (toggle)
     if (filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor) {
         filtroAtivo = null;
         dadosExibidos = [...dadosFiltrados];
@@ -237,47 +242,32 @@ function aplicarFiltroCard(tipo, valor) {
         }
     }
     
-    // Atualiza a lista com os dados filtrados
+    obraSelecionada = null;
+    saidaSelecionada = null;
+    
     const totalRegistros = document.getElementById('totalRegistros');
     if (totalRegistros) {
         const textoFiltro = filtroAtivo ? ` (filtrado: ${filtroAtivo.tipo})` : '';
         totalRegistros.textContent = `${dadosExibidos.length} obras${textoFiltro}`;
     }
     
-    // Re-renderiza a lista e os detalhes
     if (abaAtual === 'obras') {
         renderizarListaObras(dadosExibidos);
-        if (obraSelecionada && obraSelecionada.tipo === 'obra') {
-            const encontrada = dadosExibidos.find(o => o.obra === obraSelecionada.obra);
-            if (encontrada) {
-                renderizarDetalhesObra(encontrada);
-            } else {
-                document.getElementById('obraDetails').innerHTML = `
-                    <div class="empty-state-dashboard">
-                        <div class="icon">👆</div>
-                        <p>Obra não encontrada no filtro atual</p>
-                    </div>
-                `;
-                obraSelecionada = null;
-            }
-        }
+        document.getElementById('obraDetails').innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">👆</div>
+                <p>Selecione uma obra para ver os detalhes</p>
+            </div>
+        `;
     } else if (abaAtual === 'separadores') {
         const separadores = agruparPorSeparador(dadosExibidos);
         renderizarListaSeparadores(separadores);
-        if (obraSelecionada && obraSelecionada.tipo === 'separador') {
-            const encontrado = separadores.find(s => s.nome === obraSelecionada.nome);
-            if (encontrado) {
-                renderizarDetalhesSeparador(encontrado);
-            } else {
-                document.getElementById('obraDetails').innerHTML = `
-                    <div class="empty-state-dashboard">
-                        <div class="icon">👆</div>
-                        <p>Separador não encontrado no filtro atual</p>
-                    </div>
-                `;
-                obraSelecionada = null;
-            }
-        }
+        document.getElementById('obraDetails').innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">👆</div>
+                <p>Selecione um separador para ver os detalhes</p>
+            </div>
+        `;
     }
 }
 
@@ -358,10 +348,10 @@ function renderizarDashboard(obras) {
         renderizarListaObras(obras);
         renderizarGraficosObras(ativas);
         
-        if (obraSelecionada && obraSelecionada.tipo === 'obra') {
-            const encontrada = obras.find(o => o.obra === obraSelecionada.obra);
-            if (encontrada) {
-                renderizarDetalhesObra(encontrada);
+        if (obraSelecionada) {
+            const obra = obras.find(o => o.obra === obraSelecionada.obra);
+            if (obra) {
+                renderizarDetalhesObra(obra);
             }
         }
     } else if (abaAtual === 'separadores') {
@@ -380,7 +370,7 @@ function renderizarDashboard(obras) {
 }
 
 // ============================================
-// KPIs - OBRAS (com interatividade)
+// KPIs - OBRAS
 // ============================================
 
 function renderizarKPIsObras(obras, todasObras) {
@@ -404,7 +394,6 @@ function renderizarKPIsObras(obras, todasObras) {
         if (o.separador) separadores.add(o.separador);
     });
     
-    // Verifica se algum filtro está ativo
     const isFilterActive = (tipo, valor) => {
         return filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor;
     };
@@ -413,7 +402,7 @@ function renderizarKPIsObras(obras, todasObras) {
         <div class="kpi-card status-total ${isFilterActive('status', 'TOTAL') ? 'active' : ''}" onclick="aplicarFiltroCard('status', 'TOTAL')" style="cursor: pointer; ${isFilterActive('status', 'TOTAL') ? 'border: 2px solid #4299E1; background: #EBF8FF;' : ''}">
             <div class="kpi-icon">🏗️</div>
             <div class="kpi-value">${total}</div>
-            <div class="kpi-label">Total de Obras</div>
+            <div class="kpi-label">Total</div>
         </div>
         <div class="kpi-card status-cancelada ${isFilterActive('cancelada', 'SIM') ? 'active' : ''}" onclick="aplicarFiltroCard('cancelada', 'SIM')" style="cursor: pointer; ${isFilterActive('cancelada', 'SIM') ? 'border: 2px solid #FC8181; background: #FFF5F5;' : ''}">
             <div class="kpi-icon">❌</div>
@@ -428,7 +417,7 @@ function renderizarKPIsObras(obras, todasObras) {
         <div class="kpi-card status-programacao ${isFilterActive('programacao', 'NÃO') ? 'active' : ''}" onclick="aplicarFiltroCard('programacao', 'NÃO')" style="cursor: pointer; ${isFilterActive('programacao', 'NÃO') ? 'border: 2px solid #ED8936; background: #FFFAF0;' : ''}">
             <div class="kpi-icon">📅</div>
             <div class="kpi-value">${foraProgramacao}</div>
-            <div class="kpi-label">Fora de Programação</div>
+            <div class="kpi-label">Fora Prog.</div>
         </div>
         <div class="kpi-card status-devolvida ${isFilterActive('devolvida', 'SIM') ? 'active' : ''}" onclick="aplicarFiltroCard('devolvida', 'SIM')" style="cursor: pointer; ${isFilterActive('devolvida', 'SIM') ? 'border: 2px solid #48BB78; background: #F0FFF4;' : ''}">
             <div class="kpi-icon">📦</div>
@@ -471,12 +460,12 @@ function renderizarKPIsSeparadores(separadores) {
         <div class="kpi-card status-total">
             <div class="kpi-icon">📦</div>
             <div class="kpi-value">${totalSeparadores}</div>
-            <div class="kpi-label">Total de Separadores</div>
+            <div class="kpi-label">Separadores</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-icon">🏗️</div>
             <div class="kpi-value">${totalObras}</div>
-            <div class="kpi-label">Total de Obras</div>
+            <div class="kpi-label">Total Obras</div>
         </div>
         <div class="kpi-card" style="border-color: #48BB78;">
             <div class="kpi-icon">✅</div>
@@ -493,11 +482,14 @@ function renderizarKPIsSeparadores(separadores) {
             <div class="kpi-value">${totalComAditivo}</div>
             <div class="kpi-label">Com Aditivo</div>
         </div>
+        <div class="kpi-card" style="visibility: hidden;"></div>
+        <div class="kpi-card" style="visibility: hidden;"></div>
+        <div class="kpi-card" style="visibility: hidden;"></div>
     `;
 }
 
 // ============================================
-// LISTA DE OBRAS (apenas número)
+// LISTA DE OBRAS
 // ============================================
 
 function renderizarListaObras(obras) {
@@ -515,24 +507,35 @@ function renderizarListaObras(obras) {
         return;
     }
     
-    const obrasOrdenadas = [...obras].sort((a, b) => (a.obra || '').localeCompare(b.obra || ''));
+    // Agrupa obras por número (mesma obra pode ter múltiplas saídas)
+    const obrasAgrupadas = {};
+    obras.forEach(obra => {
+        const key = obra.obra || 'SEM OBRA';
+        if (!obrasAgrupadas[key]) {
+            obrasAgrupadas[key] = [];
+        }
+        obrasAgrupadas[key].push(obra);
+    });
+    
+    const keys = Object.keys(obrasAgrupadas).sort();
     
     let html = `
         <div style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
-            <span style="text-align: right;">Status</span>
+            <span style="text-align: right;">Saídas</span>
         </div>
     `;
     
-    obrasOrdenadas.forEach(obra => {
-        const isActive = obraSelecionada && obraSelecionada.tipo === 'obra' && obraSelecionada.obra === obra.obra;
-        const obraFormatada = formatarObraParaExibicao(obra.obra);
-        const statusIcon = obra.status === 'FINALIZADO' ? '✅' : '⏳';
+    keys.forEach(key => {
+        const saidas = obrasAgrupadas[key];
+        const isActive = obraSelecionada && obraSelecionada.obra === key;
+        const obraFormatada = formatarObraParaExibicao(key);
+        const qtdSaidas = saidas.length;
         
         html += `
-            <div class="obra-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')" style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
-                <span class="obra-numero" style="font-weight: 600; color: #2D3748; font-size: 14px;">🏗️ ${obraFormatada}</span>
-                <span style="text-align: right; font-size: 12px;">${statusIcon}</span>
+            <div class="obra-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${key}')" style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+                <span class="obra-numero">🏗️ ${obraFormatada}</span>
+                <span style="text-align: right; font-weight: 600; color: #4299E1; font-size: 13px;">${qtdSaidas}</span>
             </div>
         `;
     });
@@ -585,13 +588,29 @@ function renderizarListaSeparadores(separadores) {
 
 function selecionarObra(obraNumero) {
     console.log(`🔍 Selecionando obra: ${obraNumero}`);
-    const obra = dadosExibidos.find(o => o.obra === obraNumero);
     
-    if (obra) {
-        obraSelecionada = { obra: obra.obra, tipo: 'obra' };
-        renderizarDetalhesObra(obra);
+    // Busca todas as saídas desta obra
+    const saidas = dadosExibidos.filter(o => o.obra === obraNumero);
+    
+    if (saidas && saidas.length > 0) {
+        obraSelecionada = { obra: obraNumero, tipo: 'obra' };
+        saidaSelecionada = saidas[0]; // Seleciona a primeira saída por padrão
+        renderizarDetalhesObra(saidas);
         renderizarListaObras(dadosExibidos);
     }
+}
+
+// ============================================
+// SELECIONAR SAÍDA
+// ============================================
+
+function selecionarSaida(saida) {
+    console.log(`🔍 Selecionando saída: ${saida.data_programacao}`);
+    saidaSelecionada = saida;
+    
+    // Re-renderiza os detalhes com a saída selecionada
+    const saidas = dadosExibidos.filter(o => o.obra === obraSelecionada.obra);
+    renderizarDetalhesObra(saidas);
 }
 
 // ============================================
@@ -611,18 +630,55 @@ function selecionarSeparador(nome) {
 }
 
 // ============================================
-// DETALHES DA OBRA
+// DETALHES DA OBRA (COM SELETOR DE SAÍDAS)
 // ============================================
 
-function renderizarDetalhesObra(obra) {
+function renderizarDetalhesObra(saidas) {
     const container = document.getElementById('obraDetails');
     if (!container) return;
     
+    if (!saidas || saidas.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">📭</div>
+                <p>Nenhuma saída encontrada para esta obra</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Se não tem saída selecionada, usa a primeira
+    if (!saidaSelecionada || !saidas.some(s => s.id === saidaSelecionada.id)) {
+        saidaSelecionada = saidas[0];
+    }
+    
+    const obra = saidaSelecionada;
     const obraFormatada = formatarObraParaExibicao(obra.obra);
     
+    // Gera o seletor de saídas
+    let selectorHtml = `
+        <div class="saidas-selector">
+            <span style="font-size: 12px; font-weight: 600; color: #4A5568; margin-right: 4px;">📅 Saídas:</span>
+    `;
+    
+    saidas.forEach((s, index) => {
+        const isActive = s.id === saidaSelecionada.id;
+        const dataFormatada = formatarData(s.data_programacao);
+        const label = `#${index + 1} ${dataFormatada}`;
+        selectorHtml += `
+            <button class="btn-saida ${isActive ? 'active' : ''}" onclick="selecionarSaida(${JSON.stringify(s).replace(/"/g, '&quot;')})">
+                ${label}
+            </button>
+        `;
+    });
+    
+    selectorHtml += `</div>`;
+    
+    // Status da obra
     let statusText = obra.status === 'FINALIZADO' ? '✅ Finalizado' : '⏳ Pendente';
     let statusColor = obra.status === 'FINALIZADO' ? '#48BB78' : '#ED8936';
     
+    // Indicadores
     const indicadores = [];
     if (obra.cancelada === 'SIM') indicadores.push('❌ Cancelada');
     if (obra.aditivo === 'SIM') indicadores.push('📝 Com Aditivo');
@@ -632,6 +688,7 @@ function renderizarDetalhesObra(obra) {
     
     let html = `
         <div class="detail-title">🏗️ ${obraFormatada}</div>
+        ${selectorHtml}
         <div class="detail-row">
             <span class="label">Status:</span>
             <span class="value" style="color: ${statusColor}; font-weight: 600;">${statusText}</span>
@@ -696,13 +753,15 @@ function renderizarDetalhesObra(obra) {
         `;
     }
     
-    if (obra.itens && obra.itens.length > 0) {
+    // Itens da saída selecionada
+    const itens = saidaSelecionada.itens || [];
+    if (itens.length > 0) {
         html += `
-            <div class="detail-section-title">📦 Itens da Obra (${obra.itens.length})</div>
+            <div class="detail-section-title">📦 Itens da Saída (${itens.length})</div>
             <div class="obra-detail-itens">
         `;
         
-        const itensOrdenados = [...obra.itens].sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+        const itensOrdenados = [...itens].sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
         
         itensOrdenados.forEach(item => {
             const qtdFormatada = Number.isInteger(item.quantidade) ? item.quantidade : item.quantidade.toFixed(2);
@@ -987,6 +1046,7 @@ function renderizarGraficosSeparadores(separadores) {
 window.aplicarFiltros = aplicarFiltros;
 window.limparFiltros = limparFiltros;
 window.selecionarObra = selecionarObra;
+window.selecionarSaida = selecionarSaida;
 window.selecionarSeparador = selecionarSeparador;
 window.trocarAba = trocarAba;
 window.renderizarDashboard = renderizarDashboard;

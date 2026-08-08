@@ -3,7 +3,7 @@
 /* ============================================ */
 
 .dashboard-container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -241,22 +241,29 @@
     color: #718096;
 }
 
-/* ===== KPI CARDS ===== */
+/* ===== KPI CARDS - UMA LINHA ===== */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 10px;
     margin-bottom: 25px;
 }
 
 .kpi-card {
     background: white;
     border-radius: 10px;
-    padding: 15px 20px;
+    padding: 12px 10px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.06);
-    border: 1px solid #E2E8F0;
+    border: 2px solid #E2E8F0;
     text-align: center;
-    transition: all 0.2s;
+    transition: all 0.25s ease;
+    cursor: pointer;
+    position: relative;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 .kpi-card:hover {
@@ -264,28 +271,97 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
+.kpi-card.active {
+    border-color: #4299E1;
+    background: #EBF8FF;
+}
+
+.kpi-card.active::after {
+    content: '✓';
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    font-size: 12px;
+    color: #4299E1;
+    font-weight: 700;
+}
+
 .kpi-card .kpi-icon {
-    font-size: 24px;
-    margin-bottom: 4px;
+    font-size: 20px;
+    margin-bottom: 2px;
 }
 
 .kpi-card .kpi-value {
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 700;
     color: #2B6CB0;
+    line-height: 1.2;
 }
 
 .kpi-card .kpi-label {
-    font-size: 12px;
+    font-size: 10px;
     color: #718096;
     margin-top: 2px;
+    line-height: 1.2;
 }
 
+/* Cores específicas para cada tipo de card */
 .kpi-card.status-cancelada .kpi-value { color: #FC8181; }
+.kpi-card.status-cancelada.active { border-color: #FC8181; background: #FFF5F5; }
+.kpi-card.status-cancelada.active::after { color: #FC8181; }
+
 .kpi-card.status-aditivo .kpi-value { color: #ED8936; }
+.kpi-card.status-aditivo.active { border-color: #ED8936; background: #FFFAF0; }
+.kpi-card.status-aditivo.active::after { color: #ED8936; }
+
 .kpi-card.status-programacao .kpi-value { color: #ED8936; }
+.kpi-card.status-programacao.active { border-color: #ED8936; background: #FFFAF0; }
+.kpi-card.status-programacao.active::after { color: #ED8936; }
+
 .kpi-card.status-devolvida .kpi-value { color: #48BB78; }
+.kpi-card.status-devolvida.active { border-color: #48BB78; background: #F0FFF4; }
+.kpi-card.status-devolvida.active::after { color: #48BB78; }
+
 .kpi-card.status-total .kpi-value { color: #4299E1; }
+.kpi-card.status-total.active { border-color: #4299E1; background: #EBF8FF; }
+.kpi-card.status-total.active::after { color: #4299E1; }
+
+/* ===== ABAS ===== */
+.abas-container {
+    background: white;
+    border-radius: 10px;
+    padding: 8px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    border: 1px solid #E2E8F0;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-aba {
+    padding: 8px 20px;
+    border: 2px solid #E2E8F0;
+    border-radius: 8px;
+    background: #F7FAFC;
+    color: #4A5568;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-aba:hover:not(.active) {
+    background: #EDF2F7;
+    border-color: #CBD5E0;
+}
+
+.btn-aba.active {
+    background: #ED8936;
+    color: white;
+    border-color: #ED8936;
+    box-shadow: 0 2px 8px rgba(237, 137, 54, 0.25);
+}
 
 /* ===== CONTEÚDO PRINCIPAL ===== */
 .dashboard-main {
@@ -336,13 +412,13 @@
 
 .obra-item {
     display: grid;
-    grid-template-columns: 100px 1fr 80px;
+    grid-template-columns: 1fr 60px;
     gap: 8px;
     padding: 10px 12px;
     border-bottom: 1px solid #F7FAFC;
     cursor: pointer;
-    transition: all 0.15s;
     border-radius: 6px;
+    transition: all 0.15s;
     align-items: center;
 }
 
@@ -358,64 +434,7 @@
 .obra-item .obra-numero {
     font-weight: 600;
     color: #2D3748;
-    font-size: 13px;
-}
-
-.obra-item .obra-info {
-    color: #4A5568;
-    font-size: 13px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.obra-item .obra-badge {
-    text-align: right;
-}
-
-/* Badges de Status */
-.badge-status-farol {
-    font-size: 10px;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-weight: 500;
-    display: inline-block;
-    white-space: nowrap;
-}
-
-.badge-status-farol.pendente {
-    background: #FEFCBF;
-    color: #975A16;
-}
-
-.badge-status-farol.finalizado {
-    background: #C6F6D5;
-    color: #276749;
-}
-
-.badge-status-farol.cancelada {
-    background: #FED7D7;
-    color: #9B2C2C;
-}
-
-.badge-status-farol.com-aditivo {
-    background: #FEFCBF;
-    color: #975A16;
-}
-
-.badge-status-farol.fora-programacao {
-    background: #FEFCBF;
-    color: #975A16;
-}
-
-.badge-status-farol.devolvida {
-    background: #C6F6D5;
-    color: #276749;
-}
-
-.badge-status-farol.saida {
-    background: #EBF8FF;
-    color: #2B6CB0;
+    font-size: 14px;
 }
 
 /* ===== DETALHES DA OBRA ===== */
@@ -480,6 +499,36 @@
 .obra-detail-itens .item-row .qtd {
     font-weight: 600;
     color: #2B6CB0;
+}
+
+/* ===== SELETOR DE SAÍDAS ===== */
+.saidas-selector {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 10px 0;
+}
+
+.saidas-selector .btn-saida {
+    padding: 4px 14px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
+    background: #F7FAFC;
+    color: #4A5568;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saidas-selector .btn-saida:hover {
+    background: #EDF2F7;
+}
+
+.saidas-selector .btn-saida.active {
+    background: #4299E1;
+    color: white;
+    border-color: #4299E1;
 }
 
 /* ===== GRÁFICOS ===== */
@@ -653,6 +702,13 @@
 /* RESPONSIVIDADE                               */
 /* ============================================ */
 
+@media (max-width: 1200px) {
+    .kpi-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+}
+
 @media (max-width: 1024px) {
     .dashboard-main {
         grid-template-columns: 1fr;
@@ -709,17 +765,36 @@
     }
 
     .kpi-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+    }
+
+    .kpi-card {
+        padding: 8px 6px;
+        min-height: 60px;
     }
 
     .kpi-card .kpi-value {
-        font-size: 22px;
+        font-size: 16px;
+    }
+
+    .kpi-card .kpi-label {
+        font-size: 8px;
+    }
+
+    .kpi-card .kpi-icon {
+        font-size: 16px;
+    }
+
+    .kpi-card.active::after {
+        font-size: 10px;
+        top: 2px;
+        right: 4px;
     }
 
     .obra-item {
-        grid-template-columns: 80px 1fr 60px;
-        gap: 6px;
+        grid-template-columns: 1fr 40px;
+        gap: 4px;
         font-size: 12px;
         padding: 8px 10px;
     }
@@ -785,20 +860,25 @@
     }
 
     .kpi-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
     }
 
     .kpi-card {
-        padding: 12px 10px;
+        padding: 6px 4px;
+        min-height: 50px;
     }
 
     .kpi-card .kpi-value {
-        font-size: 18px;
+        font-size: 14px;
     }
 
     .kpi-card .kpi-label {
-        font-size: 10px;
+        font-size: 7px;
+    }
+
+    .kpi-card .kpi-icon {
+        font-size: 14px;
     }
 
     .dashboard-card {
@@ -807,16 +887,6 @@
 
     .dashboard-card h3 {
         font-size: 14px;
-    }
-
-    .obra-item {
-        grid-template-columns: 1fr;
-        gap: 4px;
-        padding: 8px 10px;
-    }
-
-    .obra-item .obra-badge {
-        text-align: left;
     }
 
     .chart-bar-indicator .label {
@@ -842,75 +912,20 @@
         min-width: 60px;
         font-size: 10px;
     }
+
+    .saidas-selector .btn-saida {
+        font-size: 10px;
+        padding: 3px 10px;
+    }
+
+    .obra-item {
+        grid-template-columns: 1fr;
+        gap: 2px;
+        padding: 6px 8px;
+    }
+
+    .obra-item .obra-status {
+        text-align: left;
+        font-size: 11px;
+    }
 }
-
-/* ===== KPI CARDS INTERATIVOS ===== */
-.kpi-card {
-    background: white;
-    border-radius: 10px;
-    padding: 15px 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
-    border: 2px solid #E2E8F0;
-    text-align: center;
-    transition: all 0.25s ease;
-    cursor: pointer;
-    position: relative;
-}
-
-.kpi-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.12);
-}
-
-.kpi-card.active {
-    border-color: #4299E1;
-    background: #EBF8FF;
-}
-
-.kpi-card.active::after {
-    content: '✓';
-    position: absolute;
-    top: 6px;
-    right: 10px;
-    font-size: 14px;
-    color: #4299E1;
-    font-weight: 700;
-}
-
-.kpi-card .kpi-icon {
-    font-size: 24px;
-    margin-bottom: 4px;
-}
-
-.kpi-card .kpi-value {
-    font-size: 28px;
-    font-weight: 700;
-    color: #2B6CB0;
-}
-
-.kpi-card .kpi-label {
-    font-size: 12px;
-    color: #718096;
-    margin-top: 2px;
-}
-
-/* Cores específicas para cada tipo de card */
-.kpi-card.status-cancelada .kpi-value { color: #FC8181; }
-.kpi-card.status-cancelada.active { border-color: #FC8181; background: #FFF5F5; }
-.kpi-card.status-cancelada.active::after { color: #FC8181; }
-
-.kpi-card.status-aditivo .kpi-value { color: #ED8936; }
-.kpi-card.status-aditivo.active { border-color: #ED8936; background: #FFFAF0; }
-.kpi-card.status-aditivo.active::after { color: #ED8936; }
-
-.kpi-card.status-programacao .kpi-value { color: #ED8936; }
-.kpi-card.status-programacao.active { border-color: #ED8936; background: #FFFAF0; }
-.kpi-card.status-programacao.active::after { color: #ED8936; }
-
-.kpi-card.status-devolvida .kpi-value { color: #48BB78; }
-.kpi-card.status-devolvida.active { border-color: #48BB78; background: #F0FFF4; }
-.kpi-card.status-devolvida.active::after { color: #48BB78; }
-
-.kpi-card.status-total .kpi-value { color: #4299E1; }
-.kpi-card.status-total.active { border-color: #4299E1; background: #EBF8FF; }
-.kpi-card.status-total.active::after { color: #4299E1; }
