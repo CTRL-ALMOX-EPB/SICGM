@@ -1,5 +1,5 @@
 // ============================================
-// DASHBOARD ADITIVOS SISTÊMICOS (CORRIGIDO)
+// DASHBOARD ADITIVOS SISTÊMICOS
 // ============================================
 
 console.log('🚀 dashboards-aditivos-sistemicos.js carregado!');
@@ -7,7 +7,26 @@ console.log('🚀 dashboards-aditivos-sistemicos.js carregado!');
 let dadosCompletos = [];
 let dadosFiltrados = [];
 let itemSelecionado = null;
-let abaAtual = 'materiais'; // 'materiais' ou 'obras'
+let abaAtual = 'materiais';
+
+// ============================================
+// FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO
+// ============================================
+
+function formatarObraParaExibicao(obra) {
+    if (!obra) return '';
+    
+    // Remove espaços e caracteres especiais
+    let limpo = obra.trim().replace(/[^0-9]/g, '');
+    
+    // Se não tem 10 dígitos, retorna o original
+    if (limpo.length !== 10) return obra;
+    
+    // Formata como XXX-XX-XXXXX
+    return limpo.substring(0, 3) + '-' + 
+           limpo.substring(3, 5) + '-' + 
+           limpo.substring(5, 10);
+}
 
 // ============================================
 // INICIALIZAÇÃO
@@ -204,7 +223,7 @@ function limparFiltros() {
 }
 
 // ============================================
-// AGRUPAMENTO DE ITENS
+// AGRUPAMENTO DE ITENS POR CÓDIGO
 // ============================================
 
 function agruparItensPorCodigo(controles) {
@@ -278,13 +297,12 @@ function agruparItensPorCodigo(controles) {
 }
 
 // ============================================
-// AGRUPAR POR OBRA (com contagem de SKUs por ocorrência)
+// AGRUPAR POR OBRA
 // ============================================
 
 function agruparPorObra(controles) {
     console.log(`🏗️ Agrupando por obra...`);
     const obras = {};
-    let totalSkusContados = 0;
     
     controles.forEach(controle => {
         const obra = controle.obra || 'SEM OBRA';
@@ -297,8 +315,8 @@ function agruparPorObra(controles) {
                 datas: new Set(),
                 itens: [],
                 totalItens: 0,
-                skus: [], // Array para contar cada ocorrência
-                skusSet: new Set() // Para SKUs únicos
+                skus: [],
+                skusSet: new Set()
             };
         }
         
@@ -313,7 +331,6 @@ function agruparPorObra(controles) {
             const qtd = parseFloat(item.quantidade) || 0;
             obras[obra].totalItens += qtd;
             
-            // Conta CADA ocorrência do SKU (mesmo que repetido em datas diferentes)
             if (item.codigo) {
                 obras[obra].skus.push(item.codigo);
                 obras[obra].skusSet.add(item.codigo);
@@ -324,12 +341,11 @@ function agruparPorObra(controles) {
     const resultado = Object.values(obras).map(obra => ({
         ...obra,
         datas: Array.from(obra.datas).sort(),
-        skusCount: obra.skus.length, // Total de ocorrências de SKUs
-        skusUnico: obra.skusSet.size // SKUs únicos
+        skusCount: obra.skus.length,
+        skusUnico: obra.skusSet.size
     })).sort((a, b) => b.skusCount - a.skusCount);
     
-    const totalSkusOcorrencias = resultado.reduce((sum, o) => sum + o.skusCount, 0);
-    console.log(`✅ ${resultado.length} obras agrupadas, ${totalSkusOcorrencias} ocorrências de SKUs`);
+    console.log(`✅ ${resultado.length} obras agrupadas`);
     return resultado;
 }
 
@@ -358,8 +374,6 @@ function renderizarDashboard(aditivos) {
     
     if (abaAtual === 'materiais') {
         const itensAgrupados = agruparItensPorCodigo(aditivos);
-        console.log(`📦 ${itensAgrupados.length} grupos de itens criados`);
-        
         renderizarKPIsMateriais(itensAgrupados);
         renderizarListaItens(itensAgrupados);
         renderizarGraficos(itensAgrupados);
@@ -399,10 +413,8 @@ function renderizarKPIsMateriais(itensAgrupados) {
     const container = document.getElementById('kpiGrid');
     if (!container) return;
     
-    // Soma total de itens (quantidades)
     const totalItens = itensAgrupados.reduce((sum, item) => sum + item.total, 0);
     
-    // Conta quantas obras diferentes têm aditivos
     const obrasSet = new Set();
     itensAgrupados.forEach(item => {
         item.obras.forEach(o => obrasSet.add(o.obra));
@@ -410,10 +422,8 @@ function renderizarKPIsMateriais(itensAgrupados) {
     });
     const totalObras = obrasSet.size;
     
-    // Conta quantos SKUs por status (usando COUNT de ocorrências)
     const statusCount = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     itensAgrupados.forEach(item => {
-        // Para cada SKU, conta cada ocorrência com status
         item.itens.forEach(i => {
             const s = i.status || 'ANALISE';
             if (statusCount[s] !== undefined) statusCount[s]++;
@@ -462,7 +472,6 @@ function renderizarKPIsObras(obrasAgrupadas) {
     const totalObras = obrasAgrupadas.length;
     const totalSkusOcorrencias = obrasAgrupadas.reduce((sum, o) => sum + o.skusCount, 0);
     const totalSkusUnicos = obrasAgrupadas.reduce((sum, o) => sum + o.skusUnico, 0);
-    const totalItens = obrasAgrupadas.reduce((sum, o) => sum + o.totalItens, 0);
     
     container.innerHTML = `
         <div class="kpi-card status-total">
@@ -479,11 +488,6 @@ function renderizarKPIsObras(obrasAgrupadas) {
             <div class="kpi-icon">📊</div>
             <div class="kpi-value">${totalSkusUnicos}</div>
             <div class="kpi-label">SKUs Únicos</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-icon">📋</div>
-            <div class="kpi-value">${totalItens.toFixed(1)}</div>
-            <div class="kpi-label">Total de Itens</div>
         </div>
     `;
 }
@@ -545,10 +549,11 @@ function renderizarListaObras(obrasAgrupadas) {
     let html = '';
     obrasAgrupadas.forEach(obra => {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'obra' && itemSelecionado.obra === obra.obra;
+        const obraFormatada = formatarObraParaExibicao(obra.obra);
         html += `
             <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')">
                 <span class="item-code">🏗️</span>
-                <span class="item-desc">${obra.obra}</span>
+                <span class="item-desc">${obraFormatada}</span>
                 <span class="item-total">${obra.skusCount} SKUs</span>
             </div>
         `;
@@ -581,8 +586,10 @@ function renderizarDetalhesObra(obra) {
     const container = document.getElementById('itemDetails');
     if (!container) return;
     
+    const obraFormatada = formatarObraParaExibicao(obra.obra);
+    
     let html = `
-        <div class="detail-title">🏗️ ${obra.obra}</div>
+        <div class="detail-title">🏗️ ${obraFormatada}</div>
         <div class="detail-row">
             <span class="label">Ocorrências de SKUs:</span>
             <span class="value">${obra.skusCount}</span>
@@ -609,7 +616,6 @@ function renderizarDetalhesObra(obra) {
     
     html += `</div>`;
     
-    // Lista todos os materiais agrupados por código
     html += `<div class="detail-section-title">📦 Materiais Aditivados:</div>
     <div class="item-detail-obras">`;
     
@@ -713,9 +719,10 @@ function renderizarDetalhes(item) {
         item.obras.forEach(o => {
             const badge = getStatusBadge(o.status);
             const qtdFormatada = Number.isInteger(o.quantidade) ? o.quantidade : o.quantidade.toFixed(2);
+            const obraFormatada = formatarObraParaExibicao(o.obra);
             html += `
                 <div class="obra-row">
-                    <span>${o.obra}</span>
+                    <span>${obraFormatada}</span>
                     <span><span class="qtd">${qtdFormatada}</span> ${badge}</span>
                 </div>
             `;
@@ -729,9 +736,10 @@ function renderizarDetalhes(item) {
         item.saidas.forEach(o => {
             const badge = getStatusBadge(o.status);
             const qtdFormatada = Number.isInteger(o.quantidade) ? o.quantidade : o.quantidade.toFixed(2);
+            const obraFormatada = formatarObraParaExibicao(o.obra);
             html += `
                 <div class="obra-row">
-                    <span>${o.obra}</span>
+                    <span>${obraFormatada}</span>
                     <span><span class="qtd">${qtdFormatada}</span> ${badge}</span>
                 </div>
             `;
@@ -759,7 +767,6 @@ function getStatusBadge(status) {
 function renderizarGraficos(itensAgrupados) {
     console.log('📊 Renderizando gráficos de indicadores...');
     
-    // Calcula totais por status (contando ocorrências)
     const statusCount = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     itensAgrupados.forEach(item => {
         item.itens.forEach(i => {
@@ -785,7 +792,6 @@ function renderizarGraficos(itensAgrupados) {
         'S/ SOLICITAÇÃO': 'bar-s-solicitacao'
     };
     
-    // Gráfico 1: Distribuição por Status
     let htmlStatus = '';
     Object.keys(statusCount).forEach(status => {
         const value = statusCount[status];
@@ -806,7 +812,6 @@ function renderizarGraficos(itensAgrupados) {
         `;
     });
     
-    // Barra total
     htmlStatus += `
         <div class="chart-bar-indicator" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #E2E8F0;">
             <span class="label" style="font-weight: 700;">Total</span>

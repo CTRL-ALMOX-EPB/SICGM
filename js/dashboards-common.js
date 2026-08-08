@@ -80,7 +80,7 @@ function redirecionarParaHome() {
 }
 
 // ============================================
-// BUSCA DE DADOS COM LOGS
+// BUSCA DE DADOS
 // ============================================
 
 async function buscarTodosRegistros(endpoint) {
@@ -239,7 +239,7 @@ function filtrarPorPeriodo(dados, dataInicio, dataFim) {
 }
 
 // ============================================
-// EXPORTAR (tornar disponível globalmente)
+// EXPORTAR
 // ============================================
 
 window.API_URL = API_URL;
