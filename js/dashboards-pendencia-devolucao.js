@@ -1,8 +1,8 @@
 // ============================================
-// DASHBOARD PENDÊNCIA DE BAIXA
+// DASHBOARD PENDÊNCIA DE DEVOLUÇÃO
 // ============================================
 
-console.log('🚀 dashboards-pendencia-baixa.js carregado!');
+console.log('🚀 dashboards-pendencia-devolucao.js carregado!');
 
 let dadosCompletos = [];
 let dadosFiltrados = [];
@@ -28,7 +28,7 @@ function formatarObraParaExibicao(obra) {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('📋 DOM carregado, iniciando dashboard Pendência de Baixa...');
+    console.log('📋 DOM carregado, iniciando dashboard Pendência de Devolução...');
     
     const loadingOverlay = document.getElementById('loadingOverlay');
     const dashboardContent = document.getElementById('dashboardContent');
@@ -54,24 +54,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.log('📡 Iniciando busca de dados...');
         
         const startTime = Date.now();
-        dadosCompletos = await buscarPendenciasBaixa();
+        dadosCompletos = await buscarPendenciasDevolucao();
         const elapsed = Date.now() - startTime;
         
-        console.log(`✅ ${dadosCompletos.length} pendências carregadas em ${elapsed}ms`);
+        console.log(`✅ ${dadosCompletos.length} pendências de devolução carregadas em ${elapsed}ms`);
         
         if (dadosCompletos.length === 0) {
-            console.warn('⚠️ Nenhuma pendência de baixa encontrada');
-            mostrarToast('⚠️ Nenhuma pendência de baixa encontrada', 'warning');
-        }
-        
-        // Cria o container de KPIs com loading
-        const kpiGrid = document.getElementById('kpiGrid');
-        if (kpiGrid) {
-            kpiGrid.innerHTML = `
-                <div class="loading-dashboard" style="min-height: 60px; grid-column: 1 / -1;">
-                    <div class="spinner"></div>
-                </div>
-            `;
+            console.warn('⚠️ Nenhuma pendência de devolução encontrada');
+            mostrarToast('⚠️ Nenhuma pendência de devolução encontrada', 'warning');
         }
         
         aplicarFiltros();
@@ -107,9 +97,8 @@ function aplicarFiltros() {
     console.log('🔄 Aplicando filtros...');
     const dataInicio = document.getElementById('filterDataInicio')?.value || '';
     const dataFim = document.getElementById('filterDataFim')?.value || '';
-    const filtroBaixado = document.getElementById('filterBaixado')?.value || 'todos';
-    const buscaTexto = document.getElementById('filterBusca')?.value?.toLowerCase() || '';
     const buscaObra = document.getElementById('filterObra')?.value || '';
+    const buscaEncarregado = document.getElementById('filterEncarregado')?.value?.toLowerCase() || '';
     
     let filtrados = [...dadosCompletos];
     
@@ -123,34 +112,20 @@ function aplicarFiltros() {
         console.log(`📅 Após filtro de período: ${filtrados.length} pendências`);
     }
     
-    if (filtroBaixado !== 'todos') {
-        filtrados = filtrados.map(pendencia => ({
-            ...pendencia,
-            itens: (pendencia.itens || []).filter(item => 
-                (item.baixado || 'NÃO') === filtroBaixado
-            )
-        })).filter(pendencia => pendencia.itens && pendencia.itens.length > 0);
-        console.log(`📊 Após filtro de baixado: ${filtrados.length} pendências`);
-    }
-    
-    if (buscaTexto) {
-        filtrados = filtrados.map(pendencia => ({
-            ...pendencia,
-            itens: (pendencia.itens || []).filter(item => {
-                const codigo = (item.codigo || '').toLowerCase();
-                const descricao = (item.descricao || '').toLowerCase();
-                return codigo.includes(buscaTexto) || descricao.includes(buscaTexto);
-            })
-        })).filter(pendencia => pendencia.itens && pendencia.itens.length > 0);
-        console.log(`🔍 Após filtro de busca: ${filtrados.length} pendências`);
-    }
-    
     if (buscaObra) {
-        filtrados = filtrados.filter(pendencia => {
-            const obra = (pendencia.obra || '').toLowerCase();
+        filtrados = filtrados.filter(item => {
+            const obra = (item.obra || '').toLowerCase();
             return obra.includes(buscaObra.toLowerCase());
         });
         console.log(`🏗️ Após filtro de obra: ${filtrados.length} pendências`);
+    }
+    
+    if (buscaEncarregado) {
+        filtrados = filtrados.filter(item => {
+            const encarregado = (item.encarregado || '').toLowerCase();
+            return encarregado.includes(buscaEncarregado);
+        });
+        console.log(`👤 Após filtro de encarregado: ${filtrados.length} pendências`);
     }
     
     dadosFiltrados = filtrados;
@@ -169,9 +144,8 @@ function limparFiltros() {
     console.log('🧹 Limpando filtros...');
     document.getElementById('filterDataInicio').value = '';
     document.getElementById('filterDataFim').value = '';
-    document.getElementById('filterBaixado').value = 'todos';
-    document.getElementById('filterBusca').value = '';
     document.getElementById('filterObra').value = '';
+    document.getElementById('filterEncarregado').value = '';
     filtroAtivo = null;
     aplicarFiltros();
 }
@@ -189,11 +163,8 @@ function aplicarFiltroCard(tipo, valor) {
     } else {
         filtroAtivo = { tipo, valor };
         
-        if (tipo === 'baixado') {
-            dadosExibidos = dadosFiltrados.filter(p => {
-                const itensBaixados = (p.itens || []).filter(i => i.baixado === valor);
-                return itensBaixados.length > 0;
-            });
+        if (tipo === 'encarregado') {
+            dadosExibidos = dadosFiltrados.filter(p => p.encarregado === valor);
         } else if (tipo === 'total') {
             dadosExibidos = [...dadosFiltrados];
         }
@@ -206,62 +177,6 @@ function aplicarFiltroCard(tipo, valor) {
     }
     
     renderizarDashboard(dadosExibidos);
-}
-
-// ============================================
-// AGRUPAR ITENS POR CÓDIGO
-// ============================================
-
-function agruparItensPorCodigo(pendencias) {
-    console.log(`📦 Agrupando itens de ${pendencias.length} pendências...`);
-    const grupos = {};
-    
-    pendencias.forEach(pendencia => {
-        const itens = pendencia.itens || [];
-        itens.forEach(item => {
-            const codigo = item.codigo || 'SEM_CODIGO';
-            const descricao = item.descricao || 'Sem descrição';
-            const unidade = item.unidade || 'UN';
-            const quantidade = parseFloat(item.quantidade) || 0;
-            const baixado = item.baixado || 'NÃO';
-            
-            if (!grupos[codigo]) {
-                grupos[codigo] = {
-                    codigo: codigo,
-                    descricao: descricao,
-                    unidade: unidade,
-                    total: 0,
-                    itens: [],
-                    obras: [],
-                    baixados: 0,
-                    naoBaixados: 0,
-                    pendentes: 0,
-                    obrasSet: new Set()
-                };
-            }
-            
-            if (!grupos[codigo].descricao || grupos[codigo].descricao === 'Sem descrição') {
-                grupos[codigo].descricao = descricao;
-            }
-            
-            grupos[codigo].total += 1; // COUNT de ocorrências
-            grupos[codigo].itens.push(item);
-            
-            const obra = pendencia.obra || 'SEM OBRA';
-            grupos[codigo].obrasSet.add(obra);
-            
-            if (baixado === 'SIM') {
-                grupos[codigo].baixados += 1;
-            } else {
-                grupos[codigo].naoBaixados += 1;
-                grupos[codigo].pendentes += 1;
-            }
-        });
-    });
-    
-    const resultado = Object.values(grupos).sort((a, b) => b.total - a.total);
-    console.log(`✅ ${resultado.length} grupos de itens criados`);
-    return resultado;
 }
 
 // ============================================
@@ -284,39 +199,17 @@ function renderizarDashboard(pendencias) {
                 <p>Selecione um item para ver os detalhes</p>
             </div>
         `;
-        
-        // Atualiza gráficos vazios
-        document.getElementById('statusChart').innerHTML = `
-            <div class="empty-state-dashboard">
-                <div class="icon">📊</div>
-                <p>Sem dados para exibir</p>
-            </div>
-        `;
-        document.getElementById('topSkusChart').innerHTML = `
-            <div class="empty-state-dashboard">
-                <div class="icon">📊</div>
-                <p>Sem dados para exibir</p>
-            </div>
-        `;
         return;
     }
     
-    const itensAgrupados = agruparItensPorCodigo(pendencias);
-    renderizarKPIs(itensAgrupados);
-    renderizarListaItens(itensAgrupados);
-    renderizarGraficos(itensAgrupados);
+    renderizarKPIs(pendencias);
+    renderizarListaPendencias(pendencias);
+    renderizarGraficos(pendencias);
     
     if (itemSelecionado) {
-        const encontrado = itensAgrupados.find(i => i.codigo === itemSelecionado.codigo);
+        const encontrado = pendencias.find(p => p.id === itemSelecionado.id);
         if (encontrado) {
             renderizarDetalhes(encontrado);
-        } else {
-            document.getElementById('itemDetails').innerHTML = `
-                <div class="empty-state-dashboard">
-                    <div class="icon">👆</div>
-                    <p>Item não encontrado nos filtros atuais</p>
-                </div>
-            `;
         }
     }
 }
@@ -325,14 +218,27 @@ function renderizarDashboard(pendencias) {
 // KPIs
 // ============================================
 
-function renderizarKPIs(itensAgrupados) {
+function renderizarKPIs(pendencias) {
     const container = document.getElementById('kpiGrid');
     if (!container) return;
     
-    const totalOcorrencias = itensAgrupados.reduce((sum, item) => sum + item.total, 0);
-    const totalSkus = itensAgrupados.length;
-    const totalBaixados = itensAgrupados.reduce((sum, item) => sum + item.baixados, 0);
-    const totalNaoBaixados = itensAgrupados.reduce((sum, item) => sum + item.naoBaixados, 0);
+    const total = pendencias.length;
+    const totalObras = new Set(pendencias.map(p => p.obra)).size;
+    const totalEncarregados = new Set(pendencias.map(p => p.encarregado).filter(e => e)).size;
+    
+    // Conta pendências por encarregado
+    const encarregadosCount = {};
+    pendencias.forEach(p => {
+        const nome = p.encarregado || 'NÃO INFORMADO';
+        if (!encarregadosCount[nome]) encarregadosCount[nome] = 0;
+        encarregadosCount[nome]++;
+    });
+    
+    const sortedEncarregados = Object.entries(encarregadosCount)
+        .sort((a, b) => b[1] - a[1]);
+    
+    const topEncarregado = sortedEncarregados.length > 0 ? sortedEncarregados[0][0] : 'Nenhum';
+    const topCount = sortedEncarregados.length > 0 ? sortedEncarregados[0][1] : 0;
     
     const isFilterActive = (tipo, valor) => {
         return filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor;
@@ -341,61 +247,70 @@ function renderizarKPIs(itensAgrupados) {
     container.innerHTML = `
         <div class="kpi-card status-total ${isFilterActive('total', 'TOTAL') ? 'active' : ''}" onclick="aplicarFiltroCard('total', 'TOTAL')" style="cursor: pointer; ${isFilterActive('total', 'TOTAL') ? 'border: 2px solid #4299E1; background: #EBF8FF;' : ''}">
             <div class="kpi-icon">📦</div>
-            <div class="kpi-value">${totalOcorrencias}</div>
-            <div class="kpi-label">Ocorrências</div>
+            <div class="kpi-value">${total}</div>
+            <div class="kpi-label">Total de Pendências</div>
         </div>
-        <div class="kpi-card" style="cursor: default;">
+        <div class="kpi-card">
+            <div class="kpi-icon">🏗️</div>
+            <div class="kpi-value">${totalObras}</div>
+            <div class="kpi-label">Obras com Pendência</div>
+        </div>
+        <div class="kpi-card ${isFilterActive('encarregado', topEncarregado) ? 'active' : ''}" onclick="aplicarFiltroCard('encarregado', '${topEncarregado}')" style="cursor: pointer; ${isFilterActive('encarregado', topEncarregado) ? 'border: 2px solid #ED8936; background: #FFFAF0;' : ''}">
+            <div class="kpi-icon">👤</div>
+            <div class="kpi-value">${topCount}</div>
+            <div class="kpi-label">${topEncarregado}</div>
+        </div>
+        <div class="kpi-card">
             <div class="kpi-icon">📋</div>
-            <div class="kpi-value">${totalSkus}</div>
-            <div class="kpi-label">SKUs com Pendência</div>
-        </div>
-        <div class="kpi-card status-baixado ${isFilterActive('baixado', 'SIM') ? 'active' : ''}" onclick="aplicarFiltroCard('baixado', 'SIM')" style="cursor: pointer; ${isFilterActive('baixado', 'SIM') ? 'border: 2px solid #48BB78; background: #F0FFF4;' : ''}">
-            <div class="kpi-icon">✅</div>
-            <div class="kpi-value">${totalBaixados}</div>
-            <div class="kpi-label">Baixados</div>
-        </div>
-        <div class="kpi-card status-pendente ${isFilterActive('baixado', 'NÃO') ? 'active' : ''}" onclick="aplicarFiltroCard('baixado', 'NÃO')" style="cursor: pointer; ${isFilterActive('baixado', 'NÃO') ? 'border: 2px solid #ED8936; background: #FFFAF0;' : ''}">
-            <div class="kpi-icon">⏳</div>
-            <div class="kpi-value">${totalNaoBaixados}</div>
-            <div class="kpi-label">Não Baixados</div>
+            <div class="kpi-value">${totalEncarregados}</div>
+            <div class="kpi-label">Encarregados</div>
         </div>
     `;
 }
 
 // ============================================
-// LISTA DE ITENS
+// LISTA DE PENDÊNCIAS
 // ============================================
 
-function renderizarListaItens(itensAgrupados) {
+function renderizarListaPendencias(pendencias) {
     const container = document.getElementById('itemList');
     if (!container) return;
     
-    if (!itensAgrupados || itensAgrupados.length === 0) {
+    if (!pendencias || pendencias.length === 0) {
         container.innerHTML = `
             <div class="empty-state-dashboard">
                 <div class="icon">📭</div>
-                <p>Nenhum item encontrado</p>
+                <p>Nenhuma pendência encontrada</p>
                 <p class="sub">Tente ajustar os filtros</p>
             </div>
         `;
         return;
     }
     
+    // Ordena pendências por obra
+    const pendenciasOrdenadas = [...pendencias].sort((a, b) => (a.obra || '').localeCompare(b.obra || ''));
+    
     let html = `
-        <div style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
-            <span>Código</span>
-            <span>Descrição</span>
-            <span style="text-align: right;">Ocorr.</span>
+        <div style="display: grid; grid-template-columns: 100px 1fr 100px 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+            <span>Obra</span>
+            <span>Encarregado</span>
+            <span style="text-align: right;">Data</span>
+            <span style="text-align: right;">Status</span>
         </div>
     `;
     
-    itensAgrupados.forEach(item => {
-        const isActive = itemSelecionado && itemSelecionado.codigo === item.codigo;
+    pendenciasOrdenadas.forEach(pendencia => {
+        const isActive = itemSelecionado && itemSelecionado.id === pendencia.id;
+        const obraFormatada = formatarObraParaExibicao(pendencia.obra);
+        const encarregado = pendencia.encarregado || 'NÃO INFORMADO';
+        const dataFormatada = formatarData(pendencia.data_programacao);
+        
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarItem('${item.codigo}')" style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
-                <span class="item-code">${item.codigo}</span>
-                <span class="item-desc">${item.descricao}</span>
-                <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${item.total}</span>
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarPendencia(${pendencia.id})" style="display: grid; grid-template-columns: 100px 1fr 100px 80px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+                <span class="item-code">🏗️ ${obraFormatada}</span>
+                <span class="item-desc">👤 ${encarregado}</span>
+                <span style="text-align: right; font-size: 12px; color: #718096;">${dataFormatada}</span>
+                <span style="text-align: right;"><span class="badge-baixa nao-baixado">⏳ Pendente</span></span>
             </div>
         `;
     });
@@ -404,120 +319,78 @@ function renderizarListaItens(itensAgrupados) {
 }
 
 // ============================================
-// SELECIONAR ITEM
+// SELECIONAR PENDÊNCIA
 // ============================================
 
-function selecionarItem(codigo) {
-    console.log(`🔍 Selecionando item: ${codigo}`);
-    const itensAgrupados = agruparItensPorCodigo(dadosExibidos);
-    const item = itensAgrupados.find(i => i.codigo === codigo);
+function selecionarPendencia(id) {
+    console.log(`🔍 Selecionando pendência ID: ${id}`);
+    const pendencia = dadosExibidos.find(p => p.id === id);
     
-    if (item) {
-        itemSelecionado = { codigo: item.codigo };
-        renderizarDetalhes(item);
-        renderizarListaItens(itensAgrupados);
+    if (pendencia) {
+        itemSelecionado = { id: pendencia.id };
+        renderizarDetalhes(pendencia);
+        renderizarListaPendencias(dadosExibidos);
     }
 }
 
 // ============================================
-// DETALHES DO ITEM
+// DETALHES DA PENDÊNCIA
 // ============================================
 
-function renderizarDetalhes(item) {
+function renderizarDetalhes(pendencia) {
     const container = document.getElementById('itemDetails');
     if (!container) return;
     
-    if (!item) {
-        container.innerHTML = `
-            <div class="empty-state-dashboard">
-                <div class="icon">👆</div>
-                <p>Selecione um item para ver os detalhes</p>
-            </div>
-        `;
-        return;
-    }
-    
-    const obrasMap = {};
-    item.itens.forEach(i => {
-        const obra = i.obra || 'SEM OBRA';
-        if (!obrasMap[obra]) {
-            obrasMap[obra] = {
-                obra: obra,
-                total: 0,
-                baixados: 0,
-                naoBaixados: 0,
-                itens: []
-            };
-        }
-        obrasMap[obra].total += 1;
-        obrasMap[obra].itens.push(i);
-        if (i.baixado === 'SIM') {
-            obrasMap[obra].baixados += 1;
-        } else {
-            obrasMap[obra].naoBaixados += 1;
-        }
-    });
-    
-    const obrasOrdenadas = Object.values(obrasMap).sort((a, b) => a.obra.localeCompare(b.obra));
+    const obraFormatada = formatarObraParaExibicao(pendencia.obra);
     
     let html = `
-        <div class="detail-title">📦 ${item.codigo} - ${item.descricao}</div>
+        <div class="detail-title">📦 Pendência - ${obraFormatada}</div>
         <div class="detail-row">
-            <span class="label">Ocorrências:</span>
-            <span class="value">${item.total}</span>
+            <span class="label">Obra:</span>
+            <span class="value">🏗️ ${obraFormatada}</span>
         </div>
         <div class="detail-row">
-            <span class="label">Obras:</span>
-            <span class="value">${obrasOrdenadas.length}</span>
+            <span class="label">Encarregado:</span>
+            <span class="value">👤 ${pendencia.encarregado || 'Não informado'}</span>
         </div>
-        <div class="detail-status-count">
-            <span class="status-item"><span class="count status-baixado">${item.baixados}</span> ✅ Baixados</span>
-            <span class="status-item"><span class="count status-pendente">${item.naoBaixados}</span> ⏳ Não Baixados</span>
+        <div class="detail-row">
+            <span class="label">Data de Programação:</span>
+            <span class="value">📅 ${formatarData(pendencia.data_programacao)}</span>
         </div>
-        <div class="detail-section-title">🏗️ Obras com Pendência:</div>
-        <div class="item-detail-obras">
+        <div class="detail-row">
+            <span class="label">Data de Descarga:</span>
+            <span class="value">📦 ${formatarData(pendencia.data_descarga)}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Data Devolução Física:</span>
+            <span class="value">📦 ${formatarData(pendencia.data_devolucao_fisica)}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Motivo da Pendência:</span>
+            <span class="value">${pendencia.motivo_pendencia || 'Não informado'}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Solução:</span>
+            <span class="value">${pendencia.solucao_pendencia || 'Não informada'}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Pendência por:</span>
+            <span class="value">${pendencia.pendencia_por || 'Não informado'}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Status:</span>
+            <span class="value" style="color: #ED8936; font-weight: 600;">⏳ Pendente</span>
+        </div>
     `;
     
-    obrasOrdenadas.forEach(obra => {
-        const obraFormatada = formatarObraParaExibicao(obra.obra);
-        const statusIcon = obra.naoBaixados > 0 ? '⏳' : '✅';
+    if (pendencia.observacao) {
         html += `
-            <div class="obra-row">
-                <span>🏗️ ${obraFormatada} ${statusIcon}</span>
-                <span>${obra.total} ocorrências (${obra.baixados} ✅ / ${obra.naoBaixados} ⏳)</span>
+            <div class="detail-section-title">📝 Observação</div>
+            <div class="detail-row" style="grid-column: 1 / -1;">
+                <span class="value" style="font-size: 13px; color: #4A5568;">${pendencia.observacao}</span>
             </div>
         `;
-    });
-    
-    html += `</div>`;
-    
-    html += `<div class="detail-section-title">📋 Detalhes por Obra:</div>
-    <div class="item-detail-obras">`;
-    
-    obrasOrdenadas.forEach(obra => {
-        const obraFormatada = formatarObraParaExibicao(obra.obra);
-        html += `
-            <div style="padding: 4px 0; border-bottom: 1px solid #EDF2F7;">
-                <div style="font-weight: 600; color: #2D3748; font-size: 13px;">🏗️ ${obraFormatada}</div>
-        `;
-        
-        obra.itens.forEach(i => {
-            const qtdFormatada = Number.isInteger(i.quantidade) ? i.quantidade : i.quantidade.toFixed(2);
-            const badge = i.baixado === 'SIM' 
-                ? '<span class="badge-baixa baixado">✅ Baixado</span>' 
-                : '<span class="badge-baixa nao-baixado">⏳ Pendente</span>';
-            html += `
-                <div style="display: flex; justify-content: space-between; padding: 2px 8px; font-size: 12px; color: #4A5568;">
-                    <span>${i.codigo} - ${i.descricao || 'Sem descrição'}</span>
-                    <span>${qtdFormatada} ${i.unidade || 'UN'} ${badge}</span>
-                </div>
-            `;
-        });
-        
-        html += `</div>`;
-    });
-    
-    html += `</div>`;
+    }
     
     container.innerHTML = html;
 }
@@ -526,75 +399,84 @@ function renderizarDetalhes(item) {
 // GRÁFICOS
 // ============================================
 
-function renderizarGraficos(itensAgrupados) {
+function renderizarGraficos(pendencias) {
     console.log('📊 Renderizando gráficos...');
     
-    const totalBaixados = itensAgrupados.reduce((sum, item) => sum + item.baixados, 0);
-    const totalNaoBaixados = itensAgrupados.reduce((sum, item) => sum + item.naoBaixados, 0);
-    const totalGeral = totalBaixados + totalNaoBaixados || 1;
+    const total = pendencias.length || 1;
     
-    const categorias = [
-        { key: 'baixados', count: totalBaixados, label: 'Baixados', class: 'bar-baixado' },
-        { key: 'naoBaixados', count: totalNaoBaixados, label: 'Não Baixados', class: 'bar-nao-baixado' }
-    ];
+    // Gráfico 1: Distribuição por Encarregado
+    const encarregadosCount = {};
+    pendencias.forEach(p => {
+        const nome = p.encarregado || 'NÃO INFORMADO';
+        if (!encarregadosCount[nome]) encarregadosCount[nome] = 0;
+        encarregadosCount[nome]++;
+    });
     
-    let html = '';
-    categorias.forEach(cat => {
-        const percentual = (cat.count / totalGeral) * 100;
-        html += `
-            <div class="chart-bar-indicator">
-                <span class="label">${cat.label}</span>
-                <div class="bar-track">
-                    <div class="bar-fill ${cat.class}" style="width: ${percentual}%;">
-                        <span class="value">${cat.count}</span>
+    const sorted = Object.entries(encarregadosCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15);
+    
+    const maxCount = sorted.length > 0 ? Math.max(...sorted.map(s => s[1])) : 1;
+    
+    let htmlEncarregado = '';
+    sorted.forEach(([nome, count]) => {
+        const percentual = (count / maxCount) * 100;
+        const percentualTotal = (count / total) * 100;
+        htmlEncarregado += `
+            <div class="chart-bar-indicator" style="margin-bottom: 6px;">
+                <span class="label" style="min-width: 100px; font-size: 11px;">${nome}</span>
+                <div class="bar-track" style="height: 22px;">
+                    <div class="bar-fill" style="width: ${percentual}%; background: linear-gradient(90deg, #ED8936, #C05621);">
+                        <span class="value">${count}</span>
                     </div>
                 </div>
-                <span class="percent">${percentual.toFixed(0)}%</span>
+                <span class="percent" style="font-size: 11px;">${percentualTotal.toFixed(0)}%</span>
             </div>
         `;
     });
     
-    html += `
-        <div class="chart-bar-indicator" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #E2E8F0;">
-            <span class="label" style="font-weight: 700;">Total</span>
-            <div class="bar-track">
-                <div class="bar-fill bar-total" style="width: 100%;">
-                    <span class="value">${totalGeral}</span>
-                </div>
-            </div>
-            <span class="percent" style="font-weight: 700;">100%</span>
-        </div>
-    `;
-    
-    document.getElementById('statusChart').innerHTML = html;
-    
-    const topSkus = [...itensAgrupados]
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 10);
-    
-    const maxTotal = topSkus.length > 0 ? Math.max(...topSkus.map(s => s.total)) : 1;
-    
-    let htmlTop = '';
-    topSkus.forEach((item, index) => {
-        const percentual = (item.total / maxTotal) * 100;
-        htmlTop += `
-            <div class="top-sku-item">
-                <span class="rank">#${index + 1}</span>
-                <span class="code">${item.codigo}</span>
-                <div class="bar-track">
-                    <div class="bar-fill" style="width: ${percentual}%;">
-                        <span class="value">${item.total}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    if (topSkus.length === 0) {
-        htmlTop = `<div class="empty-state-dashboard"><p>Nenhum SKU encontrado</p></div>`;
+    if (sorted.length === 0) {
+        htmlEncarregado = `<div class="empty-state-dashboard"><p>Nenhum encarregado encontrado</p></div>`;
     }
     
-    document.getElementById('topSkusChart').innerHTML = htmlTop;
+    document.getElementById('statusChart').innerHTML = htmlEncarregado;
+    
+    // Gráfico 2: Top Obras com Pendência
+    const obrasCount = {};
+    pendencias.forEach(p => {
+        const obra = p.obra || 'SEM OBRA';
+        if (!obrasCount[obra]) obrasCount[obra] = 0;
+        obrasCount[obra]++;
+    });
+    
+    const sortedObras = Object.entries(obrasCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+    
+    const maxObras = sortedObras.length > 0 ? Math.max(...sortedObras.map(s => s[1])) : 1;
+    
+    let htmlObras = '';
+    sortedObras.forEach(([obra, count]) => {
+        const percentual = (count / maxObras) * 100;
+        const obraFormatada = formatarObraParaExibicao(obra);
+        htmlObras += `
+            <div class="top-sku-item">
+                <span class="rank" style="min-width: 25px;">#</span>
+                <span class="code" style="min-width: 80px; font-size: 10px;">${obraFormatada}</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width: ${percentual}%; background: linear-gradient(90deg, #FC8181, #C53030);">
+                        <span class="value">${count}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    if (sortedObras.length === 0) {
+        htmlObras = `<div class="empty-state-dashboard"><p>Nenhuma obra encontrada</p></div>`;
+    }
+    
+    document.getElementById('topSkusChart').innerHTML = htmlObras;
 }
 
 // ============================================
@@ -603,8 +485,8 @@ function renderizarGraficos(itensAgrupados) {
 
 window.aplicarFiltros = aplicarFiltros;
 window.limparFiltros = limparFiltros;
-window.selecionarItem = selecionarItem;
+window.selecionarPendencia = selecionarPendencia;
 window.renderizarDashboard = renderizarDashboard;
 window.aplicarFiltroCard = aplicarFiltroCard;
 
-console.log('✅ dashboards-pendencia-baixa.js inicializado!');
+console.log('✅ dashboards-pendencia-devolucao.js inicializado!');

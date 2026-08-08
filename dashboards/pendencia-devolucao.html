@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Pendência de Baixa</title>
+    <title>Dashboard - Pendência de Devolução</title>
     
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/dashboards-common.css">
-    <link rel="stylesheet" href="../css/dashboards-pendencia-baixa.css">
+    <link rel="stylesheet" href="../css/dashboards-pendencia-devolucao.css">
 </head>
 <body>
     <!-- Loading Overlay -->
@@ -20,8 +20,8 @@
         <!-- Header -->
         <header class="dashboard-header">
             <h1>
-                <span class="icon">📌</span>
-                Pendência de Baixa
+                <span class="icon">📦</span>
+                Pendência de Devolução
             </h1>
             <div class="user-info">
                 <div class="user-details">
@@ -36,8 +36,8 @@
         <!-- Banner -->
         <section class="dashboard-banner">
             <div class="banner-content">
-                <h2>📌 Pendências de Baixa</h2>
-                <p>Acompanhamento de itens pendentes de baixa por obra</p>
+                <h2>📦 Pendências de Devolução</h2>
+                <p>Acompanhamento de pendências de devolução por obra e encarregado</p>
             </div>
         </section>
 
@@ -50,20 +50,12 @@
                 <input type="date" id="filterDataFim">
             </div>
             <div class="filter-group">
-                <label>📊 Baixado:</label>
-                <select id="filterBaixado">
-                    <option value="todos">Todos</option>
-                    <option value="SIM">✅ Baixado</option>
-                    <option value="NÃO">❌ Não Baixado</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>🔍 Buscar:</label>
-                <input type="text" id="filterBusca" placeholder="Código ou descrição..." style="width: 180px;">
-            </div>
-            <div class="filter-group">
                 <label>🏗️ Obra:</label>
                 <input type="text" id="filterObra" placeholder="Número da obra..." style="width: 140px;">
+            </div>
+            <div class="filter-group">
+                <label>👤 Encarregado:</label>
+                <input type="text" id="filterEncarregado" placeholder="Nome do encarregado..." style="width: 160px;">
             </div>
             <button class="btn-filter primary" onclick="aplicarFiltros()">🔍 Filtrar</button>
             <button class="btn-filter secondary" onclick="limparFiltros()">🧹 Limpar</button>
@@ -80,11 +72,11 @@
         <!-- Conteúdo Principal -->
         <div class="dashboard-main">
             <div class="dashboard-card">
-                <h3 id="listTitle">📦 Itens Pendentes</h3>
+                <h3 id="listTitle">📋 Lista de Pendências</h3>
                 <div id="itemList" class="item-group-list">
                     <div class="loading-dashboard">
                         <div class="spinner"></div>
-                        <p>Carregando itens...</p>
+                        <p>Carregando pendências...</p>
                     </div>
                 </div>
             </div>
@@ -94,7 +86,7 @@
                 <div id="itemDetails" class="item-details-panel">
                     <div class="empty-state-dashboard">
                         <div class="icon">👆</div>
-                        <p>Selecione um item para ver os detalhes</p>
+                        <p>Selecione uma pendência para ver os detalhes</p>
                     </div>
                 </div>
             </div>
@@ -103,7 +95,7 @@
         <!-- Gráficos -->
         <div class="dashboard-charts">
             <div class="dashboard-card">
-                <h3>📊 Distribuição por Status de Baixa</h3>
+                <h3>👤 Pendências por Encarregado</h3>
                 <div id="statusChart" class="chart-container">
                     <div class="loading-dashboard" style="min-height: 100px;">
                         <div class="spinner"></div>
@@ -112,7 +104,7 @@
             </div>
 
             <div class="dashboard-card">
-                <h3>🏆 Top 10 SKUs com Maior Pendência</h3>
+                <h3>🏗️ Top Obras com Pendência</h3>
                 <div id="topSkusChart" class="chart-container">
                     <div class="loading-dashboard" style="min-height: 100px;">
                         <div class="spinner"></div>
@@ -125,6 +117,6 @@
     <script src="../js/script.js"></script>
     <script src="../js/dashboards-common.js"></script>
     <script src="../js/dashboards-cache.js"></script>
-    <script src="../js/dashboards-pendencia-baixa.js"></script>
+    <script src="../js/dashboards-pendencia-devolucao.js"></script>
 </body>
 </html>
