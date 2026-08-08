@@ -6,7 +6,10 @@ console.log('🚀 dashboards-farol-obras.js carregado!');
 
 let dadosCompletos = [];
 let dadosFiltrados = [];
+let dadosExibidos = [];
 let obraSelecionada = null;
+let abaAtual = 'obras';
+let filtroAtivo = null; // Armazena o filtro ativo dos cards
 
 // ============================================
 // FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO
@@ -62,6 +65,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             mostrarToast('⚠️ Nenhuma obra encontrada no farol', 'warning');
         }
         
+        criarAbas();
         aplicarFiltros();
         
         loadingOverlay.classList.remove('active');
@@ -88,6 +92,65 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 // ============================================
+// CRIAR ABAS
+// ============================================
+
+function criarAbas() {
+    const mainContainer = document.querySelector('.dashboard-main');
+    if (!mainContainer) return;
+    
+    const existingAbas = document.querySelector('.abas-container');
+    if (existingAbas) existingAbas.remove();
+    
+    const abaContainer = document.createElement('div');
+    abaContainer.className = 'abas-container';
+    abaContainer.innerHTML = `
+        <button class="btn-aba active" data-aba="obras" onclick="trocarAba('obras')">
+            🏗️ Obras
+        </button>
+        <button class="btn-aba" data-aba="separadores" onclick="trocarAba('separadores')">
+            📦 Separadores
+        </button>
+    `;
+    
+    mainContainer.parentNode.insertBefore(abaContainer, mainContainer);
+}
+
+// ============================================
+// TROCAR ABA
+// ============================================
+
+function trocarAba(aba) {
+    abaAtual = aba;
+    filtroAtivo = null; // Reseta filtro ao trocar de aba
+    
+    document.querySelectorAll('.btn-aba').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.aba === aba);
+    });
+    
+    const listTitle = document.getElementById('listTitle');
+    if (listTitle) {
+        const titles = {
+            'obras': '🏗️ Lista de Obras',
+            'separadores': '📦 Separadores'
+        };
+        listTitle.textContent = titles[aba] || '🏗️ Lista de Obras';
+    }
+    
+    const chartTitle = document.getElementById('chartSecondTitle');
+    if (chartTitle) {
+        const titles = {
+            'obras': '📦 Top Separadores',
+            'separadores': '📦 Top Separadores'
+        };
+        chartTitle.textContent = titles[aba] || '📦 Top Separadores';
+    }
+    
+    obraSelecionada = null;
+    renderizarDashboard(dadosFiltrados);
+}
+
+// ============================================
 // FILTROS
 // ============================================
 
@@ -100,7 +163,6 @@ function aplicarFiltros() {
     
     let filtrados = [...dadosCompletos];
     
-    // Filtro por período
     if (dataInicio || dataFim) {
         filtrados = filtrados.filter(item => {
             const dataItem = new Date(item.data_programacao);
@@ -111,7 +173,6 @@ function aplicarFiltros() {
         console.log(`📅 Após filtro de período: ${filtrados.length} obras`);
     }
     
-    // Filtro por obra
     if (buscaObra) {
         filtrados = filtrados.filter(item => {
             const obra = (item.obra || '').toLowerCase();
@@ -120,13 +181,14 @@ function aplicarFiltros() {
         console.log(`🏗️ Após filtro de obra: ${filtrados.length} obras`);
     }
     
-    // Filtro por status
     if (filtroStatus !== 'todos') {
         filtrados = filtrados.filter(item => item.status === filtroStatus);
         console.log(`📊 Após filtro de status: ${filtrados.length} obras`);
     }
     
     dadosFiltrados = filtrados;
+    dadosExibidos = filtrados;
+    filtroAtivo = null; // Reseta filtro ativo
     
     const totalRegistros = document.getElementById('totalRegistros');
     if (totalRegistros) {
@@ -142,7 +204,127 @@ function limparFiltros() {
     document.getElementById('filterDataFim').value = '';
     document.getElementById('filterObra').value = '';
     document.getElementById('filterStatus').value = 'todos';
+    filtroAtivo = null;
     aplicarFiltros();
+}
+
+// ============================================
+// APLICAR FILTRO DO CARD
+// ============================================
+
+function aplicarFiltroCard(tipo, valor) {
+    console.log(`🔍 Aplicando filtro do card: ${tipo} = ${valor}`);
+    
+    // Se já está com esse filtro, remove (toggle)
+    if (filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor) {
+        filtroAtivo = null;
+        dadosExibidos = [...dadosFiltrados];
+    } else {
+        filtroAtivo = { tipo, valor };
+        
+        if (tipo === 'status') {
+            dadosExibidos = dadosFiltrados.filter(o => o.status === valor);
+        } else if (tipo === 'cancelada') {
+            dadosExibidos = dadosFiltrados.filter(o => o.cancelada === valor);
+        } else if (tipo === 'aditivo') {
+            dadosExibidos = dadosFiltrados.filter(o => o.aditivo === valor);
+        } else if (tipo === 'programacao') {
+            dadosExibidos = dadosFiltrados.filter(o => o.obra_programada === valor);
+        } else if (tipo === 'devolvida') {
+            dadosExibidos = dadosFiltrados.filter(o => o.devolvida === valor);
+        } else if (tipo === 'saida') {
+            dadosExibidos = dadosFiltrados.filter(o => o.obra_teve_saida === valor);
+        }
+    }
+    
+    // Atualiza a lista com os dados filtrados
+    const totalRegistros = document.getElementById('totalRegistros');
+    if (totalRegistros) {
+        const textoFiltro = filtroAtivo ? ` (filtrado: ${filtroAtivo.tipo})` : '';
+        totalRegistros.textContent = `${dadosExibidos.length} obras${textoFiltro}`;
+    }
+    
+    // Re-renderiza a lista e os detalhes
+    if (abaAtual === 'obras') {
+        renderizarListaObras(dadosExibidos);
+        if (obraSelecionada && obraSelecionada.tipo === 'obra') {
+            const encontrada = dadosExibidos.find(o => o.obra === obraSelecionada.obra);
+            if (encontrada) {
+                renderizarDetalhesObra(encontrada);
+            } else {
+                document.getElementById('obraDetails').innerHTML = `
+                    <div class="empty-state-dashboard">
+                        <div class="icon">👆</div>
+                        <p>Obra não encontrada no filtro atual</p>
+                    </div>
+                `;
+                obraSelecionada = null;
+            }
+        }
+    } else if (abaAtual === 'separadores') {
+        const separadores = agruparPorSeparador(dadosExibidos);
+        renderizarListaSeparadores(separadores);
+        if (obraSelecionada && obraSelecionada.tipo === 'separador') {
+            const encontrado = separadores.find(s => s.nome === obraSelecionada.nome);
+            if (encontrado) {
+                renderizarDetalhesSeparador(encontrado);
+            } else {
+                document.getElementById('obraDetails').innerHTML = `
+                    <div class="empty-state-dashboard">
+                        <div class="icon">👆</div>
+                        <p>Separador não encontrado no filtro atual</p>
+                    </div>
+                `;
+                obraSelecionada = null;
+            }
+        }
+    }
+}
+
+// ============================================
+// AGRUPAR POR SEPARADOR
+// ============================================
+
+function agruparPorSeparador(obras) {
+    console.log('📦 Agrupando por separador...');
+    const separadores = {};
+    
+    obras.forEach(obra => {
+        const nome = obra.separador || 'NÃO INFORMADO';
+        if (!separadores[nome]) {
+            separadores[nome] = {
+                nome: nome,
+                obras: [],
+                totalObras: 0,
+                finalizadas: 0,
+                pendentes: 0,
+                comAditivo: 0,
+                canceladas: 0,
+                devolvidas: 0,
+                foraProgramacao: 0,
+                comSaida: 0
+            };
+        }
+        
+        separadores[nome].obras.push(obra);
+        separadores[nome].totalObras++;
+        
+        if (obra.status === 'FINALIZADO') {
+            separadores[nome].finalizadas++;
+        } else {
+            separadores[nome].pendentes++;
+        }
+        
+        if (obra.aditivo === 'SIM') separadores[nome].comAditivo++;
+        if (obra.cancelada === 'SIM') separadores[nome].canceladas++;
+        if (obra.devolvida === 'SIM') separadores[nome].devolvidas++;
+        if (obra.obra_programada === 'NÃO') separadores[nome].foraProgramacao++;
+        if (obra.obra_teve_saida === 'SIM') separadores[nome].comSaida++;
+    });
+    
+    const resultado = Object.values(separadores).sort((a, b) => b.totalObras - a.totalObras);
+    console.log(`✅ ${resultado.length} separadores agrupados`);
+    return resultado;
 }
 
 // ============================================
@@ -150,6 +332,8 @@ function limparFiltros() {
 // ============================================
 
 function renderizarDashboard(obras) {
+    dadosExibidos = [...obras];
+    
     if (!obras || obras.length === 0) {
         console.log('📭 Nenhuma obra para renderizar');
         document.getElementById('obrasList').innerHTML = `
@@ -162,94 +346,158 @@ function renderizarDashboard(obras) {
         document.getElementById('obraDetails').innerHTML = `
             <div class="empty-state-dashboard">
                 <div class="icon">👆</div>
-                <p>Selecione uma obra para ver os detalhes</p>
+                <p>Selecione uma obra ou separador para ver os detalhes</p>
             </div>
         `;
         return;
     }
     
-    renderizarKPIs(obras);
-    renderizarListaObras(obras);
-    renderizarGraficos(obras);
-    
-    if (obraSelecionada) {
-        const encontrada = obras.find(o => o.obra === obraSelecionada.obra);
-        if (encontrada) {
-            renderizarDetalhesObra(encontrada);
-        } else {
-            document.getElementById('obraDetails').innerHTML = `
-                <div class="empty-state-dashboard">
-                    <div class="icon">👆</div>
-                    <p>Obra não encontrada nos filtros atuais</p>
-                </div>
-            `;
+    if (abaAtual === 'obras') {
+        const ativas = obras.filter(o => o.status !== 'FINALIZADO');
+        renderizarKPIsObras(ativas, obras);
+        renderizarListaObras(obras);
+        renderizarGraficosObras(ativas);
+        
+        if (obraSelecionada && obraSelecionada.tipo === 'obra') {
+            const encontrada = obras.find(o => o.obra === obraSelecionada.obra);
+            if (encontrada) {
+                renderizarDetalhesObra(encontrada);
+            }
+        }
+    } else if (abaAtual === 'separadores') {
+        const separadores = agruparPorSeparador(obras);
+        renderizarKPIsSeparadores(separadores);
+        renderizarListaSeparadores(separadores);
+        renderizarGraficosSeparadores(separadores);
+        
+        if (obraSelecionada && obraSelecionada.tipo === 'separador') {
+            const encontrado = separadores.find(s => s.nome === obraSelecionada.nome);
+            if (encontrado) {
+                renderizarDetalhesSeparador(encontrado);
+            }
         }
     }
 }
 
 // ============================================
-// KPIs
+// KPIs - OBRAS (com interatividade)
 // ============================================
 
-function renderizarKPIs(obras) {
+function renderizarKPIsObras(obras, todasObras) {
     const container = document.getElementById('kpiGrid');
     if (!container) return;
     
-    const ativas = obras.filter(o => o.status !== 'FINALIZADO');
-    const total = ativas.length;
-    
-    const canceladas = ativas.filter(o => o.cancelada === 'SIM').length;
-    const comAditivo = ativas.filter(o => o.aditivo === 'SIM').length;
-    const foraProgramacao = ativas.filter(o => o.obra_programada === 'NÃO').length;
-    const devolvidas = ativas.filter(o => o.devolvida === 'SIM').length;
-    const comSaida = ativas.filter(o => o.obra_teve_saida === 'SIM').length;
+    const total = obras.length;
+    const canceladas = obras.filter(o => o.cancelada === 'SIM').length;
+    const comAditivo = obras.filter(o => o.aditivo === 'SIM').length;
+    const foraProgramacao = obras.filter(o => o.obra_programada === 'NÃO').length;
+    const devolvidas = obras.filter(o => o.devolvida === 'SIM').length;
+    const comSaida = obras.filter(o => o.obra_teve_saida === 'SIM').length;
     
     const encarregados = new Set();
-    ativas.forEach(o => {
+    obras.forEach(o => {
         if (o.encarregado) encarregados.add(o.encarregado);
     });
     
+    const separadores = new Set();
+    obras.forEach(o => {
+        if (o.separador) separadores.add(o.separador);
+    });
+    
+    // Verifica se algum filtro está ativo
+    const isFilterActive = (tipo, valor) => {
+        return filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor;
+    };
+    
     container.innerHTML = `
-        <div class="kpi-card status-total">
+        <div class="kpi-card status-total ${isFilterActive('status', 'TOTAL') ? 'active' : ''}" onclick="aplicarFiltroCard('status', 'TOTAL')" style="cursor: pointer; ${isFilterActive('status', 'TOTAL') ? 'border: 2px solid #4299E1; background: #EBF8FF;' : ''}">
             <div class="kpi-icon">🏗️</div>
             <div class="kpi-value">${total}</div>
-            <div class="kpi-label">Total de Obras Ativas</div>
+            <div class="kpi-label">Total de Obras</div>
         </div>
-        <div class="kpi-card status-cancelada">
+        <div class="kpi-card status-cancelada ${isFilterActive('cancelada', 'SIM') ? 'active' : ''}" onclick="aplicarFiltroCard('cancelada', 'SIM')" style="cursor: pointer; ${isFilterActive('cancelada', 'SIM') ? 'border: 2px solid #FC8181; background: #FFF5F5;' : ''}">
             <div class="kpi-icon">❌</div>
             <div class="kpi-value">${canceladas}</div>
             <div class="kpi-label">Canceladas</div>
         </div>
-        <div class="kpi-card status-aditivo">
+        <div class="kpi-card status-aditivo ${isFilterActive('aditivo', 'SIM') ? 'active' : ''}" onclick="aplicarFiltroCard('aditivo', 'SIM')" style="cursor: pointer; ${isFilterActive('aditivo', 'SIM') ? 'border: 2px solid #ED8936; background: #FFFAF0;' : ''}">
             <div class="kpi-icon">📝</div>
             <div class="kpi-value">${comAditivo}</div>
             <div class="kpi-label">Com Aditivo</div>
         </div>
-        <div class="kpi-card status-programacao">
+        <div class="kpi-card status-programacao ${isFilterActive('programacao', 'NÃO') ? 'active' : ''}" onclick="aplicarFiltroCard('programacao', 'NÃO')" style="cursor: pointer; ${isFilterActive('programacao', 'NÃO') ? 'border: 2px solid #ED8936; background: #FFFAF0;' : ''}">
             <div class="kpi-icon">📅</div>
             <div class="kpi-value">${foraProgramacao}</div>
             <div class="kpi-label">Fora de Programação</div>
         </div>
-        <div class="kpi-card status-devolvida">
+        <div class="kpi-card status-devolvida ${isFilterActive('devolvida', 'SIM') ? 'active' : ''}" onclick="aplicarFiltroCard('devolvida', 'SIM')" style="cursor: pointer; ${isFilterActive('devolvida', 'SIM') ? 'border: 2px solid #48BB78; background: #F0FFF4;' : ''}">
             <div class="kpi-icon">📦</div>
             <div class="kpi-value">${devolvidas}</div>
             <div class="kpi-label">Devolvidas</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card ${isFilterActive('saida', 'SIM') ? 'active' : ''}" onclick="aplicarFiltroCard('saida', 'SIM')" style="cursor: pointer; ${isFilterActive('saida', 'SIM') ? 'border: 2px solid #4299E1; background: #EBF8FF;' : ''}">
             <div class="kpi-icon">🚚</div>
             <div class="kpi-value">${comSaida}</div>
             <div class="kpi-label">Com Saída</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card" style="cursor: default;">
             <div class="kpi-icon">👤</div>
             <div class="kpi-value">${encarregados.size}</div>
             <div class="kpi-label">Encarregados</div>
+        </div>
+        <div class="kpi-card" style="cursor: default;">
+            <div class="kpi-icon">📦</div>
+            <div class="kpi-value">${separadores.size}</div>
+            <div class="kpi-label">Separadores</div>
         </div>
     `;
 }
 
 // ============================================
-// LISTA DE OBRAS
+// KPIs - SEPARADORES
+// ============================================
+
+function renderizarKPIsSeparadores(separadores) {
+    const container = document.getElementById('kpiGrid');
+    if (!container) return;
+    
+    const totalSeparadores = separadores.length;
+    const totalObras = separadores.reduce((sum, s) => sum + s.totalObras, 0);
+    const totalFinalizadas = separadores.reduce((sum, s) => sum + s.finalizadas, 0);
+    const totalPendentes = separadores.reduce((sum, s) => sum + s.pendentes, 0);
+    const totalComAditivo = separadores.reduce((sum, s) => sum + s.comAditivo, 0);
+    
+    container.innerHTML = `
+        <div class="kpi-card status-total">
+            <div class="kpi-icon">📦</div>
+            <div class="kpi-value">${totalSeparadores}</div>
+            <div class="kpi-label">Total de Separadores</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">🏗️</div>
+            <div class="kpi-value">${totalObras}</div>
+            <div class="kpi-label">Total de Obras</div>
+        </div>
+        <div class="kpi-card" style="border-color: #48BB78;">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-value" style="color: #48BB78;">${totalFinalizadas}</div>
+            <div class="kpi-label">Finalizadas</div>
+        </div>
+        <div class="kpi-card" style="border-color: #ED8936;">
+            <div class="kpi-icon">⏳</div>
+            <div class="kpi-value" style="color: #ED8936;">${totalPendentes}</div>
+            <div class="kpi-label">Pendentes</div>
+        </div>
+        <div class="kpi-card status-aditivo">
+            <div class="kpi-icon">📝</div>
+            <div class="kpi-value">${totalComAditivo}</div>
+            <div class="kpi-label">Com Aditivo</div>
+        </div>
+    `;
+}
+
+// ============================================
+// LISTA DE OBRAS (apenas número)
 // ============================================
 
 function renderizarListaObras(obras) {
@@ -267,57 +515,63 @@ function renderizarListaObras(obras) {
         return;
     }
     
-    // Ordena obras por número
     const obrasOrdenadas = [...obras].sort((a, b) => (a.obra || '').localeCompare(b.obra || ''));
     
     let html = `
-        <div style="display: grid; grid-template-columns: 100px 1fr 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
-            <span>Informações</span>
             <span style="text-align: right;">Status</span>
         </div>
     `;
     
     obrasOrdenadas.forEach(obra => {
-        const isActive = obraSelecionada && obraSelecionada.obra === obra.obra;
+        const isActive = obraSelecionada && obraSelecionada.tipo === 'obra' && obraSelecionada.obra === obra.obra;
         const obraFormatada = formatarObraParaExibicao(obra.obra);
-        
-        // Monta badges de status
-        let badges = [];
-        if (obra.status === 'FINALIZADO') {
-            badges.push('<span class="badge-status-farol finalizado">✅ Finalizado</span>');
-        } else {
-            badges.push('<span class="badge-status-farol pendente">⏳ Pendente</span>');
-            if (obra.cancelada === 'SIM') {
-                badges.push('<span class="badge-status-farol cancelada">❌ Cancelada</span>');
-            }
-            if (obra.aditivo === 'SIM') {
-                badges.push('<span class="badge-status-farol com-aditivo">📝 Aditivo</span>');
-            }
-            if (obra.obra_programada === 'NÃO') {
-                badges.push('<span class="badge-status-farol fora-programacao">📅 Fora Prog.</span>');
-            }
-            if (obra.devolvida === 'SIM') {
-                badges.push('<span class="badge-status-farol devolvida">📦 Devolvida</span>');
-            }
-            if (obra.obra_teve_saida === 'SIM') {
-                badges.push('<span class="badge-status-farol saida">🚚 Saída</span>');
-            }
-        }
-        
-        if (badges.length === 0) {
-            badges.push('<span class="badge-status-farol" style="background: #E2E8F0; color: #4A5568;">✅ Normal</span>');
-        }
-        
-        const infoText = obra.setor ? `📍 ${obra.setor}` : '';
-        const encarregadoText = obra.encarregado ? `👤 ${obra.encarregado}` : '';
-        const info = [infoText, encarregadoText].filter(Boolean).join(' • ');
+        const statusIcon = obra.status === 'FINALIZADO' ? '✅' : '⏳';
         
         html += `
-            <div class="obra-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')" style="display: grid; grid-template-columns: 100px 1fr 80px; gap: 8px; padding: 10px 12px;">
-                <span class="obra-numero">🏗️ ${obraFormatada}</span>
-                <span class="obra-info">${info}</span>
-                <span class="obra-badge">${badges.join(' ')}</span>
+            <div class="obra-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')" style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+                <span class="obra-numero" style="font-weight: 600; color: #2D3748; font-size: 14px;">🏗️ ${obraFormatada}</span>
+                <span style="text-align: right; font-size: 12px;">${statusIcon}</span>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// ============================================
+// LISTA DE SEPARADORES
+// ============================================
+
+function renderizarListaSeparadores(separadores) {
+    const container = document.getElementById('obrasList');
+    if (!container) return;
+    
+    if (!separadores || separadores.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">📭</div>
+                <p>Nenhum separador encontrado</p>
+                <p class="sub">Tente ajustar os filtros</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+            <span>Separador</span>
+            <span style="text-align: right;">Obras</span>
+        </div>
+    `;
+    
+    separadores.forEach(sep => {
+        const isActive = obraSelecionada && obraSelecionada.tipo === 'separador' && obraSelecionada.nome === sep.nome;
+        html += `
+            <div class="obra-item ${isActive ? 'active' : ''}" onclick="selecionarSeparador('${sep.nome}')" style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+                <span class="obra-numero" style="font-weight: 500; color: #2D3748; font-size: 14px;">📦 ${sep.nome}</span>
+                <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${sep.totalObras}</span>
             </div>
         `;
     });
@@ -331,12 +585,28 @@ function renderizarListaObras(obras) {
 
 function selecionarObra(obraNumero) {
     console.log(`🔍 Selecionando obra: ${obraNumero}`);
-    const obra = dadosFiltrados.find(o => o.obra === obraNumero);
+    const obra = dadosExibidos.find(o => o.obra === obraNumero);
     
     if (obra) {
-        obraSelecionada = { obra: obra.obra };
+        obraSelecionada = { obra: obra.obra, tipo: 'obra' };
         renderizarDetalhesObra(obra);
-        renderizarListaObras(dadosFiltrados);
+        renderizarListaObras(dadosExibidos);
+    }
+}
+
+// ============================================
+// SELECIONAR SEPARADOR
+// ============================================
+
+function selecionarSeparador(nome) {
+    console.log(`🔍 Selecionando separador: ${nome}`);
+    const separadores = agruparPorSeparador(dadosExibidos);
+    const separador = separadores.find(s => s.nome === nome);
+    
+    if (separador) {
+        obraSelecionada = { nome: separador.nome, tipo: 'separador' };
+        renderizarDetalhesSeparador(separador);
+        renderizarListaSeparadores(separadores);
     }
 }
 
@@ -350,11 +620,9 @@ function renderizarDetalhesObra(obra) {
     
     const obraFormatada = formatarObraParaExibicao(obra.obra);
     
-    // Status da obra
     let statusText = obra.status === 'FINALIZADO' ? '✅ Finalizado' : '⏳ Pendente';
     let statusColor = obra.status === 'FINALIZADO' ? '#48BB78' : '#ED8936';
     
-    // Indicadores
     const indicadores = [];
     if (obra.cancelada === 'SIM') indicadores.push('❌ Cancelada');
     if (obra.aditivo === 'SIM') indicadores.push('📝 Com Aditivo');
@@ -377,6 +645,10 @@ function renderizarDetalhesObra(obra) {
             <span class="value">${obra.encarregado || 'Não informado'}</span>
         </div>
         <div class="detail-row">
+            <span class="label">Separador:</span>
+            <span class="value">${obra.separador || 'Não informado'}</span>
+        </div>
+        <div class="detail-row">
             <span class="label">Data de Programação:</span>
             <span class="value">${formatarData(obra.data_programacao)}</span>
         </div>
@@ -386,7 +658,6 @@ function renderizarDetalhesObra(obra) {
         </div>
     `;
     
-    // Indicadores
     if (indicadores.length > 0) {
         html += `
             <div class="detail-row" style="grid-column: 1 / -1; border-bottom: none;">
@@ -396,22 +667,16 @@ function renderizarDetalhesObra(obra) {
         `;
     }
     
-    // Separador
-    if (obra.separador || obra.data_separacao) {
+    if (obra.data_separacao) {
         html += `
-            <div class="detail-section-title">📦 Separação</div>
+            <div class="detail-section-title">📅 Data de Separação</div>
             <div class="detail-row">
-                <span class="label">Separador:</span>
-                <span class="value">${obra.separador || 'Não informado'}</span>
-            </div>
-            <div class="detail-row">
-                <span class="label">Data de Separação:</span>
+                <span class="label">Data:</span>
                 <span class="value">${formatarData(obra.data_separacao)}</span>
             </div>
         `;
     }
     
-    // Saída
     if (obra.obra_teve_saida === 'SIM' && obra.data_saida) {
         html += `
             <div class="detail-section-title">🚚 Saída</div>
@@ -422,7 +687,6 @@ function renderizarDetalhesObra(obra) {
         `;
     }
     
-    // Observação
     if (obra.observacao) {
         html += `
             <div class="detail-section-title">📝 Observação</div>
@@ -432,14 +696,12 @@ function renderizarDetalhesObra(obra) {
         `;
     }
     
-    // Itens da obra (se houver)
     if (obra.itens && obra.itens.length > 0) {
         html += `
             <div class="detail-section-title">📦 Itens da Obra (${obra.itens.length})</div>
             <div class="obra-detail-itens">
         `;
         
-        // Ordena itens por código
         const itensOrdenados = [...obra.itens].sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
         
         itensOrdenados.forEach(item => {
@@ -459,26 +721,94 @@ function renderizarDetalhesObra(obra) {
 }
 
 // ============================================
-// GRÁFICOS
+// DETALHES DO SEPARADOR
 // ============================================
 
-function renderizarGraficos(obras) {
-    console.log('📊 Renderizando gráficos...');
+function renderizarDetalhesSeparador(separador) {
+    const container = document.getElementById('obraDetails');
+    if (!container) return;
     
-    const ativas = obras.filter(o => o.status !== 'FINALIZADO');
-    const total = ativas.length || 1;
+    const obras = separador.obras || [];
+    const obrasOrdenadas = [...obras].sort((a, b) => (a.obra || '').localeCompare(b.obra || ''));
     
-    // Gráfico 1: Distribuição de Obras
+    let html = `
+        <div class="detail-title">📦 ${separador.nome}</div>
+        <div class="detail-row">
+            <span class="label">Total de Obras:</span>
+            <span class="value" style="font-weight: 700; color: #2B6CB0;">${separador.totalObras}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Finalizadas:</span>
+            <span class="value" style="color: #48BB78;">✅ ${separador.finalizadas}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Pendentes:</span>
+            <span class="value" style="color: #ED8936;">⏳ ${separador.pendentes}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Com Aditivo:</span>
+            <span class="value" style="color: #ED8936;">📝 ${separador.comAditivo}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Canceladas:</span>
+            <span class="value" style="color: #FC8181;">❌ ${separador.canceladas}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Devolvidas:</span>
+            <span class="value" style="color: #48BB78;">📦 ${separador.devolvidas}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Fora de Programação:</span>
+            <span class="value" style="color: #ED8936;">📅 ${separador.foraProgramacao}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Com Saída:</span>
+            <span class="value" style="color: #4299E1;">🚚 ${separador.comSaida}</span>
+        </div>
+    `;
+    
+    if (obrasOrdenadas.length > 0) {
+        html += `
+            <div class="detail-section-title">🏗️ Obras do Separador (${obrasOrdenadas.length})</div>
+            <div class="obra-detail-itens">
+        `;
+        
+        obrasOrdenadas.forEach(obra => {
+            const obraFormatada = formatarObraParaExibicao(obra.obra);
+            const statusIcon = obra.status === 'FINALIZADO' ? '✅' : '⏳';
+            const encarregado = obra.encarregado || 'N/I';
+            html += `
+                <div class="item-row">
+                    <span>🏗️ ${obraFormatada} ${statusIcon}</span>
+                    <span class="qtd" style="font-weight: 400; color: #718096;">👤 ${encarregado}</span>
+                </div>
+            `;
+        });
+        
+        html += `</div>`;
+    }
+    
+    container.innerHTML = html;
+}
+
+// ============================================
+// GRÁFICOS - OBRAS
+// ============================================
+
+function renderizarGraficosObras(obras) {
+    console.log('📊 Renderizando gráficos de obras...');
+    
+    const total = obras.length || 1;
+    
     const categorias = {
-        canceladas: { count: ativas.filter(o => o.cancelada === 'SIM').length, label: 'Canceladas', class: 'bar-cancelada' },
-        comAditivo: { count: ativas.filter(o => o.aditivo === 'SIM').length, label: 'Com Aditivo', class: 'bar-aditivo' },
-        foraProgramacao: { count: ativas.filter(o => o.obra_programada === 'NÃO').length, label: 'Fora Programação', class: 'bar-programacao' },
-        devolvidas: { count: ativas.filter(o => o.devolvida === 'SIM').length, label: 'Devolvidas', class: 'bar-devolvida' },
-        comSaida: { count: ativas.filter(o => o.obra_teve_saida === 'SIM').length, label: 'Com Saída', class: 'bar-saida' }
+        canceladas: { count: obras.filter(o => o.cancelada === 'SIM').length, label: 'Canceladas', class: 'bar-cancelada' },
+        comAditivo: { count: obras.filter(o => o.aditivo === 'SIM').length, label: 'Com Aditivo', class: 'bar-aditivo' },
+        foraProgramacao: { count: obras.filter(o => o.obra_programada === 'NÃO').length, label: 'Fora Programação', class: 'bar-programacao' },
+        devolvidas: { count: obras.filter(o => o.devolvida === 'SIM').length, label: 'Devolvidas', class: 'bar-devolvida' },
+        comSaida: { count: obras.filter(o => o.obra_teve_saida === 'SIM').length, label: 'Com Saída', class: 'bar-saida' }
     };
     
-    // Obras normais (sem nenhum indicador)
-    const normais = ativas.filter(o => 
+    const normais = obras.filter(o => 
         o.cancelada !== 'SIM' && 
         o.aditivo !== 'SIM' && 
         o.obra_programada !== 'NÃO' && 
@@ -486,12 +816,12 @@ function renderizarGraficos(obras) {
         o.obra_teve_saida !== 'SIM'
     ).length;
     
-    let htmlStatus = '';
+    let html = '';
     
     Object.keys(categorias).forEach(key => {
         const cat = categorias[key];
         const percentual = (cat.count / total) * 100;
-        htmlStatus += `
+        html += `
             <div class="chart-bar-indicator">
                 <span class="label">${cat.label}</span>
                 <div class="bar-track">
@@ -504,9 +834,8 @@ function renderizarGraficos(obras) {
         `;
     });
     
-    // Obras normais
     const percentualNormal = (normais / total) * 100;
-    htmlStatus += `
+    html += `
         <div class="chart-bar-indicator">
             <span class="label">Normais</span>
             <div class="bar-track">
@@ -527,26 +856,26 @@ function renderizarGraficos(obras) {
         </div>
     `;
     
-    document.getElementById('statusChart').innerHTML = htmlStatus;
+    document.getElementById('statusChart').innerHTML = html;
     
-    // Gráfico 2: Obras por Encarregado
-    const encarregados = {};
-    ativas.forEach(obra => {
-        const nome = obra.encarregado || 'NÃO INFORMADO';
-        if (!encarregados[nome]) encarregados[nome] = 0;
-        encarregados[nome]++;
+    // Gráfico de Separadores
+    const separadoresMap = {};
+    obras.forEach(obra => {
+        const nome = obra.separador || 'NÃO INFORMADO';
+        if (!separadoresMap[nome]) separadoresMap[nome] = 0;
+        separadoresMap[nome]++;
     });
     
-    const sorted = Object.entries(encarregados)
+    const sorted = Object.entries(separadoresMap)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 15);
     
     const maxCount = sorted.length > 0 ? Math.max(...sorted.map(s => s[1])) : 1;
     
-    let htmlEncarregado = '';
+    let htmlSep = '';
     sorted.forEach(([nome, count]) => {
         const percentual = (count / maxCount) * 100;
-        htmlEncarregado += `
+        htmlSep += `
             <div class="encarregado-item-chart">
                 <span class="name">${nome}</span>
                 <div class="bar-track">
@@ -560,10 +889,95 @@ function renderizarGraficos(obras) {
     });
     
     if (sorted.length === 0) {
-        htmlEncarregado = `<div class="empty-state-dashboard"><p>Nenhum encarregado encontrado</p></div>`;
+        htmlSep = `<div class="empty-state-dashboard"><p>Nenhum separador encontrado</p></div>`;
     }
     
-    document.getElementById('encarregadoChart').innerHTML = htmlEncarregado;
+    document.getElementById('encarregadoChart').innerHTML = htmlSep;
+}
+
+// ============================================
+// GRÁFICOS - SEPARADORES
+// ============================================
+
+function renderizarGraficosSeparadores(separadores) {
+    console.log('📊 Renderizando gráficos de separadores...');
+    
+    const totalObras = separadores.reduce((sum, s) => sum + s.totalObras, 0) || 1;
+    
+    const statusCount = {
+        finalizadas: separadores.reduce((sum, s) => sum + s.finalizadas, 0),
+        pendentes: separadores.reduce((sum, s) => sum + s.pendentes, 0),
+        comAditivo: separadores.reduce((sum, s) => sum + s.comAditivo, 0),
+        canceladas: separadores.reduce((sum, s) => sum + s.canceladas, 0),
+        devolvidas: separadores.reduce((sum, s) => sum + s.devolvidas, 0)
+    };
+    
+    const categorias = [
+        { key: 'finalizadas', label: 'Finalizadas', class: 'bar-devolvida' },
+        { key: 'pendentes', label: 'Pendentes', class: 'bar-programacao' },
+        { key: 'comAditivo', label: 'Com Aditivo', class: 'bar-aditivo' },
+        { key: 'canceladas', label: 'Canceladas', class: 'bar-cancelada' },
+        { key: 'devolvidas', label: 'Devolvidas', class: 'bar-saida' }
+    ];
+    
+    let html = '';
+    categorias.forEach(cat => {
+        const count = statusCount[cat.key] || 0;
+        const percentual = (count / totalObras) * 100;
+        html += `
+            <div class="chart-bar-indicator">
+                <span class="label">${cat.label}</span>
+                <div class="bar-track">
+                    <div class="bar-fill ${cat.class}" style="width: ${percentual}%;">
+                        <span class="value">${count}</span>
+                    </div>
+                </div>
+                <span class="percent">${percentual.toFixed(0)}%</span>
+            </div>
+        `;
+    });
+    
+    html += `
+        <div class="chart-bar-indicator" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #E2E8F0;">
+            <span class="label" style="font-weight: 700;">Total</span>
+            <div class="bar-track">
+                <div class="bar-fill bar-total" style="width: 100%;">
+                    <span class="value">${totalObras}</span>
+                </div>
+            </div>
+            <span class="percent" style="font-weight: 700;">100%</span>
+        </div>
+    `;
+    
+    document.getElementById('statusChart').innerHTML = html;
+    
+    const sorted = [...separadores]
+        .sort((a, b) => b.totalObras - a.totalObras)
+        .slice(0, 15);
+    
+    const maxCount = sorted.length > 0 ? Math.max(...sorted.map(s => s.totalObras)) : 1;
+    
+    let htmlSep = '';
+    sorted.forEach(sep => {
+        const percentual = (sep.totalObras / maxCount) * 100;
+        htmlSep += `
+            <div class="encarregado-item-chart">
+                <span class="name">${sep.nome}</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width: ${percentual}%;">
+                        <span class="value">${sep.totalObras}</span>
+                    </div>
+                </div>
+                <span class="count">${sep.totalObras}</span>
+            </div>
+        `;
+    });
+    
+    if (sorted.length === 0) {
+        htmlSep = `<div class="empty-state-dashboard"><p>Nenhum separador encontrado</p></div>`;
+    }
+    
+    document.getElementById('encarregadoChart').innerHTML = htmlSep;
 }
 
 // ============================================
@@ -573,6 +987,9 @@ function renderizarGraficos(obras) {
 window.aplicarFiltros = aplicarFiltros;
 window.limparFiltros = limparFiltros;
 window.selecionarObra = selecionarObra;
+window.selecionarSeparador = selecionarSeparador;
+window.trocarAba = trocarAba;
 window.renderizarDashboard = renderizarDashboard;
+window.aplicarFiltroCard = aplicarFiltroCard;
 
 console.log('✅ dashboards-farol-obras.js inicializado!');

@@ -843,3 +843,74 @@
         font-size: 10px;
     }
 }
+
+/* ===== KPI CARDS INTERATIVOS ===== */
+.kpi-card {
+    background: white;
+    border-radius: 10px;
+    padding: 15px 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    border: 2px solid #E2E8F0;
+    text-align: center;
+    transition: all 0.25s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+}
+
+.kpi-card.active {
+    border-color: #4299E1;
+    background: #EBF8FF;
+}
+
+.kpi-card.active::after {
+    content: '✓';
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    font-size: 14px;
+    color: #4299E1;
+    font-weight: 700;
+}
+
+.kpi-card .kpi-icon {
+    font-size: 24px;
+    margin-bottom: 4px;
+}
+
+.kpi-card .kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2B6CB0;
+}
+
+.kpi-card .kpi-label {
+    font-size: 12px;
+    color: #718096;
+    margin-top: 2px;
+}
+
+/* Cores específicas para cada tipo de card */
+.kpi-card.status-cancelada .kpi-value { color: #FC8181; }
+.kpi-card.status-cancelada.active { border-color: #FC8181; background: #FFF5F5; }
+.kpi-card.status-cancelada.active::after { color: #FC8181; }
+
+.kpi-card.status-aditivo .kpi-value { color: #ED8936; }
+.kpi-card.status-aditivo.active { border-color: #ED8936; background: #FFFAF0; }
+.kpi-card.status-aditivo.active::after { color: #ED8936; }
+
+.kpi-card.status-programacao .kpi-value { color: #ED8936; }
+.kpi-card.status-programacao.active { border-color: #ED8936; background: #FFFAF0; }
+.kpi-card.status-programacao.active::after { color: #ED8936; }
+
+.kpi-card.status-devolvida .kpi-value { color: #48BB78; }
+.kpi-card.status-devolvida.active { border-color: #48BB78; background: #F0FFF4; }
+.kpi-card.status-devolvida.active::after { color: #48BB78; }
+
+.kpi-card.status-total .kpi-value { color: #4299E1; }
+.kpi-card.status-total.active { border-color: #4299E1; background: #EBF8FF; }
+.kpi-card.status-total.active::after { color: #4299E1; }

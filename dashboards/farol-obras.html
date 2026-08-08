@@ -73,10 +73,12 @@
             </div>
         </div>
 
+        <!-- Abas serão inseridas via JS -->
+
         <!-- Conteúdo Principal -->
         <div class="dashboard-main">
             <div class="dashboard-card">
-                <h3>🏗️ Lista de Obras</h3>
+                <h3 id="listTitle">🏗️ Lista de Obras</h3>
                 <div id="obrasList" class="obras-list">
                     <div class="loading-dashboard">
                         <div class="spinner"></div>
@@ -86,11 +88,11 @@
             </div>
             
             <div class="dashboard-card">
-                <h3>📋 Detalhes da Obra</h3>
+                <h3>📋 Detalhes</h3>
                 <div id="obraDetails" class="obra-details-panel">
                     <div class="empty-state-dashboard">
                         <div class="icon">👆</div>
-                        <p>Selecione uma obra para ver os detalhes</p>
+                        <p>Selecione uma obra ou separador para ver os detalhes</p>
                     </div>
                 </div>
             </div>
@@ -108,7 +110,7 @@
             </div>
 
             <div class="dashboard-card">
-                <h3>📦 Obras por Encarregado</h3>
+                <h3 id="chartSecondTitle">📦 Top Separadores</h3>
                 <div id="encarregadoChart" class="chart-container">
                     <div class="loading-dashboard" style="min-height: 100px;">
                         <div class="spinner"></div>
