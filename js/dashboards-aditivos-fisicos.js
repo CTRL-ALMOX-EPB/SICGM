@@ -109,6 +109,9 @@ function criarAbas() {
         <button class="btn-aba" data-aba="obras" onclick="trocarAba('obras')">
             🏗️ Obras
         </button>
+        <button class="btn-aba" data-aba="encarregados" onclick="trocarAba('encarregados')">
+            👤 Encarregados
+        </button>
     `;
     
     mainContainer.parentNode.insertBefore(abaContainer, mainContainer);
@@ -127,7 +130,12 @@ function trocarAba(aba) {
     
     const listTitle = document.getElementById('listTitle');
     if (listTitle) {
-        listTitle.textContent = aba === 'materiais' ? '📦 Itens Aditivados' : '🏗️ Obras com Aditivos';
+        const titles = {
+            'materiais': '📦 Itens Aditivados',
+            'obras': '🏗️ Obras com Aditivos',
+            'encarregados': '👤 Encarregados'
+        };
+        listTitle.textContent = titles[aba] || '📦 Itens Aditivados';
     }
     
     renderizarDashboard(dadosFiltrados);
@@ -208,7 +216,7 @@ function limparFiltros() {
 }
 
 // ============================================
-// AGRUPAMENTO DE ITENS FÍSICOS
+// AGRUPAMENTO DE ITENS FÍSICOS (COUNT de SKUs)
 // ============================================
 
 function agruparItensFisicos(controles) {
@@ -239,7 +247,8 @@ function agruparItensFisicos(controles) {
                     itens: [],
                     aplicacaoCount: { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 },
                     obrasSet: new Set(),
-                    saidasSet: new Set()
+                    saidasSet: new Set(),
+                    encarregadosSet: new Set()
                 };
             }
             
@@ -247,7 +256,8 @@ function agruparItensFisicos(controles) {
                 grupos[codigo].descricao = descricao;
             }
             
-            grupos[codigo].total += quantidade;
+            // CONTAGEM: Cada ocorrência do SKU conta como 1 (COUNT)
+            grupos[codigo].total += 1;
             
             const obra = controle.obra || 'SEM OBRA';
             const isSaida = obra.toUpperCase().includes('SAÍDA') || obra.toUpperCase().includes('SAIDA');
@@ -256,8 +266,9 @@ function agruparItensFisicos(controles) {
                              aplicado === 'NÃO' ? 'NAO' : 
                              aplicado === 'PARCIAL' ? 'PARCIAL' : 'PENDENTE';
             
+            // CONTAGEM por status
             if (grupos[codigo].aplicacaoCount[statusKey] !== undefined) {
-                grupos[codigo].aplicacaoCount[statusKey] += quantidade;
+                grupos[codigo].aplicacaoCount[statusKey] += 1;
             }
             
             const itemData = {
@@ -279,6 +290,7 @@ function agruparItensFisicos(controles) {
             }
             
             grupos[codigo].itens.push(itemData);
+            if (encarregado) grupos[codigo].encarregadosSet.add(encarregado);
         });
     });
     
@@ -288,7 +300,7 @@ function agruparItensFisicos(controles) {
 }
 
 // ============================================
-// AGRUPAR POR OBRA
+// AGRUPAR POR OBRA (COUNT de SKUs)
 // ============================================
 
 function agruparPorObra(controles) {
@@ -307,7 +319,8 @@ function agruparPorObra(controles) {
                 itens: [],
                 totalItens: 0,
                 skus: [],
-                skusSet: new Set()
+                skusSet: new Set(),
+                encarregadosSet: new Set()
             };
         }
         
@@ -323,8 +336,12 @@ function agruparPorObra(controles) {
             obras[obra].totalItens += qtd;
             
             if (item.codigo) {
+                // CONTAGEM: Cada ocorrência do SKU conta como 1
                 obras[obra].skus.push(item.codigo);
                 obras[obra].skusSet.add(item.codigo);
+            }
+            if (item.encarregado_obra) {
+                obras[obra].encarregadosSet.add(item.encarregado_obra);
             }
         });
     });
@@ -332,11 +349,72 @@ function agruparPorObra(controles) {
     const resultado = Object.values(obras).map(obra => ({
         ...obra,
         datas: Array.from(obra.datas).sort(),
-        skusCount: obra.skus.length,
-        skusUnico: obra.skusSet.size
+        skusCount: obra.skus.length, // COUNT de ocorrências
+        skusUnico: obra.skusSet.size, // SKUs únicos
+        encarregadosCount: obra.encarregadosSet.size
     })).sort((a, b) => b.skusCount - a.skusCount);
     
     console.log(`✅ ${resultado.length} obras agrupadas`);
+    return resultado;
+}
+
+// ============================================
+// AGRUPAR POR ENCARREGADO (COUNT de SKUs)
+// ============================================
+
+function agruparPorEncarregado(controles) {
+    console.log(`👤 Agrupando por encarregado...`);
+    const encarregados = {};
+    
+    controles.forEach(controle => {
+        const itens = controle.itens || [];
+        const dataProgramacao = controle.data_programacao || '';
+        
+        itens.forEach(item => {
+            const nome = item.encarregado_obra || 'NÃO INFORMADO';
+            const obra = controle.obra || 'SEM OBRA';
+            
+            if (!encarregados[nome]) {
+                encarregados[nome] = {
+                    nome: nome,
+                    obras: new Set(),
+                    itens: [],
+                    skus: [],
+                    skusSet: new Set(),
+                    aplicacaoCount: { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 }
+                };
+            }
+            
+            encarregados[nome].obras.add(obra);
+            encarregados[nome].itens.push({
+                ...item,
+                data: dataProgramacao,
+                numero: controle.numero,
+                obra: obra
+            });
+            
+            if (item.codigo) {
+                // CONTAGEM: Cada ocorrência do SKU conta como 1
+                encarregados[nome].skus.push(item.codigo);
+                encarregados[nome].skusSet.add(item.codigo);
+            }
+            
+            const aplicado = item.aplicado || 'PENDENTE';
+            const key = aplicado === 'SIM' ? 'SIM' : 
+                       aplicado === 'NÃO' ? 'NAO' : 
+                       aplicado === 'PARCIAL' ? 'PARCIAL' : 'PENDENTE';
+            encarregados[nome].aplicacaoCount[key] += 1;
+        });
+    });
+    
+    const resultado = Object.values(encarregados).map(enc => ({
+        ...enc,
+        obras: Array.from(enc.obras),
+        skusCount: enc.skus.length, // COUNT de ocorrências
+        skusUnico: enc.skusSet.size // SKUs únicos
+    })).sort((a, b) => b.skusCount - a.skusCount);
+    
+    console.log(`✅ ${resultado.length} encarregados agrupados`);
     return resultado;
 }
 
@@ -383,7 +461,7 @@ function renderizarDashboard(aditivos) {
                 `;
             }
         }
-    } else {
+    } else if (abaAtual === 'obras') {
         const obrasAgrupadas = agruparPorObra(aditivos);
         renderizarListaObras(obrasAgrupadas);
         renderizarKPIsObras(obrasAgrupadas);
@@ -392,6 +470,17 @@ function renderizarDashboard(aditivos) {
             const encontrado = obrasAgrupadas.find(o => o.obra === itemSelecionado.obra);
             if (encontrado) {
                 renderizarDetalhesObra(encontrado);
+            }
+        }
+    } else if (abaAtual === 'encarregados') {
+        const encarregadosAgrupados = agruparPorEncarregado(aditivos);
+        renderizarListaEncarregados(encarregadosAgrupados);
+        renderizarKPIsEncarregados(encarregadosAgrupados);
+        
+        if (itemSelecionado && itemSelecionado.tipo === 'encarregado') {
+            const encontrado = encarregadosAgrupados.find(e => e.nome === itemSelecionado.nome);
+            if (encontrado) {
+                renderizarDetalhesEncarregado(encontrado);
             }
         }
     }
@@ -405,8 +494,9 @@ function renderizarKPIsMateriais(itensAgrupados) {
     const container = document.getElementById('kpiGrid');
     if (!container) return;
     
-    const totalSkus = itensAgrupados.length;
-    const totalItens = itensAgrupados.reduce((sum, item) => sum + item.total, 0);
+    // COUNT de SKUs (cada ocorrência)
+    const totalSkus = itensAgrupados.reduce((sum, item) => sum + item.total, 0);
+    const totalSkusUnicos = itensAgrupados.length;
     
     const obrasSet = new Set();
     itensAgrupados.forEach(item => {
@@ -426,7 +516,12 @@ function renderizarKPIsMateriais(itensAgrupados) {
         <div class="kpi-card status-total">
             <div class="kpi-icon">📦</div>
             <div class="kpi-value">${totalSkus}</div>
-            <div class="kpi-label">SKUs Aditivados</div>
+            <div class="kpi-label">Ocorrências de SKUs</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-value">${totalSkusUnicos}</div>
+            <div class="kpi-label">SKUs Únicos</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-icon">🏗️</div>
@@ -435,17 +530,17 @@ function renderizarKPIsMateriais(itensAgrupados) {
         </div>
         <div class="kpi-card status-aplicado">
             <div class="kpi-icon">✅</div>
-            <div class="kpi-value">${aplicacaoCount.SIM.toFixed(1)}</div>
+            <div class="kpi-value">${aplicacaoCount.SIM}</div>
             <div class="kpi-label">Aplicados</div>
         </div>
         <div class="kpi-card status-nao-aplicado">
             <div class="kpi-icon">❌</div>
-            <div class="kpi-value">${aplicacaoCount.NAO.toFixed(1)}</div>
+            <div class="kpi-value">${aplicacaoCount.NAO}</div>
             <div class="kpi-label">Não Aplicados</div>
         </div>
         <div class="kpi-card status-parcial">
             <div class="kpi-icon">🔄</div>
-            <div class="kpi-value">${aplicacaoCount.PARCIAL.toFixed(1)}</div>
+            <div class="kpi-value">${aplicacaoCount.PARCIAL}</div>
             <div class="kpi-label">Parcial</div>
         </div>
     `;
@@ -462,6 +557,12 @@ function renderizarKPIsObras(obrasAgrupadas) {
     const totalObras = obrasAgrupadas.length;
     const totalSkusOcorrencias = obrasAgrupadas.reduce((sum, o) => sum + o.skusCount, 0);
     const totalSkusUnicos = obrasAgrupadas.reduce((sum, o) => sum + o.skusUnico, 0);
+    const totalEncarregados = new Set();
+    obrasAgrupadas.forEach(o => {
+        o.itens.forEach(i => {
+            if (i.encarregado_obra) totalEncarregados.add(i.encarregado_obra);
+        });
+    });
     
     container.innerHTML = `
         <div class="kpi-card status-total">
@@ -475,15 +576,60 @@ function renderizarKPIsObras(obrasAgrupadas) {
             <div class="kpi-label">Ocorrências de SKUs</div>
         </div>
         <div class="kpi-card">
-            <div class="kpi-icon">📊</div>
+            <div class="kpi-icon">📋</div>
             <div class="kpi-value">${totalSkusUnicos}</div>
             <div class="kpi-label">SKUs Únicos</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">👤</div>
+            <div class="kpi-value">${totalEncarregados.size}</div>
+            <div class="kpi-label">Encarregados</div>
         </div>
     `;
 }
 
 // ============================================
-// LISTA DE ITENS
+// KPIs - ENCARREGADOS
+// ============================================
+
+function renderizarKPIsEncarregados(encarregadosAgrupados) {
+    const container = document.getElementById('kpiGrid');
+    if (!container) return;
+    
+    const totalEncarregados = encarregadosAgrupados.length;
+    const totalSkusOcorrencias = encarregadosAgrupados.reduce((sum, e) => sum + e.skusCount, 0);
+    const totalSkusUnicos = encarregadosAgrupados.reduce((sum, e) => sum + e.skusUnico, 0);
+    const totalObras = new Set();
+    encarregadosAgrupados.forEach(e => {
+        e.obras.forEach(o => totalObras.add(o));
+    });
+    
+    container.innerHTML = `
+        <div class="kpi-card status-total">
+            <div class="kpi-icon">👤</div>
+            <div class="kpi-value">${totalEncarregados}</div>
+            <div class="kpi-label">Total de Encarregados</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">📦</div>
+            <div class="kpi-value">${totalSkusOcorrencias}</div>
+            <div class="kpi-label">Ocorrências de SKUs</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-value">${totalSkusUnicos}</div>
+            <div class="kpi-label">SKUs Únicos</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">🏗️</div>
+            <div class="kpi-value">${totalObras.size}</div>
+            <div class="kpi-label">Obras</div>
+        </div>
+    `;
+}
+
+// ============================================
+// LISTA DE ITENS (MATERIAIS)
 // ============================================
 
 function renderizarListaItens(itensAgrupados) {
@@ -501,15 +647,21 @@ function renderizarListaItens(itensAgrupados) {
         return;
     }
     
-    let html = '';
+    let html = `
+        <div style="display: grid; grid-template-columns: 80px 1fr 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+            <span>Código</span>
+            <span>Descrição</span>
+            <span style="text-align: right;">Ocorr.</span>
+        </div>
+    `;
+    
     itensAgrupados.forEach(item => {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'material' && itemSelecionado.codigo === item.codigo;
-        const totalFormatado = Number.isInteger(item.total) ? item.total : item.total.toFixed(2);
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarItem('${item.codigo}')">
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarItem('${item.codigo}')" style="display: grid; grid-template-columns: 80px 1fr 80px; gap: 8px; padding: 8px 12px;">
                 <span class="item-code">${item.codigo}</span>
                 <span class="item-desc">${item.descricao}</span>
-                <span class="item-total">${totalFormatado} ${item.unidade}</span>
+                <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${item.total}</span>
             </div>
         `;
     });
@@ -536,18 +688,181 @@ function renderizarListaObras(obrasAgrupadas) {
         return;
     }
     
-    let html = '';
+    let html = `
+        <div style="display: grid; grid-template-columns: 100px 1fr 80px 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+            <span>Obra</span>
+            <span>Descrição</span>
+            <span style="text-align: right;">Ocorr.</span>
+            <span style="text-align: right;">SKUs Ún.</span>
+        </div>
+    `;
+    
     obrasAgrupadas.forEach(obra => {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'obra' && itemSelecionado.obra === obra.obra;
         const obraFormatada = formatarObraParaExibicao(obra.obra);
+        const descricao = obra.itens.length > 0 ? obra.itens[0].descricao || '' : '';
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')">
-                <span class="item-code">🏗️</span>
-                <span class="item-desc">${obraFormatada}</span>
-                <span class="item-total">${obra.skusCount} SKUs</span>
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')" style="display: grid; grid-template-columns: 100px 1fr 80px 80px; gap: 8px; padding: 8px 12px;">
+                <span class="item-code">🏗️ ${obraFormatada}</span>
+                <span class="item-desc">${obra.skusCount} SKUs • ${obra.encarregadosCount} encarregados</span>
+                <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${obra.skusCount}</span>
+                <span style="text-align: right; font-weight: 600; color: #48BB78;">${obra.skusUnico}</span>
             </div>
         `;
     });
+    
+    container.innerHTML = html;
+}
+
+// ============================================
+// LISTA DE ENCARREGADOS
+// ============================================
+
+function renderizarListaEncarregados(encarregadosAgrupados) {
+    const container = document.getElementById('itemList');
+    if (!container) return;
+    
+    if (!encarregadosAgrupados || encarregadosAgrupados.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">📭</div>
+                <p>Nenhum encarregado encontrado</p>
+                <p class="sub">Tente ajustar os filtros</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div style="display: grid; grid-template-columns: 1fr 80px 80px 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+            <span>Encarregado</span>
+            <span style="text-align: right;">Ocorr.</span>
+            <span style="text-align: right;">SKUs Ún.</span>
+            <span style="text-align: right;">Obras</span>
+        </div>
+    `;
+    
+    encarregadosAgrupados.forEach(enc => {
+        const isActive = itemSelecionado && itemSelecionado.tipo === 'encarregado' && itemSelecionado.nome === enc.nome;
+        html += `
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarEncarregado('${enc.nome}')" style="display: grid; grid-template-columns: 1fr 80px 80px 80px; gap: 8px; padding: 8px 12px;">
+                <span class="item-code">👤 ${enc.nome}</span>
+                <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${enc.skusCount}</span>
+                <span style="text-align: right; font-weight: 600; color: #48BB78;">${enc.skusUnico}</span>
+                <span style="text-align: right; font-weight: 600; color: #4299E1;">${enc.obras.length}</span>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// ============================================
+// SELECIONAR ENCARREGADO
+// ============================================
+
+function selecionarEncarregado(nome) {
+    console.log(`🔍 Selecionando encarregado: ${nome}`);
+    const encarregadosAgrupados = agruparPorEncarregado(dadosFiltrados);
+    const enc = encarregadosAgrupados.find(e => e.nome === nome);
+    
+    if (enc) {
+        itemSelecionado = { nome: enc.nome, tipo: 'encarregado' };
+        renderizarDetalhesEncarregado(enc);
+        renderizarListaEncarregados(encarregadosAgrupados);
+    }
+}
+
+// ============================================
+// DETALHES DO ENCARREGADO
+// ============================================
+
+function renderizarDetalhesEncarregado(enc) {
+    const container = document.getElementById('itemDetails');
+    if (!container) return;
+    
+    const aplicacaoCount = enc.aplicacaoCount || { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 };
+    
+    let html = `
+        <div class="detail-title">👤 ${enc.nome}</div>
+        <div class="detail-row">
+            <span class="label">Ocorrências de SKUs:</span>
+            <span class="value">${enc.skusCount}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">SKUs Únicos:</span>
+            <span class="value">${enc.skusUnico}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Obras:</span>
+            <span class="value">${enc.obras.length}</span>
+        </div>
+        <div class="detail-status-count">
+            <span class="status-item"><span class="count status-aplicado">${aplicacaoCount.SIM}</span> ✅ Aplicado</span>
+            <span class="status-item"><span class="count status-nao-aplicado">${aplicacaoCount.NAO}</span> ❌ Não Aplicado</span>
+            <span class="status-item"><span class="count status-parcial">${aplicacaoCount.PARCIAL}</span> 🔄 Parcial</span>
+            <span class="status-item"><span class="count status-pendente">${aplicacaoCount.PENDENTE}</span> ⏳ Pendente</span>
+        </div>
+        <div class="detail-section-title">🏗️ Obras:</div>
+        <div class="item-detail-obras">
+    `;
+    
+    // Agrupa itens por obra
+    const obrasMap = {};
+    enc.itens.forEach(item => {
+        const obra = item.obra || 'SEM OBRA';
+        if (!obrasMap[obra]) {
+            obrasMap[obra] = {
+                obra: obra,
+                itens: [],
+                skusCount: 0
+            };
+        }
+        obrasMap[obra].itens.push(item);
+        obrasMap[obra].skusCount += 1;
+    });
+    
+    Object.values(obrasMap).forEach(obra => {
+        const obraFormatada = formatarObraParaExibicao(obra.obra);
+        html += `
+            <div class="obra-row">
+                <span>🏗️ ${obraFormatada}</span>
+                <span>${obra.skusCount} SKUs</span>
+            </div>
+        `;
+    });
+    
+    html += `</div>`;
+    
+    // Lista de materiais
+    html += `<div class="detail-section-title">📦 Materiais:</div>
+    <div class="item-detail-obras">`;
+    
+    const materiaisMap = {};
+    enc.itens.forEach(item => {
+        const codigo = item.codigo || 'SEM_CODIGO';
+        if (!materiaisMap[codigo]) {
+            materiaisMap[codigo] = {
+                codigo: codigo,
+                descricao: item.descricao || 'Sem descrição',
+                ocorrencias: 0,
+                aplicado: item.aplicado || 'PENDENTE'
+            };
+        }
+        materiaisMap[codigo].ocorrencias += 1;
+    });
+    
+    Object.values(materiaisMap).forEach(item => {
+        const badge = getAplicacaoBadge(item.aplicado);
+        html += `
+            <div class="obra-row">
+                <span><strong>${item.codigo}</strong> - ${item.descricao}</span>
+                <span>${item.ocorrencias}x ${badge}</span>
+            </div>
+        `;
+    });
+    
+    html += `</div>`;
     
     container.innerHTML = html;
 }
@@ -589,8 +904,8 @@ function renderizarDetalhesObra(obra) {
             <span class="value">${obra.skusUnico}</span>
         </div>
         <div class="detail-row">
-            <span class="label">Total de Itens:</span>
-            <span class="value">${obra.totalItens.toFixed(2)}</span>
+            <span class="label">Encarregados:</span>
+            <span class="value">${obra.encarregadosCount}</span>
         </div>
         <div class="detail-section-title">📅 Datas de Programação:</div>
         <div class="item-detail-obras">
@@ -618,11 +933,12 @@ function renderizarDetalhesObra(obra) {
                 descricao: item.descricao || 'Sem descrição',
                 quantidade: 0,
                 aplicado: item.aplicado || 'PENDENTE',
-                ocorrencias: 0
+                ocorrencias: 0,
+                encarregado: item.encarregado_obra || 'NÃO INFORMADO'
             };
         }
         itensPorCodigo[codigo].quantidade += parseFloat(item.quantidade) || 0;
-        itensPorCodigo[codigo].ocorrencias++;
+        itensPorCodigo[codigo].ocorrencias += 1;
     });
     
     Object.values(itensPorCodigo).forEach(item => {
@@ -630,7 +946,7 @@ function renderizarDetalhesObra(obra) {
         const badge = getAplicacaoBadge(item.aplicado);
         html += `
             <div class="obra-row">
-                <span><strong>${item.codigo}</strong> - ${item.descricao} (${item.ocorrencias}x)</span>
+                <span><strong>${item.codigo}</strong> - ${item.descricao} (${item.ocorrencias}x) 👤 ${item.encarregado}</span>
                 <span>${qtdFormatada} ${badge}</span>
             </div>
         `;
@@ -680,14 +996,14 @@ function renderizarDetalhes(item) {
         const key = i.aplicado === 'SIM' ? 'SIM' : 
                    i.aplicado === 'NÃO' ? 'NAO' : 
                    i.aplicado === 'PARCIAL' ? 'PARCIAL' : 'PENDENTE';
-        aplicacaoMap[key] += i.quantidade;
+        aplicacaoMap[key] += 1; // COUNT, não soma
     });
     
     let html = `
         <div class="detail-title">🔧 ${item.codigo} - ${item.descricao}</div>
         <div class="detail-row">
-            <span class="label">Total Aditivado:</span>
-            <span class="value">${Number.isInteger(item.total) ? item.total : item.total.toFixed(2)} ${item.unidade}</span>
+            <span class="label">Ocorrências:</span>
+            <span class="value">${item.total}</span>
         </div>
         <div class="detail-row">
             <span class="label">Obras:</span>
@@ -697,11 +1013,15 @@ function renderizarDetalhes(item) {
             <span class="label">Saídas:</span>
             <span class="value">${item.saidas.length}</span>
         </div>
+        <div class="detail-row">
+            <span class="label">Encarregados:</span>
+            <span class="value">${item.encarregadosSet ? item.encarregadosSet.size : 0}</span>
+        </div>
         <div class="detail-status-count">
-            <span class="status-item"><span class="count status-aplicado">${aplicacaoMap.SIM.toFixed(1)}</span> ✅ Aplicado</span>
-            <span class="status-item"><span class="count status-nao-aplicado">${aplicacaoMap.NAO.toFixed(1)}</span> ❌ Não Aplicado</span>
-            <span class="status-item"><span class="count status-parcial">${aplicacaoMap.PARCIAL.toFixed(1)}</span> 🔄 Parcial</span>
-            <span class="status-item"><span class="count status-pendente">${aplicacaoMap.PENDENTE.toFixed(1)}</span> ⏳ Pendente</span>
+            <span class="status-item"><span class="count status-aplicado">${aplicacaoMap.SIM}</span> ✅ Aplicado</span>
+            <span class="status-item"><span class="count status-nao-aplicado">${aplicacaoMap.NAO}</span> ❌ Não Aplicado</span>
+            <span class="status-item"><span class="count status-parcial">${aplicacaoMap.PARCIAL}</span> 🔄 Parcial</span>
+            <span class="status-item"><span class="count status-pendente">${aplicacaoMap.PENDENTE}</span> ⏳ Pendente</span>
         </div>
     `;
     
@@ -710,12 +1030,11 @@ function renderizarDetalhes(item) {
         <div class="item-detail-obras">`;
         item.obras.forEach(o => {
             const badge = getAplicacaoBadge(o.aplicado);
-            const qtdFormatada = Number.isInteger(o.quantidade) ? o.quantidade : o.quantidade.toFixed(2);
             const obraFormatada = formatarObraParaExibicao(o.obra);
             html += `
                 <div class="obra-row">
                     <span>${obraFormatada}</span>
-                    <span><span class="qtd">${qtdFormatada}</span> ${badge}</span>
+                    <span>${badge}</span>
                 </div>
             `;
         });
@@ -727,12 +1046,11 @@ function renderizarDetalhes(item) {
         <div class="item-detail-obras">`;
         item.saidas.forEach(o => {
             const badge = getAplicacaoBadge(o.aplicado);
-            const qtdFormatada = Number.isInteger(o.quantidade) ? o.quantidade : o.quantidade.toFixed(2);
             const obraFormatada = formatarObraParaExibicao(o.obra);
             html += `
                 <div class="obra-row">
                     <span>${obraFormatada}</span>
-                    <span><span class="qtd">${qtdFormatada}</span> ${badge}</span>
+                    <span>${badge}</span>
                 </div>
             `;
         });
@@ -759,7 +1077,7 @@ function getAplicacaoBadge(status) {
 function renderizarGraficos(itensAgrupados, aditivos) {
     console.log('📊 Renderizando gráficos...');
     
-    // Gráfico 1: Distribuição por Status de Aplicação
+    // Gráfico 1: Distribuição por Status de Aplicação (COUNT)
     const aplicacaoCount = { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 };
     itensAgrupados.forEach(item => {
         Object.keys(aplicacaoCount).forEach(key => {
@@ -789,14 +1107,13 @@ function renderizarGraficos(itensAgrupados, aditivos) {
         const value = aplicacaoCount[key];
         const percentual = maxValue > 0 ? (value / maxValue) * 100 : 0;
         const colorClass = classes[key];
-        const valueFormat = Number.isInteger(value) ? value : value.toFixed(1);
         
         html += `
             <div class="chart-bar-indicator">
                 <span class="label">${labels[key]}</span>
                 <div class="bar-track">
                     <div class="bar-fill ${colorClass}" style="width: ${percentual}%;">
-                        <span class="value">${valueFormat}</span>
+                        <span class="value">${value}</span>
                     </div>
                 </div>
                 <span class="percent">${percentual.toFixed(0)}%</span>
@@ -809,7 +1126,7 @@ function renderizarGraficos(itensAgrupados, aditivos) {
             <span class="label" style="font-weight: 700;">Total</span>
             <div class="bar-track">
                 <div class="bar-fill bar-total" style="width: 100%;">
-                    <span class="value">${Number.isInteger(totalGeral) ? totalGeral : totalGeral.toFixed(1)}</span>
+                    <span class="value">${totalGeral}</span>
                 </div>
             </div>
             <span class="percent" style="font-weight: 700;">100%</span>
@@ -823,7 +1140,7 @@ function renderizarGraficos(itensAgrupados, aditivos) {
 }
 
 // ============================================
-// ENCARREGADOS
+// ENCARREGADOS (Gráfico resumido)
 // ============================================
 
 function renderizarEncarregados(aditivos) {
@@ -839,19 +1156,20 @@ function renderizarEncarregados(aditivos) {
                 encarregados[nome] = { total: 0, aplicado: 0, naoAplicado: 0, parcial: 0, pendente: 0 };
             }
             
-            const qtd = parseFloat(item.quantidade) || 0;
-            encarregados[nome].total += qtd;
+            // COUNT, não soma
+            encarregados[nome].total += 1;
             
             const status = item.aplicado || 'PENDENTE';
-            if (status === 'SIM') encarregados[nome].aplicado += qtd;
-            else if (status === 'NÃO') encarregados[nome].naoAplicado += qtd;
-            else if (status === 'PARCIAL') encarregados[nome].parcial += qtd;
-            else encarregados[nome].pendente += qtd;
+            if (status === 'SIM') encarregados[nome].aplicado += 1;
+            else if (status === 'NÃO') encarregados[nome].naoAplicado += 1;
+            else if (status === 'PARCIAL') encarregados[nome].parcial += 1;
+            else encarregados[nome].pendente += 1;
         });
     });
     
     const sorted = Object.entries(encarregados)
-        .sort((a, b) => b[1].total - a[1].total);
+        .sort((a, b) => b[1].total - a[1].total)
+        .slice(0, 15);
     
     if (sorted.length === 0) {
         container.innerHTML = `
@@ -863,18 +1181,24 @@ function renderizarEncarregados(aditivos) {
         return;
     }
     
-    let html = '';
+    let html = `
+        <div style="display: grid; grid-template-columns: 1fr 40px 40px 40px 40px; gap: 4px; padding: 6px 10px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 11px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+            <span>Encarregado</span>
+            <span style="text-align: right;">Total</span>
+            <span style="text-align: right; color: #48BB78;">✅</span>
+            <span style="text-align: right; color: #FC8181;">❌</span>
+            <span style="text-align: right; color: #ED8936;">🔄</span>
+        </div>
+    `;
+    
     sorted.forEach(([nome, stats]) => {
         html += `
-            <div class="encarregado-item">
+            <div class="encarregado-item" style="display: grid; grid-template-columns: 1fr 40px 40px 40px 40px; gap: 4px; padding: 6px 10px; border-bottom: 1px solid #F7FAFC; cursor: pointer;" onclick="selecionarEncarregado('${nome}')">
                 <span class="name">${nome}</span>
-                <div class="stats">
-                    <span class="total">${stats.total.toFixed(1)}</span>
-                    <span class="aplicado">✅ ${stats.aplicado.toFixed(1)}</span>
-                    <span class="nao-aplicado">❌ ${stats.naoAplicado.toFixed(1)}</span>
-                    <span class="parcial">🔄 ${stats.parcial.toFixed(1)}</span>
-                    <span class="pendente">⏳ ${stats.pendente.toFixed(1)}</span>
-                </div>
+                <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${stats.total}</span>
+                <span style="text-align: right; font-weight: 600; color: #48BB78;">${stats.aplicado}</span>
+                <span style="text-align: right; font-weight: 600; color: #FC8181;">${stats.naoAplicado}</span>
+                <span style="text-align: right; font-weight: 600; color: #ED8936;">${stats.parcial}</span>
             </div>
         `;
     });
@@ -899,14 +1223,13 @@ function renderizarTopSkus(itensAgrupados) {
     let html = '';
     topSkus.forEach((item, index) => {
         const percentual = (item.total / maxTotal) * 100;
-        const qtdFormatada = Number.isInteger(item.total) ? item.total : item.total.toFixed(1);
         html += `
             <div class="top-sku-item">
                 <span class="rank">#${index + 1}</span>
                 <span class="code">${item.codigo}</span>
                 <div class="bar-track">
                     <div class="bar-fill" style="width: ${percentual}%;">
-                        <span class="value">${qtdFormatada}</span>
+                        <span class="value">${item.total}</span>
                     </div>
                 </div>
             </div>
@@ -928,6 +1251,7 @@ window.aplicarFiltros = aplicarFiltros;
 window.limparFiltros = limparFiltros;
 window.selecionarItem = selecionarItem;
 window.selecionarObra = selecionarObra;
+window.selecionarEncarregado = selecionarEncarregado;
 window.trocarAba = trocarAba;
 window.renderizarDashboard = renderizarDashboard;
 
