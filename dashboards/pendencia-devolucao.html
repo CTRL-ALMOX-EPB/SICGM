@@ -50,12 +50,8 @@
                 <input type="date" id="filterDataFim">
             </div>
             <div class="filter-group">
-                <label>🏗️ Obra:</label>
-                <input type="text" id="filterObra" placeholder="Número da obra..." style="width: 140px;">
-            </div>
-            <div class="filter-group">
-                <label>👤 Encarregado:</label>
-                <input type="text" id="filterEncarregado" placeholder="Nome do encarregado..." style="width: 160px;">
+                <label>🔍 Buscar:</label>
+                <input type="text" id="filterBusca" placeholder="Obra ou encarregado..." style="width: 200px;">
             </div>
             <button class="btn-filter primary" onclick="aplicarFiltros()">🔍 Filtrar</button>
             <button class="btn-filter secondary" onclick="limparFiltros()">🧹 Limpar</button>
@@ -69,14 +65,24 @@
             </div>
         </div>
 
+        <!-- Abas -->
+        <div class="abas-container" id="abasContainer">
+            <button class="btn-aba active" data-aba="obras" onclick="trocarAba('obras')">
+                🏗️ Obras
+            </button>
+            <button class="btn-aba" data-aba="encarregados" onclick="trocarAba('encarregados')">
+                👤 Encarregados
+            </button>
+        </div>
+
         <!-- Conteúdo Principal -->
         <div class="dashboard-main">
             <div class="dashboard-card">
-                <h3 id="listTitle">📋 Lista de Pendências</h3>
+                <h3 id="listTitle">🏗️ Lista de Obras</h3>
                 <div id="itemList" class="item-group-list">
                     <div class="loading-dashboard">
                         <div class="spinner"></div>
-                        <p>Carregando pendências...</p>
+                        <p>Carregando obras...</p>
                     </div>
                 </div>
             </div>
@@ -86,7 +92,7 @@
                 <div id="itemDetails" class="item-details-panel">
                     <div class="empty-state-dashboard">
                         <div class="icon">👆</div>
-                        <p>Selecione uma pendência para ver os detalhes</p>
+                        <p>Selecione uma obra ou encarregado para ver os detalhes</p>
                     </div>
                 </div>
             </div>
@@ -95,7 +101,7 @@
         <!-- Gráficos -->
         <div class="dashboard-charts">
             <div class="dashboard-card">
-                <h3>👤 Pendências por Encarregado</h3>
+                <h3>📊 Distribuição de Pendências</h3>
                 <div id="statusChart" class="chart-container">
                     <div class="loading-dashboard" style="min-height: 100px;">
                         <div class="spinner"></div>
@@ -104,7 +110,7 @@
             </div>
 
             <div class="dashboard-card">
-                <h3>🏗️ Top Obras com Pendência</h3>
+                <h3>🏆 Top Obras com Pendências</h3>
                 <div id="topSkusChart" class="chart-container">
                     <div class="loading-dashboard" style="min-height: 100px;">
                         <div class="spinner"></div>

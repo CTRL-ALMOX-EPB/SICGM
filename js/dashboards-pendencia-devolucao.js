@@ -6,9 +6,8 @@ console.log('🚀 dashboards-pendencia-devolucao.js carregado!');
 
 let dadosCompletos = [];
 let dadosFiltrados = [];
-let dadosExibidos = [];
 let itemSelecionado = null;
-let filtroAtivo = null;
+let abaAtual = 'obras';
 
 // ============================================
 // FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO
@@ -97,8 +96,7 @@ function aplicarFiltros() {
     console.log('🔄 Aplicando filtros...');
     const dataInicio = document.getElementById('filterDataInicio')?.value || '';
     const dataFim = document.getElementById('filterDataFim')?.value || '';
-    const buscaObra = document.getElementById('filterObra')?.value || '';
-    const buscaEncarregado = document.getElementById('filterEncarregado')?.value?.toLowerCase() || '';
+    const buscaTexto = document.getElementById('filterBusca')?.value?.toLowerCase() || '';
     
     let filtrados = [...dadosCompletos];
     
@@ -112,25 +110,16 @@ function aplicarFiltros() {
         console.log(`📅 Após filtro de período: ${filtrados.length} pendências`);
     }
     
-    if (buscaObra) {
+    if (buscaTexto) {
         filtrados = filtrados.filter(item => {
             const obra = (item.obra || '').toLowerCase();
-            return obra.includes(buscaObra.toLowerCase());
-        });
-        console.log(`🏗️ Após filtro de obra: ${filtrados.length} pendências`);
-    }
-    
-    if (buscaEncarregado) {
-        filtrados = filtrados.filter(item => {
             const encarregado = (item.encarregado || '').toLowerCase();
-            return encarregado.includes(buscaEncarregado);
+            return obra.includes(buscaTexto) || encarregado.includes(buscaTexto);
         });
-        console.log(`👤 Após filtro de encarregado: ${filtrados.length} pendências`);
+        console.log(`🔍 Após filtro de busca: ${filtrados.length} pendências`);
     }
     
     dadosFiltrados = filtrados;
-    dadosExibidos = filtrados;
-    filtroAtivo = null;
     
     const totalRegistros = document.getElementById('totalRegistros');
     if (totalRegistros) {
@@ -144,39 +133,32 @@ function limparFiltros() {
     console.log('🧹 Limpando filtros...');
     document.getElementById('filterDataInicio').value = '';
     document.getElementById('filterDataFim').value = '';
-    document.getElementById('filterObra').value = '';
-    document.getElementById('filterEncarregado').value = '';
-    filtroAtivo = null;
+    document.getElementById('filterBusca').value = '';
     aplicarFiltros();
 }
 
 // ============================================
-// APLICAR FILTRO DO CARD
+// TROCAR ABA
 // ============================================
 
-function aplicarFiltroCard(tipo, valor) {
-    console.log(`🔍 Aplicando filtro do card: ${tipo} = ${valor}`);
+function trocarAba(aba) {
+    abaAtual = aba;
+    itemSelecionado = null;
     
-    if (filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor) {
-        filtroAtivo = null;
-        dadosExibidos = [...dadosFiltrados];
-    } else {
-        filtroAtivo = { tipo, valor };
-        
-        if (tipo === 'encarregado') {
-            dadosExibidos = dadosFiltrados.filter(p => p.encarregado === valor);
-        } else if (tipo === 'total') {
-            dadosExibidos = [...dadosFiltrados];
-        }
+    document.querySelectorAll('.btn-aba').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.aba === aba);
+    });
+    
+    const listTitle = document.getElementById('listTitle');
+    if (listTitle) {
+        const titles = {
+            'obras': '🏗️ Lista de Obras',
+            'encarregados': '👤 Lista de Encarregados'
+        };
+        listTitle.textContent = titles[aba] || '🏗️ Lista de Obras';
     }
     
-    const totalRegistros = document.getElementById('totalRegistros');
-    if (totalRegistros) {
-        const textoFiltro = filtroAtivo ? ` (filtrado: ${filtroAtivo.tipo})` : '';
-        totalRegistros.textContent = `${dadosExibidos.length} pendências${textoFiltro}`;
-    }
-    
-    renderizarDashboard(dadosExibidos);
+    renderizarDashboard(dadosFiltrados);
 }
 
 // ============================================
@@ -196,20 +178,30 @@ function renderizarDashboard(pendencias) {
         document.getElementById('itemDetails').innerHTML = `
             <div class="empty-state-dashboard">
                 <div class="icon">👆</div>
-                <p>Selecione um item para ver os detalhes</p>
+                <p>Selecione uma obra ou encarregado para ver os detalhes</p>
             </div>
         `;
         return;
     }
     
     renderizarKPIs(pendencias);
-    renderizarListaPendencias(pendencias);
     renderizarGraficos(pendencias);
     
-    if (itemSelecionado) {
-        const encontrado = pendencias.find(p => p.id === itemSelecionado.id);
-        if (encontrado) {
-            renderizarDetalhes(encontrado);
+    if (abaAtual === 'obras') {
+        renderizarListaObras(pendencias);
+        if (itemSelecionado && itemSelecionado.tipo === 'obra') {
+            const encontrado = pendencias.filter(p => p.obra === itemSelecionado.obra);
+            if (encontrado.length > 0) {
+                renderizarDetalhesObra(encontrado);
+            }
+        }
+    } else {
+        renderizarListaEncarregados(pendencias);
+        if (itemSelecionado && itemSelecionado.tipo === 'encarregado') {
+            const encontrado = pendencias.filter(p => p.encarregado === itemSelecionado.nome);
+            if (encontrado.length > 0) {
+                renderizarDetalhesEncarregado(encontrado);
+            }
         }
     }
 }
@@ -226,26 +218,8 @@ function renderizarKPIs(pendencias) {
     const totalObras = new Set(pendencias.map(p => p.obra)).size;
     const totalEncarregados = new Set(pendencias.map(p => p.encarregado).filter(e => e)).size;
     
-    // Conta pendências por encarregado
-    const encarregadosCount = {};
-    pendencias.forEach(p => {
-        const nome = p.encarregado || 'NÃO INFORMADO';
-        if (!encarregadosCount[nome]) encarregadosCount[nome] = 0;
-        encarregadosCount[nome]++;
-    });
-    
-    const sortedEncarregados = Object.entries(encarregadosCount)
-        .sort((a, b) => b[1] - a[1]);
-    
-    const topEncarregado = sortedEncarregados.length > 0 ? sortedEncarregados[0][0] : 'Nenhum';
-    const topCount = sortedEncarregados.length > 0 ? sortedEncarregados[0][1] : 0;
-    
-    const isFilterActive = (tipo, valor) => {
-        return filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor;
-    };
-    
     container.innerHTML = `
-        <div class="kpi-card status-total ${isFilterActive('total', 'TOTAL') ? 'active' : ''}" onclick="aplicarFiltroCard('total', 'TOTAL')" style="cursor: pointer; ${isFilterActive('total', 'TOTAL') ? 'border: 2px solid #4299E1; background: #EBF8FF;' : ''}">
+        <div class="kpi-card status-total">
             <div class="kpi-icon">📦</div>
             <div class="kpi-value">${total}</div>
             <div class="kpi-label">Total de Pendências</div>
@@ -255,62 +229,58 @@ function renderizarKPIs(pendencias) {
             <div class="kpi-value">${totalObras}</div>
             <div class="kpi-label">Obras com Pendência</div>
         </div>
-        <div class="kpi-card ${isFilterActive('encarregado', topEncarregado) ? 'active' : ''}" onclick="aplicarFiltroCard('encarregado', '${topEncarregado}')" style="cursor: pointer; ${isFilterActive('encarregado', topEncarregado) ? 'border: 2px solid #ED8936; background: #FFFAF0;' : ''}">
-            <div class="kpi-icon">👤</div>
-            <div class="kpi-value">${topCount}</div>
-            <div class="kpi-label">${topEncarregado}</div>
-        </div>
         <div class="kpi-card">
-            <div class="kpi-icon">📋</div>
+            <div class="kpi-icon">👤</div>
             <div class="kpi-value">${totalEncarregados}</div>
             <div class="kpi-label">Encarregados</div>
+        </div>
+        <div class="kpi-card status-pendente">
+            <div class="kpi-icon">⏳</div>
+            <div class="kpi-value">${total}</div>
+            <div class="kpi-label">Pendentes</div>
         </div>
     `;
 }
 
 // ============================================
-// LISTA DE PENDÊNCIAS
+// LISTA DE OBRAS
 // ============================================
 
-function renderizarListaPendencias(pendencias) {
+function renderizarListaObras(pendencias) {
     const container = document.getElementById('itemList');
     if (!container) return;
     
-    if (!pendencias || pendencias.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state-dashboard">
-                <div class="icon">📭</div>
-                <p>Nenhuma pendência encontrada</p>
-                <p class="sub">Tente ajustar os filtros</p>
-            </div>
-        `;
-        return;
-    }
+    // Agrupa pendências por obra
+    const obrasMap = {};
+    pendencias.forEach(p => {
+        const obra = p.obra || 'SEM OBRA';
+        if (!obrasMap[obra]) {
+            obrasMap[obra] = {
+                obra: obra,
+                count: 0,
+                pendencias: []
+            };
+        }
+        obrasMap[obra].count++;
+        obrasMap[obra].pendencias.push(p);
+    });
     
-    // Ordena pendências por obra
-    const pendenciasOrdenadas = [...pendencias].sort((a, b) => (a.obra || '').localeCompare(b.obra || ''));
+    const obrasOrdenadas = Object.values(obrasMap).sort((a, b) => a.obra.localeCompare(b.obra));
     
     let html = `
-        <div style="display: grid; grid-template-columns: 100px 1fr 100px 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
-            <span>Encarregado</span>
-            <span style="text-align: right;">Data</span>
-            <span style="text-align: right;">Status</span>
+            <span style="text-align: right;">Pend.</span>
         </div>
     `;
     
-    pendenciasOrdenadas.forEach(pendencia => {
-        const isActive = itemSelecionado && itemSelecionado.id === pendencia.id;
-        const obraFormatada = formatarObraParaExibicao(pendencia.obra);
-        const encarregado = pendencia.encarregado || 'NÃO INFORMADO';
-        const dataFormatada = formatarData(pendencia.data_programacao);
-        
+    obrasOrdenadas.forEach(item => {
+        const isActive = itemSelecionado && itemSelecionado.tipo === 'obra' && itemSelecionado.obra === item.obra;
+        const obraFormatada = formatarObraParaExibicao(item.obra);
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarPendencia(${pendencia.id})" style="display: grid; grid-template-columns: 100px 1fr 100px 80px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${item.obra}')" style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 10px 12px;">
                 <span class="item-code">🏗️ ${obraFormatada}</span>
-                <span class="item-desc">👤 ${encarregado}</span>
-                <span style="text-align: right; font-size: 12px; color: #718096;">${dataFormatada}</span>
-                <span style="text-align: right;"><span class="badge-baixa nao-baixado">⏳ Pendente</span></span>
+                <span class="item-count">${item.count}</span>
             </div>
         `;
     });
@@ -319,78 +289,228 @@ function renderizarListaPendencias(pendencias) {
 }
 
 // ============================================
-// SELECIONAR PENDÊNCIA
+// LISTA DE ENCARREGADOS
 // ============================================
 
-function selecionarPendencia(id) {
-    console.log(`🔍 Selecionando pendência ID: ${id}`);
-    const pendencia = dadosExibidos.find(p => p.id === id);
+function renderizarListaEncarregados(pendencias) {
+    const container = document.getElementById('itemList');
+    if (!container) return;
     
-    if (pendencia) {
-        itemSelecionado = { id: pendencia.id };
-        renderizarDetalhes(pendencia);
-        renderizarListaPendencias(dadosExibidos);
+    // Agrupa pendências por encarregado
+    const encarregadosMap = {};
+    pendencias.forEach(p => {
+        const nome = p.encarregado || 'NÃO INFORMADO';
+        if (!encarregadosMap[nome]) {
+            encarregadosMap[nome] = {
+                nome: nome,
+                count: 0,
+                pendencias: []
+            };
+        }
+        encarregadosMap[nome].count++;
+        encarregadosMap[nome].pendencias.push(p);
+    });
+    
+    const encarregadosOrdenados = Object.values(encarregadosMap)
+        .sort((a, b) => b.count - a.count);
+    
+    let html = `
+        <div style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+            <span>Encarregado</span>
+            <span style="text-align: right;">Pend.</span>
+        </div>
+    `;
+    
+    encarregadosOrdenados.forEach(item => {
+        const isActive = itemSelecionado && itemSelecionado.tipo === 'encarregado' && itemSelecionado.nome === item.nome;
+        html += `
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarEncarregado('${item.nome}')" style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 10px 12px;">
+                <span class="item-code">👤 ${item.nome}</span>
+                <span class="item-count">${item.count}</span>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// ============================================
+// SELECIONAR OBRA
+// ============================================
+
+function selecionarObra(obra) {
+    console.log(`🔍 Selecionando obra: ${obra}`);
+    const pendencias = dadosFiltrados.filter(p => p.obra === obra);
+    if (pendencias.length > 0) {
+        itemSelecionado = { obra: obra, tipo: 'obra' };
+        renderizarDetalhesObra(pendencias);
+        renderizarListaObras(dadosFiltrados);
     }
 }
 
 // ============================================
-// DETALHES DA PENDÊNCIA
+// SELECIONAR ENCARREGADO
 // ============================================
 
-function renderizarDetalhes(pendencia) {
+function selecionarEncarregado(nome) {
+    console.log(`🔍 Selecionando encarregado: ${nome}`);
+    const pendencias = dadosFiltrados.filter(p => p.encarregado === nome);
+    if (pendencias.length > 0) {
+        itemSelecionado = { nome: nome, tipo: 'encarregado' };
+        renderizarDetalhesEncarregado(pendencias);
+        renderizarListaEncarregados(dadosFiltrados);
+    }
+}
+
+// ============================================
+// DETALHES DA OBRA (com todas as saídas)
+// ============================================
+
+function renderizarDetalhesObra(pendencias) {
     const container = document.getElementById('itemDetails');
     if (!container) return;
     
-    const obraFormatada = formatarObraParaExibicao(pendencia.obra);
+    const obraFormatada = formatarObraParaExibicao(pendencias[0].obra);
+    const total = pendencias.length;
+    
+    // Agrupa por data de programação (saídas)
+    const saidasMap = {};
+    pendencias.forEach(p => {
+        const data = p.data_programacao || 'SEM DATA';
+        if (!saidasMap[data]) {
+            saidasMap[data] = {
+                data: data,
+                pendencias: []
+            };
+        }
+        saidasMap[data].pendencias.push(p);
+    });
+    
+    const saidasOrdenadas = Object.values(saidasMap)
+        .sort((a, b) => a.data.localeCompare(b.data));
     
     let html = `
-        <div class="detail-title">📦 Pendência - ${obraFormatada}</div>
+        <div class="detail-title">🏗️ ${obraFormatada}</div>
         <div class="detail-row">
-            <span class="label">Obra:</span>
-            <span class="value">🏗️ ${obraFormatada}</span>
+            <span class="label">Total de Pendências:</span>
+            <span class="value" style="font-weight: 700; color: #ED8936;">${total}</span>
         </div>
         <div class="detail-row">
-            <span class="label">Encarregado:</span>
-            <span class="value">👤 ${pendencia.encarregado || 'Não informado'}</span>
+            <span class="label">Saídas:</span>
+            <span class="value">${saidasOrdenadas.length}</span>
         </div>
-        <div class="detail-row">
-            <span class="label">Data de Programação:</span>
-            <span class="value">📅 ${formatarData(pendencia.data_programacao)}</span>
-        </div>
-        <div class="detail-row">
-            <span class="label">Data de Descarga:</span>
-            <span class="value">📦 ${formatarData(pendencia.data_descarga)}</span>
-        </div>
-        <div class="detail-row">
-            <span class="label">Data Devolução Física:</span>
-            <span class="value">📦 ${formatarData(pendencia.data_devolucao_fisica)}</span>
-        </div>
-        <div class="detail-row">
-            <span class="label">Motivo da Pendência:</span>
-            <span class="value">${pendencia.motivo_pendencia || 'Não informado'}</span>
-        </div>
-        <div class="detail-row">
-            <span class="label">Solução:</span>
-            <span class="value">${pendencia.solucao_pendencia || 'Não informada'}</span>
-        </div>
-        <div class="detail-row">
-            <span class="label">Pendência por:</span>
-            <span class="value">${pendencia.pendencia_por || 'Não informado'}</span>
-        </div>
-        <div class="detail-row">
-            <span class="label">Status:</span>
-            <span class="value" style="color: #ED8936; font-weight: 600;">⏳ Pendente</span>
-        </div>
+        <div class="detail-section-title">📅 Saídas com Pendência:</div>
+        <div class="detail-list">
     `;
     
-    if (pendencia.observacao) {
+    saidasOrdenadas.forEach(saida => {
+        const dataFormatada = formatarData(saida.data);
+        const pendenteCount = saida.pendencias.length;
+        const encarregado = saida.pendencias[0].encarregado || 'N/I';
         html += `
-            <div class="detail-section-title">📝 Observação</div>
-            <div class="detail-row" style="grid-column: 1 / -1;">
-                <span class="value" style="font-size: 13px; color: #4A5568;">${pendencia.observacao}</span>
+            <div class="list-row">
+                <span>📅 ${dataFormatada} 👤 ${encarregado}</span>
+                <span style="font-weight: 600; color: #ED8936;">${pendenteCount} pendências</span>
             </div>
         `;
-    }
+    });
+    
+    html += `</div>`;
+    
+    // Detalhes das pendências
+    html += `<div class="detail-section-title">📋 Detalhes das Pendências:</div>
+    <div class="detail-list">`;
+    
+    pendencias.forEach(p => {
+        const dataFormatada = formatarData(p.data_programacao);
+        const motivo = p.motivo_pendencia || 'Sem motivo';
+        html += `
+            <div class="list-row">
+                <span>📅 ${dataFormatada} - ${motivo}</span>
+                <span style="font-size: 12px; color: #718096;">${p.solucao_pendencia || 'Sem solução'}</span>
+            </div>
+        `;
+    });
+    
+    html += `</div>`;
+    
+    container.innerHTML = html;
+}
+
+// ============================================
+// DETALHES DO ENCARREGADO (com todas as obras e saídas)
+// ============================================
+
+function renderizarDetalhesEncarregado(pendencias) {
+    const container = document.getElementById('itemDetails');
+    if (!container) return;
+    
+    const nome = pendencias[0].encarregado || 'NÃO INFORMADO';
+    const total = pendencias.length;
+    
+    // Agrupa por obra
+    const obrasMap = {};
+    pendencias.forEach(p => {
+        const obra = p.obra || 'SEM OBRA';
+        if (!obrasMap[obra]) {
+            obrasMap[obra] = {
+                obra: obra,
+                pendencias: [],
+                saidas: new Set()
+            };
+        }
+        obrasMap[obra].pendencias.push(p);
+        obrasMap[obra].saidas.add(p.data_programacao);
+    });
+    
+    const obrasOrdenadas = Object.values(obrasMap)
+        .sort((a, b) => a.obra.localeCompare(b.obra));
+    
+    let html = `
+        <div class="detail-title">👤 ${nome}</div>
+        <div class="detail-row">
+            <span class="label">Total de Pendências:</span>
+            <span class="value" style="font-weight: 700; color: #ED8936;">${total}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Obras:</span>
+            <span class="value">${obrasOrdenadas.length}</span>
+        </div>
+        <div class="detail-section-title">🏗️ Obras com Pendência:</div>
+        <div class="detail-list">
+    `;
+    
+    obrasOrdenadas.forEach(obra => {
+        const obraFormatada = formatarObraParaExibicao(obra.obra);
+        const count = obra.pendencias.length;
+        const saidasCount = obra.saidas.size;
+        html += `
+            <div class="list-row">
+                <span>🏗️ ${obraFormatada}</span>
+                <span style="font-weight: 600; color: #ED8936;">${count} pend. • ${saidasCount} saídas</span>
+            </div>
+        `;
+    });
+    
+    html += `</div>`;
+    
+    // Detalhes das pendências
+    html += `<div class="detail-section-title">📋 Detalhes das Pendências:</div>
+    <div class="detail-list">`;
+    
+    pendencias.forEach(p => {
+        const obraFormatada = formatarObraParaExibicao(p.obra);
+        const dataFormatada = formatarData(p.data_programacao);
+        const motivo = p.motivo_pendencia || 'Sem motivo';
+        html += `
+            <div class="list-row">
+                <span>🏗️ ${obraFormatada} - 📅 ${dataFormatada}</span>
+                <span style="font-size: 12px; color: #718096;">${motivo}</span>
+            </div>
+        `;
+    });
+    
+    html += `</div>`;
     
     container.innerHTML = html;
 }
@@ -404,7 +524,7 @@ function renderizarGraficos(pendencias) {
     
     const total = pendencias.length || 1;
     
-    // Gráfico 1: Distribuição por Encarregado
+    // Gráfico 1: Distribuição por Encarregado (Top 10)
     const encarregadosCount = {};
     pendencias.forEach(p => {
         const nome = p.encarregado || 'NÃO INFORMADO';
@@ -412,21 +532,21 @@ function renderizarGraficos(pendencias) {
         encarregadosCount[nome]++;
     });
     
-    const sorted = Object.entries(encarregadosCount)
+    const sortedEncarregados = Object.entries(encarregadosCount)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 15);
+        .slice(0, 10);
     
-    const maxCount = sorted.length > 0 ? Math.max(...sorted.map(s => s[1])) : 1;
+    const maxEncarregado = sortedEncarregados.length > 0 ? Math.max(...sortedEncarregados.map(s => s[1])) : 1;
     
     let htmlEncarregado = '';
-    sorted.forEach(([nome, count]) => {
-        const percentual = (count / maxCount) * 100;
+    sortedEncarregados.forEach(([nome, count]) => {
+        const percentual = (count / maxEncarregado) * 100;
         const percentualTotal = (count / total) * 100;
         htmlEncarregado += `
             <div class="chart-bar-indicator" style="margin-bottom: 6px;">
                 <span class="label" style="min-width: 100px; font-size: 11px;">${nome}</span>
                 <div class="bar-track" style="height: 22px;">
-                    <div class="bar-fill" style="width: ${percentual}%; background: linear-gradient(90deg, #ED8936, #C05621);">
+                    <div class="bar-fill bar-encarregados" style="width: ${percentual}%;">
                         <span class="value">${count}</span>
                     </div>
                 </div>
@@ -435,7 +555,7 @@ function renderizarGraficos(pendencias) {
         `;
     });
     
-    if (sorted.length === 0) {
+    if (sortedEncarregados.length === 0) {
         htmlEncarregado = `<div class="empty-state-dashboard"><p>Nenhum encarregado encontrado</p></div>`;
     }
     
@@ -460,11 +580,11 @@ function renderizarGraficos(pendencias) {
         const percentual = (count / maxObras) * 100;
         const obraFormatada = formatarObraParaExibicao(obra);
         htmlObras += `
-            <div class="top-sku-item">
+            <div class="top-item">
                 <span class="rank" style="min-width: 25px;">#</span>
-                <span class="code" style="min-width: 80px; font-size: 10px;">${obraFormatada}</span>
+                <span class="name" style="min-width: 80px; font-size: 10px;">${obraFormatada}</span>
                 <div class="bar-track">
-                    <div class="bar-fill" style="width: ${percentual}%; background: linear-gradient(90deg, #FC8181, #C53030);">
+                    <div class="bar-fill" style="width: ${percentual}%;">
                         <span class="value">${count}</span>
                     </div>
                 </div>
@@ -485,8 +605,9 @@ function renderizarGraficos(pendencias) {
 
 window.aplicarFiltros = aplicarFiltros;
 window.limparFiltros = limparFiltros;
-window.selecionarPendencia = selecionarPendencia;
+window.trocarAba = trocarAba;
+window.selecionarObra = selecionarObra;
+window.selecionarEncarregado = selecionarEncarregado;
 window.renderizarDashboard = renderizarDashboard;
-window.aplicarFiltroCard = aplicarFiltroCard;
 
 console.log('✅ dashboards-pendencia-devolucao.js inicializado!');
