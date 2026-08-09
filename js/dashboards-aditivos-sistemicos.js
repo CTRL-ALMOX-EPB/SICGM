@@ -9,9 +9,11 @@ const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
 
 let dadosCompletos = [];
 let dadosFiltrados = [];
+let dadosExibidos = [];
 let itemSelecionado = null;
 let abaAtual = 'materiais';
 let mesSelecionado = null;
+let filtroAtivo = null;
 let posicaoEstoque = {};
 
 // ============================================
@@ -72,21 +74,6 @@ function buscarValorItem(codigo) {
         return item.valor_unitario;
     }
     return 0;
-}
-
-// ============================================
-// FUNÇÃO: CALCULAR VALOR TOTAL DOS ITENS
-// ============================================
-
-function calcularValorTotal(itens) {
-    let total = 0;
-    itens.forEach(item => {
-        const codigo = item.codigo;
-        const qtd = parseFloat(item.quantidade) || 0;
-        const valorUnitario = buscarValorItem(codigo);
-        total += qtd * valorUnitario;
-    });
-    return total;
 }
 
 // ============================================
@@ -184,7 +171,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('userPerfil').textContent = sessao.perfil || 'GESTÃO';
     
     try {
-        // Carrega a posição de estoque primeiro
         await carregarPosicaoEstoque();
         
         console.log('📡 Iniciando busca de dados...');
@@ -326,6 +312,7 @@ function criarAbas() {
 function trocarAba(aba) {
     abaAtual = aba;
     itemSelecionado = null;
+    filtroAtivo = null;
     
     document.querySelectorAll('.btn-aba').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.aba === aba);
@@ -341,6 +328,40 @@ function trocarAba(aba) {
     }
     
     renderizarDashboard(dadosFiltrados);
+}
+
+// ============================================
+// APLICAR FILTRO DO CARD
+// ============================================
+
+function aplicarFiltroCard(tipo, valor) {
+    console.log(`🔍 Aplicando filtro do card: ${tipo} = ${valor}`);
+    
+    if (filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor) {
+        filtroAtivo = null;
+        dadosExibidos = [...dadosFiltrados];
+    } else {
+        filtroAtivo = { tipo, valor };
+        
+        if (tipo === 'status') {
+            dadosExibidos = dadosFiltrados.filter(aditivo => {
+                const itens = (aditivo.itens || []).filter(item => 
+                    (item.status_aditivo || 'ANALISE') === valor
+                );
+                return itens.length > 0;
+            });
+        } else if (tipo === 'total') {
+            dadosExibidos = [...dadosFiltrados];
+        }
+    }
+    
+    const totalRegistros = document.getElementById('totalRegistros');
+    if (totalRegistros) {
+        const textoFiltro = filtroAtivo ? ` (filtrado: ${filtroAtivo.tipo})` : '';
+        totalRegistros.textContent = `${dadosExibidos.length} aditivos${textoFiltro}`;
+    }
+    
+    renderizarDashboard(dadosExibidos);
 }
 
 // ============================================
@@ -406,6 +427,8 @@ function aplicarFiltros() {
     }
     
     dadosFiltrados = filtrados;
+    dadosExibidos = filtrados;
+    filtroAtivo = null;
     
     const totalRegistros = document.getElementById('totalRegistros');
     if (totalRegistros) {
@@ -423,6 +446,7 @@ function limparFiltros() {
     document.getElementById('filterBusca').value = '';
     document.getElementById('filterObra').value = '';
     mesSelecionado = null;
+    filtroAtivo = null;
     
     document.querySelectorAll('.btn-mes').forEach(btn => {
         btn.classList.remove('active');
@@ -464,6 +488,7 @@ function agruparItensPorCodigo(controles) {
                     saidas: [],
                     itens: [],
                     statusCount: { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 },
+                    valorStatusCount: { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 },
                     obrasSet: new Set(),
                     saidasSet: new Set(),
                     valorUnitario: valorUnitario,
@@ -484,6 +509,7 @@ function agruparItensPorCodigo(controles) {
             
             if (grupos[codigo].statusCount[status] !== undefined) {
                 grupos[codigo].statusCount[status] += 1;
+                grupos[codigo].valorStatusCount[status] += quantidade * valorUnitario;
             }
             
             const itemData = {
@@ -622,7 +648,7 @@ function renderizarDashboard(aditivos) {
 }
 
 // ============================================
-// KPIs - MATERIAIS (COUNT)
+// KPIs - MATERIAIS (COUNT) - INTERATIVOS
 // ============================================
 
 function renderizarKPIsMateriais(itensAgrupados) {
@@ -646,39 +672,42 @@ function renderizarKPIsMateriais(itensAgrupados) {
         });
     });
     
-    // Calcula valor total de todos os itens
     let valorTotal = 0;
     itensAgrupados.forEach(item => {
         valorTotal += item.quantidadeTotal * item.valorUnitario;
     });
     
+    const isFilterActive = (tipo, valor) => {
+        return filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor;
+    };
+    
     container.innerHTML = `
-        <div class="kpi-card status-total">
+        <div class="kpi-card status-total ${isFilterActive('total', 'TOTAL') ? 'active' : ''}" onclick="aplicarFiltroCard('total', 'TOTAL')" style="cursor: pointer; ${isFilterActive('total', 'TOTAL') ? 'border: 2px solid #4299E1; background: #EBF8FF;' : ''}">
             <div class="kpi-icon">📦</div>
             <div class="kpi-value">${totalOcorrencias}</div>
             <div class="kpi-label">Ocorrências de SKUs</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card" style="cursor: default;">
             <div class="kpi-icon">📋</div>
             <div class="kpi-value">${totalSkusUnicos}</div>
             <div class="kpi-label">SKUs Únicos</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card" style="cursor: default;">
             <div class="kpi-icon">🏗️</div>
             <div class="kpi-value">${totalObras}</div>
             <div class="kpi-label">Obras com Aditivos</div>
         </div>
-        <div class="kpi-card status-analise">
+        <div class="kpi-card status-analise ${isFilterActive('status', 'ANALISE') ? 'active' : ''}" onclick="aplicarFiltroCard('status', 'ANALISE')" style="cursor: pointer; ${isFilterActive('status', 'ANALISE') ? 'border: 2px solid #ED8936; background: #FFFAF0;' : ''}">
             <div class="kpi-icon">📊</div>
             <div class="kpi-value">${statusCount.ANALISE}</div>
             <div class="kpi-label">Ocorr. em Análise</div>
         </div>
-        <div class="kpi-card status-aprovado">
+        <div class="kpi-card status-aprovado ${isFilterActive('status', 'APROVADO') ? 'active' : ''}" onclick="aplicarFiltroCard('status', 'APROVADO')" style="cursor: pointer; ${isFilterActive('status', 'APROVADO') ? 'border: 2px solid #48BB78; background: #F0FFF4;' : ''}">
             <div class="kpi-icon">✅</div>
             <div class="kpi-value">${statusCount.APROVADO}</div>
             <div class="kpi-label">Ocorr. Aprovadas</div>
         </div>
-        <div class="kpi-card status-reprovado">
+        <div class="kpi-card status-reprovado ${isFilterActive('status', 'REPROVADO') ? 'active' : ''}" onclick="aplicarFiltroCard('status', 'REPROVADO')" style="cursor: pointer; ${isFilterActive('status', 'REPROVADO') ? 'border: 2px solid #FC8181; background: #FFF5F5;' : ''}">
             <div class="kpi-icon">❌</div>
             <div class="kpi-value">${statusCount.REPROVADO}</div>
             <div class="kpi-label">Ocorr. Reprovadas</div>
@@ -703,7 +732,6 @@ function renderizarKPIsObras(obrasAgrupadas) {
     const totalSkusOcorrencias = obrasAgrupadas.reduce((sum, o) => sum + o.skusCount, 0);
     const totalSkusUnicos = obrasAgrupadas.reduce((sum, o) => sum + o.skusUnico, 0);
     
-    // Calcula valor total das obras
     let valorTotal = 0;
     obrasAgrupadas.forEach(obra => {
         obra.itens.forEach(item => {
@@ -814,7 +842,6 @@ function renderizarListaObras(obrasAgrupadas) {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'obra' && itemSelecionado.obra === obra.obra;
         const obraFormatada = formatarObraParaExibicao(obra.obra);
         
-        // Calcula valor total da obra
         let valorTotal = 0;
         obra.itens.forEach(item => {
             const qtd = parseFloat(item.quantidade) || 0;
@@ -842,7 +869,7 @@ function renderizarListaObras(obrasAgrupadas) {
 
 function selecionarObra(obraNome) {
     console.log(`🔍 Selecionando obra: ${obraNome}`);
-    const obrasAgrupadas = agruparPorObra(dadosFiltrados);
+    const obrasAgrupadas = agruparPorObra(dadosExibidos);
     const obra = obrasAgrupadas.find(o => o.obra === obraNome);
     
     if (obra) {
@@ -862,7 +889,6 @@ function renderizarDetalhesObra(obra) {
     
     const obraFormatada = formatarObraParaExibicao(obra.obra);
     
-    // Calcula valor total da obra
     let valorTotal = 0;
     obra.itens.forEach(item => {
         const qtd = parseFloat(item.quantidade) || 0;
@@ -941,7 +967,7 @@ function renderizarDetalhesObra(obra) {
 
 function selecionarItem(codigo) {
     console.log(`🔍 Selecionando item: ${codigo}`);
-    const itensAgrupados = agruparItensPorCodigo(dadosFiltrados);
+    const itensAgrupados = agruparItensPorCodigo(dadosExibidos);
     const item = itensAgrupados.find(i => i.codigo === codigo);
     
     if (item) {
@@ -952,7 +978,7 @@ function selecionarItem(codigo) {
 }
 
 // ============================================
-// DETALHES DO ITEM (MATERIAL) - COM QUANTIDADE E VALOR
+// DETALHES DO ITEM (MATERIAL)
 // ============================================
 
 function renderizarDetalhes(item) {
@@ -1063,12 +1089,15 @@ function getStatusBadge(status) {
 }
 
 // ============================================
-// GRÁFICOS DE INDICADORES (COUNT)
+// GRÁFICOS - OCORRÊNCIAS E VALORES
 // ============================================
 
 function renderizarGraficos(itensAgrupados) {
     console.log('📊 Renderizando gráficos de indicadores...');
     
+    // ============================================
+    // GRÁFICO 1: OCORRÊNCIAS POR STATUS
+    // ============================================
     const statusCount = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     itensAgrupados.forEach(item => {
         Object.keys(statusCount).forEach(status => {
@@ -1126,33 +1155,58 @@ function renderizarGraficos(itensAgrupados) {
     
     document.getElementById('statusChart').innerHTML = htmlStatus;
     
-    const topSkus = [...itensAgrupados]
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 10);
+    // ============================================
+    // GRÁFICO 2: VALORES POR STATUS
+    // ============================================
+    const valorStatus = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
+    itensAgrupados.forEach(item => {
+        Object.keys(valorStatus).forEach(status => {
+            valorStatus[status] += item.valorStatusCount[status] || 0;
+        });
+    });
     
-    const maxTotal = topSkus.length > 0 ? Math.max(...topSkus.map(s => s.total)) : 1;
+    const valorTotal = Object.values(valorStatus).reduce((sum, v) => sum + v, 0);
+    const maxValor = valorTotal > 0 ? valorTotal : 1;
     
-    let htmlTop = '';
-    topSkus.forEach((item, index) => {
-        const percentual = (item.total / maxTotal) * 100;
-        htmlTop += `
-            <div class="top-sku-item">
-                <span class="rank">#${index + 1}</span>
-                <span class="code">${item.codigo}</span>
+    const valorClasses = {
+        'ANALISE': 'bar-analise',
+        'APROVADO': 'bar-aprovado',
+        'REPROVADO': 'bar-reprovado',
+        'S/ SOLICITAÇÃO': 'bar-s-solicitacao'
+    };
+    
+    let htmlValor = '';
+    Object.keys(valorStatus).forEach(status => {
+        const value = valorStatus[status];
+        const percentual = maxValor > 0 ? (value / maxValor) * 100 : 0;
+        const colorClass = valorClasses[status];
+        
+        htmlValor += `
+            <div class="chart-bar-indicator">
+                <span class="label">${statusLabels[status]}</span>
                 <div class="bar-track">
-                    <div class="bar-fill" style="width: ${percentual}%;">
-                        <span class="value">${item.total}</span>
+                    <div class="bar-fill ${colorClass}" style="width: ${percentual}%;">
+                        <span class="value">${formatarValor(value)}</span>
                     </div>
                 </div>
+                <span class="percent">${percentual.toFixed(0)}%</span>
             </div>
         `;
     });
     
-    if (topSkus.length === 0) {
-        htmlTop = `<div class="empty-state-dashboard"><p>Nenhum SKU encontrado</p></div>`;
-    }
+    htmlValor += `
+        <div class="chart-bar-indicator" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #E2E8F0;">
+            <span class="label" style="font-weight: 700;">Total</span>
+            <div class="bar-track">
+                <div class="bar-fill bar-total" style="width: 100%;">
+                    <span class="value">${formatarValor(valorTotal)}</span>
+                </div>
+            </div>
+            <span class="percent" style="font-weight: 700;">100%</span>
+        </div>
+    `;
     
-    document.getElementById('valorChart').innerHTML = htmlTop;
+    document.getElementById('valorChart').innerHTML = htmlValor;
 }
 
 // ============================================
@@ -1166,5 +1220,6 @@ window.selecionarObra = selecionarObra;
 window.trocarAba = trocarAba;
 window.renderizarDashboard = renderizarDashboard;
 window.filtrarPorMes = filtrarPorMes;
+window.aplicarFiltroCard = aplicarFiltroCard;
 
 console.log('✅ dashboards-aditivos-sistemicos.js inicializado!');

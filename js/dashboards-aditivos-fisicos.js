@@ -9,9 +9,11 @@ const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
 
 let dadosCompletos = [];
 let dadosFiltrados = [];
+let dadosExibidos = [];
 let itemSelecionado = null;
 let abaAtual = 'materiais';
 let mesSelecionado = null;
+let filtroAtivo = null;
 let posicaoEstoque = {};
 
 // ============================================
@@ -313,6 +315,7 @@ function criarAbas() {
 function trocarAba(aba) {
     abaAtual = aba;
     itemSelecionado = null;
+    filtroAtivo = null;
     
     document.querySelectorAll('.btn-aba').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.aba === aba);
@@ -329,6 +332,40 @@ function trocarAba(aba) {
     }
     
     renderizarDashboard(dadosFiltrados);
+}
+
+// ============================================
+// APLICAR FILTRO DO CARD
+// ============================================
+
+function aplicarFiltroCard(tipo, valor) {
+    console.log(`🔍 Aplicando filtro do card: ${tipo} = ${valor}`);
+    
+    if (filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor) {
+        filtroAtivo = null;
+        dadosExibidos = [...dadosFiltrados];
+    } else {
+        filtroAtivo = { tipo, valor };
+        
+        if (tipo === 'aplicacao') {
+            dadosExibidos = dadosFiltrados.filter(aditivo => {
+                const itens = (aditivo.itens || []).filter(item => 
+                    (item.aplicado || 'PENDENTE') === valor
+                );
+                return itens.length > 0;
+            });
+        } else if (tipo === 'total') {
+            dadosExibidos = [...dadosFiltrados];
+        }
+    }
+    
+    const totalRegistros = document.getElementById('totalRegistros');
+    if (totalRegistros) {
+        const textoFiltro = filtroAtivo ? ` (filtrado: ${filtroAtivo.tipo})` : '';
+        totalRegistros.textContent = `${dadosExibidos.length} aditivos${textoFiltro}`;
+    }
+    
+    renderizarDashboard(dadosExibidos);
 }
 
 // ============================================
@@ -394,6 +431,8 @@ function aplicarFiltros() {
     }
     
     dadosFiltrados = filtrados;
+    dadosExibidos = filtrados;
+    filtroAtivo = null;
     
     const totalRegistros = document.getElementById('totalRegistros');
     if (totalRegistros) {
@@ -411,6 +450,7 @@ function limparFiltros() {
     document.getElementById('filterBusca').value = '';
     document.getElementById('filterObra').value = '';
     mesSelecionado = null;
+    filtroAtivo = null;
     
     document.querySelectorAll('.btn-mes').forEach(btn => {
         btn.classList.remove('active');
@@ -687,7 +727,7 @@ function renderizarDashboard(aditivos) {
 }
 
 // ============================================
-// KPIs - MATERIAIS
+// KPIs - MATERIAIS (INTERATIVOS)
 // ============================================
 
 function renderizarKPIsMateriais(itensAgrupados) {
@@ -711,39 +751,42 @@ function renderizarKPIsMateriais(itensAgrupados) {
         });
     });
     
-    // Calcula valor total
     let valorTotal = 0;
     itensAgrupados.forEach(item => {
         valorTotal += item.quantidadeTotal * item.valorUnitario;
     });
     
+    const isFilterActive = (tipo, valor) => {
+        return filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor;
+    };
+    
     container.innerHTML = `
-        <div class="kpi-card status-total">
+        <div class="kpi-card status-total ${isFilterActive('total', 'TOTAL') ? 'active' : ''}" onclick="aplicarFiltroCard('total', 'TOTAL')" style="cursor: pointer; ${isFilterActive('total', 'TOTAL') ? 'border: 2px solid #4299E1; background: #EBF8FF;' : ''}">
             <div class="kpi-icon">📦</div>
             <div class="kpi-value">${totalSkus}</div>
             <div class="kpi-label">Ocorrências de SKUs</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card" style="cursor: default;">
             <div class="kpi-icon">📋</div>
             <div class="kpi-value">${totalSkusUnicos}</div>
             <div class="kpi-label">SKUs Únicos</div>
         </div>
-        <div class="kpi-card">
+        <div class="kpi-card" style="cursor: default;">
             <div class="kpi-icon">🏗️</div>
             <div class="kpi-value">${totalObras}</div>
             <div class="kpi-label">Obras com Aditivos</div>
         </div>
-        <div class="kpi-card status-aplicado">
+        <div class="kpi-card status-aplicado ${isFilterActive('aplicacao', 'SIM') ? 'active' : ''}" onclick="aplicarFiltroCard('aplicacao', 'SIM')" style="cursor: pointer; ${isFilterActive('aplicacao', 'SIM') ? 'border: 2px solid #48BB78; background: #F0FFF4;' : ''}">
             <div class="kpi-icon">✅</div>
             <div class="kpi-value">${aplicacaoCount.SIM}</div>
             <div class="kpi-label">Aplicados</div>
         </div>
-        <div class="kpi-card status-nao-aplicado">
+        <div class="kpi-card status-nao-aplicado ${isFilterActive('aplicacao', 'NÃO') ? 'active' : ''}" onclick="aplicarFiltroCard('aplicacao', 'NÃO')" style="cursor: pointer; ${isFilterActive('aplicacao', 'NÃO') ? 'border: 2px solid #FC8181; background: #FFF5F5;' : ''}">
             <div class="kpi-icon">❌</div>
             <div class="kpi-value">${aplicacaoCount.NAO}</div>
             <div class="kpi-label">Não Aplicados</div>
         </div>
-        <div class="kpi-card status-parcial">
+        <div class="kpi-card status-parcial ${isFilterActive('aplicacao', 'PARCIAL') ? 'active' : ''}" onclick="aplicarFiltroCard('aplicacao', 'PARCIAL')" style="cursor: pointer; ${isFilterActive('aplicacao', 'PARCIAL') ? 'border: 2px solid #ED8936; background: #FFFAF0;' : ''}">
             <div class="kpi-icon">🔄</div>
             <div class="kpi-value">${aplicacaoCount.PARCIAL}</div>
             <div class="kpi-label">Parcial</div>
@@ -775,7 +818,6 @@ function renderizarKPIsObras(obrasAgrupadas) {
         });
     });
     
-    // Calcula valor total das obras
     let valorTotal = 0;
     obrasAgrupadas.forEach(obra => {
         obra.itens.forEach(item => {
@@ -830,7 +872,6 @@ function renderizarKPIsEncarregados(encarregadosAgrupados) {
         e.obras.forEach(o => totalObras.add(o));
     });
     
-    // Calcula valor total por encarregado
     let valorTotal = 0;
     encarregadosAgrupados.forEach(enc => {
         enc.itens.forEach(item => {
@@ -1026,7 +1067,7 @@ function renderizarListaEncarregados(encarregadosAgrupados) {
 
 function selecionarEncarregado(nome) {
     console.log(`🔍 Selecionando encarregado: ${nome}`);
-    const encarregadosAgrupados = agruparPorEncarregado(dadosFiltrados);
+    const encarregadosAgrupados = agruparPorEncarregado(dadosExibidos);
     const enc = encarregadosAgrupados.find(e => e.nome === nome);
     
     if (enc) {
@@ -1066,7 +1107,6 @@ function renderizarDetalhesEncarregado(enc) {
     
     const aplicacaoCount = enc.aplicacaoCount || { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 };
     
-    // Calcula valor total do encarregado
     let valorTotal = 0;
     enc.itens.forEach(item => {
         const qtd = parseFloat(item.quantidade) || 0;
@@ -1140,7 +1180,7 @@ function renderizarDetalhesEncarregado(enc) {
 
 function selecionarObra(obraNome) {
     console.log(`🔍 Selecionando obra: ${obraNome}`);
-    const obrasAgrupadas = agruparPorObra(dadosFiltrados);
+    const obrasAgrupadas = agruparPorObra(dadosExibidos);
     const obra = obrasAgrupadas.find(o => o.obra === obraNome);
     
     if (obra) {
@@ -1250,7 +1290,7 @@ function renderizarDetalhesObra(obra) {
 
 function selecionarItem(codigo) {
     console.log(`🔍 Selecionando item: ${codigo}`);
-    const itensAgrupados = agruparItensFisicos(dadosFiltrados);
+    const itensAgrupados = agruparItensFisicos(dadosExibidos);
     const item = itensAgrupados.find(i => i.codigo === codigo);
     
     if (item) {
@@ -1385,7 +1425,7 @@ function getAplicacaoBadge(status) {
 }
 
 // ============================================
-// GRÁFICOS - COM FILTROS
+// GRÁFICOS
 // ============================================
 
 function renderizarGraficos(itensAgrupados, aditivos) {
@@ -1566,5 +1606,6 @@ window.selecionarEncarregado = selecionarEncarregado;
 window.trocarAba = trocarAba;
 window.renderizarDashboard = renderizarDashboard;
 window.filtrarPorMes = filtrarPorMes;
+window.aplicarFiltroCard = aplicarFiltroCard;
 
 console.log('✅ dashboards-aditivos-fisicos.js inicializado!');
