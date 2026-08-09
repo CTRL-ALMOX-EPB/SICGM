@@ -4,11 +4,15 @@
 
 console.log('🚀 dashboards-aditivos-fisicos.js carregado!');
 
+// URL do Cloudflare R2
+const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
+
 let dadosCompletos = [];
 let dadosFiltrados = [];
 let itemSelecionado = null;
 let abaAtual = 'materiais';
 let mesSelecionado = null;
+let posicaoEstoque = {};
 
 // ============================================
 // FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO
@@ -49,25 +53,92 @@ function formatarMesAno(mesAno) {
 }
 
 // ============================================
-// FUNÇÃO: CALCULAR VALOR TOTAL
-// ============================================
-
-function calcularValorTotal(itens) {
-    let total = 0;
-    itens.forEach(item => {
-        const qtd = parseFloat(item.quantidade) || 0;
-        const valorUnitario = item.vlrult_cot || 10;
-        total += qtd * valorUnitario;
-    });
-    return total;
-}
-
-// ============================================
-// FUNÇÃO: FORMATAR VALOR
+// FUNÇÃO: FORMATAR VALOR PARA MOEDA
 // ============================================
 
 function formatarValor(valor) {
+    if (!valor || valor === 0) return 'R$ 0,00';
     return 'R$ ' + valor.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+// ============================================
+// FUNÇÃO: BUSCAR VALOR DO ITEM NO R2
+// ============================================
+
+function buscarValorItem(codigo) {
+    if (!codigo) return 0;
+    const item = posicaoEstoque[codigo];
+    if (item && item.valor_unitario) {
+        return item.valor_unitario;
+    }
+    return 0;
+}
+
+// ============================================
+// FUNÇÃO: CARREGAR POSIÇÃO DE ESTOQUE DO R2
+// ============================================
+
+async function carregarPosicaoEstoque() {
+    try {
+        console.log('🔄 Carregando posição de estoque do R2...');
+        
+        const response = await fetch(`${R2_URL}/posicacao-de-estoque/posicao-de-estoque-1050.txt`);
+        
+        if (!response.ok) {
+            console.warn('⚠️ Arquivo posicao-de-estoque-1050.txt não encontrado no R2');
+            return;
+        }
+        
+        const texto = await response.text();
+        const linhas = texto.trim().split('\n');
+        
+        if (linhas.length === 0) {
+            console.warn('⚠️ Arquivo posicao-de-estoque.txt vazio');
+            return;
+        }
+        
+        console.log(`📄 Arquivo carregado: ${linhas.length} linhas`);
+        
+        posicaoEstoque = {};
+        let linhasProcessadas = 0;
+        
+        for (let i = 1; i < linhas.length; i++) {
+            const linha = linhas[i].trim();
+            if (!linha) continue;
+            
+            const partes = linha.split('\t');
+            
+            if (partes.length >= 6) {
+                const codmat = partes[0].trim();
+                const dscmat = partes[2]?.trim() || '';
+                const codund = partes[3]?.trim() || '';
+                
+                let vlrultCot = 0;
+                try {
+                    const valorStr = partes[4]?.trim().replace(',', '.') || '0';
+                    vlrultCot = parseFloat(valorStr) || 0;
+                } catch (e) {
+                    vlrultCot = 0;
+                }
+                
+                if (codmat) {
+                    posicaoEstoque[codmat] = {
+                        codmat: codmat,
+                        descricao: dscmat,
+                        und: codund,
+                        valor_unitario: vlrultCot
+                    };
+                    linhasProcessadas++;
+                }
+            }
+        }
+        
+        console.log(`📦 Posição de estoque carregada: ${linhasProcessadas} códigos`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar posição de estoque:', error);
+        mostrarToast('❌ Erro ao carregar valores dos itens', 'erro');
+    }
 }
 
 // ============================================
@@ -98,6 +169,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('userPerfil').textContent = sessao.perfil || 'GESTÃO';
     
     try {
+        await carregarPosicaoEstoque();
+        
         console.log('📡 Iniciando busca de dados...');
         
         const startTime = Date.now();
@@ -369,6 +442,7 @@ function agruparItensFisicos(controles) {
             const quantidade = parseFloat(item.quantidade) || 0;
             const aplicado = item.aplicado || 'PENDENTE';
             const encarregado = item.encarregado_obra || 'NÃO INFORMADO';
+            const valorUnitario = buscarValorItem(codigo);
             
             if (!grupos[codigo]) {
                 grupos[codigo] = {
@@ -382,7 +456,9 @@ function agruparItensFisicos(controles) {
                     aplicacaoCount: { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 },
                     obrasSet: new Set(),
                     saidasSet: new Set(),
-                    encarregadosSet: new Set()
+                    encarregadosSet: new Set(),
+                    valorUnitario: valorUnitario,
+                    quantidadeTotal: 0
                 };
             }
             
@@ -391,6 +467,7 @@ function agruparItensFisicos(controles) {
             }
             
             grupos[codigo].total += 1;
+            grupos[codigo].quantidadeTotal += quantidade;
             
             const obra = controle.obra || 'SEM OBRA';
             const isSaida = obra.toUpperCase().includes('SAÍDA') || obra.toUpperCase().includes('SAIDA');
@@ -634,6 +711,12 @@ function renderizarKPIsMateriais(itensAgrupados) {
         });
     });
     
+    // Calcula valor total
+    let valorTotal = 0;
+    itensAgrupados.forEach(item => {
+        valorTotal += item.quantidadeTotal * item.valorUnitario;
+    });
+    
     container.innerHTML = `
         <div class="kpi-card status-total">
             <div class="kpi-icon">📦</div>
@@ -665,6 +748,11 @@ function renderizarKPIsMateriais(itensAgrupados) {
             <div class="kpi-value">${aplicacaoCount.PARCIAL}</div>
             <div class="kpi-label">Parcial</div>
         </div>
+        <div class="kpi-card" style="grid-column: span 1; border-color: #48BB78; cursor: default;">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-value" style="color: #48BB78; font-size: 20px;">${formatarValor(valorTotal)}</div>
+            <div class="kpi-label">Valor Total dos Aditivos</div>
+        </div>
     `;
 }
 
@@ -679,10 +767,21 @@ function renderizarKPIsObras(obrasAgrupadas) {
     const totalObras = obrasAgrupadas.length;
     const totalSkusOcorrencias = obrasAgrupadas.reduce((sum, o) => sum + o.skusCount, 0);
     const totalSkusUnicos = obrasAgrupadas.reduce((sum, o) => sum + o.skusUnico, 0);
+    
     const totalEncarregados = new Set();
     obrasAgrupadas.forEach(o => {
         o.itens.forEach(i => {
             if (i.encarregado_obra) totalEncarregados.add(i.encarregado_obra);
+        });
+    });
+    
+    // Calcula valor total das obras
+    let valorTotal = 0;
+    obrasAgrupadas.forEach(obra => {
+        obra.itens.forEach(item => {
+            const qtd = parseFloat(item.quantidade) || 0;
+            const valorUnitario = buscarValorItem(item.codigo);
+            valorTotal += qtd * valorUnitario;
         });
     });
     
@@ -707,6 +806,11 @@ function renderizarKPIsObras(obrasAgrupadas) {
             <div class="kpi-value">${totalEncarregados.size}</div>
             <div class="kpi-label">Encarregados</div>
         </div>
+        <div class="kpi-card" style="border-color: #48BB78; cursor: default;">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-value" style="color: #48BB78; font-size: 20px;">${formatarValor(valorTotal)}</div>
+            <div class="kpi-label">Valor Total dos Aditivos</div>
+        </div>
     `;
 }
 
@@ -724,6 +828,16 @@ function renderizarKPIsEncarregados(encarregadosAgrupados) {
     const totalObras = new Set();
     encarregadosAgrupados.forEach(e => {
         e.obras.forEach(o => totalObras.add(o));
+    });
+    
+    // Calcula valor total por encarregado
+    let valorTotal = 0;
+    encarregadosAgrupados.forEach(enc => {
+        enc.itens.forEach(item => {
+            const qtd = parseFloat(item.quantidade) || 0;
+            const valorUnitario = buscarValorItem(item.codigo);
+            valorTotal += qtd * valorUnitario;
+        });
     });
     
     container.innerHTML = `
@@ -746,6 +860,11 @@ function renderizarKPIsEncarregados(encarregadosAgrupados) {
             <div class="kpi-icon">🏗️</div>
             <div class="kpi-value">${totalObras.size}</div>
             <div class="kpi-label">Obras</div>
+        </div>
+        <div class="kpi-card" style="border-color: #48BB78; cursor: default;">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-value" style="color: #48BB78; font-size: 20px;">${formatarValor(valorTotal)}</div>
+            <div class="kpi-label">Valor Total dos Aditivos</div>
         </div>
     `;
 }
@@ -770,20 +889,23 @@ function renderizarListaItens(itensAgrupados) {
     }
     
     let html = `
-        <div class="list-header" style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 80px 1fr 70px 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Código</span>
             <span>Descrição</span>
             <span style="text-align: right;">Ocorr.</span>
+            <span style="text-align: right;">Valor</span>
         </div>
     `;
     
     itensAgrupados.forEach(item => {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'material' && itemSelecionado.codigo === item.codigo;
+        const valorTotal = item.quantidadeTotal * item.valorUnitario;
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarItem('${item.codigo}')" style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarItem('${item.codigo}')" style="display: grid; grid-template-columns: 80px 1fr 70px 80px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
                 <span class="item-code">${item.codigo}</span>
                 <span class="item-desc">${item.descricao}</span>
                 <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${item.total}</span>
+                <span style="text-align: right; font-weight: 600; color: #48BB78; font-size: 12px;">${formatarValor(valorTotal)}</span>
             </div>
         `;
     });
@@ -811,23 +933,33 @@ function renderizarListaObras(obrasAgrupadas) {
     }
     
     let html = `
-        <div class="list-header" style="display: grid; grid-template-columns: 100px 1fr 70px 70px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 100px 1fr 70px 70px 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
             <span>Informações</span>
             <span style="text-align: right;">Ocorr.</span>
             <span style="text-align: right;">SKUs Ún.</span>
+            <span style="text-align: right;">Valor</span>
         </div>
     `;
     
     obrasAgrupadas.forEach(obra => {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'obra' && itemSelecionado.obra === obra.obra;
         const obraFormatada = formatarObraParaExibicao(obra.obra);
+        
+        let valorTotal = 0;
+        obra.itens.forEach(item => {
+            const qtd = parseFloat(item.quantidade) || 0;
+            const valorUnitario = buscarValorItem(item.codigo);
+            valorTotal += qtd * valorUnitario;
+        });
+        
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')" style="display: grid; grid-template-columns: 100px 1fr 70px 70px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')" style="display: grid; grid-template-columns: 100px 1fr 70px 70px 80px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
                 <span class="item-code">🏗️ ${obraFormatada}</span>
                 <span class="item-desc">${obra.skusCount} SKUs • ${obra.encarregadosCount} encarregados</span>
                 <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${obra.skusCount}</span>
                 <span style="text-align: right; font-weight: 600; color: #48BB78;">${obra.skusUnico}</span>
+                <span style="text-align: right; font-weight: 600; color: #48BB78; font-size: 12px;">${formatarValor(valorTotal)}</span>
             </div>
         `;
     });
@@ -855,22 +987,32 @@ function renderizarListaEncarregados(encarregadosAgrupados) {
     }
     
     let html = `
-        <div class="list-header" style="display: grid; grid-template-columns: 1fr 70px 70px 70px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 1fr 70px 70px 70px 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Encarregado</span>
             <span style="text-align: right;">Ocorr.</span>
             <span style="text-align: right;">SKUs Ún.</span>
             <span style="text-align: right;">Obras</span>
+            <span style="text-align: right;">Valor</span>
         </div>
     `;
     
     encarregadosAgrupados.forEach(enc => {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'encarregado' && itemSelecionado.nome === enc.nome;
+        
+        let valorTotal = 0;
+        enc.itens.forEach(item => {
+            const qtd = parseFloat(item.quantidade) || 0;
+            const valorUnitario = buscarValorItem(item.codigo);
+            valorTotal += qtd * valorUnitario;
+        });
+        
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarEncarregado('${enc.nome}')" style="display: grid; grid-template-columns: 1fr 70px 70px 70px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarEncarregado('${enc.nome}')" style="display: grid; grid-template-columns: 1fr 70px 70px 70px 80px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
                 <span class="item-code">👤 ${enc.nome}</span>
                 <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${enc.skusCount}</span>
                 <span style="text-align: right; font-weight: 600; color: #48BB78;">${enc.skusUnico}</span>
                 <span style="text-align: right; font-weight: 600; color: #4299E1;">${enc.obras.length}</span>
+                <span style="text-align: right; font-weight: 600; color: #48BB78; font-size: 12px;">${formatarValor(valorTotal)}</span>
             </div>
         `;
     });
@@ -912,14 +1054,25 @@ function renderizarDetalhesEncarregado(enc) {
                 codigo: codigo,
                 descricao: item.descricao || 'Sem descrição',
                 ocorrencias: 0,
-                aplicado: item.aplicado || 'PENDENTE'
+                aplicado: item.aplicado || 'PENDENTE',
+                valorUnitario: buscarValorItem(codigo),
+                quantidade: 0
             };
         }
         materiaisMap[codigo].ocorrencias += 1;
+        materiaisMap[codigo].quantidade += parseFloat(item.quantidade) || 0;
     });
     const materiaisOrdenados = Object.values(materiaisMap).sort((a, b) => a.codigo.localeCompare(b.codigo));
     
     const aplicacaoCount = enc.aplicacaoCount || { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 };
+    
+    // Calcula valor total do encarregado
+    let valorTotal = 0;
+    enc.itens.forEach(item => {
+        const qtd = parseFloat(item.quantidade) || 0;
+        const valorUnitario = buscarValorItem(item.codigo);
+        valorTotal += qtd * valorUnitario;
+    });
     
     let html = `
         <div class="detail-title">👤 ${enc.nome}</div>
@@ -934,6 +1087,10 @@ function renderizarDetalhesEncarregado(enc) {
         <div class="detail-row">
             <span class="label">Obras:</span>
             <span class="value">${obrasOrdenadas.length}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Valor Total:</span>
+            <span class="value" style="color: #48BB78; font-weight: 700;">${formatarValor(valorTotal)}</span>
         </div>
         <div class="detail-status-count">
             <span class="status-item"><span class="count status-aplicado">${aplicacaoCount.SIM}</span> ✅ Aplicado</span>
@@ -963,10 +1120,11 @@ function renderizarDetalhesEncarregado(enc) {
     
     materiaisOrdenados.forEach(item => {
         const badge = getAplicacaoBadge(item.aplicado);
+        const valorTotalItem = item.quantidade * item.valorUnitario;
         html += `
             <div class="obra-row">
                 <span><strong>${item.codigo}</strong> - ${item.descricao}</span>
-                <span>${item.ocorrencias}x ${badge}</span>
+                <span>${item.ocorrencias}x ${badge} 💰 ${formatarValor(valorTotalItem)}</span>
             </div>
         `;
     });
@@ -993,7 +1151,7 @@ function selecionarObra(obraNome) {
 }
 
 // ============================================
-// DETALHES DA OBRA - COM QUANTIDADE E VALOR
+// DETALHES DA OBRA
 // ============================================
 
 function renderizarDetalhesObra(obra) {
@@ -1004,9 +1162,14 @@ function renderizarDetalhesObra(obra) {
     
     const itensPorCodigo = {};
     let totalQuantidade = 0;
+    let valorTotal = 0;
+    
     obra.itens.forEach(item => {
         totalQuantidade += parseFloat(item.quantidade) || 0;
         const codigo = item.codigo || 'SEM_CODIGO';
+        const valorUnitario = buscarValorItem(codigo);
+        valorTotal += (parseFloat(item.quantidade) || 0) * valorUnitario;
+        
         if (!itensPorCodigo[codigo]) {
             itensPorCodigo[codigo] = {
                 codigo: codigo,
@@ -1014,14 +1177,14 @@ function renderizarDetalhesObra(obra) {
                 quantidade: 0,
                 aplicado: item.aplicado || 'PENDENTE',
                 ocorrencias: 0,
-                encarregado: item.encarregado_obra || 'NÃO INFORMADO'
+                encarregado: item.encarregado_obra || 'NÃO INFORMADO',
+                valorUnitario: valorUnitario
             };
         }
         itensPorCodigo[codigo].quantidade += parseFloat(item.quantidade) || 0;
         itensPorCodigo[codigo].ocorrencias += 1;
     });
     
-    const valorTotal = calcularValorTotal(obra.itens);
     const materiaisOrdenados = Object.values(itensPorCodigo).sort((a, b) => a.codigo.localeCompare(b.codigo));
     const datasOrdenadas = [...obra.datas].sort();
     
@@ -1067,10 +1230,11 @@ function renderizarDetalhesObra(obra) {
     materiaisOrdenados.forEach(item => {
         const qtdFormatada = Number.isInteger(item.quantidade) ? item.quantidade : item.quantidade.toFixed(2);
         const badge = getAplicacaoBadge(item.aplicado);
+        const valorTotalItem = item.quantidade * item.valorUnitario;
         html += `
             <div class="obra-row">
                 <span><strong>${item.codigo}</strong> - ${item.descricao} (${item.ocorrencias}x) 👤 ${item.encarregado}</span>
-                <span>${qtdFormatada} ${badge}</span>
+                <span>${qtdFormatada} ${badge} 💰 ${formatarValor(valorTotalItem)}</span>
             </div>
         `;
     });
@@ -1097,7 +1261,7 @@ function selecionarItem(codigo) {
 }
 
 // ============================================
-// DETALHES DO ITEM - COM QUANTIDADE E VALOR
+// DETALHES DO ITEM
 // ============================================
 
 function renderizarDetalhes(item) {
@@ -1119,7 +1283,8 @@ function renderizarDetalhes(item) {
         totalQuantidade += parseFloat(i.quantidade) || 0;
     });
     
-    const valorTotal = calcularValorTotal(item.itens);
+    const valorUnitario = item.valorUnitario;
+    const valorTotal = totalQuantidade * valorUnitario;
     
     const obrasOrdenadas = [...item.obras].sort((a, b) => a.obra.localeCompare(b.obra));
     const saidasOrdenadas = [...item.saidas].sort((a, b) => a.obra.localeCompare(b.obra));
@@ -1141,6 +1306,10 @@ function renderizarDetalhes(item) {
         <div class="detail-row">
             <span class="label">Quantidade Total:</span>
             <span class="value">${totalQuantidade.toFixed(2)} ${item.unidade}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Valor Unitário:</span>
+            <span class="value" style="color: #4299E1;">${formatarValor(valorUnitario)}</span>
         </div>
         <div class="detail-row">
             <span class="label">Valor Total:</span>
@@ -1222,7 +1391,6 @@ function getAplicacaoBadge(status) {
 function renderizarGraficos(itensAgrupados, aditivos) {
     console.log('📊 Renderizando gráficos com filtros...');
     
-    // Gráfico de status - usa os itens agrupados filtrados
     const aplicacaoCount = { SIM: 0, NAO: 0, PARCIAL: 0, PENDENTE: 0 };
     itensAgrupados.forEach(item => {
         Object.keys(aplicacaoCount).forEach(key => {
@@ -1280,7 +1448,6 @@ function renderizarGraficos(itensAgrupados, aditivos) {
     
     document.getElementById('statusChart').innerHTML = html;
     
-    // Lista de encarregados - usa os dados filtrados (aditivos)
     renderizarEncarregados(aditivos);
 }
 

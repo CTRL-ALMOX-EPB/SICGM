@@ -4,11 +4,15 @@
 
 console.log('🚀 dashboards-aditivos-sistemicos.js carregado!');
 
+// URL do Cloudflare R2
+const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
+
 let dadosCompletos = [];
 let dadosFiltrados = [];
 let itemSelecionado = null;
 let abaAtual = 'materiais';
 let mesSelecionado = null;
+let posicaoEstoque = {};
 
 // ============================================
 // FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO
@@ -49,25 +53,107 @@ function formatarMesAno(mesAno) {
 }
 
 // ============================================
-// FUNÇÃO: CALCULAR VALOR TOTAL
+// FUNÇÃO: FORMATAR VALOR PARA MOEDA
+// ============================================
+
+function formatarValor(valor) {
+    if (!valor || valor === 0) return 'R$ 0,00';
+    return 'R$ ' + valor.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+// ============================================
+// FUNÇÃO: BUSCAR VALOR DO ITEM NO R2
+// ============================================
+
+function buscarValorItem(codigo) {
+    if (!codigo) return 0;
+    const item = posicaoEstoque[codigo];
+    if (item && item.valor_unitario) {
+        return item.valor_unitario;
+    }
+    return 0;
+}
+
+// ============================================
+// FUNÇÃO: CALCULAR VALOR TOTAL DOS ITENS
 // ============================================
 
 function calcularValorTotal(itens) {
     let total = 0;
     itens.forEach(item => {
+        const codigo = item.codigo;
         const qtd = parseFloat(item.quantidade) || 0;
-        const valorUnitario = item.vlrult_cot || 10;
+        const valorUnitario = buscarValorItem(codigo);
         total += qtd * valorUnitario;
     });
     return total;
 }
 
 // ============================================
-// FUNÇÃO: FORMATAR VALOR
+// FUNÇÃO: CARREGAR POSIÇÃO DE ESTOQUE DO R2
 // ============================================
 
-function formatarValor(valor) {
-    return 'R$ ' + valor.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+async function carregarPosicaoEstoque() {
+    try {
+        console.log('🔄 Carregando posição de estoque do R2...');
+        
+        const response = await fetch(`${R2_URL}/posicacao-de-estoque/posicao-de-estoque-1050.txt`);
+        
+        if (!response.ok) {
+            console.warn('⚠️ Arquivo posicao-de-estoque-1050.txt não encontrado no R2');
+            return;
+        }
+        
+        const texto = await response.text();
+        const linhas = texto.trim().split('\n');
+        
+        if (linhas.length === 0) {
+            console.warn('⚠️ Arquivo posicao-de-estoque.txt vazio');
+            return;
+        }
+        
+        console.log(`📄 Arquivo carregado: ${linhas.length} linhas`);
+        
+        posicaoEstoque = {};
+        let linhasProcessadas = 0;
+        
+        for (let i = 1; i < linhas.length; i++) {
+            const linha = linhas[i].trim();
+            if (!linha) continue;
+            
+            const partes = linha.split('\t');
+            
+            if (partes.length >= 6) {
+                const codmat = partes[0].trim();
+                const dscmat = partes[2]?.trim() || '';
+                const codund = partes[3]?.trim() || '';
+                
+                let vlrultCot = 0;
+                try {
+                    const valorStr = partes[4]?.trim().replace(',', '.') || '0';
+                    vlrultCot = parseFloat(valorStr) || 0;
+                } catch (e) {
+                    vlrultCot = 0;
+                }
+                
+                if (codmat) {
+                    posicaoEstoque[codmat] = {
+                        codmat: codmat,
+                        descricao: dscmat,
+                        und: codund,
+                        valor_unitario: vlrultCot
+                    };
+                    linhasProcessadas++;
+                }
+            }
+        }
+        
+        console.log(`📦 Posição de estoque carregada: ${linhasProcessadas} códigos`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar posição de estoque:', error);
+        mostrarToast('❌ Erro ao carregar valores dos itens', 'erro');
+    }
 }
 
 // ============================================
@@ -98,6 +184,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('userPerfil').textContent = sessao.perfil || 'GESTÃO';
     
     try {
+        // Carrega a posição de estoque primeiro
+        await carregarPosicaoEstoque();
+        
         console.log('📡 Iniciando busca de dados...');
         
         const startTime = Date.now();
@@ -363,6 +452,7 @@ function agruparItensPorCodigo(controles) {
             const descricao = item.descricao || 'Sem descrição';
             const unidade = item.unidade || 'UN';
             const quantidade = parseFloat(item.quantidade) || 0;
+            const valorUnitario = buscarValorItem(codigo);
             
             if (!grupos[codigo]) {
                 grupos[codigo] = {
@@ -375,7 +465,9 @@ function agruparItensPorCodigo(controles) {
                     itens: [],
                     statusCount: { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 },
                     obrasSet: new Set(),
-                    saidasSet: new Set()
+                    saidasSet: new Set(),
+                    valorUnitario: valorUnitario,
+                    quantidadeTotal: 0
                 };
             }
             
@@ -384,6 +476,7 @@ function agruparItensPorCodigo(controles) {
             }
             
             grupos[codigo].total += 1;
+            grupos[codigo].quantidadeTotal += quantidade;
             
             const obra = controle.obra || 'SEM OBRA';
             const isSaida = obra.toUpperCase().includes('SAÍDA') || obra.toUpperCase().includes('SAIDA');
@@ -553,6 +646,12 @@ function renderizarKPIsMateriais(itensAgrupados) {
         });
     });
     
+    // Calcula valor total de todos os itens
+    let valorTotal = 0;
+    itensAgrupados.forEach(item => {
+        valorTotal += item.quantidadeTotal * item.valorUnitario;
+    });
+    
     container.innerHTML = `
         <div class="kpi-card status-total">
             <div class="kpi-icon">📦</div>
@@ -584,6 +683,11 @@ function renderizarKPIsMateriais(itensAgrupados) {
             <div class="kpi-value">${statusCount.REPROVADO}</div>
             <div class="kpi-label">Ocorr. Reprovadas</div>
         </div>
+        <div class="kpi-card" style="grid-column: span 1; border-color: #48BB78; cursor: default;">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-value" style="color: #48BB78; font-size: 20px;">${formatarValor(valorTotal)}</div>
+            <div class="kpi-label">Valor Total dos Aditivos</div>
+        </div>
     `;
 }
 
@@ -598,6 +702,16 @@ function renderizarKPIsObras(obrasAgrupadas) {
     const totalObras = obrasAgrupadas.length;
     const totalSkusOcorrencias = obrasAgrupadas.reduce((sum, o) => sum + o.skusCount, 0);
     const totalSkusUnicos = obrasAgrupadas.reduce((sum, o) => sum + o.skusUnico, 0);
+    
+    // Calcula valor total das obras
+    let valorTotal = 0;
+    obrasAgrupadas.forEach(obra => {
+        obra.itens.forEach(item => {
+            const qtd = parseFloat(item.quantidade) || 0;
+            const valorUnitario = buscarValorItem(item.codigo);
+            valorTotal += qtd * valorUnitario;
+        });
+    });
     
     container.innerHTML = `
         <div class="kpi-card status-total">
@@ -614,6 +728,11 @@ function renderizarKPIsObras(obrasAgrupadas) {
             <div class="kpi-icon">📋</div>
             <div class="kpi-value">${totalSkusUnicos}</div>
             <div class="kpi-label">SKUs Únicos</div>
+        </div>
+        <div class="kpi-card" style="border-color: #48BB78; cursor: default;">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-value" style="color: #48BB78; font-size: 20px;">${formatarValor(valorTotal)}</div>
+            <div class="kpi-label">Valor Total dos Aditivos</div>
         </div>
     `;
 }
@@ -638,20 +757,23 @@ function renderizarListaItens(itensAgrupados) {
     }
     
     let html = `
-        <div class="list-header" style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 80px 1fr 70px 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Código</span>
             <span>Descrição</span>
             <span style="text-align: right;">Ocorr.</span>
+            <span style="text-align: right;">Valor</span>
         </div>
     `;
     
     itensAgrupados.forEach(item => {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'material' && itemSelecionado.codigo === item.codigo;
+        const valorTotal = item.quantidadeTotal * item.valorUnitario;
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarItem('${item.codigo}')" style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarItem('${item.codigo}')" style="display: grid; grid-template-columns: 80px 1fr 70px 80px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
                 <span class="item-code">${item.codigo}</span>
                 <span class="item-desc">${item.descricao}</span>
                 <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${item.total}</span>
+                <span style="text-align: right; font-weight: 600; color: #48BB78; font-size: 12px;">${formatarValor(valorTotal)}</span>
             </div>
         `;
     });
@@ -679,23 +801,34 @@ function renderizarListaObras(obrasAgrupadas) {
     }
     
     let html = `
-        <div class="list-header" style="display: grid; grid-template-columns: 100px 1fr 70px 70px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 100px 1fr 70px 70px 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
             <span>Informações</span>
             <span style="text-align: right;">Ocorr.</span>
             <span style="text-align: right;">SKUs Ún.</span>
+            <span style="text-align: right;">Valor</span>
         </div>
     `;
     
     obrasAgrupadas.forEach(obra => {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'obra' && itemSelecionado.obra === obra.obra;
         const obraFormatada = formatarObraParaExibicao(obra.obra);
+        
+        // Calcula valor total da obra
+        let valorTotal = 0;
+        obra.itens.forEach(item => {
+            const qtd = parseFloat(item.quantidade) || 0;
+            const valorUnitario = buscarValorItem(item.codigo);
+            valorTotal += qtd * valorUnitario;
+        });
+        
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')" style="display: grid; grid-template-columns: 100px 1fr 70px 70px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')" style="display: grid; grid-template-columns: 100px 1fr 70px 70px 80px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
                 <span class="item-code">🏗️ ${obraFormatada}</span>
                 <span class="item-desc">${obra.skusCount} SKUs</span>
                 <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${obra.skusCount}</span>
                 <span style="text-align: right; font-weight: 600; color: #48BB78;">${obra.skusUnico}</span>
+                <span style="text-align: right; font-weight: 600; color: #48BB78; font-size: 12px;">${formatarValor(valorTotal)}</span>
             </div>
         `;
     });
@@ -729,6 +862,14 @@ function renderizarDetalhesObra(obra) {
     
     const obraFormatada = formatarObraParaExibicao(obra.obra);
     
+    // Calcula valor total da obra
+    let valorTotal = 0;
+    obra.itens.forEach(item => {
+        const qtd = parseFloat(item.quantidade) || 0;
+        const valorUnitario = buscarValorItem(item.codigo);
+        valorTotal += qtd * valorUnitario;
+    });
+    
     let html = `
         <div class="detail-title">🏗️ ${obraFormatada}</div>
         <div class="detail-row">
@@ -738,6 +879,10 @@ function renderizarDetalhesObra(obra) {
         <div class="detail-row">
             <span class="label">SKUs Únicos:</span>
             <span class="value">${obra.skusUnico}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Valor Total:</span>
+            <span class="value" style="color: #48BB78; font-weight: 700;">${formatarValor(valorTotal)}</span>
         </div>
         <div class="detail-section-title">📅 Datas de Programação:</div>
         <div class="item-detail-obras">
@@ -765,7 +910,8 @@ function renderizarDetalhesObra(obra) {
                 descricao: item.descricao || 'Sem descrição',
                 quantidade: 0,
                 status: item.status_aditivo || 'ANALISE',
-                ocorrencias: 0
+                ocorrencias: 0,
+                valorUnitario: buscarValorItem(codigo)
             };
         }
         itensPorCodigo[codigo].quantidade += parseFloat(item.quantidade) || 0;
@@ -774,10 +920,11 @@ function renderizarDetalhesObra(obra) {
     
     Object.values(itensPorCodigo).forEach(item => {
         const qtdFormatada = Number.isInteger(item.quantidade) ? item.quantidade : item.quantidade.toFixed(2);
+        const valorTotalItem = item.quantidade * item.valorUnitario;
         const badge = getStatusBadge(item.status);
         html += `
             <div class="obra-row">
-                <span><strong>${item.codigo}</strong> - ${item.descricao} (${item.ocorrencias}x)</span>
+                <span><strong>${item.codigo}</strong> - ${item.descricao} (${item.ocorrencias}x) 💰 ${formatarValor(valorTotalItem)}</span>
                 <span>${qtdFormatada} ${badge}</span>
             </div>
         `;
@@ -827,7 +974,8 @@ function renderizarDetalhes(item) {
         totalQuantidade += parseFloat(i.quantidade) || 0;
     });
     
-    const valorTotal = calcularValorTotal(item.itens);
+    const valorUnitario = item.valorUnitario;
+    const valorTotal = totalQuantidade * valorUnitario;
     
     const statusMap = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     item.itens.forEach(i => {
@@ -844,6 +992,10 @@ function renderizarDetalhes(item) {
         <div class="detail-row">
             <span class="label">Quantidade Total:</span>
             <span class="value">${totalQuantidade.toFixed(2)} ${item.unidade}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Valor Unitário:</span>
+            <span class="value" style="color: #4299E1;">${formatarValor(valorUnitario)}</span>
         </div>
         <div class="detail-row">
             <span class="label">Valor Total:</span>
