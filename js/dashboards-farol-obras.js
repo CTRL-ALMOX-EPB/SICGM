@@ -11,6 +11,7 @@ let obraSelecionada = null;
 let saidaSelecionada = null;
 let abaAtual = 'obras';
 let filtroAtivo = null;
+let mesSelecionado = null;
 
 // ============================================
 // FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO
@@ -23,6 +24,31 @@ function formatarObraParaExibicao(obra) {
     return limpo.substring(0, 3) + '-' + 
            limpo.substring(3, 5) + '-' + 
            limpo.substring(5, 10);
+}
+
+// ============================================
+// FUNÇÃO: OBTER MÊS DA DATA
+// ============================================
+
+function getMesAno(dataString) {
+    if (!dataString) return null;
+    try {
+        const data = new Date(dataString);
+        return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+    } catch {
+        return null;
+    }
+}
+
+// ============================================
+// FUNÇÃO: FORMATAR MÊS PARA EXIBIÇÃO
+// ============================================
+
+function formatarMesAno(mesAno) {
+    if (!mesAno) return '';
+    const [ano, mes] = mesAno.split('-');
+    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    return `${meses[parseInt(mes) - 1]} ${ano}`;
 }
 
 // ============================================
@@ -67,6 +93,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         criarAbas();
+        criarMeses();
         aplicarFiltros();
         
         loadingOverlay.classList.remove('active');
@@ -91,6 +118,73 @@ document.addEventListener('DOMContentLoaded', async function() {
         `;
     }
 });
+
+// ============================================
+// CRIAR MESES
+// ============================================
+
+function criarMeses() {
+    const container = document.getElementById('mesesContainer');
+    if (!container) return;
+    
+    const mesesSet = new Set();
+    dadosCompletos.forEach(item => {
+        const mes = getMesAno(item.data_programacao);
+        if (mes) mesesSet.add(mes);
+    });
+    
+    const meses = Array.from(mesesSet).sort();
+    
+    if (meses.length === 0) {
+        container.innerHTML = `<span style="font-size: 12px; color: #A0AEC0;">Nenhum mês disponível</span>`;
+        return;
+    }
+    
+    let html = `
+        <button class="btn-mes active" data-mes="todos" onclick="filtrarPorMes('todos')" style="padding: 4px 12px; border: 2px solid #E2E8F0; border-radius: 6px; background: #ED8936; color: white; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; border-color: #ED8936;">
+            📅 Todos
+        </button>
+    `;
+    
+    meses.forEach(mes => {
+        const label = formatarMesAno(mes);
+        html += `
+            <button class="btn-mes" data-mes="${mes}" onclick="filtrarPorMes('${mes}')" style="padding: 4px 12px; border: 2px solid #E2E8F0; border-radius: 6px; background: #F7FAFC; color: #4A5568; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                📅 ${label}
+            </button>
+        `;
+    });
+    
+    container.innerHTML = html;
+    container.style.display = 'flex';
+    container.style.gap = '8px';
+    container.style.flexWrap = 'wrap';
+    container.style.padding = '10px 0';
+    container.style.marginBottom = '15px';
+}
+
+// ============================================
+// FILTRAR POR MÊS
+// ============================================
+
+function filtrarPorMes(mes) {
+    mesSelecionado = mes === 'todos' ? null : mes;
+    
+    document.querySelectorAll('.btn-mes').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mes === mes);
+        if (btn.dataset.mes === mes) {
+            btn.style.background = '#ED8936';
+            btn.style.color = 'white';
+            btn.style.borderColor = '#ED8936';
+        } else {
+            btn.style.background = '#F7FAFC';
+            btn.style.color = '#4A5568';
+            btn.style.borderColor = '#E2E8F0';
+        }
+    });
+    
+    aplicarFiltros();
+}
 
 // ============================================
 // CRIAR ABAS
@@ -126,6 +220,7 @@ function trocarAba(aba) {
     filtroAtivo = null;
     obraSelecionada = null;
     saidaSelecionada = null;
+    mesSelecionado = null;
     
     document.querySelectorAll('.btn-aba').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.aba === aba);
@@ -164,6 +259,14 @@ function aplicarFiltros() {
     const filtroStatus = document.getElementById('filterStatus')?.value || 'todos';
     
     let filtrados = [...dadosCompletos];
+    
+    if (mesSelecionado) {
+        filtrados = filtrados.filter(item => {
+            const mes = getMesAno(item.data_programacao);
+            return mes === mesSelecionado;
+        });
+        console.log(`📅 Após filtro de mês: ${filtrados.length} obras`);
+    }
     
     if (dataInicio || dataFim) {
         filtrados = filtrados.filter(item => {
@@ -211,6 +314,15 @@ function limparFiltros() {
     filtroAtivo = null;
     obraSelecionada = null;
     saidaSelecionada = null;
+    mesSelecionado = null;
+    
+    document.querySelectorAll('.btn-mes').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = '#F7FAFC';
+        btn.style.color = '#4A5568';
+        btn.style.borderColor = '#E2E8F0';
+    });
+    
     aplicarFiltros();
 }
 
@@ -348,7 +460,7 @@ function renderizarDashboard(obras) {
         renderizarListaObras(obras);
         renderizarGraficosObras(ativas);
         
-        if (obraSelecionada) {
+        if (obraSelecionada && obraSelecionada.tipo === 'obra') {
             const obra = obras.find(o => o.obra === obraSelecionada.obra);
             if (obra) {
                 renderizarDetalhesObra(obra);
@@ -507,7 +619,6 @@ function renderizarListaObras(obras) {
         return;
     }
     
-    // Agrupa obras por número (mesma obra pode ter múltiplas saídas)
     const obrasAgrupadas = {};
     obras.forEach(obra => {
         const key = obra.obra || 'SEM OBRA';
@@ -520,7 +631,7 @@ function renderizarListaObras(obras) {
     const keys = Object.keys(obrasAgrupadas).sort();
     
     let html = `
-        <div style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
             <span style="text-align: right;">Saídas</span>
         </div>
@@ -563,7 +674,7 @@ function renderizarListaSeparadores(separadores) {
     }
     
     let html = `
-        <div style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Separador</span>
             <span style="text-align: right;">Obras</span>
         </div>
@@ -589,12 +700,11 @@ function renderizarListaSeparadores(separadores) {
 function selecionarObra(obraNumero) {
     console.log(`🔍 Selecionando obra: ${obraNumero}`);
     
-    // Busca todas as saídas desta obra
     const saidas = dadosExibidos.filter(o => o.obra === obraNumero);
     
     if (saidas && saidas.length > 0) {
         obraSelecionada = { obra: obraNumero, tipo: 'obra' };
-        saidaSelecionada = saidas[0]; // Seleciona a primeira saída por padrão
+        saidaSelecionada = saidas[0];
         renderizarDetalhesObra(saidas);
         renderizarListaObras(dadosExibidos);
     }
@@ -608,7 +718,6 @@ function selecionarSaida(saida) {
     console.log(`🔍 Selecionando saída: ${saida.data_programacao}`);
     saidaSelecionada = saida;
     
-    // Re-renderiza os detalhes com a saída selecionada
     const saidas = dadosExibidos.filter(o => o.obra === obraSelecionada.obra);
     renderizarDetalhesObra(saidas);
 }
@@ -647,7 +756,6 @@ function renderizarDetalhesObra(saidas) {
         return;
     }
     
-    // Se não tem saída selecionada, usa a primeira
     if (!saidaSelecionada || !saidas.some(s => s.id === saidaSelecionada.id)) {
         saidaSelecionada = saidas[0];
     }
@@ -655,7 +763,6 @@ function renderizarDetalhesObra(saidas) {
     const obra = saidaSelecionada;
     const obraFormatada = formatarObraParaExibicao(obra.obra);
     
-    // Gera o seletor de saídas
     let selectorHtml = `
         <div class="saidas-selector">
             <span style="font-size: 12px; font-weight: 600; color: #4A5568; margin-right: 4px;">📅 Saídas:</span>
@@ -674,11 +781,9 @@ function renderizarDetalhesObra(saidas) {
     
     selectorHtml += `</div>`;
     
-    // Status da obra
     let statusText = obra.status === 'FINALIZADO' ? '✅ Finalizado' : '⏳ Pendente';
     let statusColor = obra.status === 'FINALIZADO' ? '#48BB78' : '#ED8936';
     
-    // Indicadores
     const indicadores = [];
     if (obra.cancelada === 'SIM') indicadores.push('❌ Cancelada');
     if (obra.aditivo === 'SIM') indicadores.push('📝 Com Aditivo');
@@ -748,12 +853,11 @@ function renderizarDetalhesObra(saidas) {
         html += `
             <div class="detail-section-title">📝 Observação</div>
             <div class="detail-row" style="grid-column: 1 / -1;">
-                <span class="value" style="font-size: 13px; color: #4A5568;">${obra.observacao}</span>
+                <span class="value" style="font-size: 13px; color: #4A5568; word-wrap: break-word;">${obra.observacao}</span>
             </div>
         `;
     }
     
-    // Itens da saída selecionada
     const itens = saidaSelecionada.itens || [];
     if (itens.length > 0) {
         html += `
@@ -917,7 +1021,6 @@ function renderizarGraficosObras(obras) {
     
     document.getElementById('statusChart').innerHTML = html;
     
-    // Gráfico de Separadores
     const separadoresMap = {};
     obras.forEach(obra => {
         const nome = obra.separador || 'NÃO INFORMADO';
@@ -1051,5 +1154,6 @@ window.selecionarSeparador = selecionarSeparador;
 window.trocarAba = trocarAba;
 window.renderizarDashboard = renderizarDashboard;
 window.aplicarFiltroCard = aplicarFiltroCard;
+window.filtrarPorMes = filtrarPorMes;
 
 console.log('✅ dashboards-farol-obras.js inicializado!');

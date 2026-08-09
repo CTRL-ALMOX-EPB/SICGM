@@ -8,6 +8,7 @@ let dadosCompletos = [];
 let dadosFiltrados = [];
 let itemSelecionado = null;
 let abaAtual = 'obras';
+let mesSelecionado = null;
 
 // ============================================
 // FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO
@@ -20,6 +21,31 @@ function formatarObraParaExibicao(obra) {
     return limpo.substring(0, 3) + '-' + 
            limpo.substring(3, 5) + '-' + 
            limpo.substring(5, 10);
+}
+
+// ============================================
+// FUNÇÃO: OBTER MÊS DA DATA
+// ============================================
+
+function getMesAno(dataString) {
+    if (!dataString) return null;
+    try {
+        const data = new Date(dataString);
+        return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+    } catch {
+        return null;
+    }
+}
+
+// ============================================
+// FUNÇÃO: FORMATAR MÊS PARA EXIBIÇÃO
+// ============================================
+
+function formatarMesAno(mesAno) {
+    if (!mesAno) return '';
+    const [ano, mes] = mesAno.split('-');
+    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    return `${meses[parseInt(mes) - 1]} ${ano}`;
 }
 
 // ============================================
@@ -63,6 +89,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             mostrarToast('⚠️ Nenhuma pendência de devolução encontrada', 'warning');
         }
         
+        criarAbas();
+        criarMeses();
         aplicarFiltros();
         
         loadingOverlay.classList.remove('active');
@@ -89,6 +117,123 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 // ============================================
+// CRIAR MESES
+// ============================================
+
+function criarMeses() {
+    const container = document.getElementById('mesesContainer');
+    if (!container) return;
+    
+    const mesesSet = new Set();
+    dadosCompletos.forEach(item => {
+        const mes = getMesAno(item.data_programacao);
+        if (mes) mesesSet.add(mes);
+    });
+    
+    const meses = Array.from(mesesSet).sort();
+    
+    if (meses.length === 0) {
+        container.innerHTML = `<span style="font-size: 12px; color: #A0AEC0;">Nenhum mês disponível</span>`;
+        return;
+    }
+    
+    let html = `
+        <button class="btn-mes active" data-mes="todos" onclick="filtrarPorMes('todos')" style="padding: 4px 12px; border: 2px solid #E2E8F0; border-radius: 6px; background: #ED8936; color: white; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; border-color: #ED8936;">
+            📅 Todos
+        </button>
+    `;
+    
+    meses.forEach(mes => {
+        const label = formatarMesAno(mes);
+        html += `
+            <button class="btn-mes" data-mes="${mes}" onclick="filtrarPorMes('${mes}')" style="padding: 4px 12px; border: 2px solid #E2E8F0; border-radius: 6px; background: #F7FAFC; color: #4A5568; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                📅 ${label}
+            </button>
+        `;
+    });
+    
+    container.innerHTML = html;
+    container.style.display = 'flex';
+    container.style.gap = '8px';
+    container.style.flexWrap = 'wrap';
+    container.style.padding = '10px 0';
+    container.style.marginBottom = '15px';
+}
+
+// ============================================
+// FILTRAR POR MÊS
+// ============================================
+
+function filtrarPorMes(mes) {
+    mesSelecionado = mes === 'todos' ? null : mes;
+    
+    document.querySelectorAll('.btn-mes').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mes === mes);
+        if (btn.dataset.mes === mes) {
+            btn.style.background = '#ED8936';
+            btn.style.color = 'white';
+            btn.style.borderColor = '#ED8936';
+        } else {
+            btn.style.background = '#F7FAFC';
+            btn.style.color = '#4A5568';
+            btn.style.borderColor = '#E2E8F0';
+        }
+    });
+    
+    aplicarFiltros();
+}
+
+// ============================================
+// CRIAR ABAS
+// ============================================
+
+function criarAbas() {
+    const mainContainer = document.querySelector('.dashboard-main');
+    if (!mainContainer) return;
+    
+    const existingAbas = document.querySelector('.abas-container');
+    if (existingAbas) existingAbas.remove();
+    
+    const abaContainer = document.createElement('div');
+    abaContainer.className = 'abas-container';
+    abaContainer.innerHTML = `
+        <button class="btn-aba active" data-aba="obras" onclick="trocarAba('obras')">
+            🏗️ Obras
+        </button>
+        <button class="btn-aba" data-aba="encarregados" onclick="trocarAba('encarregados')">
+            👤 Encarregados
+        </button>
+    `;
+    
+    mainContainer.parentNode.insertBefore(abaContainer, mainContainer);
+}
+
+// ============================================
+// TROCAR ABA
+// ============================================
+
+function trocarAba(aba) {
+    abaAtual = aba;
+    itemSelecionado = null;
+    mesSelecionado = null;
+    
+    document.querySelectorAll('.btn-aba').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.aba === aba);
+    });
+    
+    const listTitle = document.getElementById('listTitle');
+    if (listTitle) {
+        const titles = {
+            'obras': '🏗️ Lista de Obras',
+            'encarregados': '👤 Lista de Encarregados'
+        };
+        listTitle.textContent = titles[aba] || '🏗️ Lista de Obras';
+    }
+    
+    renderizarDashboard(dadosFiltrados);
+}
+
+// ============================================
 // FILTROS
 // ============================================
 
@@ -97,8 +242,17 @@ function aplicarFiltros() {
     const dataInicio = document.getElementById('filterDataInicio')?.value || '';
     const dataFim = document.getElementById('filterDataFim')?.value || '';
     const buscaTexto = document.getElementById('filterBusca')?.value?.toLowerCase() || '';
+    const filtroStatus = document.getElementById('filterStatus')?.value || 'todos';
     
     let filtrados = [...dadosCompletos];
+    
+    if (mesSelecionado) {
+        filtrados = filtrados.filter(item => {
+            const mes = getMesAno(item.data_programacao);
+            return mes === mesSelecionado;
+        });
+        console.log(`📅 Após filtro de mês: ${filtrados.length} pendências`);
+    }
     
     if (dataInicio || dataFim) {
         filtrados = filtrados.filter(item => {
@@ -108,6 +262,11 @@ function aplicarFiltros() {
             return true;
         });
         console.log(`📅 Após filtro de período: ${filtrados.length} pendências`);
+    }
+    
+    if (filtroStatus !== 'todos') {
+        filtrados = filtrados.filter(item => item.status === filtroStatus);
+        console.log(`📊 Após filtro de status: ${filtrados.length} pendências`);
     }
     
     if (buscaTexto) {
@@ -134,31 +293,17 @@ function limparFiltros() {
     document.getElementById('filterDataInicio').value = '';
     document.getElementById('filterDataFim').value = '';
     document.getElementById('filterBusca').value = '';
-    aplicarFiltros();
-}
-
-// ============================================
-// TROCAR ABA
-// ============================================
-
-function trocarAba(aba) {
-    abaAtual = aba;
-    itemSelecionado = null;
+    document.getElementById('filterStatus').value = 'todos';
+    mesSelecionado = null;
     
-    document.querySelectorAll('.btn-aba').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.aba === aba);
+    document.querySelectorAll('.btn-mes').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = '#F7FAFC';
+        btn.style.color = '#4A5568';
+        btn.style.borderColor = '#E2E8F0';
     });
     
-    const listTitle = document.getElementById('listTitle');
-    if (listTitle) {
-        const titles = {
-            'obras': '🏗️ Lista de Obras',
-            'encarregados': '👤 Lista de Encarregados'
-        };
-        listTitle.textContent = titles[aba] || '🏗️ Lista de Obras';
-    }
-    
-    renderizarDashboard(dadosFiltrados);
+    aplicarFiltros();
 }
 
 // ============================================
@@ -214,7 +359,12 @@ function renderizarKPIs(pendencias) {
     const container = document.getElementById('kpiGrid');
     if (!container) return;
     
+    const pendentes = pendencias.filter(p => p.status !== 'FINALIZADO');
+    const finalizadas = pendencias.filter(p => p.status === 'FINALIZADO');
+    
     const total = pendencias.length;
+    const totalPendentes = pendentes.length;
+    const totalFinalizadas = finalizadas.length;
     const totalObras = new Set(pendencias.map(p => p.obra)).size;
     const totalEncarregados = new Set(pendencias.map(p => p.encarregado).filter(e => e)).size;
     
@@ -222,22 +372,27 @@ function renderizarKPIs(pendencias) {
         <div class="kpi-card status-total">
             <div class="kpi-icon">📦</div>
             <div class="kpi-value">${total}</div>
-            <div class="kpi-label">Total de Pendências</div>
+            <div class="kpi-label">Total de Registros</div>
+        </div>
+        <div class="kpi-card status-pendente">
+            <div class="kpi-icon">⏳</div>
+            <div class="kpi-value">${totalPendentes}</div>
+            <div class="kpi-label">Pendentes</div>
+        </div>
+        <div class="kpi-card status-baixado">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-value">${totalFinalizadas}</div>
+            <div class="kpi-label">Devolvidas</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-icon">🏗️</div>
             <div class="kpi-value">${totalObras}</div>
-            <div class="kpi-label">Obras com Pendência</div>
+            <div class="kpi-label">Obras</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-icon">👤</div>
             <div class="kpi-value">${totalEncarregados}</div>
             <div class="kpi-label">Encarregados</div>
-        </div>
-        <div class="kpi-card status-pendente">
-            <div class="kpi-icon">⏳</div>
-            <div class="kpi-value">${total}</div>
-            <div class="kpi-label">Pendentes</div>
         </div>
     `;
 }
@@ -250,7 +405,6 @@ function renderizarListaObras(pendencias) {
     const container = document.getElementById('itemList');
     if (!container) return;
     
-    // Agrupa pendências por obra
     const obrasMap = {};
     pendencias.forEach(p => {
         const obra = p.obra || 'SEM OBRA';
@@ -258,19 +412,27 @@ function renderizarListaObras(pendencias) {
             obrasMap[obra] = {
                 obra: obra,
                 count: 0,
+                pendentes: 0,
+                finalizadas: 0,
                 pendencias: []
             };
         }
         obrasMap[obra].count++;
         obrasMap[obra].pendencias.push(p);
+        if (p.status === 'FINALIZADO') {
+            obrasMap[obra].finalizadas++;
+        } else {
+            obrasMap[obra].pendentes++;
+        }
     });
     
     const obrasOrdenadas = Object.values(obrasMap).sort((a, b) => a.obra.localeCompare(b.obra));
     
     let html = `
-        <div style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 1fr 60px 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
-            <span style="text-align: right;">Pend.</span>
+            <span style="text-align: right;">⏳</span>
+            <span style="text-align: right;">✅</span>
         </div>
     `;
     
@@ -278,9 +440,10 @@ function renderizarListaObras(pendencias) {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'obra' && itemSelecionado.obra === item.obra;
         const obraFormatada = formatarObraParaExibicao(item.obra);
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${item.obra}')" style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 10px 12px;">
-                <span class="item-code">🏗️ ${obraFormatada}</span>
-                <span class="item-count">${item.count}</span>
+            <div class="obra-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${item.obra}')" style="display: grid; grid-template-columns: 1fr 60px 60px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+                <span class="obra-numero">🏗️ ${obraFormatada}</span>
+                <span style="text-align: right; color: #ED8936; font-weight: 600;">${item.pendentes}</span>
+                <span style="text-align: right; color: #48BB78; font-weight: 600;">${item.finalizadas}</span>
             </div>
         `;
     });
@@ -296,7 +459,6 @@ function renderizarListaEncarregados(pendencias) {
     const container = document.getElementById('itemList');
     if (!container) return;
     
-    // Agrupa pendências por encarregado
     const encarregadosMap = {};
     pendencias.forEach(p => {
         const nome = p.encarregado || 'NÃO INFORMADO';
@@ -304,29 +466,38 @@ function renderizarListaEncarregados(pendencias) {
             encarregadosMap[nome] = {
                 nome: nome,
                 count: 0,
+                pendentes: 0,
+                finalizadas: 0,
                 pendencias: []
             };
         }
         encarregadosMap[nome].count++;
         encarregadosMap[nome].pendencias.push(p);
+        if (p.status === 'FINALIZADO') {
+            encarregadosMap[nome].finalizadas++;
+        } else {
+            encarregadosMap[nome].pendentes++;
+        }
     });
     
     const encarregadosOrdenados = Object.values(encarregadosMap)
         .sort((a, b) => b.count - a.count);
     
     let html = `
-        <div style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 1fr 60px 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Encarregado</span>
-            <span style="text-align: right;">Pend.</span>
+            <span style="text-align: right;">⏳</span>
+            <span style="text-align: right;">✅</span>
         </div>
     `;
     
     encarregadosOrdenados.forEach(item => {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'encarregado' && itemSelecionado.nome === item.nome;
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarEncarregado('${item.nome}')" style="display: grid; grid-template-columns: 1fr 60px; gap: 8px; padding: 10px 12px;">
-                <span class="item-code">👤 ${item.nome}</span>
-                <span class="item-count">${item.count}</span>
+            <div class="obra-item ${isActive ? 'active' : ''}" onclick="selecionarEncarregado('${item.nome}')" style="display: grid; grid-template-columns: 1fr 60px 60px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+                <span class="obra-numero">👤 ${item.nome}</span>
+                <span style="text-align: right; color: #ED8936; font-weight: 600;">${item.pendentes}</span>
+                <span style="text-align: right; color: #48BB78; font-weight: 600;">${item.finalizadas}</span>
             </div>
         `;
     });
@@ -363,7 +534,7 @@ function selecionarEncarregado(nome) {
 }
 
 // ============================================
-// DETALHES DA OBRA (com todas as saídas)
+// DETALHES DA OBRA
 // ============================================
 
 function renderizarDetalhesObra(pendencias) {
@@ -373,7 +544,6 @@ function renderizarDetalhesObra(pendencias) {
     const obraFormatada = formatarObraParaExibicao(pendencias[0].obra);
     const total = pendencias.length;
     
-    // Agrupa por data de programação (saídas)
     const saidasMap = {};
     pendencias.forEach(p => {
         const data = p.data_programacao || 'SEM DATA';
@@ -407,26 +577,27 @@ function renderizarDetalhesObra(pendencias) {
         const dataFormatada = formatarData(saida.data);
         const pendenteCount = saida.pendencias.length;
         const encarregado = saida.pendencias[0].encarregado || 'N/I';
+        const statusIcon = saida.pendencias[0].status === 'FINALIZADO' ? '✅' : '⏳';
         html += `
             <div class="list-row">
-                <span>📅 ${dataFormatada} 👤 ${encarregado}</span>
-                <span style="font-weight: 600; color: #ED8936;">${pendenteCount} pendências</span>
+                <span>📅 ${dataFormatada} 👤 ${encarregado} ${statusIcon}</span>
+                <span style="font-weight: 600; color: ${saida.pendencias[0].status === 'FINALIZADO' ? '#48BB78' : '#ED8936'};">${pendenteCount} pendências</span>
             </div>
         `;
     });
     
     html += `</div>`;
     
-    // Detalhes das pendências
     html += `<div class="detail-section-title">📋 Detalhes das Pendências:</div>
     <div class="detail-list">`;
     
     pendencias.forEach(p => {
         const dataFormatada = formatarData(p.data_programacao);
         const motivo = p.motivo_pendencia || 'Sem motivo';
+        const statusIcon = p.status === 'FINALIZADO' ? '✅' : '⏳';
         html += `
             <div class="list-row">
-                <span>📅 ${dataFormatada} - ${motivo}</span>
+                <span>📅 ${dataFormatada} ${statusIcon} - ${motivo}</span>
                 <span style="font-size: 12px; color: #718096;">${p.solucao_pendencia || 'Sem solução'}</span>
             </div>
         `;
@@ -438,7 +609,7 @@ function renderizarDetalhesObra(pendencias) {
 }
 
 // ============================================
-// DETALHES DO ENCARREGADO (com todas as obras e saídas)
+// DETALHES DO ENCARREGADO
 // ============================================
 
 function renderizarDetalhesEncarregado(pendencias) {
@@ -448,7 +619,6 @@ function renderizarDetalhesEncarregado(pendencias) {
     const nome = pendencias[0].encarregado || 'NÃO INFORMADO';
     const total = pendencias.length;
     
-    // Agrupa por obra
     const obrasMap = {};
     pendencias.forEach(p => {
         const obra = p.obra || 'SEM OBRA';
@@ -484,17 +654,18 @@ function renderizarDetalhesEncarregado(pendencias) {
         const obraFormatada = formatarObraParaExibicao(obra.obra);
         const count = obra.pendencias.length;
         const saidasCount = obra.saidas.size;
+        const pendentes = obra.pendencias.filter(p => p.status !== 'FINALIZADO').length;
+        const finalizadas = obra.pendencias.filter(p => p.status === 'FINALIZADO').length;
         html += `
             <div class="list-row">
                 <span>🏗️ ${obraFormatada}</span>
-                <span style="font-weight: 600; color: #ED8936;">${count} pend. • ${saidasCount} saídas</span>
+                <span style="font-weight: 600;">${count} pend. • ${saidasCount} saídas ⏳${pendentes} ✅${finalizadas}</span>
             </div>
         `;
     });
     
     html += `</div>`;
     
-    // Detalhes das pendências
     html += `<div class="detail-section-title">📋 Detalhes das Pendências:</div>
     <div class="detail-list">`;
     
@@ -502,9 +673,10 @@ function renderizarDetalhesEncarregado(pendencias) {
         const obraFormatada = formatarObraParaExibicao(p.obra);
         const dataFormatada = formatarData(p.data_programacao);
         const motivo = p.motivo_pendencia || 'Sem motivo';
+        const statusIcon = p.status === 'FINALIZADO' ? '✅' : '⏳';
         html += `
             <div class="list-row">
-                <span>🏗️ ${obraFormatada} - 📅 ${dataFormatada}</span>
+                <span>🏗️ ${obraFormatada} - 📅 ${dataFormatada} ${statusIcon}</span>
                 <span style="font-size: 12px; color: #718096;">${motivo}</span>
             </div>
         `;
@@ -522,9 +694,42 @@ function renderizarDetalhesEncarregado(pendencias) {
 function renderizarGraficos(pendencias) {
     console.log('📊 Renderizando gráficos...');
     
+    const pendentes = pendencias.filter(p => p.status !== 'FINALIZADO');
+    const finalizadas = pendencias.filter(p => p.status === 'FINALIZADO');
     const total = pendencias.length || 1;
     
-    // Gráfico 1: Distribuição por Encarregado (Top 10)
+    let htmlStatus = `
+        <div class="chart-bar-indicator">
+            <span class="label">⏳ Pendentes</span>
+            <div class="bar-track">
+                <div class="bar-fill bar-pendente" style="width: ${(pendentes.length / total) * 100}%;">
+                    <span class="value">${pendentes.length}</span>
+                </div>
+            </div>
+            <span class="percent">${((pendentes.length / total) * 100).toFixed(0)}%</span>
+        </div>
+        <div class="chart-bar-indicator">
+            <span class="label">✅ Devolvidas</span>
+            <div class="bar-track">
+                <div class="bar-fill bar-baixado" style="width: ${(finalizadas.length / total) * 100}%;">
+                    <span class="value">${finalizadas.length}</span>
+                </div>
+            </div>
+            <span class="percent">${((finalizadas.length / total) * 100).toFixed(0)}%</span>
+        </div>
+        <div class="chart-bar-indicator" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #E2E8F0;">
+            <span class="label" style="font-weight: 700;">Total</span>
+            <div class="bar-track">
+                <div class="bar-fill bar-total" style="width: 100%;">
+                    <span class="value">${total}</span>
+                </div>
+            </div>
+            <span class="percent" style="font-weight: 700;">100%</span>
+        </div>
+    `;
+    
+    document.getElementById('statusChart').innerHTML = htmlStatus;
+    
     const encarregadosCount = {};
     pendencias.forEach(p => {
         const nome = p.encarregado || 'NÃO INFORMADO';
@@ -532,71 +737,33 @@ function renderizarGraficos(pendencias) {
         encarregadosCount[nome]++;
     });
     
-    const sortedEncarregados = Object.entries(encarregadosCount)
+    const sorted = Object.entries(encarregadosCount)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10);
     
-    const maxEncarregado = sortedEncarregados.length > 0 ? Math.max(...sortedEncarregados.map(s => s[1])) : 1;
+    const maxCount = sorted.length > 0 ? Math.max(...sorted.map(s => s[1])) : 1;
     
     let htmlEncarregado = '';
-    sortedEncarregados.forEach(([nome, count]) => {
-        const percentual = (count / maxEncarregado) * 100;
-        const percentualTotal = (count / total) * 100;
+    sorted.forEach(([nome, count]) => {
+        const percentual = (count / maxCount) * 100;
         htmlEncarregado += `
-            <div class="chart-bar-indicator" style="margin-bottom: 6px;">
-                <span class="label" style="min-width: 100px; font-size: 11px;">${nome}</span>
-                <div class="bar-track" style="height: 22px;">
-                    <div class="bar-fill bar-encarregados" style="width: ${percentual}%;">
+            <div class="top-sku-item">
+                <span class="rank" style="min-width: 25px;">#</span>
+                <span class="code" style="min-width: 80px; font-size: 10px;">${nome}</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width: ${percentual}%; background: linear-gradient(90deg, #ED8936, #C05621);">
                         <span class="value">${count}</span>
                     </div>
                 </div>
-                <span class="percent" style="font-size: 11px;">${percentualTotal.toFixed(0)}%</span>
             </div>
         `;
     });
     
-    if (sortedEncarregados.length === 0) {
+    if (sorted.length === 0) {
         htmlEncarregado = `<div class="empty-state-dashboard"><p>Nenhum encarregado encontrado</p></div>`;
     }
     
-    document.getElementById('statusChart').innerHTML = htmlEncarregado;
-    
-    // Gráfico 2: Top Obras com Pendência
-    const obrasCount = {};
-    pendencias.forEach(p => {
-        const obra = p.obra || 'SEM OBRA';
-        if (!obrasCount[obra]) obrasCount[obra] = 0;
-        obrasCount[obra]++;
-    });
-    
-    const sortedObras = Object.entries(obrasCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10);
-    
-    const maxObras = sortedObras.length > 0 ? Math.max(...sortedObras.map(s => s[1])) : 1;
-    
-    let htmlObras = '';
-    sortedObras.forEach(([obra, count]) => {
-        const percentual = (count / maxObras) * 100;
-        const obraFormatada = formatarObraParaExibicao(obra);
-        htmlObras += `
-            <div class="top-item">
-                <span class="rank" style="min-width: 25px;">#</span>
-                <span class="name" style="min-width: 80px; font-size: 10px;">${obraFormatada}</span>
-                <div class="bar-track">
-                    <div class="bar-fill" style="width: ${percentual}%;">
-                        <span class="value">${count}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    if (sortedObras.length === 0) {
-        htmlObras = `<div class="empty-state-dashboard"><p>Nenhuma obra encontrada</p></div>`;
-    }
-    
-    document.getElementById('topSkusChart').innerHTML = htmlObras;
+    document.getElementById('topSkusChart').innerHTML = htmlEncarregado;
 }
 
 // ============================================
@@ -609,5 +776,6 @@ window.trocarAba = trocarAba;
 window.selecionarObra = selecionarObra;
 window.selecionarEncarregado = selecionarEncarregado;
 window.renderizarDashboard = renderizarDashboard;
+window.filtrarPorMes = filtrarPorMes;
 
 console.log('✅ dashboards-pendencia-devolucao.js inicializado!');

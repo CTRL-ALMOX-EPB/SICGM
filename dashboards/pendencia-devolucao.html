@@ -50,12 +50,25 @@
                 <input type="date" id="filterDataFim">
             </div>
             <div class="filter-group">
+                <label>📊 Status:</label>
+                <select id="filterStatus">
+                    <option value="todos">Todos</option>
+                    <option value="PENDENTE">⏳ Pendente</option>
+                    <option value="FINALIZADO">✅ Devolvido</option>
+                </select>
+            </div>
+            <div class="filter-group">
                 <label>🔍 Buscar:</label>
                 <input type="text" id="filterBusca" placeholder="Obra ou encarregado..." style="width: 200px;">
             </div>
             <button class="btn-filter primary" onclick="aplicarFiltros()">🔍 Filtrar</button>
             <button class="btn-filter secondary" onclick="limparFiltros()">🧹 Limpar</button>
             <span class="total-registros" id="totalRegistros">0 pendências</span>
+        </div>
+
+        <!-- Meses -->
+        <div class="meses-container" id="mesesContainer">
+            <span style="font-size: 12px; color: #718096; margin-right: 8px; font-weight: 600;">📅 FILTRAR POR MÊS:</span>
         </div>
 
         <!-- KPIs -->
@@ -110,7 +123,7 @@
             </div>
 
             <div class="dashboard-card">
-                <h3>🏆 Top Obras com Pendências</h3>
+                <h3>🏆 Top Encarregados</h3>
                 <div id="topSkusChart" class="chart-container">
                     <div class="loading-dashboard" style="min-height: 100px;">
                         <div class="spinner"></div>

@@ -8,6 +8,7 @@ let dadosCompletos = [];
 let dadosFiltrados = [];
 let itemSelecionado = null;
 let abaAtual = 'materiais';
+let mesSelecionado = null;
 
 // ============================================
 // FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO
@@ -20,6 +21,53 @@ function formatarObraParaExibicao(obra) {
     return limpo.substring(0, 3) + '-' + 
            limpo.substring(3, 5) + '-' + 
            limpo.substring(5, 10);
+}
+
+// ============================================
+// FUNÇÃO: OBTER MÊS DA DATA
+// ============================================
+
+function getMesAno(dataString) {
+    if (!dataString) return null;
+    try {
+        const data = new Date(dataString);
+        return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+    } catch {
+        return null;
+    }
+}
+
+// ============================================
+// FUNÇÃO: FORMATAR MÊS PARA EXIBIÇÃO
+// ============================================
+
+function formatarMesAno(mesAno) {
+    if (!mesAno) return '';
+    const [ano, mes] = mesAno.split('-');
+    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    return `${meses[parseInt(mes) - 1]} ${ano}`;
+}
+
+// ============================================
+// FUNÇÃO: CALCULAR VALOR TOTAL
+// ============================================
+
+function calcularValorTotal(itens) {
+    let total = 0;
+    itens.forEach(item => {
+        const qtd = parseFloat(item.quantidade) || 0;
+        const valorUnitario = item.vlrult_cot || 10;
+        total += qtd * valorUnitario;
+    });
+    return total;
+}
+
+// ============================================
+// FUNÇÃO: FORMATAR VALOR
+// ============================================
+
+function formatarValor(valor) {
+    return 'R$ ' + valor.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 // ============================================
@@ -64,6 +112,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
         criarAbas();
+        criarMeses();
         aplicarFiltros();
         
         loadingOverlay.classList.remove('active');
@@ -88,6 +137,73 @@ document.addEventListener('DOMContentLoaded', async function() {
         `;
     }
 });
+
+// ============================================
+// CRIAR MESES
+// ============================================
+
+function criarMeses() {
+    const container = document.getElementById('mesesContainer');
+    if (!container) return;
+    
+    const mesesSet = new Set();
+    dadosCompletos.forEach(item => {
+        const mes = getMesAno(item.data_programacao);
+        if (mes) mesesSet.add(mes);
+    });
+    
+    const meses = Array.from(mesesSet).sort();
+    
+    if (meses.length === 0) {
+        container.innerHTML = `<span style="font-size: 12px; color: #A0AEC0;">Nenhum mês disponível</span>`;
+        return;
+    }
+    
+    let html = `
+        <button class="btn-mes active" data-mes="todos" onclick="filtrarPorMes('todos')" style="padding: 4px 12px; border: 2px solid #E2E8F0; border-radius: 6px; background: #ED8936; color: white; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; border-color: #ED8936;">
+            📅 Todos
+        </button>
+    `;
+    
+    meses.forEach(mes => {
+        const label = formatarMesAno(mes);
+        html += `
+            <button class="btn-mes" data-mes="${mes}" onclick="filtrarPorMes('${mes}')" style="padding: 4px 12px; border: 2px solid #E2E8F0; border-radius: 6px; background: #F7FAFC; color: #4A5568; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                📅 ${label}
+            </button>
+        `;
+    });
+    
+    container.innerHTML = html;
+    container.style.display = 'flex';
+    container.style.gap = '8px';
+    container.style.flexWrap = 'wrap';
+    container.style.padding = '10px 0';
+    container.style.marginBottom = '15px';
+}
+
+// ============================================
+// FILTRAR POR MÊS
+// ============================================
+
+function filtrarPorMes(mes) {
+    mesSelecionado = mes === 'todos' ? null : mes;
+    
+    document.querySelectorAll('.btn-mes').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mes === mes);
+        if (btn.dataset.mes === mes) {
+            btn.style.background = '#ED8936';
+            btn.style.color = 'white';
+            btn.style.borderColor = '#ED8936';
+        } else {
+            btn.style.background = '#F7FAFC';
+            btn.style.color = '#4A5568';
+            btn.style.borderColor = '#E2E8F0';
+        }
+    });
+    
+    aplicarFiltros();
+}
 
 // ============================================
 // CRIAR ABAS
@@ -150,9 +266,15 @@ function aplicarFiltros() {
     const buscaTexto = document.getElementById('filterBusca')?.value?.toLowerCase() || '';
     const buscaObra = document.getElementById('filterObra')?.value || '';
     
-    console.log(`📅 Filtros: Início=${dataInicio}, Fim=${dataFim}, Status=${statusFiltro}, Busca=${buscaTexto}, Obra=${buscaObra}`);
-    
     let filtrados = [...dadosCompletos];
+    
+    if (mesSelecionado) {
+        filtrados = filtrados.filter(item => {
+            const mes = getMesAno(item.data_programacao);
+            return mes === mesSelecionado;
+        });
+        console.log(`📅 Após filtro de mês: ${filtrados.length} aditivos`);
+    }
     
     if (dataInicio || dataFim) {
         filtrados = filtrados.filter(item => {
@@ -211,6 +333,15 @@ function limparFiltros() {
     document.getElementById('filterStatus').value = 'todos';
     document.getElementById('filterBusca').value = '';
     document.getElementById('filterObra').value = '';
+    mesSelecionado = null;
+    
+    document.querySelectorAll('.btn-mes').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = '#F7FAFC';
+        btn.style.color = '#4A5568';
+        btn.style.borderColor = '#E2E8F0';
+    });
+    
     aplicarFiltros();
 }
 
@@ -252,14 +383,12 @@ function agruparItensPorCodigo(controles) {
                 grupos[codigo].descricao = descricao;
             }
             
-            // CONTAGEM: Cada ocorrência do SKU conta como 1 (COUNT)
             grupos[codigo].total += 1;
             
             const obra = controle.obra || 'SEM OBRA';
             const isSaida = obra.toUpperCase().includes('SAÍDA') || obra.toUpperCase().includes('SAIDA');
             const status = item.status_aditivo || 'ANALISE';
             
-            // CONTAGEM por status
             if (grupos[codigo].statusCount[status] !== undefined) {
                 grupos[codigo].statusCount[status] += 1;
             }
@@ -326,7 +455,6 @@ function agruparPorObra(controles) {
             obras[obra].totalItens += qtd;
             
             if (item.codigo) {
-                // CONTAGEM: Cada ocorrência do SKU conta como 1
                 obras[obra].skus.push(item.codigo);
                 obras[obra].skusSet.add(item.codigo);
             }
@@ -336,8 +464,8 @@ function agruparPorObra(controles) {
     const resultado = Object.values(obras).map(obra => ({
         ...obra,
         datas: Array.from(obra.datas).sort(),
-        skusCount: obra.skus.length, // COUNT de ocorrências
-        skusUnico: obra.skusSet.size // SKUs únicos
+        skusCount: obra.skus.length,
+        skusUnico: obra.skusSet.size
     })).sort((a, b) => b.skusCount - a.skusCount);
     
     console.log(`✅ ${resultado.length} obras agrupadas`);
@@ -408,11 +536,9 @@ function renderizarKPIsMateriais(itensAgrupados) {
     const container = document.getElementById('kpiGrid');
     if (!container) return;
     
-    // COUNT de ocorrências de SKUs
     const totalOcorrencias = itensAgrupados.reduce((sum, item) => sum + item.total, 0);
     const totalSkusUnicos = itensAgrupados.length;
     
-    // Obras com aditivos (usando Set)
     const obrasSet = new Set();
     itensAgrupados.forEach(item => {
         item.obras.forEach(o => obrasSet.add(o.obra));
@@ -420,7 +546,6 @@ function renderizarKPIsMateriais(itensAgrupados) {
     });
     const totalObras = obrasSet.size;
     
-    // CONTAGEM de ocorrências por status
     const statusCount = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     itensAgrupados.forEach(item => {
         Object.keys(statusCount).forEach(status => {
@@ -513,7 +638,7 @@ function renderizarListaItens(itensAgrupados) {
     }
     
     let html = `
-        <div style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Código</span>
             <span>Descrição</span>
             <span style="text-align: right;">Ocorr.</span>
@@ -554,7 +679,7 @@ function renderizarListaObras(obrasAgrupadas) {
     }
     
     let html = `
-        <div style="display: grid; grid-template-columns: 100px 1fr 70px 70px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 100px 1fr 70px 70px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
             <span>Informações</span>
             <span style="text-align: right;">Ocorr.</span>
@@ -680,7 +805,7 @@ function selecionarItem(codigo) {
 }
 
 // ============================================
-// DETALHES DO ITEM (MATERIAL)
+// DETALHES DO ITEM (MATERIAL) - COM QUANTIDADE E VALOR
 // ============================================
 
 function renderizarDetalhes(item) {
@@ -697,11 +822,17 @@ function renderizarDetalhes(item) {
         return;
     }
     
-    // COUNT de status
+    let totalQuantidade = 0;
+    item.itens.forEach(i => {
+        totalQuantidade += parseFloat(i.quantidade) || 0;
+    });
+    
+    const valorTotal = calcularValorTotal(item.itens);
+    
     const statusMap = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     item.itens.forEach(i => {
         const s = i.status || 'ANALISE';
-        if (statusMap[s] !== undefined) statusMap[s] += 1; // COUNT
+        if (statusMap[s] !== undefined) statusMap[s] += 1;
     });
     
     let html = `
@@ -709,6 +840,14 @@ function renderizarDetalhes(item) {
         <div class="detail-row">
             <span class="label">Ocorrências:</span>
             <span class="value">${item.total}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Quantidade Total:</span>
+            <span class="value">${totalQuantidade.toFixed(2)} ${item.unidade}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Valor Total:</span>
+            <span class="value" style="color: #48BB78; font-weight: 700;">${formatarValor(valorTotal)}</span>
         </div>
         <div class="detail-row">
             <span class="label">Obras:</span>
@@ -778,7 +917,6 @@ function getStatusBadge(status) {
 function renderizarGraficos(itensAgrupados) {
     console.log('📊 Renderizando gráficos de indicadores...');
     
-    // Calcula totais por status (COUNT de ocorrências)
     const statusCount = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     itensAgrupados.forEach(item => {
         Object.keys(statusCount).forEach(status => {
@@ -803,7 +941,6 @@ function renderizarGraficos(itensAgrupados) {
         'S/ SOLICITAÇÃO': 'bar-s-solicitacao'
     };
     
-    // Gráfico 1: Distribuição por Status (COUNT)
     let htmlStatus = '';
     Object.keys(statusCount).forEach(status => {
         const value = statusCount[status];
@@ -823,7 +960,6 @@ function renderizarGraficos(itensAgrupados) {
         `;
     });
     
-    // Barra total
     htmlStatus += `
         <div class="chart-bar-indicator" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #E2E8F0;">
             <span class="label" style="font-weight: 700;">Total</span>
@@ -838,7 +974,6 @@ function renderizarGraficos(itensAgrupados) {
     
     document.getElementById('statusChart').innerHTML = htmlStatus;
     
-    // Gráfico 2: Top 10 SKUs (COUNT)
     const topSkus = [...itensAgrupados]
         .sort((a, b) => b.total - a.total)
         .slice(0, 10);
@@ -878,5 +1013,6 @@ window.selecionarItem = selecionarItem;
 window.selecionarObra = selecionarObra;
 window.trocarAba = trocarAba;
 window.renderizarDashboard = renderizarDashboard;
+window.filtrarPorMes = filtrarPorMes;
 
 console.log('✅ dashboards-aditivos-sistemicos.js inicializado!');
