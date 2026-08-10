@@ -455,10 +455,10 @@ function renderizarDashboard(obras) {
     }
     
     if (abaAtual === 'obras') {
-        const ativas = obras.filter(o => o.status !== 'FINALIZADO');
-        renderizarKPIsObras(ativas, obras);
+        // REMOVIDO O FILTRO - Agora usa TODAS as obras, não apenas pendentes
+        renderizarKPIsObras(obras, obras);
         renderizarListaObras(obras);
-        renderizarGraficosObras(ativas);
+        renderizarGraficosObras(obras);
         
         if (obraSelecionada && obraSelecionada.tipo === 'obra') {
             const obra = obras.find(o => o.obra === obraSelecionada.obra);
@@ -482,13 +482,14 @@ function renderizarDashboard(obras) {
 }
 
 // ============================================
-// KPIs - OBRAS
+// KPIs - OBRAS (AGORA COM TODAS AS OBRAS)
 // ============================================
 
 function renderizarKPIsObras(obras, todasObras) {
     const container = document.getElementById('kpiGrid');
     if (!container) return;
     
+    // Usa TODAS as obras, não apenas as pendentes
     const total = obras.length;
     const canceladas = obras.filter(o => o.cancelada === 'SIM').length;
     const comAditivo = obras.filter(o => o.aditivo === 'SIM').length;
@@ -506,6 +507,9 @@ function renderizarKPIsObras(obras, todasObras) {
         if (o.separador) separadores.add(o.separador);
     });
     
+    // Conta finalizadas
+    const finalizadas = obras.filter(o => o.status === 'FINALIZADO').length;
+    
     const isFilterActive = (tipo, valor) => {
         return filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor;
     };
@@ -515,6 +519,11 @@ function renderizarKPIsObras(obras, todasObras) {
             <div class="kpi-icon">🏗️</div>
             <div class="kpi-value">${total}</div>
             <div class="kpi-label">Total</div>
+        </div>
+        <div class="kpi-card" style="border-color: #48BB78; cursor: default;">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-value" style="color: #48BB78;">${finalizadas}</div>
+            <div class="kpi-label">Finalizadas</div>
         </div>
         <div class="kpi-card status-cancelada ${isFilterActive('cancelada', 'SIM') ? 'active' : ''}" onclick="aplicarFiltroCard('cancelada', 'SIM')" style="cursor: pointer; ${isFilterActive('cancelada', 'SIM') ? 'border: 2px solid #FC8181; background: #FFF5F5;' : ''}">
             <div class="kpi-icon">❌</div>
@@ -955,12 +964,13 @@ function renderizarDetalhesSeparador(separador) {
 }
 
 // ============================================
-// GRÁFICOS - OBRAS
+// GRÁFICOS - OBRAS (COM TODAS AS OBRAS)
 // ============================================
 
 function renderizarGraficosObras(obras) {
     console.log('📊 Renderizando gráficos de obras...');
     
+    // Usa TODAS as obras, não apenas pendentes
     const total = obras.length || 1;
     
     const categorias = {
@@ -968,7 +978,8 @@ function renderizarGraficosObras(obras) {
         comAditivo: { count: obras.filter(o => o.aditivo === 'SIM').length, label: 'Com Aditivo', class: 'bar-aditivo' },
         foraProgramacao: { count: obras.filter(o => o.obra_programada === 'NÃO').length, label: 'Fora Programação', class: 'bar-programacao' },
         devolvidas: { count: obras.filter(o => o.devolvida === 'SIM').length, label: 'Devolvidas', class: 'bar-devolvida' },
-        comSaida: { count: obras.filter(o => o.obra_teve_saida === 'SIM').length, label: 'Com Saída', class: 'bar-saida' }
+        comSaida: { count: obras.filter(o => o.obra_teve_saida === 'SIM').length, label: 'Com Saída', class: 'bar-saida' },
+        finalizadas: { count: obras.filter(o => o.status === 'FINALIZADO').length, label: 'Finalizadas', class: 'bar-devolvida' }
     };
     
     const normais = obras.filter(o => 
@@ -976,7 +987,8 @@ function renderizarGraficosObras(obras) {
         o.aditivo !== 'SIM' && 
         o.obra_programada !== 'NÃO' && 
         o.devolvida !== 'SIM' && 
-        o.obra_teve_saida !== 'SIM'
+        o.obra_teve_saida !== 'SIM' &&
+        o.status !== 'FINALIZADO'
     ).length;
     
     let html = '';
