@@ -168,23 +168,8 @@ if (document.getElementById('contagemForm')) {
                         const codigo = partes[0].trim();
                         const descricao = partes[1].trim();
                         
-                        let und = 'UN';
-                        try {
-                            const materiaisResponse = await fetch('../data/materiais-proprios.txt');
-                            if (materiaisResponse.ok) {
-                                const materiaisTexto = await materiaisResponse.text();
-                                const materiaisLinhas = materiaisTexto.trim().split('\n');
-                                for (const mLinha of materiaisLinhas) {
-                                    const mPartes = mLinha.trim().split('\t');
-                                    if (mPartes.length >= 3 && mPartes[0].trim() === codigo) {
-                                        und = mPartes[2].trim();
-                                        break;
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            console.warn('⚠️ Não foi possível carregar UN do materiais-proprios.txt');
-                        }
+                        // UND sempre "UN" para todos os itens
+                        const und = 'UN';
                         
                         materiaisDMPC.push({
                             codigo: codigo,
@@ -269,6 +254,7 @@ if (document.getElementById('contagemForm')) {
         
         materiaisDMPC.forEach((material, index) => {
             const idUnico = `dmpc-${index}`;
+            const numeroItem = index + 1;
             
             // Verificar se já está registrado (qualquer data)
             const jaRegistrado = codigosExistentesDB.has(material.codigo);
@@ -289,7 +275,7 @@ if (document.getElementById('contagemForm')) {
                      data-index="${index}"
                      data-ja-registrado="${jaRegistrado}">
                     <div class="material-header">
-                        <span class="material-number">${material.codigo}</span>
+                        <span class="material-number">Item #${numeroItem}</span>
                         ${jaRegistrado ? `<span class="badge-registrado">✅ Registrado</span>` : ''}
                     </div>
                     
