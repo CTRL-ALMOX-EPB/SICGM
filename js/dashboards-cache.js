@@ -97,8 +97,8 @@ class DashboardCache {
         return data.data || [];
     }
 
-    // Busca dados com timeout - 60 SEGUNDOS para Pendência de Baixa
-    async getWithTimeout(endpoint, timeout = 60000, forceRefresh = false) {
+    // Busca dados com timeout
+    async getWithTimeout(endpoint, timeout = 30000, forceRefresh = false) {
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error(`Timeout ao carregar ${endpoint}`)), timeout);
         });
@@ -110,19 +110,16 @@ class DashboardCache {
             ]);
         } catch (error) {
             console.error(`❌ Erro ao buscar ${endpoint}:`, error);
-            // Tenta retornar cache mesmo que expirado
             const cacheKey = `${CACHE_VERSION}:${endpoint}`;
             if (this.cache[cacheKey]) {
                 console.log(`⚠️ Usando cache fallback para ${endpoint}`);
                 return this.cache[cacheKey].data;
             }
-            // Se não tem cache, retorna array vazio para não quebrar o dashboard
-            console.log(`⚠️ Retornando array vazio para ${endpoint}`);
             return [];
         }
     }
 
-    // Busca dados SEM TIMEOUT (aguarda até completar) - para Pendência de Baixa
+    // Busca dados SEM TIMEOUT (aguarda até completar)
     async getWithoutTimeout(endpoint, forceRefresh = false) {
         try {
             return await this.get(endpoint, forceRefresh);
@@ -133,8 +130,6 @@ class DashboardCache {
                 console.log(`⚠️ Usando cache fallback para ${endpoint}`);
                 return this.cache[cacheKey].data;
             }
-            // Se não tem cache, retorna array vazio
-            console.log(`⚠️ Retornando array vazio para ${endpoint}`);
             return [];
         }
     }
@@ -195,9 +190,9 @@ async function buscarPendenciasDevolucao(forceRefresh = false) {
     return dashboardCache.getWithTimeout('/pendencia-devolucao?limit=1000', 45000, forceRefresh);
 }
 
-// Pendências de Baixa (Pendência de Requisição) - SEM TIMEOUT (aguarda até completar)
+// Pendências de Baixa (Pendência de Requisição) - USANDO A ROTA COMPLETA
 async function buscarPendenciasBaixa(forceRefresh = false) {
-    return dashboardCache.getWithoutTimeout('/pendencia-baixa?limit=1000', forceRefresh);
+    return dashboardCache.getWithoutTimeout('/pendencia-baixa-completo', forceRefresh);
 }
 
 // ============================================
@@ -210,13 +205,12 @@ async function preCarregarDashboards() {
     const startTime = Date.now();
     
     try {
-        // Carrega todos os dashboards em paralelo
         const results = await Promise.allSettled([
             buscarAditivosSistemicosCompleto(),
             buscarAditivosFisicosCompleto(),
             buscarFarolObrasCompleto(),
             buscarPendenciasDevolucao(),
-            buscarPendenciasBaixa() // Pendência de Requisição - SEM TIMEOUT
+            buscarPendenciasBaixa()
         ]);
         
         const elapsed = Date.now() - startTime;
