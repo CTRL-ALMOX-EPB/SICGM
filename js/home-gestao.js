@@ -62,8 +62,16 @@ const DEPARTAMENTOS = {
     'DMPC': {
         nome: 'DMPC',
         titulo: 'Departamento de Materiais Próprios Control',
-        descricao: 'Gerencie S.A. emergencial e relatórios do departamento.',
+        descricao: 'Gerencie contagem semanal de EPIs/materiais próprios, S.A. emergencial e relatórios do departamento.',
         funcoes: [
+            {
+                id: 'contagem-dmpc',
+                nome: 'Contagem DMPC',
+                icone: '📦',
+                link: 'contagem-diaria/contagem-dmpc.html',
+                status: 'disponivel',
+                descricao: 'Contagem semanal de EPIs e materiais próprios'
+            },
             {
                 id: 'sa-emergencial-dmpc',
                 nome: 'S.A. Emergencial',
@@ -327,6 +335,14 @@ function atualizarTimestampSessao() {
     }
 }
 
+/**
+ * Função de logout
+ */
+function sair() {
+    sessionStorage.removeItem('sessaoSICGM');
+    window.location.href = 'index.html';
+}
+
 // ============================================
 // INICIALIZAÇÃO
 // ============================================
@@ -359,7 +375,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('matriculaUsuario').textContent = `Matrícula: ${sessao.matricula}`;
         document.getElementById('perfilUsuario').textContent = sessao.perfil || 'GESTÃO';
         document.getElementById('mensagemBoasVindas').textContent = 
-            `👋 Olá, ${sessao.nome}! Bem-vindo ao sistema (Gestão).`;
+            `👋 Olá, ${sessao.nome}! Bem-vindo ao SICGM.`;
     } catch (e) {
         console.error('Erro ao carregar dados do usuário:', e);
         window.location.href = 'index.html';

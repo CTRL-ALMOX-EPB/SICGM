@@ -39,6 +39,14 @@ const DEPARTAMENTOS_VISUALIZACAO = {
                 isRestricted: true
             },
             {
+                id: 'dashboards-visualizacao',
+                nome: 'Dashboards',
+                icone: '📊',
+                link: 'dashboards/index.html',
+                status: 'disponivel',
+                descricao: 'Visualize os dashboards do sistema'
+            },
+            {
                 id: 'relatorios-dcmd',
                 nome: 'Relatórios',
                 icone: '📈',
