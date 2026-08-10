@@ -184,6 +184,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         console.log(`✅ ${dadosCompletos.length} pendências carregadas em ${elapsed}ms`);
         
+        // LOG PARA DEPURAÇÃO: Verificar se os itens vieram
+        let totalItens = 0;
+        dadosCompletos.forEach(p => {
+            if (p.itens) {
+                totalItens += p.itens.length;
+            }
+        });
+        console.log(`📦 Total de itens encontrados: ${totalItens}`);
+        
         if (dadosCompletos.length === 0) {
             console.warn('⚠️ Nenhuma pendência de requisição encontrada');
             mostrarToast('⚠️ Nenhuma pendência de requisição encontrada', 'warning');
