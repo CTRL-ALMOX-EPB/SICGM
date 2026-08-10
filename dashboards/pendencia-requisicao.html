@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Pendência de Requisição</title>
+    
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/dashboards-common.css">
+    <link rel="stylesheet" href="../css/dashboards-pendencia-requisicao.css">
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Carregando dashboard...</div>
+    </div>
+
+    <div class="dashboard-container" id="dashboardContent" style="display: none;">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <h1>
+                <span class="icon">📌</span>
+                Pendência de Requisição
+            </h1>
+            <div class="user-info">
+                <div class="user-details">
+                    <span class="user-name" id="userName">Carregando...</span>
+                    <span class="user-matricula" id="userMatricula">Matrícula: ---</span>
+                </div>
+                <span class="user-perfil" id="userPerfil">GESTÃO</span>
+                <a href="../dashboards/index.html" class="btn-voltar">📊 Dashboards</a>
+            </div>
+        </header>
+
+        <!-- Banner -->
+        <section class="dashboard-banner">
+            <div class="banner-content">
+                <h2>📌 Pendências de Requisição</h2>
+                <p>Acompanhamento de itens pendentes de requisição por obra e saída</p>
+            </div>
+        </section>
+
+        <!-- Filtros -->
+        <div class="filters-bar">
+            <div class="filter-group">
+                <label>📅 Período:</label>
+                <input type="date" id="filterDataInicio">
+                <span>até</span>
+                <input type="date" id="filterDataFim">
+            </div>
+            <div class="filter-group">
+                <label>📊 Status:</label>
+                <select id="filterStatus">
+                    <option value="todos">Todos</option>
+                    <option value="PENDENTE">⏳ Pendente</option>
+                    <option value="BAIXADO">✅ Baixado</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>🔍 Buscar:</label>
+                <input type="text" id="filterBusca" placeholder="Código ou descrição..." style="width: 180px;">
+            </div>
+            <div class="filter-group">
+                <label>🏗️ Obra:</label>
+                <input type="text" id="filterObra" placeholder="Número da obra..." style="width: 140px;">
+            </div>
+            <button class="btn-filter primary" onclick="aplicarFiltros()">🔍 Filtrar</button>
+            <button class="btn-filter secondary" onclick="limparFiltros()">🧹 Limpar</button>
+            <span class="total-registros" id="totalRegistros">0 pendências</span>
+        </div>
+
+        <!-- Meses -->
+        <div class="meses-container" id="mesesContainer">
+            <span style="font-size: 12px; color: #718096; margin-right: 8px; font-weight: 600;">📅 FILTRAR POR MÊS:</span>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-grid" id="kpiGrid">
+            <div class="loading-dashboard" style="min-height: 60px; grid-column: 1 / -1;">
+                <div class="spinner"></div>
+            </div>
+        </div>
+
+        <!-- Abas -->
+        <div class="abas-container" id="abasContainer">
+            <button class="btn-aba active" data-aba="materiais" onclick="trocarAba('materiais')">
+                📦 Materiais
+            </button>
+            <button class="btn-aba" data-aba="obras" onclick="trocarAba('obras')">
+                🏗️ Obras
+            </button>
+        </div>
+
+        <!-- Conteúdo Principal -->
+        <div class="dashboard-main">
+            <div class="dashboard-card">
+                <h3 id="listTitle">📦 Itens Pendentes</h3>
+                <div id="itemList" class="item-group-list">
+                    <div class="loading-dashboard">
+                        <div class="spinner"></div>
+                        <p>Carregando itens...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dashboard-card">
+                <h3>📋 Detalhes</h3>
+                <div id="itemDetails" class="item-details-panel">
+                    <div class="empty-state-dashboard">
+                        <div class="icon">👆</div>
+                        <p>Selecione um item ou obra para ver os detalhes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="dashboard-charts">
+            <div class="dashboard-card">
+                <h3>📊 Ocorrências por Status</h3>
+                <div id="statusChart" class="chart-container">
+                    <div class="loading-dashboard" style="min-height: 100px;">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-card">
+                <h3>💰 Valores por Status</h3>
+                <div id="valorChart" class="chart-container">
+                    <div class="loading-dashboard" style="min-height: 100px;">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/script.js"></script>
+    <script src="../js/dashboards-common.js"></script>
+    <script src="../js/dashboards-cache.js"></script>
+    <script src="../js/dashboards-pendencia-requisicao.js"></script>
+</body>
+</html>
