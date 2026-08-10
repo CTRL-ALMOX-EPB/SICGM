@@ -173,10 +173,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     try {
         await carregarPosicaoEstoque();
         
-        console.log('📡 Iniciando busca de dados...');
+        console.log('📡 Iniciando busca de dados (Pendência de Baixa)...');
         
         const startTime = Date.now();
+        
+        // Usa a função de busca SEM TIMEOUT para garantir que vai carregar
         dadosCompletos = await buscarPendenciasBaixa();
+        
         const elapsed = Date.now() - startTime;
         
         console.log(`✅ ${dadosCompletos.length} pendências carregadas em ${elapsed}ms`);

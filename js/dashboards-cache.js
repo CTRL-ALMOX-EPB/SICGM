@@ -97,8 +97,8 @@ class DashboardCache {
         return data.data || [];
     }
 
-    // Busca dados com timeout
-    async getWithTimeout(endpoint, timeout = 30000, forceRefresh = false) {
+    // Busca dados com timeout - 60 SEGUNDOS para Pendência de Baixa
+    async getWithTimeout(endpoint, timeout = 60000, forceRefresh = false) {
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error(`Timeout ao carregar ${endpoint}`)), timeout);
         });
@@ -116,7 +116,26 @@ class DashboardCache {
                 console.log(`⚠️ Usando cache fallback para ${endpoint}`);
                 return this.cache[cacheKey].data;
             }
-            throw error;
+            // Se não tem cache, retorna array vazio para não quebrar o dashboard
+            console.log(`⚠️ Retornando array vazio para ${endpoint}`);
+            return [];
+        }
+    }
+
+    // Busca dados SEM TIMEOUT (aguarda até completar) - para Pendência de Baixa
+    async getWithoutTimeout(endpoint, forceRefresh = false) {
+        try {
+            return await this.get(endpoint, forceRefresh);
+        } catch (error) {
+            console.error(`❌ Erro ao buscar ${endpoint}:`, error);
+            const cacheKey = `${CACHE_VERSION}:${endpoint}`;
+            if (this.cache[cacheKey]) {
+                console.log(`⚠️ Usando cache fallback para ${endpoint}`);
+                return this.cache[cacheKey].data;
+            }
+            // Se não tem cache, retorna array vazio
+            console.log(`⚠️ Retornando array vazio para ${endpoint}`);
+            return [];
         }
     }
 
@@ -156,29 +175,29 @@ const dashboardCache = new DashboardCache();
 // FUNÇÕES OTIMIZADAS DE BUSCA
 // ============================================
 
-// Aditivos Sistêmicos
+// Aditivos Sistêmicos - 30 segundos
 async function buscarAditivosSistemicosCompleto(forceRefresh = false) {
     return dashboardCache.getWithTimeout('/aditivo-sistemico-completo', 30000, forceRefresh);
 }
 
-// Aditivos Físicos
+// Aditivos Físicos - 30 segundos
 async function buscarAditivosFisicosCompleto(forceRefresh = false) {
     return dashboardCache.getWithTimeout('/aditivo-fisico-completo', 30000, forceRefresh);
 }
 
-// Farol de Obras
+// Farol de Obras - 30 segundos
 async function buscarFarolObrasCompleto(forceRefresh = false) {
     return dashboardCache.getWithTimeout('/farol-obras-completo', 30000, forceRefresh);
 }
 
-// Pendências de Devolução
+// Pendências de Devolução - 45 segundos
 async function buscarPendenciasDevolucao(forceRefresh = false) {
-    return dashboardCache.getWithTimeout('/pendencia-devolucao?limit=1000', 15000, forceRefresh);
+    return dashboardCache.getWithTimeout('/pendencia-devolucao?limit=1000', 45000, forceRefresh);
 }
 
-// Pendências de Baixa (para Pendência de Requisição)
+// Pendências de Baixa (Pendência de Requisição) - SEM TIMEOUT (aguarda até completar)
 async function buscarPendenciasBaixa(forceRefresh = false) {
-    return dashboardCache.getWithTimeout('/pendencia-baixa?limit=1000', 15000, forceRefresh);
+    return dashboardCache.getWithoutTimeout('/pendencia-baixa?limit=1000', forceRefresh);
 }
 
 // ============================================
@@ -197,7 +216,7 @@ async function preCarregarDashboards() {
             buscarAditivosFisicosCompleto(),
             buscarFarolObrasCompleto(),
             buscarPendenciasDevolucao(),
-            buscarPendenciasBaixa() // Pendência de Requisição
+            buscarPendenciasBaixa() // Pendência de Requisição - SEM TIMEOUT
         ]);
         
         const elapsed = Date.now() - startTime;
