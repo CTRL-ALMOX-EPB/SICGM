@@ -50,18 +50,18 @@
             <div class="section-header">
                 <h3>
                     📋 Dashboards Disponíveis
-                    <span class="count" id="totalDashboards">5</span>
+                    <span class="count" id="totalDashboards">6</span>
                 </h3>
             </div>
             
             <div class="dashboards-grid">
-                <!-- Dashboard 1 - Pendência de Requisição (Em produção) -->
-                <a href="#" class="dashboard-card-link disabled" onclick="event.preventDefault(); alert('⏳ Dashboard em produção. Em breve disponível!')">
+                <!-- Dashboard 1 - Pendência de Requisição -->
+                <a href="pendencia-requisicao.html" class="dashboard-card-link" id="linkRequisicao">
                     <div class="icon">📌</div>
                     <div class="card-content">
                         <h4>Pendência de Requisição</h4>
                         <p>Acompanhamento de requisições pendentes</p>
-                        <span class="badge em-breve">Em produção</span>
+                        <span class="badge carregando" id="badgeRequisicao">⏳ Carregando...</span>
                     </div>
                 </a>
                 

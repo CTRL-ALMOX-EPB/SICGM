@@ -14,12 +14,6 @@ function carregarDadosUsuario() {
         if (sessao) {
             const dados = JSON.parse(sessao);
             
-            // Atualiza o avatar com a primeira letra do nome
-            const avatar = document.getElementById('userAvatar');
-            if (avatar && dados.nome) {
-                avatar.textContent = dados.nome.charAt(0).toUpperCase();
-            }
-            
             // Atualiza o nome
             const nomeEl = document.getElementById('userName');
             if (nomeEl && dados.nome) {
@@ -58,6 +52,7 @@ async function preCarregarDashboardsIndex() {
     const preloadStatus = document.getElementById('preloadStatus');
     
     const badges = {
+        requisicao: document.getElementById('badgeRequisicao'),
         sistemicos: document.getElementById('badgeSistemicos'),
         fisicos: document.getElementById('badgeFisicos'),
         devolucao: document.getElementById('badgeDevolucao'),
@@ -86,8 +81,8 @@ async function preCarregarDashboardsIndex() {
             const elapsed = Date.now() - startTime;
             
             if (results && results.length > 0) {
-                const names = ['Aditivos Sistêmicos', 'Aditivos Físicos', 'Farol de Obras', 'Pendências Devolução'];
-                const badgeKeys = ['sistemicos', 'fisicos', 'farol', 'devolucao'];
+                const names = ['Aditivos Sistêmicos', 'Aditivos Físicos', 'Farol de Obras', 'Pendências Devolução', 'Pendência de Requisição'];
+                const badgeKeys = ['sistemicos', 'fisicos', 'farol', 'devolucao', 'requisicao'];
                 let successCount = 0;
                 let totalRegistros = 0;
                 
@@ -110,18 +105,24 @@ async function preCarregarDashboardsIndex() {
                 if (successCount === results.length) {
                     preloadText.innerHTML = `<span class="check">✅</span> ${totalRegistros} registros carregados (${elapsed}ms)`;
                     if (preloadSpinner) preloadSpinner.style.display = 'none';
-                    if (preloadStatus) preloadStatus.style.borderColor = '#48BB78';
-                    preloadStatus.style.background = '#F0FFF4';
+                    if (preloadStatus) {
+                        preloadStatus.style.borderColor = '#48BB78';
+                        preloadStatus.style.background = '#F0FFF4';
+                    }
                 } else if (successCount > 0) {
                     preloadText.innerHTML = `<span class="check">⚠️</span> ${successCount}/${results.length} carregados (${elapsed}ms)`;
                     if (preloadSpinner) preloadSpinner.style.display = 'none';
-                    if (preloadStatus) preloadStatus.style.borderColor = '#ED8936';
-                    preloadStatus.style.background = '#FFFAF0';
+                    if (preloadStatus) {
+                        preloadStatus.style.borderColor = '#ED8936';
+                        preloadStatus.style.background = '#FFFAF0';
+                    }
                 } else {
                     preloadText.innerHTML = `<span class="error">❌</span> Erro ao carregar (${elapsed}ms)`;
                     if (preloadSpinner) preloadSpinner.style.display = 'none';
-                    if (preloadStatus) preloadStatus.style.borderColor = '#FC8181';
-                    preloadStatus.style.background = '#FFF5F5';
+                    if (preloadStatus) {
+                        preloadStatus.style.borderColor = '#FC8181';
+                        preloadStatus.style.background = '#FFF5F5';
+                    }
                 }
             } else {
                 preloadText.textContent = '⚠️ Nenhum dado retornado';

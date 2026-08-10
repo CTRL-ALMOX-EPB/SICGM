@@ -176,7 +176,7 @@ async function buscarPendenciasDevolucao(forceRefresh = false) {
     return dashboardCache.getWithTimeout('/pendencia-devolucao?limit=1000', 15000, forceRefresh);
 }
 
-// Pendências de Baixa (para possível uso futuro)
+// Pendências de Baixa (para Pendência de Requisição)
 async function buscarPendenciasBaixa(forceRefresh = false) {
     return dashboardCache.getWithTimeout('/pendencia-baixa?limit=1000', 15000, forceRefresh);
 }
@@ -196,13 +196,14 @@ async function preCarregarDashboards() {
             buscarAditivosSistemicosCompleto(),
             buscarAditivosFisicosCompleto(),
             buscarFarolObrasCompleto(),
-            buscarPendenciasDevolucao()
+            buscarPendenciasDevolucao(),
+            buscarPendenciasBaixa() // Pendência de Requisição
         ]);
         
         const elapsed = Date.now() - startTime;
         console.log(`✅ Pré-carregamento concluído em ${elapsed}ms`);
         
-        const names = ['Aditivos Sistêmicos', 'Aditivos Físicos', 'Farol de Obras', 'Pendências Devolução'];
+        const names = ['Aditivos Sistêmicos', 'Aditivos Físicos', 'Farol de Obras', 'Pendências Devolução', 'Pendência de Requisição'];
         results.forEach((result, index) => {
             if (result.status === 'fulfilled') {
                 console.log(`   ✅ ${names[index]}: ${result.value?.length || 0} registros`);
