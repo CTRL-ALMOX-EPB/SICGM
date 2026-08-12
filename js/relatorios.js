@@ -1,11 +1,18 @@
 // ============================================
-// RELATÓRIOS - SICGM (VERSÃO COMPLETA COM MONITORAMENTO)
+// RELATÓRIOS - SICGM (VERSÃO COMPLETA CORRIGIDA)
 // ============================================
 
 const API_URL = 'https://noisy-snow-0359.alefe-gomes-72f.workers.dev/api';
 
-// URL do Cloudflare R2 (apenas para emails)
-const R2_URL = 'https://pub-1c4b896f7c8e4f7dae35ae2ad5693f04.r2.dev';
+// ============================================
+// BUCKETS - APENAS 2 (CORRETOS)
+// ============================================
+
+// Bucket 1: Posições de Estoque (URL CORRETA)
+const R2_POSICOES_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
+
+// Bucket 2: Emails (URL CORRETA)
+const R2_EMAILS_URL = 'https://pub-1c4b896f7c8e4f7dae35ae2ad5693f04.r2.dev';
 
 // ============================================
 // VARIÁVEIS GLOBAIS
@@ -225,17 +232,18 @@ function ativarDeposito(deposito) {
 }
 
 // ============================================
-// CARREGAR POSIÇÃO DE ESTOQUE - DO R2 (POR DEPÓSITO)
+// CARREGAR POSIÇÃO DE ESTOQUE - BUCKET 1 (POSIÇÕES)
 // ============================================
 
 async function carregarPosicaoEstoque() {
     try {
         console.log(`🔄 Carregando posição de estoque para depósito ${depositoAtual}...`);
+        console.log(`📦 Bucket Posições: ${R2_POSICOES_URL}`);
         
-        const response = await fetch(`${R2_URL}/posicacao-de-estoque/posicao-de-estoque-${depositoAtual}.txt`);
+        const response = await fetch(`${R2_POSICOES_URL}/posicacao-de-estoque/posicao-de-estoque-${depositoAtual}.txt`);
         
         if (!response.ok) {
-            console.warn(`⚠️ Arquivo posicao-de-estoque-${depositoAtual}.txt não encontrado no R2`);
+            console.warn(`⚠️ Arquivo posicao-de-estoque-${depositoAtual}.txt não encontrado no bucket de posições`);
             mostrarToast(`⚠️ Posição de estoque do depósito ${depositoAtual} não encontrada`, 'aviso');
             return;
         }
@@ -1796,31 +1804,28 @@ function restaurarRelatorioAtual() {
 // ============================================
 
 // ============================================
-// CARREGAR ESTOQUE MÍNIMO DO REPOSITÓRIO (ARQUIVO LOCAL)
+// CARREGAR ESTOQUE MÍNIMO DO REPOSITÓRIO (data/estoque-minimo.txt)
 // ============================================
 
 async function carregarEstoqueMinimo() {
     try {
         console.log('🔄 Carregando estoque mínimo do repositório...');
         
-        // Caminho relativo para o arquivo no repositório
-        // O arquivo está na pasta data/ do projeto
-        const response = await fetch('../data/estoque-minimo.txt');
+        // Tenta carregar do caminho relativo (pasta data/)
+        let response = await fetch('../data/estoque-minimo.txt');
         
         if (!response.ok) {
-            // Tenta caminho alternativo
             console.warn('⚠️ Tentando caminho alternativo...');
-            const response2 = await fetch('data/estoque-minimo.txt');
-            if (!response2.ok) {
-                console.warn('⚠️ Arquivo estoque-minimo.txt não encontrado no repositório');
-                mostrarToast('⚠️ Estoque mínimo não encontrado', 'aviso');
-                return;
-            }
-            var texto = await response2.text();
-        } else {
-            var texto = await response.text();
+            response = await fetch('data/estoque-minimo.txt');
         }
         
+        if (!response.ok) {
+            console.warn('⚠️ Arquivo estoque-minimo.txt não encontrado no repositório');
+            mostrarToast('⚠️ Estoque mínimo não encontrado', 'aviso');
+            return;
+        }
+        
+        const texto = await response.text();
         const linhas = texto.trim().split('\n');
         
         if (linhas.length === 0) {
@@ -1837,7 +1842,6 @@ async function carregarEstoqueMinimo() {
             
             const partes = linha.split('\t');
             
-            // Estrutura: cod_material | dscmat | codund_mda_mat | Estoque Necessário
             if (partes.length >= 4) {
                 const codigo = partes[0].trim();
                 const descricao = partes[1]?.trim() || '';
@@ -1866,17 +1870,18 @@ async function carregarEstoqueMinimo() {
 }
 
 // ============================================
-// CARREGAR LISTA DE EMAILS DO R2 BUCKET
+// CARREGAR LISTA DE EMAILS - BUCKET 2 (EMAILS)
 // ============================================
 
 async function carregarListaEmails() {
     try {
-        console.log('📧 Carregando lista de emails do R2...');
+        console.log(`📧 Carregando lista de emails do bucket de emails...`);
+        console.log(`📦 Bucket Emails: ${R2_EMAILS_URL}`);
         
-        const response = await fetch(`${R2_URL}/emails.txt`);
+        const response = await fetch(`${R2_EMAILS_URL}/emails.txt`);
         
         if (!response.ok) {
-            console.warn('⚠️ Arquivo emails.txt não encontrado no R2');
+            console.warn('⚠️ Arquivo emails.txt não encontrado no bucket de emails');
             mostrarToast('⚠️ Lista de emails não encontrada', 'aviso');
             return ['alefe.gomes@gpssa.com.br'];
         }
@@ -1890,7 +1895,7 @@ async function carregarListaEmails() {
         
         listaEmailsCache = emails;
         
-        console.log(`📧 ${emails.length} emails carregados do R2:`, emails);
+        console.log(`📧 ${emails.length} emails carregados do bucket de emails:`, emails);
         return emails;
         
     } catch (error) {
@@ -2110,6 +2115,13 @@ function gerarRelatorioHTML(itensCriticos, deposito) {
         .badge-ok {
             background: #48BB78;
             color: white;
+        }
+        .badge-warning {
+            background: #F6AD55;
+            color: white;
+        }
+        .status-icon {
+            font-size: 18px;
         }
         .footer {
             background: #F7FAFC;
@@ -2583,8 +2595,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     verificarHorarioMonitoramento();
     
     console.log('✅ Monitoramento automático configurado para 08:00 todos os dias');
-    console.log('📧 Lista de emails carregada do R2:', listaEmailsCache);
-    console.log('📦 Estoque mínimo carregado do repositório:', Object.keys(estoqueMinimoCache).length, 'itens');
+    console.log(`📧 Lista de emails carregada do R2: ${listaEmailsCache.length} emails`);
+    console.log(`📦 Estoque mínimo carregado do repositório: ${Object.keys(estoqueMinimoCache).length} itens`);
 });
 
 // ============================================
