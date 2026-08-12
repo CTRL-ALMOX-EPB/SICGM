@@ -582,9 +582,8 @@ async function carregarControleFormulario() {
         }
         
         configurarPopupDescricao();
-        
-        // Configurar navegação por teclado após carregar os itens
         configurarNavegacaoTeclado();
+        configurarPasteEmMassa();
         
     } catch (error) {
         console.error('❌ Erro ao carregar controle:', error);
@@ -593,26 +592,43 @@ async function carregarControleFormulario() {
 }
 
 // ============================================
+// FUNÇÃO PARA VERIFICAR SE UM CAMPO É EDITÁVEL
+// ============================================
+
+function isCampoEditavel(elemento) {
+    if (!elemento) return false;
+    // Verifica se está visível, não desabilitado e não readonly
+    return elemento.offsetParent !== null && 
+           !elemento.disabled && 
+           !elemento.readOnly;
+}
+
+function getElementosEditaveis(container) {
+    const elementos = container.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+    return Array.from(elementos).filter(el => el.offsetParent !== null);
+}
+
+// ============================================
 // NAVEGAÇÃO POR TECLADO (ENTER E SETAS)
 // ============================================
 
 function configurarNavegacaoTeclado() {
-    // Seleciona todos os inputs e selects do formulário
-    const elementos = document.querySelectorAll('#controleForm input, #controleForm select, #controleForm textarea');
+    // Seleciona todos os inputs e selects do formulário que são editáveis
+    const elementos = document.querySelectorAll('#controleForm input:not([readonly]):not([disabled]), #controleForm select:not([disabled]), #controleForm textarea:not([disabled])');
     
-    elementos.forEach(function(el, index) {
+    elementos.forEach(function(el) {
         // Remove listeners antigos para evitar duplicação
         el.removeEventListener('keydown', handleTeclado);
         el.addEventListener('keydown', handleTeclado);
-        
-        // Guarda o índice para navegação
-        el.dataset.tabIndex = index;
     });
 }
 
 function handleTeclado(e) {
     const key = e.key;
     const target = e.target;
+    
+    // Verifica se o campo é editável (segurança extra)
+    if (!isCampoEditavel(target)) return;
     
     // Verifica se está dentro de uma tabela de itens
     const isInTable = target.closest('table');
@@ -633,7 +649,7 @@ function handleTeclado(e) {
             // Enter simples avança
         }
         
-        // Avança para o próximo campo
+        // Avança para o próximo campo editável
         avancarParaProximoCampo(target);
         return;
     }
@@ -676,19 +692,14 @@ function handleTeclado(e) {
 // ============================================
 
 function avancarParaProximoCampo(currentElement) {
-    // Obtém todos os elementos interativos do formulário
-    const elementos = document.querySelectorAll('#controleForm input:not([readonly]):not([disabled]), #controleForm select:not([disabled]), #controleForm textarea:not([disabled])');
-    
-    // Filtra apenas os que estão visíveis e habilitados
-    const visiveis = Array.from(elementos).filter(el => {
-        return el.offsetParent !== null && !el.disabled && !el.readOnly;
-    });
+    // Obtém todos os elementos editáveis do formulário
+    const visiveis = getElementosEditaveis(document.getElementById('controleForm'));
     
     // Encontra o índice do elemento atual
     const currentIndex = visiveis.indexOf(currentElement);
     
     if (currentIndex === -1 || currentIndex === visiveis.length - 1) {
-        // Se for o último, não faz nada ou pode ir para o próximo campo fora da tabela
+        // Se for o último, não faz nada
         return;
     }
     
@@ -704,11 +715,7 @@ function avancarParaProximoCampo(currentElement) {
 }
 
 function navegarVerticalFormulario(element, direcao) {
-    const elementos = document.querySelectorAll('#controleForm input:not([readonly]):not([disabled]), #controleForm select:not([disabled]), #controleForm textarea:not([disabled])');
-    
-    const visiveis = Array.from(elementos).filter(el => {
-        return el.offsetParent !== null && !el.disabled && !el.readOnly;
-    });
+    const visiveis = getElementosEditaveis(document.getElementById('controleForm'));
     
     const currentIndex = visiveis.indexOf(element);
     if (currentIndex === -1) return;
@@ -784,9 +791,9 @@ function navegarVerticalTabela(element, direcao) {
     });
     
     if (targetCellIndex === -1) {
-        // Se não encontrou, foca no primeiro campo da linha alvo
-        const firstInput = targetRow.querySelector('input, select, textarea');
-        if (firstInput && !firstInput.disabled && !firstInput.readOnly) {
+        // Se não encontrou, foca no primeiro campo editável da linha alvo
+        const firstInput = targetRow.querySelector('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+        if (firstInput && isCampoEditavel(firstInput)) {
             firstInput.focus();
         }
         return;
@@ -795,25 +802,25 @@ function navegarVerticalTabela(element, direcao) {
     // Tenta encontrar o campo na mesma coluna na linha alvo
     const targetCells = targetRow.querySelectorAll('td');
     if (targetCellIndex >= targetCells.length) {
-        // Se a coluna não existe na linha alvo, foca no primeiro campo
-        const firstInput = targetRow.querySelector('input, select, textarea');
-        if (firstInput && !firstInput.disabled && !firstInput.readOnly) {
+        // Se a coluna não existe na linha alvo, foca no primeiro campo editável
+        const firstInput = targetRow.querySelector('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+        if (firstInput && isCampoEditavel(firstInput)) {
             firstInput.focus();
         }
         return;
     }
     
     const targetCell = targetCells[targetCellIndex];
-    const targetInput = targetCell.querySelector('input, select, textarea');
+    const targetInput = targetCell.querySelector('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
     
-    if (targetInput && !targetInput.disabled && !targetInput.readOnly) {
+    if (targetInput && isCampoEditavel(targetInput)) {
         targetInput.focus();
         if (targetInput.tagName === 'INPUT' && targetInput.type === 'text') {
             targetInput.select();
         }
     } else {
-        // Se o campo na mesma coluna está desabilitado, procura o próximo disponível
-        const allInputs = targetRow.querySelectorAll('input:not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])');
+        // Se o campo na mesma coluna está desabilitado/readonly, procura o próximo editável
+        const allInputs = targetRow.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
         if (allInputs.length > 0) {
             allInputs[0].focus();
         }
@@ -824,32 +831,237 @@ function navegarHorizontalTabela(element, direcao) {
     const row = element.closest('tr');
     if (!row) return;
     
+    // Obtém apenas os campos editáveis da linha
+    const celulasEditaveis = [];
     const cells = Array.from(row.querySelectorAll('td'));
-    let currentCellIndex = -1;
     
-    cells.forEach((cell, idx) => {
-        const inputs = cell.querySelectorAll('input, select, textarea');
+    cells.forEach((cell) => {
+        const inputs = cell.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
         inputs.forEach(inp => {
-            if (inp === element) {
-                currentCellIndex = idx;
+            if (isCampoEditavel(inp)) {
+                celulasEditaveis.push({
+                    elemento: inp,
+                    celula: cell,
+                    indice: celulasEditaveis.length
+                });
             }
         });
     });
     
-    if (currentCellIndex === -1) return;
+    // Encontra o índice do elemento atual na lista de editáveis
+    let currentIndex = -1;
+    celulasEditaveis.forEach((item, idx) => {
+        if (item.elemento === element) {
+            currentIndex = idx;
+        }
+    });
     
-    const targetCellIndex = currentCellIndex + direcao;
-    if (targetCellIndex < 0 || targetCellIndex >= cells.length) return;
+    if (currentIndex === -1) return;
     
-    const targetCell = cells[targetCellIndex];
-    const targetInput = targetCell.querySelector('input:not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])');
+    const targetIndex = currentIndex + direcao;
+    if (targetIndex < 0 || targetIndex >= celulasEditaveis.length) return;
     
-    if (targetInput) {
-        targetInput.focus();
-        if (targetInput.tagName === 'INPUT' && targetInput.type === 'text') {
-            targetInput.select();
+    const target = celulasEditaveis[targetIndex].elemento;
+    if (target && isCampoEditavel(target)) {
+        target.focus();
+        if (target.tagName === 'INPUT' && target.type === 'text') {
+            target.select();
         }
     }
+}
+
+// ============================================
+// COLEÇÃO EM MASSA (BULK PASTE)
+// ============================================
+
+function configurarPasteEmMassa() {
+    // Configura todos os campos de código para aceitar colagem em massa
+    const codigos = document.querySelectorAll('.item-codigo');
+    codigos.forEach(function(campo) {
+        if (campo._pasteConfigurado) return;
+        campo._pasteConfigurado = true;
+        
+        campo.removeEventListener('paste', handlePasteEmMassa);
+        campo.addEventListener('paste', handlePasteEmMassa);
+    });
+}
+
+function handlePasteEmMassa(e) {
+    const target = e.target;
+    
+    // Verifica se o campo é editável
+    if (!isCampoEditavel(target)) return;
+    
+    // Obtém os dados da área de transferência
+    const dados = e.clipboardData || window.clipboardData;
+    if (!dados) return;
+    
+    const texto = dados.getData('text/plain');
+    if (!texto || texto.trim() === '') return;
+    
+    // Verifica se o texto contém múltiplas linhas ou tabs
+    const linhas = texto.split('\n').filter(line => line.trim() !== '');
+    
+    // Se for apenas uma linha e não tiver tabs, não faz nada (comportamento normal)
+    if (linhas.length <= 1 && !texto.includes('\t')) {
+        return; // Deixa o paste normal acontecer
+    }
+    
+    // Impede o paste padrão
+    e.preventDefault();
+    
+    // Processa os dados colados
+    processarPasteEmMassa(linhas, target);
+}
+
+function processarPasteEmMassa(linhas, elementoAlvo) {
+    console.log(`📋 Processando ${linhas.length} linhas coladas...`);
+    
+    // Primeiro, verifica se todos os códigos são válidos ou se há múltiplas colunas
+    const dadosProcessados = linhas.map(linha => {
+        // Divide por TAB (colunas do Excel)
+        const colunas = linha.split('\t').map(col => col.trim());
+        
+        // Se tiver apenas uma coluna, é só o código
+        if (colunas.length === 1) {
+            return {
+                codigo: colunas[0],
+                descricao: '',
+                unidade: '',
+                quantidade: ''
+            };
+        }
+        
+        // Se tiver múltiplas colunas: [código, descrição, unidade, quantidade, ...]
+        return {
+            codigo: colunas[0] || '',
+            descricao: colunas[1] || '',
+            unidade: colunas[2] || '',
+            quantidade: colunas[3] || ''
+        };
+    });
+    
+    // Filtra linhas vazias
+    const validos = dadosProcessados.filter(d => d.codigo !== '');
+    
+    if (validos.length === 0) {
+        mostrarToast('⚠️ Nenhum código válido encontrado', 'aviso');
+        return;
+    }
+    
+    // Encontra a linha atual onde ocorreu o paste
+    const linhaAtual = elementoAlvo.closest('tr');
+    const tbody = document.getElementById('itemsBody');
+    const todasLinhas = tbody.querySelectorAll('tr');
+    
+    // Verifica se a linha atual está vazia (apenas para ser substituída)
+    const codigoAtual = linhaAtual.querySelector('.item-codigo').value.trim();
+    const descricaoAtual = linhaAtual.querySelector('.item-descricao').value.trim();
+    const quantidadeAtual = linhaAtual.querySelector('.item-quantidade').value.trim();
+    
+    const linhaVazia = codigoAtual === '' && descricaoAtual === '' && quantidadeAtual === '';
+    
+    // Determina o índice da linha atual
+    let indiceAtual = Array.from(todasLinhas).indexOf(linhaAtual);
+    if (indiceAtual === -1) indiceAtual = todasLinhas.length - 1;
+    
+    // Se a linha atual estiver vazia, vamos usá-la como primeiro item
+    // Caso contrário, adicionamos uma nova linha antes de começar
+    let primeiroIndice = indiceAtual;
+    
+    if (!linhaVazia) {
+        // A linha atual tem dados, então inserimos após ela
+        primeiroIndice = indiceAtual + 1;
+        // Adicionamos uma nova linha vazia
+        adicionarLinhaItem();
+        // Atualiza referências
+        const novasLinhas = tbody.querySelectorAll('tr');
+        linhaAtual = novasLinhas[primeiroIndice];
+    }
+    
+    // Agora, preenchemos as linhas
+    const linhasExistentes = tbody.querySelectorAll('tr');
+    let linhaAtualIndex = primeiroIndice;
+    
+    // Para cada dado processado, preenchemos uma linha
+    for (let i = 0; i < validos.length; i++) {
+        const dado = validos[i];
+        
+        // Verifica se precisamos adicionar mais linhas
+        if (linhaAtualIndex >= linhasExistentes.length) {
+            adicionarLinhaItem();
+        }
+        
+        // Obtém a linha atual
+        const linhasAtuais = tbody.querySelectorAll('tr');
+        const linha = linhasAtuais[linhaAtualIndex];
+        if (!linha) continue;
+        
+        // Preenche os campos (apenas os editáveis)
+        const codigoInput = linha.querySelector('.item-codigo');
+        const descInput = linha.querySelector('.item-descricao');
+        const undInput = linha.querySelector('.item-unidade');
+        const qtdInput = linha.querySelector('.item-quantidade');
+        
+        // Código - sempre editável
+        if (codigoInput && isCampoEditavel(codigoInput)) {
+            codigoInput.value = dado.codigo.toUpperCase();
+            // Dispara a busca do material
+            buscarMaterial(codigoInput);
+        }
+        
+        // Descrição - é readonly, então só preenche se for editável (nunca é, mas por segurança)
+        if (descInput && isCampoEditavel(descInput) && dado.descricao) {
+            descInput.value = dado.descricao;
+        }
+        
+        // Unidade - é readonly, então só preenche se for editável (nunca é, mas por segurança)
+        if (undInput && isCampoEditavel(undInput) && dado.unidade) {
+            undInput.value = dado.unidade;
+        }
+        
+        // Quantidade - editável
+        if (qtdInput && isCampoEditavel(qtdInput) && dado.quantidade) {
+            qtdInput.value = dado.quantidade;
+        }
+        
+        linhaAtualIndex++;
+    }
+    
+    // Remove linhas extras se houver (linhas vazias no final)
+    const linhasFinais = tbody.querySelectorAll('tr');
+    for (let i = linhasFinais.length - 1; i > linhaAtualIndex - 1; i--) {
+        const linha = linhasFinais[i];
+        const codigo = linha.querySelector('.item-codigo').value.trim();
+        const descricao = linha.querySelector('.item-descricao').value.trim();
+        const quantidade = linha.querySelector('.item-quantidade').value.trim();
+        
+        // Se a linha estiver vazia e não for a única linha, remove
+        if (codigo === '' && descricao === '' && quantidade === '') {
+            if (tbody.children.length > 1) {
+                linha.remove();
+            }
+        }
+    }
+    
+    // Reconfigura navegação e paste
+    setTimeout(configurarNavegacaoTeclado, 100);
+    setTimeout(configurarPopupDescricao, 100);
+    setTimeout(configurarPasteEmMassa, 100);
+    
+    // Foca no primeiro campo da primeira linha preenchida
+    setTimeout(() => {
+        const todasLinhasFinais = tbody.querySelectorAll('tr');
+        if (todasLinhasFinais.length > 0) {
+            const primeiroInput = todasLinhasFinais[primeiroIndice]?.querySelector('.item-codigo');
+            if (primeiroInput && isCampoEditavel(primeiroInput)) {
+                primeiroInput.focus();
+                primeiroInput.select();
+            }
+        }
+    }, 200);
+    
+    mostrarToast(`✅ ${validos.length} itens adicionados com sucesso!`, 'sucesso');
 }
 
 // ============================================
@@ -996,14 +1208,15 @@ function adicionarLinhaItem() {
     tbody.appendChild(tr);
     
     // Foca no primeiro campo da nova linha
-    const primeiroInput = tr.querySelector('input, select');
+    const primeiroInput = tr.querySelector('.item-codigo');
     if (primeiroInput) {
         setTimeout(() => primeiroInput.focus(), 100);
     }
     
-    // Reconfigura navegação por teclado para incluir os novos elementos
+    // Reconfigura navegação e paste
     setTimeout(configurarNavegacaoTeclado, 50);
     setTimeout(configurarPopupDescricao, 100);
+    setTimeout(configurarPasteEmMassa, 100);
 }
 
 window.adicionarLinhaItem = adicionarLinhaItem;
@@ -1022,8 +1235,9 @@ function removerItem(btn) {
     const row = btn.closest('tr');
     if (row) row.remove();
     
-    // Reconfigura navegação após remover
+    // Reconfigura navegação e paste após remover
     setTimeout(configurarNavegacaoTeclado, 50);
+    setTimeout(configurarPasteEmMassa, 50);
 }
 
 window.removerItem = removerItem;
@@ -1184,6 +1398,7 @@ function carregarItens(itens) {
     
     setTimeout(configurarNavegacaoTeclado, 50);
     setTimeout(configurarPopupDescricao, 100);
+    setTimeout(configurarPasteEmMassa, 100);
 }
 
 // ============================================
@@ -1621,8 +1836,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.addEventListener('scroll', controlarBotoesNavegacao);
     window.addEventListener('load', function() {
         setTimeout(controlarBotoesNavegacao, 500);
-        // Configurar navegação por teclado após carregamento completo
         setTimeout(configurarNavegacaoTeclado, 300);
+        setTimeout(configurarPasteEmMassa, 300);
     });
     window.addEventListener('resize', controlarBotoesNavegacao);
     
@@ -1646,3 +1861,6 @@ window.mostrarPopup = mostrarPopup;
 window.fecharPopup = fecharPopup;
 window.configurarPopupDescricao = configurarPopupDescricao;
 window.configurarNavegacaoTeclado = configurarNavegacaoTeclado;
+window.configurarPasteEmMassa = configurarPasteEmMassa;
+window.isCampoEditavel = isCampoEditavel;
+window.getElementosEditaveis = getElementosEditaveis;
