@@ -1,17 +1,17 @@
 // ============================================
-// RELATÓRIOS - SICGM (VERSÃO COMPLETA CORRIGIDA)
+// RELATÓRIOS - SICGM (VERSÃO COMPLETA - COM SEPARAÇÃO)
 // ============================================
 
 const API_URL = 'https://noisy-snow-0359.alefe-gomes-72f.workers.dev/api';
 
 // ============================================
-// BUCKETS - APENAS 2 (CORRETOS)
+// BUCKETS - APENAS 2
 // ============================================
 
-// Bucket 1: Posições de Estoque (URL CORRETA)
+// Bucket 1: Posições de Estoque
 const R2_POSICOES_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
 
-// Bucket 2: Emails (URL CORRETA)
+// Bucket 2: Emails
 const R2_EMAILS_URL = 'https://pub-1c4b896f7c8e4f7dae35ae2ad5693f04.r2.dev';
 
 // ============================================
@@ -1061,9 +1061,9 @@ async function carregarRelatorios() {
         await carregarEstoqueMinimo();
         if (Object.keys(estoqueMinimoCache).length > 0) {
             const resultado = monitorarEstoqueMinimo(dadosProcessados);
-            if (resultado.total_itens_criticos > 0) {
-                exibirItensCriticos(resultado.itens);
-                console.warn(`⚠️ ${resultado.total_itens_criticos} itens abaixo do estoque mínimo`);
+            if (resultado.total_criticos > 0 || resultado.total_sem_previsao > 0) {
+                exibirItensCriticos(resultado.itens_criticos, resultado.itens_sem_previsao);
+                console.warn(`⚠️ ${resultado.total_criticos} itens críticos, ${resultado.total_sem_previsao} sem previsão`);
             }
         }
         
@@ -1811,7 +1811,6 @@ async function carregarEstoqueMinimo() {
     try {
         console.log('🔄 Carregando estoque mínimo do repositório...');
         
-        // Tenta carregar do caminho relativo (pasta data/)
         let response = await fetch('../data/estoque-minimo.txt');
         
         if (!response.ok) {
@@ -1835,7 +1834,6 @@ async function carregarEstoqueMinimo() {
         
         estoqueMinimoCache = {};
         
-        // Pula o cabeçalho (primeira linha)
         for (let i = 1; i < linhas.length; i++) {
             const linha = linhas[i].trim();
             if (!linha) continue;
@@ -1905,204 +1903,42 @@ async function carregarListaEmails() {
 }
 
 // ============================================
-// GERAR RELATÓRIO EM TEXTO PURO (SEM EMOJIS, SEM HTML)
-// ============================================
-
-function gerarRelatorioTexto(itensCriticos, deposito) {
-    const dataHora = getDataHoraBrasilString();
-    const totalItens = itensCriticos.length;
-    
-    let texto = '';
-    
-    texto += '='.repeat(60) + '\n';
-    texto += 'RELATORIO DE ESTOQUE MINIMO - SICGM\n';
-    texto += '='.repeat(60) + '\n';
-    texto += `Data: ${dataHora}\n`;
-    texto += `Deposito: ${deposito || '1050'}\n`;
-    texto += `Total de Itens Criticos: ${totalItens}\n`;
-    texto += '='.repeat(60) + '\n\n';
-    
-    if (totalItens === 0) {
-        texto += 'Nenhum item abaixo do estoque minimo.\n';
-        return texto;
-    }
-    
-    // Cabeçalho da tabela
-    texto += 'CODIGO   | DESCRICAO                 | UND | MINIMO  | FISICO  | SISTEMICO | STATUS\n';
-    texto += '-'.repeat(85) + '\n';
-    
-    itensCriticos.forEach(item => {
-        const status = (item.fisico_abaixo || item.sistemico_abaixo) ? 'CRITICO' : 'OK';
-        const fisico = item.saldo_fisico.toFixed(2);
-        const sistemico = item.saldo_sistemico.toFixed(2);
-        const minimo = item.estoque_minimo.toFixed(2);
-        const codigo = (item.codigo || '').padEnd(8);
-        const descricao = (item.descricao || '').substring(0, 25).padEnd(25);
-        const und = (item.und || '-').padEnd(4);
-        
-        texto += `${codigo} | ${descricao} | ${und} | ${minimo.padStart(6)} | ${fisico.padStart(6)} | ${sistemico.padStart(8)} | ${status}\n`;
-    });
-    
-    texto += '-'.repeat(85) + '\n\n';
-    
-    // Resumo por tipo
-    const tipos = {};
-    itensCriticos.forEach(item => {
-        const tipo = item.tipo_material || 'desconhecido';
-        if (!tipos[tipo]) tipos[tipo] = 0;
-        tipos[tipo]++;
-    });
-    
-    if (Object.keys(tipos).length > 0) {
-        texto += 'RESUMO POR TIPO:\n';
-        Object.entries(tipos).forEach(([tipo, qtd]) => {
-            texto += `  ${tipo}: ${qtd} itens\n`;
-        });
-        texto += '\n';
-    }
-    
-    texto += '='.repeat(60) + '\n';
-    texto += '* Este e um alerta automatico do sistema SICGM *\n';
-    texto += 'Por favor, verifique o estoque dos itens listados.\n';
-    
-    return texto;
-}
-
-// ============================================
-// FUNÇÃO PARA ENVIAR EMAIL VIA WORKER (APENAS TEXTO)
-// ============================================
-
-async function enviarRelatorioEstoque(relatorioTexto, itensCriticos, emailsDestino) {
-    try {
-        if (!emailsDestino || emailsDestino.length === 0) {
-            console.warn('⚠️ Nenhum email de destino configurado');
-            return { success: false, error: 'Nenhum email de destino' };
-        }
-
-        if (!itensCriticos || itensCriticos.length === 0) {
-            console.log('ℹ️ Nenhum item crítico para enviar');
-            return { success: true, message: 'Nenhum item crítico' };
-        }
-
-        const dataHora = getDataHoraBrasilString();
-        const totalItens = itensCriticos.length;
-        const assunto = `ALERTA ESTOQUE MINIMO - ${dataHora}`;
-
-        console.log(`📧 Enviando relatório com ${totalItens} itens`);
-
-        const response = await fetch(`${API_URL}/enviar-email-estoque`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                to: emailsDestino,
-                from: 'alefe.gomes@gpssa.com.br',
-                subject: assunto,
-                text: relatorioTexto,
-                itensCriticos: itensCriticos,
-                totalItens: totalItens,
-                deposito: depositoAtual
-            })
-        });
-
-        if (!response.ok) {
-            const erro = await response.text();
-            
-            // Se for erro de tamanho (413), dividir o relatório
-            if (response.status === 413 || erro.includes('size limit')) {
-                console.warn('⚠️ Relatório muito grande, dividindo em partes...');
-                
-                const ITENS_POR_BLOCO = 25;
-                const totalBlocos = Math.ceil(totalItens / ITENS_POR_BLOCO);
-                let resultados = [];
-                let todosSucesso = true;
-                
-                for (let i = 0; i < totalBlocos; i++) {
-                    const inicio = i * ITENS_POR_BLOCO;
-                    const fim = Math.min(inicio + ITENS_POR_BLOCO, totalItens);
-                    const itensParciais = itensCriticos.slice(inicio, fim);
-                    
-                    const textoParcial = gerarRelatorioTexto(itensParciais, depositoAtual);
-                    const assuntoParcial = `${assunto} (Parte ${i+1}/${totalBlocos})`;
-                    
-                    console.log(`📧 Enviando parte ${i+1}/${totalBlocos} (${itensParciais.length} itens)`);
-                    
-                    const responseParcial = await fetch(`${API_URL}/enviar-email-estoque`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            to: emailsDestino,
-                            from: 'alefe.gomes@gpssa.com.br',
-                            subject: assuntoParcial,
-                            text: textoParcial,
-                            itensCriticos: itensParciais,
-                            totalItens: itensParciais.length,
-                            deposito: depositoAtual,
-                            parte: `${i+1}/${totalBlocos}`
-                        })
-                    });
-                    
-                    if (responseParcial.ok) {
-                        const resultado = await responseParcial.json();
-                        console.log(`✅ Parte ${i+1}/${totalBlocos} enviada`);
-                        resultados.push({ parte: i+1, success: true, resultado });
-                    } else {
-                        const erroParcial = await responseParcial.text();
-                        console.error(`❌ Erro na parte ${i+1}/${totalBlocos}:`, erroParcial);
-                        todosSucesso = false;
-                        resultados.push({ parte: i+1, success: false, error: erroParcial });
-                    }
-                    
-                    if (i < totalBlocos - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                }
-                
-                const sucessos = resultados.filter(r => r.success).length;
-                mostrarToast(`📧 ${sucessos}/${totalBlocos} partes enviadas`, 'info');
-                
-                return {
-                    success: todosSucesso,
-                    totalItens: totalItens,
-                    totalEmails: totalBlocos,
-                    sucessos: sucessos,
-                    resultados: resultados,
-                    message: `${sucessos}/${totalBlocos} partes enviadas`
-                };
-            }
-            
-            throw new Error(`Erro ao enviar email: ${response.status} - ${erro}`);
-        }
-
-        const resultado = await response.json();
-        console.log('✅ Email enviado com sucesso:', resultado);
-        mostrarToast(`📧 Relatório enviado para ${emailsDestino.length} destinatários`, 'sucesso');
-        return resultado;
-
-    } catch (error) {
-        console.error('❌ Erro ao enviar email:', error);
-        mostrarToast(`❌ Erro ao enviar email: ${error.message}`, 'erro');
-        return { success: false, error: error.message };
-    }
-}
-
-// ============================================
-// MONITORAR ESTOQUE E GERAR ALERTAS
+// MONITORAR ESTOQUE E GERAR ALERTAS - COM SEPARAÇÃO
 // ============================================
 
 function monitorarEstoqueMinimo(dados) {
     const itensAbaixoMinimo = [];
-    const alertas = [];
+    const itensSemPrevisao = [];
     
     if (Object.keys(estoqueMinimoCache).length === 0) {
         console.warn('⚠️ Estoque mínimo não carregado.');
-        return { itens: [], alertas: [], total_itens_criticos: 0 };
+        return { 
+            itens_criticos: [], 
+            itens_sem_previsao: [],
+            total_criticos: 0,
+            total_sem_previsao: 0
+        };
     }
     
     dados.forEach(item => {
         const codigo = item.codigo;
         const estoqueMinimo = estoqueMinimoCache[codigo];
         
-        if (!estoqueMinimo) return;
+        // Se não tem estoque mínimo definido OU estoque_minimo = 0
+        if (!estoqueMinimo || estoqueMinimo.estoque_minimo === 0) {
+            itensSemPrevisao.push({
+                codigo: codigo,
+                descricao: item.descricao || 'Sem descrição',
+                und: item.und || '-',
+                saldo_fisico: item.temRegistro ? item.quantidade_total : 0,
+                saldo_sistemico: item.saldo_sistemico || 0,
+                tipo_material: item.tipo_material || 'desconhecido',
+                ultimo_usuario: item.ultimo_usuario || '-',
+                ultima_data: item.ultima_data || '-',
+                sem_previsao: true
+            });
+            return;
+        }
         
         const saldoFisico = item.temRegistro ? item.quantidade_total : 0;
         const saldoSistemico = item.saldo_sistemico || 0;
@@ -2115,7 +1951,7 @@ function monitorarEstoqueMinimo(dados) {
             const faltaFisico = Math.max(0, estoqueMinimoNecessario - saldoFisico);
             const faltaSistemico = Math.max(0, estoqueMinimoNecessario - saldoSistemico);
             
-            const alerta = {
+            itensAbaixoMinimo.push({
                 codigo: codigo,
                 descricao: item.descricao || estoqueMinimo.descricao || codigo,
                 und: item.und || estoqueMinimo.und || '-',
@@ -2128,43 +1964,303 @@ function monitorarEstoqueMinimo(dados) {
                 ultimo_usuario: item.ultimo_usuario || '-',
                 ultima_data: item.ultima_data || '-',
                 fisico_abaixo: fisicoAbaixo,
-                sistemico_abaixo: sistemicoAbaixo
-            };
-            
-            itensAbaixoMinimo.push(alerta);
+                sistemico_abaixo: sistemicoAbaixo,
+                sem_previsao: false
+            });
         }
     });
     
+    // Ordena os itens críticos por maior falta
     itensAbaixoMinimo.sort((a, b) => {
         const faltaA = Math.max(a.falta_fisico, a.falta_sistemico);
         const faltaB = Math.max(b.falta_fisico, b.falta_sistemico);
         return faltaB - faltaA;
     });
     
+    // Ordena os itens sem previsão por código
+    itensSemPrevisao.sort((a, b) => a.codigo.localeCompare(b.codigo));
+    
     return {
-        itens: itensAbaixoMinimo,
-        alertas: alertas,
-        total_itens_criticos: itensAbaixoMinimo.length
+        itens_criticos: itensAbaixoMinimo,
+        itens_sem_previsao: itensSemPrevisao,
+        total_criticos: itensAbaixoMinimo.length,
+        total_sem_previsao: itensSemPrevisao.length
     };
 }
 
 // ============================================
-// EXIBIR ITENS CRÍTICOS NA TELA
+// GERAR RELATÓRIO EM TEXTO PURO (COM SEPARAÇÃO)
 // ============================================
 
-function exibirItensCriticos(itens) {
-    const painelExistente = document.getElementById('painel-itens-criticos');
-    if (painelExistente) {
-        painelExistente.remove();
+function gerarRelatorioTexto(itensCriticos, itensSemPrevisao, deposito) {
+    const dataHora = getDataHoraBrasilString();
+    const totalCriticos = itensCriticos.length;
+    const totalSemPrevisao = itensSemPrevisao.length;
+    
+    let texto = '';
+    
+    texto += '='.repeat(60) + '\n';
+    texto += 'RELATORIO DE ESTOQUE MINIMO - SICGM\n';
+    texto += '='.repeat(60) + '\n';
+    texto += `Data: ${dataHora}\n`;
+    texto += `Deposito: ${deposito || '1050'}\n`;
+    texto += `Total de Itens Criticos: ${totalCriticos}\n`;
+    texto += `Total de Itens sem Previsao: ${totalSemPrevisao}\n`;
+    texto += '='.repeat(60) + '\n\n';
+    
+    // ============================================
+    // SEÇÃO 1: ITENS CRÍTICOS (ABAIXO DO MÍNIMO)
+    // ============================================
+    if (totalCriticos > 0) {
+        texto += '='.repeat(60) + '\n';
+        texto += 'ITENS COM ESTOQUE ABAIXO DO MINIMO\n';
+        texto += '='.repeat(60) + '\n\n';
+        
+        texto += 'CODIGO   | DESCRICAO                 | UND | MINIMO  | FISICO  | SISTEMICO | STATUS\n';
+        texto += '-'.repeat(85) + '\n';
+        
+        itensCriticos.forEach(item => {
+            const status = (item.fisico_abaixo || item.sistemico_abaixo) ? 'CRITICO' : 'OK';
+            const fisico = item.saldo_fisico.toFixed(2);
+            const sistemico = item.saldo_sistemico.toFixed(2);
+            const minimo = item.estoque_minimo.toFixed(2);
+            const codigo = (item.codigo || '').padEnd(8);
+            const descricao = (item.descricao || '').substring(0, 25).padEnd(25);
+            const und = (item.und || '-').padEnd(4);
+            texto += `${codigo} | ${descricao} | ${und} | ${minimo.padStart(6)} | ${fisico.padStart(6)} | ${sistemico.padStart(8)} | ${status}\n`;
+        });
+        
+        texto += '-'.repeat(85) + '\n\n';
+        
+        // Resumo por tipo dos críticos
+        const tiposCriticos = {};
+        itensCriticos.forEach(item => {
+            const tipo = item.tipo_material || 'desconhecido';
+            if (!tiposCriticos[tipo]) tiposCriticos[tipo] = 0;
+            tiposCriticos[tipo]++;
+        });
+        if (Object.keys(tiposCriticos).length > 0) {
+            texto += 'RESUMO POR TIPO (CRITICOS):\n';
+            Object.entries(tiposCriticos).forEach(([tipo, qtd]) => {
+                texto += `  ${tipo}: ${qtd} itens\n`;
+            });
+            texto += '\n';
+        }
     }
     
-    if (!itens || itens.length === 0) return;
+    // ============================================
+    // SEÇÃO 2: ITENS SEM PREVISÃO
+    // ============================================
+    if (totalSemPrevisao > 0) {
+        texto += '='.repeat(60) + '\n';
+        texto += 'ITENS SEM PREVISAO DE ESTOQUE MINIMO\n';
+        texto += '='.repeat(60) + '\n';
+        texto += `Total: ${totalSemPrevisao} itens\n\n`;
+        
+        texto += 'CODIGO   | DESCRICAO                 | UND | FISICO  | SISTEMICO | TIPO\n';
+        texto += '-'.repeat(80) + '\n';
+        
+        itensSemPrevisao.forEach(item => {
+            const fisico = item.saldo_fisico.toFixed(2);
+            const sistemico = item.saldo_sistemico.toFixed(2);
+            const codigo = (item.codigo || '').padEnd(8);
+            const descricao = (item.descricao || '').substring(0, 25).padEnd(25);
+            const und = (item.und || '-').padEnd(4);
+            const tipo = (item.tipo_material || 'desconhecido').padEnd(10);
+            texto += `${codigo} | ${descricao} | ${und} | ${fisico.padStart(6)} | ${sistemico.padStart(8)} | ${tipo}\n`;
+        });
+        
+        texto += '-'.repeat(80) + '\n\n';
+    }
+    
+    texto += '='.repeat(60) + '\n';
+    texto += '* Este e um alerta automatico do sistema SICGM *\n';
+    texto += 'Por favor, verifique o estoque dos itens listados.\n';
+    
+    return texto;
+}
+
+// ============================================
+// GERAR RELATÓRIO RESUMIDO (CASO SEJA MUITO GRANDE)
+// ============================================
+
+function gerarRelatorioTextoResumido(itensCriticos, itensSemPrevisao, totalCriticos, totalSemPrevisao, deposito) {
+    const dataHora = getDataHoraBrasilString();
+    
+    let texto = '';
+    
+    texto += '='.repeat(60) + '\n';
+    texto += 'RELATORIO DE ESTOQUE MINIMO - SICGM (RESUMIDO)\n';
+    texto += '='.repeat(60) + '\n';
+    texto += `Data: ${dataHora}\n`;
+    texto += `Deposito: ${deposito || '1050'}\n`;
+    texto += `Total de Itens Criticos: ${totalCriticos}\n`;
+    texto += `Total de Itens sem Previsao: ${totalSemPrevisao}\n`;
+    texto += '='.repeat(60) + '\n\n';
+    
+    // CRÍTICOS (mostra apenas os 10 primeiros)
+    if (itensCriticos.length > 0) {
+        texto += 'ITENS CRITICOS (10 primeiros):\n';
+        texto += 'CODIGO   | DESCRICAO                 | UND | MINIMO  | FISICO  | SISTEMICO\n';
+        texto += '-'.repeat(80) + '\n';
+        
+        itensCriticos.slice(0, 10).forEach(item => {
+            const fisico = item.saldo_fisico.toFixed(2);
+            const sistemico = item.saldo_sistemico.toFixed(2);
+            const minimo = item.estoque_minimo.toFixed(2);
+            const codigo = (item.codigo || '').padEnd(8);
+            const descricao = (item.descricao || '').substring(0, 25).padEnd(25);
+            const und = (item.und || '-').padEnd(4);
+            texto += `${codigo} | ${descricao} | ${und} | ${minimo.padStart(6)} | ${fisico.padStart(6)} | ${sistemico.padStart(8)}\n`;
+        });
+        
+        if (totalCriticos > 10) {
+            texto += `... e mais ${totalCriticos - 10} itens criticos.\n`;
+        }
+        texto += '\n';
+    }
+    
+    // SEM PREVISÃO (mostra apenas os 10 primeiros)
+    if (itensSemPrevisao.length > 0) {
+        texto += 'ITENS SEM PREVISAO (10 primeiros):\n';
+        texto += 'CODIGO   | DESCRICAO                 | UND | FISICO  | SISTEMICO\n';
+        texto += '-'.repeat(75) + '\n';
+        
+        itensSemPrevisao.slice(0, 10).forEach(item => {
+            const fisico = item.saldo_fisico.toFixed(2);
+            const sistemico = item.saldo_sistemico.toFixed(2);
+            const codigo = (item.codigo || '').padEnd(8);
+            const descricao = (item.descricao || '').substring(0, 25).padEnd(25);
+            const und = (item.und || '-').padEnd(4);
+            texto += `${codigo} | ${descricao} | ${und} | ${fisico.padStart(6)} | ${sistemico.padStart(8)}\n`;
+        });
+        
+        if (totalSemPrevisao > 10) {
+            texto += `... e mais ${totalSemPrevisao - 10} itens sem previsao.\n`;
+        }
+        texto += '\n';
+    }
+    
+    texto += '='.repeat(60) + '\n';
+    texto += '* Este e um alerta automatico do sistema SICGM *\n';
+    texto += 'Por favor, verifique o estoque dos itens listados.\n';
+    
+    return texto;
+}
+
+// ============================================
+// FUNÇÃO PARA ENVIAR EMAIL VIA WORKER (APENAS 1 EMAIL)
+// ============================================
+
+async function enviarRelatorioEstoque(relatorioTexto, itensCriticos, emailsDestino, itensSemPrevisao = []) {
+    try {
+        if (!emailsDestino || emailsDestino.length === 0) {
+            console.warn('⚠️ Nenhum email de destino configurado');
+            return { success: false, error: 'Nenhum email de destino' };
+        }
+
+        const totalItens = (itensCriticos?.length || 0) + (itensSemPrevisao?.length || 0);
+        if (totalItens === 0) {
+            console.log('ℹ️ Nenhum item para enviar');
+            return { success: true, message: 'Nenhum item' };
+        }
+
+        const dataHora = getDataHoraBrasilString();
+        const assunto = `ALERTA ESTOQUE MINIMO - ${dataHora}`;
+
+        console.log(`📧 Enviando UNICO email com ${itensCriticos?.length || 0} críticos e ${itensSemPrevisao?.length || 0} sem previsão`);
+
+        const response = await fetch(`${API_URL}/enviar-email-estoque`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                to: emailsDestino,
+                from: 'alefe.gomes@gpssa.com.br',
+                subject: assunto,
+                text: relatorioTexto,
+                itensCriticos: itensCriticos || [],
+                itensSemPrevisao: itensSemPrevisao || [],
+                totalItens: totalItens,
+                totalCriticos: itensCriticos?.length || 0,
+                totalSemPrevisao: itensSemPrevisao?.length || 0,
+                deposito: depositoAtual
+            })
+        });
+
+        if (!response.ok) {
+            const erro = await response.text();
+            
+            if (response.status === 413 || erro.includes('size limit')) {
+                console.warn('⚠️ Relatório muito grande. Gerando versão resumida...');
+                
+                const itensCriticosResumidos = (itensCriticos || []).slice(0, 10);
+                const itensSemPrevisaoResumidos = (itensSemPrevisao || []).slice(0, 10);
+                const textoResumido = gerarRelatorioTextoResumido(
+                    itensCriticosResumidos,
+                    itensSemPrevisaoResumidos,
+                    itensCriticos?.length || 0,
+                    itensSemPrevisao?.length || 0,
+                    depositoAtual
+                );
+                
+                const response2 = await fetch(`${API_URL}/enviar-email-estoque`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to: emailsDestino,
+                        from: 'alefe.gomes@gpssa.com.br',
+                        subject: `${assunto} (RESUMIDO)`,
+                        text: textoResumido,
+                        itensCriticos: itensCriticosResumidos,
+                        itensSemPrevisao: itensSemPrevisaoResumidos,
+                        totalItens: totalItens,
+                        totalCriticos: itensCriticos?.length || 0,
+                        totalSemPrevisao: itensSemPrevisao?.length || 0,
+                        deposito: depositoAtual
+                    })
+                });
+                
+                if (!response2.ok) {
+                    const erro2 = await response2.text();
+                    throw new Error(`Erro ao enviar email resumido: ${response2.status} - ${erro2}`);
+                }
+                
+                const resultado2 = await response2.json();
+                console.log('✅ Email resumido enviado com sucesso!');
+                mostrarToast(`📧 Relatório resumido enviado (${totalItens} itens)`, 'sucesso');
+                return resultado2;
+            }
+            
+            throw new Error(`Erro ao enviar email: ${response.status} - ${erro}`);
+        }
+
+        const resultado = await response.json();
+        console.log('✅ Email enviado com sucesso!');
+        mostrarToast(`📧 Relatório enviado para ${emailsDestino.length} destinatários`, 'sucesso');
+        return resultado;
+
+    } catch (error) {
+        console.error('❌ Erro ao enviar email:', error);
+        mostrarToast(`❌ Erro ao enviar email: ${error.message}`, 'erro');
+        return { success: false, error: error.message };
+    }
+}
+
+// ============================================
+// EXIBIR ITENS CRÍTICOS NA TELA (COM SEPARAÇÃO)
+// ============================================
+
+function exibirItensCriticos(itensCriticos, itensSemPrevisao) {
+    const painelExistente = document.getElementById('painel-itens-criticos');
+    if (painelExistente) painelExistente.remove();
+    
+    if ((!itensCriticos || itensCriticos.length === 0) && (!itensSemPrevisao || itensSemPrevisao.length === 0)) return;
     
     const painel = document.createElement('div');
     painel.id = 'painel-itens-criticos';
     painel.style.cssText = `
-        background: #FFF5F5;
-        border: 2px solid #FC8181;
+        background: ${(itensCriticos && itensCriticos.length > 0) ? '#FFF5F5' : '#EBF8FF'};
+        border: 2px solid ${(itensCriticos && itensCriticos.length > 0) ? '#FC8181' : '#63B3ED'};
         border-radius: 12px;
         padding: 20px;
         margin: 20px 0;
@@ -2173,82 +2269,108 @@ function exibirItensCriticos(itens) {
     
     let html = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3 style="color: #E53E3E; margin: 0; display: flex; align-items: center; gap: 10px;">
-                ⚠️ ${itens.length} Itens Abaixo do Estoque Mínimo
+            <h3 style="color: ${(itensCriticos && itensCriticos.length > 0) ? '#E53E3E' : '#2B6CB0'}; margin: 0;">
+                ${(itensCriticos && itensCriticos.length > 0) ? '⚠️' : 'ℹ️'} 
+                ${(itensCriticos ? itensCriticos.length : 0)} Itens Críticos 
+                ${(itensSemPrevisao && itensSemPrevisao.length > 0) ? `| 📋 ${itensSemPrevisao.length} Sem Previsão` : ''}
             </h3>
             <button onclick="document.getElementById('painel-itens-criticos').remove()" 
-                    style="background: none; border: none; font-size: 20px; cursor: pointer; color: #A0AEC0;">
-                ✕
-            </button>
+                    style="background: none; border: none; font-size: 20px; cursor: pointer; color: #A0AEC0;">✕</button>
         </div>
-        <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                <thead>
-                    <tr style="background: #E53E3E; color: white;">
-                        <th style="padding: 10px; text-align: left;">Código</th>
-                        <th style="padding: 10px; text-align: left;">Descrição</th>
-                        <th style="padding: 10px; text-align: center;">UND</th>
-                        <th style="padding: 10px; text-align: center;">Mínimo</th>
-                        <th style="padding: 10px; text-align: center;">Saldo Físico</th>
-                        <th style="padding: 10px; text-align: center;">Saldo Sistêmico</th>
-                        <th style="padding: 10px; text-align: center;">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
     `;
     
-    itens.forEach(item => {
-        const statusFisico = item.fisico_abaixo ? '🔴' : '🟢';
-        const statusSistemico = item.sistemico_abaixo ? '🔴' : '🟢';
-        const corFisico = item.fisico_abaixo ? '#FC8181' : '#48BB78';
-        const corSistemico = item.sistemico_abaixo ? '#FC8181' : '#48BB78';
-        
+    // TABELA DE ITENS CRÍTICOS
+    if (itensCriticos && itensCriticos.length > 0) {
         html += `
-            <tr style="border-bottom: 1px solid #E2E8F0; background: ${item.fisico_abaixo || item.sistemico_abaixo ? '#FFF5F5' : 'white'};">
-                <td style="padding: 8px 10px; font-weight: 600;">${item.codigo}</td>
-                <td style="padding: 8px 10px;">${item.descricao}</td>
-                <td style="padding: 8px 10px; text-align: center;">${item.und}</td>
-                <td style="padding: 8px 10px; text-align: center; font-weight: 700;">${item.estoque_minimo}</td>
-                <td style="padding: 8px 10px; text-align: center; color: ${corFisico}; font-weight: 600;">
-                    ${item.saldo_fisico} ${statusFisico}
-                    ${item.fisico_abaixo ? `<br><small style="font-weight: 400; color: #E53E3E;">Faltam ${item.falta_fisico}</small>` : ''}
-                </td>
-                <td style="padding: 8px 10px; text-align: center; color: ${corSistemico}; font-weight: 600;">
-                    ${item.saldo_sistemico} ${statusSistemico}
-                    ${item.sistemico_abaixo ? `<br><small style="font-weight: 400; color: #E53E3E;">Faltam ${item.falta_sistemico}</small>` : ''}
-                </td>
-                <td style="padding: 8px 10px; text-align: center;">
-                    <span style="background: ${item.fisico_abaixo || item.sistemico_abaixo ? '#FC8181' : '#48BB78'}; 
-                                 color: white; padding: 2px 12px; border-radius: 12px; font-size: 11px; font-weight: 600;">
-                        ${item.fisico_abaixo || item.sistemico_abaixo ? 'CRÍTICO' : 'OK'}
-                    </span>
-                </td>
-            </tr>
+            <div style="overflow-x: auto; margin-bottom: 20px;">
+                <h4 style="color: #E53E3E; margin: 0 0 10px 0;">⚠️ Itens Abaixo do Estoque Mínimo</h4>
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead>
+                        <tr style="background: #E53E3E; color: white;">
+                            <th style="padding: 6px 8px; text-align: left;">Código</th>
+                            <th style="padding: 6px 8px; text-align: left;">Descrição</th>
+                            <th style="padding: 6px 8px; text-align: center;">UND</th>
+                            <th style="padding: 6px 8px; text-align: center;">Mínimo</th>
+                            <th style="padding: 6px 8px; text-align: center;">Físico</th>
+                            <th style="padding: 6px 8px; text-align: center;">Sistêmico</th>
+                            <th style="padding: 6px 8px; text-align: center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
         `;
-    });
+        
+        itensCriticos.slice(0, 20).forEach(item => {
+            html += `
+                <tr style="border-bottom: 1px solid #E2E8F0; background: ${(item.fisico_abaixo || item.sistemico_abaixo) ? '#FFF5F5' : 'white'};">
+                    <td style="padding: 4px 6px; font-weight: 600;">${item.codigo}</td>
+                    <td style="padding: 4px 6px;">${item.descricao}</td>
+                    <td style="padding: 4px 6px; text-align: center;">${item.und}</td>
+                    <td style="padding: 4px 6px; text-align: center; font-weight: 700;">${item.estoque_minimo}</td>
+                    <td style="padding: 4px 6px; text-align: center; color: ${item.fisico_abaixo ? '#FC8181' : '#48BB78'};">
+                        ${item.saldo_fisico} ${item.fisico_abaixo ? '🔴' : '🟢'}
+                    </td>
+                    <td style="padding: 4px 6px; text-align: center; color: ${item.sistemico_abaixo ? '#FC8181' : '#48BB78'};">
+                        ${item.saldo_sistemico} ${item.sistemico_abaixo ? '🔴' : '🟢'}
+                    </td>
+                    <td style="padding: 4px 6px; text-align: center;">
+                        <span style="background: #FC8181; color: white; padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 600;">CRÍTICO</span>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        if (itensCriticos.length > 20) {
+            html += `<tr><td colspan="7" style="text-align: center; padding: 8px; color: #718096;">... e mais ${itensCriticos.length - 20} itens críticos</td></tr>`;
+        }
+        
+        html += `</tbody></table></div>`;
+    }
     
-    html += `
-                </tbody>
-            </table>
-        </div>
-        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
-            <button onclick="document.getElementById('painel-itens-criticos').remove()" 
-                    style="background: #E2E8F0; color: #4A5568; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                Fechar
-            </button>
-        </div>
-    `;
+    // TABELA DE ITENS SEM PREVISÃO
+    if (itensSemPrevisao && itensSemPrevisao.length > 0) {
+        html += `
+            <div style="overflow-x: auto;">
+                <h4 style="color: #2B6CB0; margin: 0 0 10px 0;">📋 Itens sem Previsão de Estoque Mínimo</h4>
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead>
+                        <tr style="background: #2B6CB0; color: white;">
+                            <th style="padding: 6px 8px; text-align: left;">Código</th>
+                            <th style="padding: 6px 8px; text-align: left;">Descrição</th>
+                            <th style="padding: 6px 8px; text-align: center;">UND</th>
+                            <th style="padding: 6px 8px; text-align: center;">Físico</th>
+                            <th style="padding: 6px 8px; text-align: center;">Sistêmico</th>
+                            <th style="padding: 6px 8px; text-align: center;">Tipo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        itensSemPrevisao.slice(0, 20).forEach(item => {
+            html += `
+                <tr style="border-bottom: 1px solid #E2E8F0;">
+                    <td style="padding: 4px 6px; font-weight: 600;">${item.codigo}</td>
+                    <td style="padding: 4px 6px;">${item.descricao}</td>
+                    <td style="padding: 4px 6px; text-align: center;">${item.und}</td>
+                    <td style="padding: 4px 6px; text-align: center;">${item.saldo_fisico}</td>
+                    <td style="padding: 4px 6px; text-align: center;">${item.saldo_sistemico}</td>
+                    <td style="padding: 4px 6px; text-align: center;">${item.tipo_material}</td>
+                </tr>
+            `;
+        });
+        
+        if (itensSemPrevisao.length > 20) {
+            html += `<tr><td colspan="6" style="text-align: center; padding: 8px; color: #718096;">... e mais ${itensSemPrevisao.length - 20} itens sem previsão</td></tr>`;
+        }
+        
+        html += `</tbody></table></div>`;
+    }
     
+    html += `</div>`;
     painel.innerHTML = html;
     
     const statsContainer = document.getElementById('stats-container');
     if (statsContainer) {
         statsContainer.parentNode.insertBefore(painel, statsContainer.nextSibling);
-    } else {
-        const formCard = document.querySelector('.form-card');
-        if (formCard) {
-            formCard.insertBefore(painel, formCard.firstChild);
-        }
     }
 }
 
@@ -2261,74 +2383,57 @@ async function monitorarEEnviarRelatorio() {
         console.log('🚀 Iniciando monitoramento e envio de relatório...');
         console.log(`📅 Data/Hora: ${getDataHoraBrasilString()}`);
         
-        // 1. Carrega a lista de emails do R2
         const emailsDestino = await carregarListaEmails();
         console.log(`📧 Emails destino: ${emailsDestino.join(', ')}`);
         
-        // 2. Carrega o estoque mínimo do repositório
         await carregarEstoqueMinimo();
-        
         if (Object.keys(estoqueMinimoCache).length === 0) {
             console.warn('⚠️ Estoque mínimo não disponível');
             return { success: false, error: 'Estoque mínimo não disponível' };
         }
         
-        // 3. Verifica os dados
         if (!dadosProcessados || dadosProcessados.length === 0) {
             console.warn('⚠️ Dados processados não disponíveis. Carregando...');
             await carregarRelatorios();
         }
         
-        // 4. Monitora o estoque
         const resultado = monitorarEstoqueMinimo(dadosProcessados);
+        console.log(`📊 ${resultado.total_criticos} itens críticos, ${resultado.total_sem_previsao} itens sem previsão`);
         
-        console.log(`📊 ${resultado.total_itens_criticos} itens abaixo do estoque mínimo`);
-        
-        // 5. Se houver itens críticos, gera e envia o relatório
-        if (resultado.total_itens_criticos > 0) {
-            console.log('⚠️ Itens críticos encontrados! Enviando relatório...');
+        if (resultado.total_criticos > 0 || resultado.total_sem_previsao > 0) {
+            console.log('⚠️ Enviando relatório...');
+            exibirItensCriticos(resultado.itens_criticos, resultado.itens_sem_previsao);
             
-            // Exibe no sistema
-            exibirItensCriticos(resultado.itens);
+            const relatorioTexto = gerarRelatorioTexto(
+                resultado.itens_criticos,
+                resultado.itens_sem_previsao,
+                depositoAtual
+            );
             
-            // Gera o relatório em texto puro
-            const relatorioTexto = gerarRelatorioTexto(resultado.itens, depositoAtual);
-            
-            // Envia o email
             const emailResultado = await enviarRelatorioEstoque(
                 relatorioTexto,
-                resultado.itens,
-                emailsDestino
+                resultado.itens_criticos,
+                emailsDestino,
+                resultado.itens_sem_previsao
             );
             
             if (emailResultado.success) {
                 console.log('✅ Relatório enviado com sucesso!');
-                return {
-                    success: true,
-                    itensCriticos: resultado.itens,
-                    totalItens: resultado.total_itens_criticos,
-                    emailsEnviados: emailsDestino,
-                    emailResultado: emailResultado
+                return { 
+                    success: true, 
+                    itens_criticos: resultado.itens_criticos, 
+                    itens_sem_previsao: resultado.itens_sem_previsao,
+                    total_criticos: resultado.total_criticos,
+                    total_sem_previsao: resultado.total_sem_previsao
                 };
             } else {
                 console.error('❌ Falha ao enviar relatório:', emailResultado.error);
-                return {
-                    success: false,
-                    error: emailResultado.error,
-                    itensCriticos: resultado.itens,
-                    totalItens: resultado.total_itens_criticos
-                };
+                return { success: false, error: emailResultado.error };
             }
         } else {
             console.log('✅ Nenhum item crítico encontrado');
-            return {
-                success: true,
-                itensCriticos: [],
-                totalItens: 0,
-                message: 'Nenhum item crítico encontrado'
-            };
+            return { success: true, itens_criticos: [], itens_sem_previsao: [], total_criticos: 0, total_sem_previsao: 0 };
         }
-        
     } catch (error) {
         console.error('❌ Erro no monitoramento:', error);
         return { success: false, error: error.message };
@@ -2399,26 +2504,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     // CONFIGURAR MONITORAMENTO AUTOMÁTICO ÀS 08:00
     // ============================================
     
-    // Carrega a lista de emails do R2
     await carregarListaEmails();
     
-    // Função para verificar se é 08:00 e executar o monitoramento
     function verificarHorarioMonitoramento() {
         const agora = getDataBrasil();
         const hora = agora.getHours();
         const minuto = agora.getMinutes();
         
-        // Verifica se são exatamente 08:00
         if (hora === 8 && minuto === 0) {
             console.log('🕐 É 08:00! Executando monitoramento automático...');
             monitorarEEnviarRelatorio();
         }
     }
     
-    // Executa a verificação a cada minuto
     setInterval(verificarHorarioMonitoramento, 60000);
-    
-    // Também executa uma vez ao carregar a página (se for 08:00)
     verificarHorarioMonitoramento();
     
     console.log('✅ Monitoramento automático configurado para 08:00 todos os dias');
@@ -2452,6 +2551,7 @@ window.carregarEstoqueMinimo = carregarEstoqueMinimo;
 window.carregarListaEmails = carregarListaEmails;
 window.monitorarEstoqueMinimo = monitorarEstoqueMinimo;
 window.gerarRelatorioTexto = gerarRelatorioTexto;
+window.gerarRelatorioTextoResumido = gerarRelatorioTextoResumido;
 window.enviarRelatorioEstoque = enviarRelatorioEstoque;
 window.monitorarEEnviarRelatorio = monitorarEEnviarRelatorio;
 window.exibirItensCriticos = exibirItensCriticos;
