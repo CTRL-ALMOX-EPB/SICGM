@@ -227,7 +227,6 @@ async function carregarMateriais() {
             
             const partes = linha.split('\t');
             
-            // Estrutura: codmat | codreg | dscmat | codund_mda_mat | vlrult_cot | saldo_oper
             if (partes.length >= 6) {
                 const codigo = partes[0].trim();
                 const codreg = partes[1]?.trim() || '';
@@ -323,7 +322,6 @@ window.voltarParaPainel = voltarParaPainel;
 
 function isCampoEditavel(elemento) {
     if (!elemento) return false;
-    // Verifica se está visível, não desabilitado e não readonly
     return elemento.offsetParent !== null && 
            !elemento.disabled && 
            !elemento.readOnly;
@@ -332,6 +330,18 @@ function isCampoEditavel(elemento) {
 function getElementosEditaveis(container) {
     const elementos = container.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
     return Array.from(elementos).filter(el => el.offsetParent !== null);
+}
+
+// ============================================
+// FUNÇÃO PARA OBTER NOME DO USUÁRIO LOGADO
+// ============================================
+
+function getNomeUsuarioLogado() {
+    return dadosSessao?.nome || 'Usuário';
+}
+
+function getMatriculaUsuarioLogado() {
+    return dadosSessao?.matricula || '---';
 }
 
 // ============================================
@@ -614,11 +624,9 @@ async function carregarControleFormulario() {
 // ============================================
 
 function configurarNavegacaoTeclado() {
-    // Seleciona todos os inputs e selects do formulário que são editáveis
     const elementos = document.querySelectorAll('#controleForm input:not([readonly]):not([disabled]), #controleForm select:not([disabled]), #controleForm textarea:not([disabled])');
     
     elementos.forEach(function(el) {
-        // Remove listeners antigos para evitar duplicação
         el.removeEventListener('keydown', handleTeclado);
         el.addEventListener('keydown', handleTeclado);
     });
@@ -628,87 +636,56 @@ function handleTeclado(e) {
     const key = e.key;
     const target = e.target;
     
-    // Verifica se o campo é editável (segurança extra)
     if (!isCampoEditavel(target)) return;
     
-    // Verifica se está dentro de uma tabela de itens
     const isInTable = target.closest('table');
     
-    // ============================================
-    // 1. ENTER - Avança para o próximo campo
-    // ============================================
     if (key === 'Enter') {
-        // Previne o comportamento padrão (submissão do formulário)
         e.preventDefault();
         
-        // Se estiver em um textarea, permite quebra de linha com Enter
         if (target.tagName === 'TEXTAREA') {
-            // Se Shift+Enter, permite quebra de linha
             if (e.shiftKey) {
-                return; // Comportamento padrão
+                return;
             }
-            // Enter simples avança
         }
         
-        // Avança para o próximo campo editável
         avancarParaProximoCampo(target);
         return;
     }
     
-    // ============================================
-    // 2. SETAS - Navegação entre campos
-    // ============================================
-    
-    // Seta para baixo (↓) e Seta para cima (↑)
     if (key === 'ArrowDown' || key === 'ArrowUp') {
         e.preventDefault();
-        
         const direcao = key === 'ArrowDown' ? 1 : -1;
         
-        // Se estiver em uma tabela, navega verticalmente na tabela
         if (isInTable) {
             navegarVerticalTabela(target, direcao);
             return;
         }
         
-        // Navegação geral do formulário
         navegarVerticalFormulario(target, direcao);
         return;
     }
     
-    // Seta para esquerda (←) e Seta para direita (→)
     if (key === 'ArrowLeft' || key === 'ArrowRight') {
-        // Só navega horizontalmente se estiver em uma tabela
         if (isInTable) {
             e.preventDefault();
             navegarHorizontalTabela(target, key === 'ArrowRight' ? 1 : -1);
         }
-        // Fora da tabela, as setas esquerda/direita mantêm comportamento padrão
         return;
     }
 }
 
-// ============================================
-// FUNÇÕES DE NAVEGAÇÃO
-// ============================================
-
 function avancarParaProximoCampo(currentElement) {
-    // Obtém todos os elementos editáveis do formulário
     const visiveis = getElementosEditaveis(document.getElementById('controleForm'));
-    
-    // Encontra o índice do elemento atual
     const currentIndex = visiveis.indexOf(currentElement);
     
     if (currentIndex === -1 || currentIndex === visiveis.length - 1) {
-        // Se for o último, não faz nada
         return;
     }
     
-    // Foca no próximo elemento
     const proximo = visiveis[currentIndex + 1];
     if (proximo) {
         proximo.focus();
-        // Seleciona o conteúdo se for um input de texto
         if (proximo.tagName === 'INPUT' && proximo.type === 'text') {
             proximo.select();
         }
@@ -717,33 +694,26 @@ function avancarParaProximoCampo(currentElement) {
 
 function navegarVerticalFormulario(element, direcao) {
     const visiveis = getElementosEditaveis(document.getElementById('controleForm'));
-    
     const currentIndex = visiveis.indexOf(element);
     if (currentIndex === -1) return;
     
-    // Calcula posição Y do elemento atual
     const rect = element.getBoundingClientRect();
     const centroY = rect.top + rect.height / 2;
     
     let melhorElemento = null;
     let melhorDistancia = Infinity;
     
-    // Procura o próximo elemento na direção vertical
     for (let i = 0; i < visiveis.length; i++) {
         if (i === currentIndex) continue;
         
         const outroRect = visiveis[i].getBoundingClientRect();
         const outroCentroY = outroRect.top + outroRect.height / 2;
         
-        // Verifica se está na direção correta
-        if (direcao === 1 && outroCentroY <= centroY + 5) continue; // Para baixo, deve estar abaixo
-        if (direcao === -1 && outroCentroY >= centroY - 5) continue; // Para cima, deve estar acima
+        if (direcao === 1 && outroCentroY <= centroY + 5) continue;
+        if (direcao === -1 && outroCentroY >= centroY - 5) continue;
         
-        // Calcula distância vertical e horizontal
         const diffY = Math.abs(outroCentroY - centroY);
         const diffX = Math.abs(outroRect.left - rect.left);
-        
-        // Prioriza elementos com distância vertical menor
         const distancia = diffY * 2 + diffX * 0.5;
         
         if (distancia < melhorDistancia) {
@@ -776,23 +746,19 @@ function navegarVerticalTabela(element, direcao) {
     
     const targetRow = rows[targetRowIndex];
     
-    // Encontra a coluna do elemento atual
     const cells = Array.from(row.querySelectorAll('td'));
     let targetCellIndex = -1;
-    let elementInCell = null;
     
     cells.forEach((cell, idx) => {
         const inputs = cell.querySelectorAll('input, select, textarea');
         inputs.forEach(inp => {
             if (inp === element) {
                 targetCellIndex = idx;
-                elementInCell = inp;
             }
         });
     });
     
     if (targetCellIndex === -1) {
-        // Se não encontrou, foca no primeiro campo editável da linha alvo
         const firstInput = targetRow.querySelector('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
         if (firstInput && isCampoEditavel(firstInput)) {
             firstInput.focus();
@@ -800,10 +766,8 @@ function navegarVerticalTabela(element, direcao) {
         return;
     }
     
-    // Tenta encontrar o campo na mesma coluna na linha alvo
     const targetCells = targetRow.querySelectorAll('td');
     if (targetCellIndex >= targetCells.length) {
-        // Se a coluna não existe na linha alvo, foca no primeiro campo editável
         const firstInput = targetRow.querySelector('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
         if (firstInput && isCampoEditavel(firstInput)) {
             firstInput.focus();
@@ -820,7 +784,6 @@ function navegarVerticalTabela(element, direcao) {
             targetInput.select();
         }
     } else {
-        // Se o campo na mesma coluna está desabilitado/readonly, procura o próximo editável
         const allInputs = targetRow.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
         if (allInputs.length > 0) {
             allInputs[0].focus();
@@ -832,7 +795,6 @@ function navegarHorizontalTabela(element, direcao) {
     const row = element.closest('tr');
     if (!row) return;
     
-    // Obtém apenas os campos editáveis da linha
     const celulasEditaveis = [];
     const cells = Array.from(row.querySelectorAll('td'));
     
@@ -849,7 +811,6 @@ function navegarHorizontalTabela(element, direcao) {
         });
     });
     
-    // Encontra o índice do elemento atual na lista de editáveis
     let currentIndex = -1;
     celulasEditaveis.forEach((item, idx) => {
         if (item.elemento === element) {
@@ -876,12 +837,14 @@ function navegarHorizontalTabela(element, direcao) {
 // ============================================
 
 function configurarPasteEmMassa() {
-    // Configura TODOS os campos editáveis para aceitar colagem em massa
     const campos = document.querySelectorAll('#itemsBody input:not([readonly]):not([disabled]), #itemsBody select:not([disabled])');
     
     campos.forEach(function(campo) {
-        // Ignora campos de descrição e unidade (são readonly e não devem ter paste)
         if (campo.classList.contains('item-descricao') || campo.classList.contains('item-unidade')) {
+            return;
+        }
+        
+        if (campo.classList.contains('item-colaborador-item')) {
             return;
         }
         
@@ -896,49 +859,42 @@ function configurarPasteEmMassa() {
 function handlePasteEmMassa(e) {
     const target = e.target;
     
-    // Verifica se o campo é editável
     if (!isCampoEditavel(target)) return;
     
-    // Ignora descrição e unidade (readonly)
     if (target.classList.contains('item-descricao') || target.classList.contains('item-unidade')) {
         return;
     }
     
-    // Obtém os dados da área de transferência
+    if (target.classList.contains('item-colaborador-item')) {
+        return;
+    }
+    
     const dados = e.clipboardData || window.clipboardData;
     if (!dados) return;
     
     const texto = dados.getData('text/plain');
     if (!texto || texto.trim() === '') return;
     
-    // Verifica se o texto contém múltiplas linhas
     const linhas = texto.split('\n').filter(line => line.trim() !== '');
     
-    // Se for apenas uma linha, não faz nada (comportamento normal)
     if (linhas.length <= 1) {
-        return; // Deixa o paste normal acontecer
+        return;
     }
     
-    // Impede o paste padrão
     e.preventDefault();
-    
-    // Processa os dados colados - apenas na coluna atual
     processarPasteEmMassa(linhas, target);
 }
 
 function processarPasteEmMassa(linhas, elementoAlvo) {
     console.log(`📋 Processando ${linhas.length} linhas coladas na coluna:`, elementoAlvo);
     
-    // Identifica qual é a classe do campo alvo
     const classesAlvo = Array.from(elementoAlvo.classList);
     let classeAlvo = '';
     
-    // Mapeamento de classes para identificar a coluna
     const mapeamentoColunas = {
         'item-codigo': 'codigo',
         'item-quantidade': 'quantidade',
         'item-motivo': 'motivo',
-        'item-colaborador-item': 'colaborador',
         'item-observacao-item': 'observacao_item',
         'item-pendente-aditivo': 'pendente_aditivo',
         'item-baixado': 'baixado',
@@ -952,7 +908,6 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
         'item-encarregado': 'encarregado_obra'
     };
     
-    // Encontra a classe que mapeia para uma coluna
     for (const classe of classesAlvo) {
         if (mapeamentoColunas[classe]) {
             classeAlvo = classe;
@@ -965,14 +920,10 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
         return;
     }
     
-    console.log(`📍 Coluna identificada: ${classeAlvo} (${mapeamentoColunas[classeAlvo]})`);
-    
-    // Obtém a linha atual
     const linhaAtual = elementoAlvo.closest('tr');
     const tbody = document.getElementById('itemsBody');
     const todasLinhas = tbody.querySelectorAll('tr');
     
-    // Verifica se a linha atual está vazia (apenas código e quantidade)
     const codigoAtual = linhaAtual.querySelector('.item-codigo').value.trim();
     const descricaoAtual = linhaAtual.querySelector('.item-descricao').value.trim();
     const quantidadeAtual = linhaAtual.querySelector('.item-quantidade').value.trim();
@@ -984,74 +935,54 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
     
     let primeiroIndice = indiceAtual;
     
-    // Se a linha atual estiver vazia, usamos ela
-    // Se não, adicionamos novas linhas abaixo
     if (!linhaVazia) {
-        // Verifica se a linha atual tem código mas não tem os dados que estamos colando
-        // Nesse caso, podemos preencher a linha atual se ela estiver "incompleta"
         const campoAtual = linhaAtual.querySelector(`.${classeAlvo}`);
         const valorAtual = campoAtual ? campoAtual.value.trim() : '';
         
-        // Se o campo atual estiver vazio e a linha tem código, usamos a linha atual
         if (valorAtual === '' && codigoAtual !== '') {
-            // Preenche a linha atual
             primeiroIndice = indiceAtual;
         } else {
-            // Adiciona novas linhas abaixo
             primeiroIndice = indiceAtual + 1;
-            // Adiciona uma linha vazia
             adicionarLinhaItem();
-            // Atualiza referências
             const novasLinhas = tbody.querySelectorAll('tr');
             linhaAtual = novasLinhas[primeiroIndice];
         }
     }
     
-    // Agora preenchemos as linhas
     let linhaAtualIndex = primeiroIndice;
     
     for (let i = 0; i < linhas.length; i++) {
         const valor = linhas[i].trim();
         if (valor === '') continue;
         
-        // Verifica se precisamos adicionar mais linhas
         const linhasAtuais = tbody.querySelectorAll('tr');
         if (linhaAtualIndex >= linhasAtuais.length) {
             adicionarLinhaItem();
         }
         
-        // Obtém a linha atual
         const linha = tbody.querySelectorAll('tr')[linhaAtualIndex];
         if (!linha) continue;
         
-        // Encontra o campo alvo na linha
         const campo = linha.querySelector(`.${classeAlvo}`);
         
         if (campo && isCampoEditavel(campo)) {
-            // Para selects, verifica se o valor é válido
             if (campo.tagName === 'SELECT') {
                 const opcoes = Array.from(campo.options).map(opt => opt.value);
-                // Se o valor existe nas opções, seleciona
                 if (opcoes.includes(valor)) {
                     campo.value = valor;
                 } else {
-                    // Tenta encontrar por texto
                     const opcaoPorTexto = Array.from(campo.options).find(opt => 
                         opt.text.trim().toUpperCase() === valor.toUpperCase() ||
                         opt.text.trim().includes(valor)
                     );
                     if (opcaoPorTexto) {
                         campo.value = opcaoPorTexto.value;
-                    } else {
-                        console.warn(`⚠️ Valor "${valor}" não encontrado nas opções do select`);
                     }
                 }
             } else {
-                // Para inputs
                 if (campo.type === 'number') {
                     campo.value = parseFloat(valor) || '';
                 } else if (campo.type === 'date') {
-                    // Tenta formatar a data
                     const dataFormatada = formatarData(valor);
                     campo.value = dataFormatada;
                 } else {
@@ -1059,10 +990,8 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
                 }
             }
             
-            // Dispara evento de mudança
             campo.dispatchEvent(new Event('change', { bubbles: true }));
             
-            // Se for um campo de código, dispara a busca automática
             if (classeAlvo === 'item-codigo') {
                 buscarMaterial(campo);
             }
@@ -1071,7 +1000,6 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
         linhaAtualIndex++;
     }
     
-    // Remove linhas vazias extras no final
     const linhasFinais = tbody.querySelectorAll('tr');
     for (let i = linhasFinais.length - 1; i >= linhaAtualIndex; i--) {
         const linha = linhasFinais[i];
@@ -1079,7 +1007,6 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
         const descricao = linha.querySelector('.item-descricao').value.trim();
         const quantidade = linha.querySelector('.item-quantidade').value.trim();
         
-        // Se a linha estiver vazia e não for a única linha, remove
         if (codigo === '' && descricao === '' && quantidade === '') {
             if (tbody.children.length > 1) {
                 linha.remove();
@@ -1087,13 +1014,11 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
         }
     }
     
-    // Reconfigura navegação
     setTimeout(configurarNavegacaoTeclado, 100);
     setTimeout(configurarPopupDescricao, 100);
     setTimeout(configurarPasteEmMassa, 100);
     setTimeout(adicionarBotoesAcoesMassa, 100);
     
-    // Foca no campo onde colou
     setTimeout(() => {
         elementoAlvo.focus();
         if (elementoAlvo.tagName === 'INPUT' && elementoAlvo.type === 'text') {
@@ -1109,13 +1034,11 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
 // ============================================
 
 function formatarData(valor) {
-    // Tenta diferentes formatos de data
     const data = new Date(valor);
     if (!isNaN(data.getTime())) {
         return data.toISOString().split('T')[0];
     }
     
-    // Tenta formato DD/MM/YYYY
     const partes = valor.split('/');
     if (partes.length === 3) {
         const dia = partes[0].padStart(2, '0');
@@ -1126,7 +1049,6 @@ function formatarData(valor) {
         }
     }
     
-    // Tenta formato DD-MM-YYYY
     const partes2 = valor.split('-');
     if (partes2.length === 3) {
         const dia = partes2[0].padStart(2, '0');
@@ -1141,11 +1063,10 @@ function formatarData(valor) {
 }
 
 // ============================================
-// AÇÕES EM MASSA (BULK ACTIONS)
+// AÇÕES EM MASSA (BULK ACTIONS) - ORGANIZADO E HARMONIOSO
 // ============================================
 
 function adicionarBotoesAcoesMassa() {
-    // Verifica se o container de ações em massa já existe
     let container = document.getElementById('bulkActionsContainer');
     if (container) {
         container.remove();
@@ -1154,7 +1075,6 @@ function adicionarBotoesAcoesMassa() {
     const secaoItens = document.getElementById('secaoItens');
     if (!secaoItens) return;
     
-    // Verifica se é um tipo que tem itens
     const tipoInfo = TIPOS[tipoAtual];
     if (!tipoInfo || !tipoInfo.temItens) return;
     
@@ -1162,53 +1082,75 @@ function adicionarBotoesAcoesMassa() {
     const isAditivo = tipoAtual === 'aditivo';
     const isAditivoFisico = tipoAtual === 'aditivo-fisico';
     
-    // Cria o container
     container = document.createElement('div');
     container.id = 'bulkActionsContainer';
     container.className = 'bulk-actions-container';
     container.style.cssText = `
-        background: #F7FAFC;
+        background: linear-gradient(135deg, #F7FAFC 0%, #EDF2F7 100%);
         border: 1px solid #E2E8F0;
-        border-radius: 8px;
-        padding: 15px 20px;
-        margin: 15px 0;
+        border-radius: 12px;
+        padding: 16px 24px;
+        margin: 15px 0 20px 0;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 10px 15px;
+        gap: 8px 16px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
     `;
     
-    // Título
     const titulo = document.createElement('span');
     titulo.style.cssText = `
-        font-weight: 600;
+        font-weight: 700;
         color: #2D3748;
-        font-size: 0.9em;
-        margin-right: 5px;
+        font-size: 0.85em;
+        margin-right: 4px;
+        letter-spacing: 0.3px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
     `;
-    titulo.textContent = '⚡ Ações em Massa:';
+    titulo.innerHTML = '⚡ Ações em Massa';
     container.appendChild(titulo);
     
-    // ============================================
-    // BOTÕES PARA PENDÊNCIA DE BAIXA
-    // ============================================
+    const separadorInicial = document.createElement('span');
+    separadorInicial.style.cssText = `
+        width: 1px;
+        height: 28px;
+        background: #CBD5E0;
+        display: inline-block;
+        margin: 0 4px;
+    `;
+    container.appendChild(separadorInicial);
+    
     if (isPendencia) {
-        // Botão Baixar Todos
+        // Grupo 1: Baixar/Desbaixar
+        const grupoBaixar = document.createElement('span');
+        grupoBaixar.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        `;
+        
         const btnBaixarTodos = criarBotaoMassa('✅ Baixar Todos', '#48BB78', function() {
             aplicarEmMassaSelect('item-baixado', 'SIM');
         });
-        container.appendChild(btnBaixarTodos);
+        grupoBaixar.appendChild(btnBaixarTodos);
         
-        // Botão Desbaixar Todos
-        const btnDesbaixarTodos = criarBotaoMassa('⬜ Desbaixar Todos', '#ED8936', function() {
+        const btnDesbaixarTodos = criarBotaoMassa('⬜ Desbaixar', '#ED8936', function() {
             aplicarEmMassaSelect('item-baixado', 'NÃO');
         });
-        container.appendChild(btnDesbaixarTodos);
+        grupoBaixar.appendChild(btnDesbaixarTodos);
+        container.appendChild(grupoBaixar);
         
-        // Separador
-        container.appendChild(criarSeparador());
+        container.appendChild(criarSeparadorPequeno());
         
-        // Aplicar Motivo em Massa
+        // Grupo 2: Motivo
+        const grupoMotivo = document.createElement('span');
+        grupoMotivo.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        `;
         const motivoContainer = criarCampoMassa(
             '📝 Motivo:',
             'item-motivo',
@@ -1218,24 +1160,18 @@ function adicionarBotoesAcoesMassa() {
                 aplicarEmMassa('item-motivo', valor);
             }
         );
-        container.appendChild(motivoContainer);
+        grupoMotivo.appendChild(motivoContainer);
+        container.appendChild(grupoMotivo);
         
-        // Aplicar Colaborador em Massa
-        const colaboradorContainer = criarCampoMassa(
-            '👤 Colaborador:',
-            'item-colaborador-item',
-            'text',
-            'Nome do colaborador...',
-            function(valor) {
-                aplicarEmMassa('item-colaborador-item', valor);
-            }
-        );
-        container.appendChild(colaboradorContainer);
+        container.appendChild(criarSeparadorPequeno());
         
-        // Separador
-        container.appendChild(criarSeparador());
-        
-        // Aplicar Pendente Aditivo em Massa
+        // Grupo 3: Pendente Aditivo
+        const grupoPendente = document.createElement('span');
+        grupoPendente.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        `;
         const pendenteContainer = criarSelectMassa(
             '📌 Pend. Aditivo:',
             'item-pendente-aditivo',
@@ -1244,9 +1180,18 @@ function adicionarBotoesAcoesMassa() {
                 aplicarEmMassaSelect('item-pendente-aditivo', valor);
             }
         );
-        container.appendChild(pendenteContainer);
+        grupoPendente.appendChild(pendenteContainer);
+        container.appendChild(grupoPendente);
         
-        // Aplicar Data Baixa em Massa
+        container.appendChild(criarSeparadorPequeno());
+        
+        // Grupo 4: Data Baixa
+        const grupoDataBaixa = document.createElement('span');
+        grupoDataBaixa.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        `;
         const dataBaixaContainer = criarCampoMassa(
             '📅 Data Baixa:',
             'item-data-baixa',
@@ -1256,13 +1201,18 @@ function adicionarBotoesAcoesMassa() {
                 aplicarEmMassa('item-data-baixa', valor);
             }
         );
-        container.appendChild(dataBaixaContainer);
+        grupoDataBaixa.appendChild(dataBaixaContainer);
+        container.appendChild(grupoDataBaixa);
     }
     
-    // ============================================
-    // BOTÕES PARA ADITIVO SISTÊMICO
-    // ============================================
     if (isAditivo) {
+        // Grupo: Status
+        const grupoStatus = document.createElement('span');
+        grupoStatus.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        `;
         const statusContainer = criarSelectMassa(
             '📊 Status:',
             'item-status-aditivo',
@@ -1277,12 +1227,18 @@ function adicionarBotoesAcoesMassa() {
                 'S/ SOLICITAÇÃO': '📋 Sem Solicitação'
             }
         );
-        container.appendChild(statusContainer);
+        grupoStatus.appendChild(statusContainer);
+        container.appendChild(grupoStatus);
         
-        // Separador
-        container.appendChild(criarSeparador());
+        container.appendChild(criarSeparadorPequeno());
         
-        // Aplicar Observação em Massa
+        // Grupo: Observação
+        const grupoObs = document.createElement('span');
+        grupoObs.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        `;
         const obsContainer = criarCampoMassa(
             '📝 Observação:',
             'item-observacao',
@@ -1292,13 +1248,18 @@ function adicionarBotoesAcoesMassa() {
                 aplicarEmMassa('item-observacao', valor);
             }
         );
-        container.appendChild(obsContainer);
+        grupoObs.appendChild(obsContainer);
+        container.appendChild(grupoObs);
     }
     
-    // ============================================
-    // BOTÕES PARA ADITIVO FÍSICO
-    // ============================================
     if (isAditivoFisico) {
+        // Grupo 1: Aplicado
+        const grupoAplicado = document.createElement('span');
+        grupoAplicado.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        `;
         const aplicadoContainer = criarSelectMassa(
             '🔧 Aplicado:',
             'item-aplicado',
@@ -1307,12 +1268,18 @@ function adicionarBotoesAcoesMassa() {
                 aplicarEmMassaSelect('item-aplicado', valor);
             }
         );
-        container.appendChild(aplicadoContainer);
+        grupoAplicado.appendChild(aplicadoContainer);
+        container.appendChild(grupoAplicado);
         
-        // Separador
-        container.appendChild(criarSeparador());
+        container.appendChild(criarSeparadorPequeno());
         
-        // Aplicar Colaborador em Massa
+        // Grupo 2: Solicitante
+        const grupoSolicitante = document.createElement('span');
+        grupoSolicitante.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        `;
         const colaboradorContainer = criarSelectMassa(
             '👤 Solicitante:',
             'item-colaborador',
@@ -1321,9 +1288,18 @@ function adicionarBotoesAcoesMassa() {
                 aplicarEmMassaSelect('item-colaborador', valor);
             }
         );
-        container.appendChild(colaboradorContainer);
+        grupoSolicitante.appendChild(colaboradorContainer);
+        container.appendChild(grupoSolicitante);
         
-        // Aplicar Encarregado em Massa
+        container.appendChild(criarSeparadorPequeno());
+        
+        // Grupo 3: Encarregado
+        const grupoEncarregado = document.createElement('span');
+        grupoEncarregado.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        `;
         const encarregadoContainer = criarSelectMassa(
             '👔 Encarregado:',
             'item-encarregado',
@@ -1332,16 +1308,16 @@ function adicionarBotoesAcoesMassa() {
                 aplicarEmMassaSelect('item-encarregado', valor);
             }
         );
-        container.appendChild(encarregadoContainer);
+        grupoEncarregado.appendChild(encarregadoContainer);
+        container.appendChild(grupoEncarregado);
     }
     
-    // ============================================
-    // BOTÃO LIMPAR CAMPOS (todos os tipos)
-    // ============================================
-    container.appendChild(criarSeparador());
+    // Separador antes do botão limpar
+    container.appendChild(criarSeparadorPequeno());
     
+    // Botão Limpar Quantidades
     const btnLimpar = document.createElement('button');
-    btnLimpar.textContent = '🧹 Limpar Quantidades';
+    btnLimpar.textContent = '🧹 Limpar Qtds';
     btnLimpar.className = 'btn-bulk-action';
     btnLimpar.style.cssText = `
         background: #FC8181;
@@ -1351,16 +1327,19 @@ function adicionarBotoesAcoesMassa() {
         border-radius: 6px;
         cursor: pointer;
         font-weight: 600;
-        font-size: 0.85em;
+        font-size: 0.8em;
         transition: all 0.3s ease;
+        white-space: nowrap;
     `;
     btnLimpar.onmouseover = function() {
         this.style.background = '#E53E3E';
         this.style.transform = 'translateY(-1px)';
+        this.style.boxShadow = '0 4px 12px rgba(229,62,62,0.3)';
     };
     btnLimpar.onmouseout = function() {
         this.style.background = '#FC8181';
         this.style.transform = 'translateY(0)';
+        this.style.boxShadow = 'none';
     };
     btnLimpar.onclick = function() {
         if (confirm('⚠️ Tem certeza que deseja limpar todas as quantidades?')) {
@@ -1370,11 +1349,22 @@ function adicionarBotoesAcoesMassa() {
     };
     container.appendChild(btnLimpar);
     
-    // Inserir o container antes da tabela de itens
     const table = document.querySelector('.table-responsive');
     if (table) {
         table.parentNode.insertBefore(container, table);
     }
+}
+
+function criarSeparadorPequeno() {
+    const sep = document.createElement('span');
+    sep.style.cssText = `
+        width: 1px;
+        height: 26px;
+        background: #CBD5E0;
+        display: inline-block;
+        margin: 0 2px;
+    `;
+    return sep;
 }
 
 function criarBotaoMassa(texto, cor, acao) {
@@ -1385,12 +1375,13 @@ function criarBotaoMassa(texto, cor, acao) {
         background: ${cor};
         color: white;
         border: none;
-        padding: 6px 14px;
+        padding: 5px 12px;
         border-radius: 6px;
         cursor: pointer;
         font-weight: 600;
-        font-size: 0.85em;
+        font-size: 0.8em;
         transition: all 0.3s ease;
+        white-space: nowrap;
     `;
     btn.onmouseover = function() {
         this.style.transform = 'translateY(-1px)';
@@ -1404,29 +1395,18 @@ function criarBotaoMassa(texto, cor, acao) {
     return btn;
 }
 
-function criarSeparador() {
-    const sep = document.createElement('span');
-    sep.style.cssText = `
-        width: 1px;
-        height: 30px;
-        background: #CBD5E0;
-        display: inline-block;
-    `;
-    return sep;
-}
-
 function criarCampoMassa(label, classe, tipo, placeholder, acao) {
     const container = document.createElement('div');
     container.style.cssText = `
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
     `;
     
     const lbl = document.createElement('label');
     lbl.textContent = label;
     lbl.style.cssText = `
-        font-size: 0.8em;
+        font-size: 0.75em;
         font-weight: 600;
         color: #4A5568;
         white-space: nowrap;
@@ -1441,10 +1421,12 @@ function criarCampoMassa(label, classe, tipo, placeholder, acao) {
         padding: 4px 10px;
         border: 2px solid #E2E8F0;
         border-radius: 6px;
-        font-size: 0.85em;
-        width: 140px;
+        font-size: 0.8em;
+        width: 130px;
         transition: all 0.3s ease;
         background: white;
+        height: 30px;
+        box-sizing: border-box;
     `;
     input.onfocus = function() {
         this.style.borderColor = '#4299E1';
@@ -1461,13 +1443,14 @@ function criarCampoMassa(label, classe, tipo, placeholder, acao) {
         background: #4299E1;
         color: white;
         border: none;
-        padding: 4px 12px;
+        padding: 4px 10px;
         border-radius: 6px;
         cursor: pointer;
         font-weight: 600;
-        font-size: 0.8em;
+        font-size: 0.75em;
         transition: all 0.3s ease;
         white-space: nowrap;
+        height: 30px;
     `;
     btn.onmouseover = function() {
         this.style.background = '#3182CE';
@@ -1504,13 +1487,13 @@ function criarSelectMassa(label, classe, opcoes, acao, labelsPersonalizados) {
     container.style.cssText = `
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
     `;
     
     const lbl = document.createElement('label');
     lbl.textContent = label;
     lbl.style.cssText = `
-        font-size: 0.8em;
+        font-size: 0.75em;
         font-weight: 600;
         color: #4A5568;
         white-space: nowrap;
@@ -1520,13 +1503,15 @@ function criarSelectMassa(label, classe, opcoes, acao, labelsPersonalizados) {
     const select = document.createElement('select');
     select.className = 'bulk-select';
     select.style.cssText = `
-        padding: 4px 8px;
+        padding: 2px 8px;
         border: 2px solid #E2E8F0;
         border-radius: 6px;
-        font-size: 0.85em;
-        min-width: 120px;
+        font-size: 0.8em;
+        min-width: 100px;
         background: white;
         transition: all 0.3s ease;
+        height: 30px;
+        box-sizing: border-box;
     `;
     select.onfocus = function() {
         this.style.borderColor = '#4299E1';
@@ -1554,13 +1539,14 @@ function criarSelectMassa(label, classe, opcoes, acao, labelsPersonalizados) {
         background: #4299E1;
         color: white;
         border: none;
-        padding: 4px 12px;
+        padding: 4px 10px;
         border-radius: 6px;
         cursor: pointer;
         font-weight: 600;
-        font-size: 0.8em;
+        font-size: 0.75em;
         transition: all 0.3s ease;
         white-space: nowrap;
+        height: 30px;
     `;
     btn.onmouseover = function() {
         this.style.background = '#3182CE';
@@ -1590,19 +1576,15 @@ function aplicarEmMassa(classe, valor) {
     let contador = 0;
     
     elementos.forEach(el => {
-        // Verifica se o campo é editável
         if (isCampoEditavel(el)) {
-            // Para campos number, converte para número ou vazio
             if (el.type === 'number') {
                 el.value = valor !== '' ? parseFloat(valor) : '';
             } else if (el.type === 'date') {
-                // Tenta formatar a data
                 const dataFormatada = formatarData(valor);
                 el.value = dataFormatada;
             } else {
                 el.value = valor;
             }
-            // Dispara evento de mudança para atualizar estados
             el.dispatchEvent(new Event('change', { bubbles: true }));
             contador++;
         }
@@ -1637,7 +1619,8 @@ function adicionarLinhaItem() {
     const isAditivo = tipoAtual === 'aditivo';
     const isAditivoFisico = tipoAtual === 'aditivo-fisico';
     const isPendencia = tipoAtual === 'pendencia';
-    const nomeUsuario = dadosSessao?.nome || '';
+    const nomeUsuario = getNomeUsuarioLogado();
+    const matriculaUsuario = getMatriculaUsuarioLogado();
     
     const tr = document.createElement('tr');
     
@@ -1670,7 +1653,7 @@ function adicionarLinhaItem() {
                 <input type="text" class="item-motivo" placeholder="Motivo">
             </td>
             <td class="col-colaborador-item">
-                <input type="text" class="item-colaborador-item" placeholder="Colaborador">
+                <input type="text" class="item-colaborador-item" value="${nomeUsuario}" readonly style="background-color:#f7fafc;color:#4A5568;cursor:default;">
             </td>
             <td class="col-observacao-item">
                 <input type="text" class="item-observacao-item" placeholder="Observação">
@@ -1769,13 +1752,11 @@ function adicionarLinhaItem() {
     tr.innerHTML = html;
     tbody.appendChild(tr);
     
-    // Foca no primeiro campo da nova linha
     const primeiroInput = tr.querySelector('.item-codigo');
     if (primeiroInput) {
         setTimeout(() => primeiroInput.focus(), 100);
     }
     
-    // Reconfigura navegação e paste
     setTimeout(configurarNavegacaoTeclado, 50);
     setTimeout(configurarPopupDescricao, 100);
     setTimeout(configurarPasteEmMassa, 100);
@@ -1798,7 +1779,6 @@ function removerItem(btn) {
     const row = btn.closest('tr');
     if (row) row.remove();
     
-    // Reconfigura navegação e paste após remover
     setTimeout(configurarNavegacaoTeclado, 50);
     setTimeout(configurarPasteEmMassa, 50);
     setTimeout(adicionarBotoesAcoesMassa, 50);
@@ -1824,6 +1804,7 @@ function carregarItens(itens) {
     const isAditivoFisico = tipoAtual === 'aditivo-fisico';
     const isPendencia = tipoAtual === 'pendencia';
     const isFinalizado = controleAtual?.status === 'FINALIZADO';
+    const nomeUsuario = getNomeUsuarioLogado();
     
     itens.forEach(item => {
         const tr = document.createElement('tr');
@@ -1836,6 +1817,9 @@ function carregarItens(itens) {
         `;
         
         if (isPendencia) {
+            // Colaborador: se já tiver valor, mantém; senão, usa o usuário logado
+            const colaboradorValue = item.colaborador || nomeUsuario;
+            
             html += `
                 <td class="col-pendente-aditivo">
                     <select class="item-pendente-aditivo" ${isFinalizado ? 'disabled' : ''}>
@@ -1857,7 +1841,7 @@ function carregarItens(itens) {
                     <input type="text" class="item-motivo" value="${item.motivo || ''}" placeholder="Motivo" ${isFinalizado ? 'disabled' : ''}>
                 </td>
                 <td class="col-colaborador-item">
-                    <input type="text" class="item-colaborador-item" value="${item.colaborador || ''}" placeholder="Colaborador" ${isFinalizado ? 'disabled' : ''}>
+                    <input type="text" class="item-colaborador-item" value="${colaboradorValue}" readonly style="background-color:#f7fafc;color:#4A5568;cursor:default;">
                 </td>
                 <td class="col-observacao-item">
                     <input type="text" class="item-observacao-item" value="${item.observacao_item || ''}" placeholder="Observação" ${isFinalizado ? 'disabled' : ''}>
@@ -1867,7 +1851,7 @@ function carregarItens(itens) {
         
         if (isAditivo) {
             const statusValue = item.status_aditivo || 'ANALISE';
-            const usuarioItem = item.usuario || dadosSessao?.nome || '';
+            const usuarioItem = item.usuario || nomeUsuario;
             
             html += `
                 <td class="col-status-aditivo">
@@ -2006,8 +1990,6 @@ function getItensFormulario() {
                 
                 const statusValue = statusSelect ? statusSelect.value : 'ANALISE';
                 
-                console.log(`📊 Capturando item ${codigo}: Status = ${statusValue}`);
-                
                 item.status_aditivo = statusValue;
                 item.numero_documento = numDoc?.value || '';
                 item.usuario = usuario?.value || '';
@@ -2049,7 +2031,6 @@ function getItensFormulario() {
         }
     });
     
-    console.log(`📦 ${items.length} itens capturados do formulário`);
     return items;
 }
 
@@ -2169,8 +2150,6 @@ async function salvarControle() {
         data.tipo_movimento = formTipoMovimento?.value || 'RMA';
         data.cod_movimentacao = formCodMovimentacao?.value || '';
     }
-    
-    console.log('📤 Dados sendo enviados:', JSON.stringify(data, null, 2));
     
     const url = `${API_URL}${tipoInfo.endpoint}/${controleAtual.numero}`;
     
@@ -2434,3 +2413,5 @@ window.aplicarEmMassaSelect = aplicarEmMassaSelect;
 window.isCampoEditavel = isCampoEditavel;
 window.getElementosEditaveis = getElementosEditaveis;
 window.formatarData = formatarData;
+window.getNomeUsuarioLogado = getNomeUsuarioLogado;
+window.getMatriculaUsuarioLogado = getMatriculaUsuarioLogado;
