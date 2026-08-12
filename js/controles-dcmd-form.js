@@ -318,6 +318,23 @@ function voltarParaPainel() {
 window.voltarParaPainel = voltarParaPainel;
 
 // ============================================
+// FUNÇÃO PARA VERIFICAR SE UM CAMPO É EDITÁVEL
+// ============================================
+
+function isCampoEditavel(elemento) {
+    if (!elemento) return false;
+    // Verifica se está visível, não desabilitado e não readonly
+    return elemento.offsetParent !== null && 
+           !elemento.disabled && 
+           !elemento.readOnly;
+}
+
+function getElementosEditaveis(container) {
+    const elementos = container.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+    return Array.from(elementos).filter(el => el.offsetParent !== null);
+}
+
+// ============================================
 // CARREGAR CONTROLE NO FORMULÁRIO
 // ============================================
 
@@ -584,28 +601,12 @@ async function carregarControleFormulario() {
         configurarPopupDescricao();
         configurarNavegacaoTeclado();
         configurarPasteEmMassa();
+        adicionarBotoesAcoesMassa();
         
     } catch (error) {
         console.error('❌ Erro ao carregar controle:', error);
         mostrarToast('❌ Erro ao carregar controle', 'erro');
     }
-}
-
-// ============================================
-// FUNÇÃO PARA VERIFICAR SE UM CAMPO É EDITÁVEL
-// ============================================
-
-function isCampoEditavel(elemento) {
-    if (!elemento) return false;
-    // Verifica se está visível, não desabilitado e não readonly
-    return elemento.offsetParent !== null && 
-           !elemento.disabled && 
-           !elemento.readOnly;
-}
-
-function getElementosEditaveis(container) {
-    const elementos = container.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
-    return Array.from(elementos).filter(el => el.offsetParent !== null);
 }
 
 // ============================================
@@ -871,13 +872,19 @@ function navegarHorizontalTabela(element, direcao) {
 }
 
 // ============================================
-// COLEÇÃO EM MASSA (BULK PASTE)
+// COLEÇÃO EM MASSA (BULK PASTE) - POR COLUNA
 // ============================================
 
 function configurarPasteEmMassa() {
-    // Configura todos os campos de código para aceitar colagem em massa
-    const codigos = document.querySelectorAll('.item-codigo');
-    codigos.forEach(function(campo) {
+    // Configura TODOS os campos editáveis para aceitar colagem em massa
+    const campos = document.querySelectorAll('#itemsBody input:not([readonly]):not([disabled]), #itemsBody select:not([disabled])');
+    
+    campos.forEach(function(campo) {
+        // Ignora campos de descrição e unidade (são readonly e não devem ter paste)
+        if (campo.classList.contains('item-descricao') || campo.classList.contains('item-unidade')) {
+            return;
+        }
+        
         if (campo._pasteConfigurado) return;
         campo._pasteConfigurado = true;
         
@@ -892,6 +899,11 @@ function handlePasteEmMassa(e) {
     // Verifica se o campo é editável
     if (!isCampoEditavel(target)) return;
     
+    // Ignora descrição e unidade (readonly)
+    if (target.classList.contains('item-descricao') || target.classList.contains('item-unidade')) {
+        return;
+    }
+    
     // Obtém os dados da área de transferência
     const dados = e.clipboardData || window.clipboardData;
     if (!dados) return;
@@ -899,138 +911,169 @@ function handlePasteEmMassa(e) {
     const texto = dados.getData('text/plain');
     if (!texto || texto.trim() === '') return;
     
-    // Verifica se o texto contém múltiplas linhas ou tabs
+    // Verifica se o texto contém múltiplas linhas
     const linhas = texto.split('\n').filter(line => line.trim() !== '');
     
-    // Se for apenas uma linha e não tiver tabs, não faz nada (comportamento normal)
-    if (linhas.length <= 1 && !texto.includes('\t')) {
+    // Se for apenas uma linha, não faz nada (comportamento normal)
+    if (linhas.length <= 1) {
         return; // Deixa o paste normal acontecer
     }
     
     // Impede o paste padrão
     e.preventDefault();
     
-    // Processa os dados colados
+    // Processa os dados colados - apenas na coluna atual
     processarPasteEmMassa(linhas, target);
 }
 
 function processarPasteEmMassa(linhas, elementoAlvo) {
-    console.log(`📋 Processando ${linhas.length} linhas coladas...`);
+    console.log(`📋 Processando ${linhas.length} linhas coladas na coluna:`, elementoAlvo);
     
-    // Primeiro, verifica se todos os códigos são válidos ou se há múltiplas colunas
-    const dadosProcessados = linhas.map(linha => {
-        // Divide por TAB (colunas do Excel)
-        const colunas = linha.split('\t').map(col => col.trim());
-        
-        // Se tiver apenas uma coluna, é só o código
-        if (colunas.length === 1) {
-            return {
-                codigo: colunas[0],
-                descricao: '',
-                unidade: '',
-                quantidade: ''
-            };
+    // Identifica qual é a classe do campo alvo
+    const classesAlvo = Array.from(elementoAlvo.classList);
+    let classeAlvo = '';
+    
+    // Mapeamento de classes para identificar a coluna
+    const mapeamentoColunas = {
+        'item-codigo': 'codigo',
+        'item-quantidade': 'quantidade',
+        'item-motivo': 'motivo',
+        'item-colaborador-item': 'colaborador',
+        'item-observacao-item': 'observacao_item',
+        'item-pendente-aditivo': 'pendente_aditivo',
+        'item-baixado': 'baixado',
+        'item-data-baixa': 'data_baixa',
+        'item-status-aditivo': 'status_aditivo',
+        'item-num-doc': 'numero_documento',
+        'item-usuario': 'usuario',
+        'item-observacao': 'observacao',
+        'item-aplicado': 'aplicado',
+        'item-colaborador': 'colaborador_solicitante',
+        'item-encarregado': 'encarregado_obra'
+    };
+    
+    // Encontra a classe que mapeia para uma coluna
+    for (const classe of classesAlvo) {
+        if (mapeamentoColunas[classe]) {
+            classeAlvo = classe;
+            break;
         }
-        
-        // Se tiver múltiplas colunas: [código, descrição, unidade, quantidade, ...]
-        return {
-            codigo: colunas[0] || '',
-            descricao: colunas[1] || '',
-            unidade: colunas[2] || '',
-            quantidade: colunas[3] || ''
-        };
-    });
+    }
     
-    // Filtra linhas vazias
-    const validos = dadosProcessados.filter(d => d.codigo !== '');
-    
-    if (validos.length === 0) {
-        mostrarToast('⚠️ Nenhum código válido encontrado', 'aviso');
+    if (!classeAlvo) {
+        console.warn('⚠️ Coluna não identificada para:', elementoAlvo);
         return;
     }
     
-    // Encontra a linha atual onde ocorreu o paste
+    console.log(`📍 Coluna identificada: ${classeAlvo} (${mapeamentoColunas[classeAlvo]})`);
+    
+    // Obtém a linha atual
     const linhaAtual = elementoAlvo.closest('tr');
     const tbody = document.getElementById('itemsBody');
     const todasLinhas = tbody.querySelectorAll('tr');
     
-    // Verifica se a linha atual está vazia (apenas para ser substituída)
+    // Verifica se a linha atual está vazia (apenas código e quantidade)
     const codigoAtual = linhaAtual.querySelector('.item-codigo').value.trim();
     const descricaoAtual = linhaAtual.querySelector('.item-descricao').value.trim();
     const quantidadeAtual = linhaAtual.querySelector('.item-quantidade').value.trim();
     
     const linhaVazia = codigoAtual === '' && descricaoAtual === '' && quantidadeAtual === '';
     
-    // Determina o índice da linha atual
     let indiceAtual = Array.from(todasLinhas).indexOf(linhaAtual);
     if (indiceAtual === -1) indiceAtual = todasLinhas.length - 1;
     
-    // Se a linha atual estiver vazia, vamos usá-la como primeiro item
-    // Caso contrário, adicionamos uma nova linha antes de começar
     let primeiroIndice = indiceAtual;
     
+    // Se a linha atual estiver vazia, usamos ela
+    // Se não, adicionamos novas linhas abaixo
     if (!linhaVazia) {
-        // A linha atual tem dados, então inserimos após ela
-        primeiroIndice = indiceAtual + 1;
-        // Adicionamos uma nova linha vazia
-        adicionarLinhaItem();
-        // Atualiza referências
-        const novasLinhas = tbody.querySelectorAll('tr');
-        linhaAtual = novasLinhas[primeiroIndice];
+        // Verifica se a linha atual tem código mas não tem os dados que estamos colando
+        // Nesse caso, podemos preencher a linha atual se ela estiver "incompleta"
+        const campoAtual = linhaAtual.querySelector(`.${classeAlvo}`);
+        const valorAtual = campoAtual ? campoAtual.value.trim() : '';
+        
+        // Se o campo atual estiver vazio e a linha tem código, usamos a linha atual
+        if (valorAtual === '' && codigoAtual !== '') {
+            // Preenche a linha atual
+            primeiroIndice = indiceAtual;
+        } else {
+            // Adiciona novas linhas abaixo
+            primeiroIndice = indiceAtual + 1;
+            // Adiciona uma linha vazia
+            adicionarLinhaItem();
+            // Atualiza referências
+            const novasLinhas = tbody.querySelectorAll('tr');
+            linhaAtual = novasLinhas[primeiroIndice];
+        }
     }
     
-    // Agora, preenchemos as linhas
-    const linhasExistentes = tbody.querySelectorAll('tr');
+    // Agora preenchemos as linhas
     let linhaAtualIndex = primeiroIndice;
     
-    // Para cada dado processado, preenchemos uma linha
-    for (let i = 0; i < validos.length; i++) {
-        const dado = validos[i];
+    for (let i = 0; i < linhas.length; i++) {
+        const valor = linhas[i].trim();
+        if (valor === '') continue;
         
         // Verifica se precisamos adicionar mais linhas
-        if (linhaAtualIndex >= linhasExistentes.length) {
+        const linhasAtuais = tbody.querySelectorAll('tr');
+        if (linhaAtualIndex >= linhasAtuais.length) {
             adicionarLinhaItem();
         }
         
         // Obtém a linha atual
-        const linhasAtuais = tbody.querySelectorAll('tr');
-        const linha = linhasAtuais[linhaAtualIndex];
+        const linha = tbody.querySelectorAll('tr')[linhaAtualIndex];
         if (!linha) continue;
         
-        // Preenche os campos (apenas os editáveis)
-        const codigoInput = linha.querySelector('.item-codigo');
-        const descInput = linha.querySelector('.item-descricao');
-        const undInput = linha.querySelector('.item-unidade');
-        const qtdInput = linha.querySelector('.item-quantidade');
+        // Encontra o campo alvo na linha
+        const campo = linha.querySelector(`.${classeAlvo}`);
         
-        // Código - sempre editável
-        if (codigoInput && isCampoEditavel(codigoInput)) {
-            codigoInput.value = dado.codigo.toUpperCase();
-            // Dispara a busca do material
-            buscarMaterial(codigoInput);
-        }
-        
-        // Descrição - é readonly, então só preenche se for editável (nunca é, mas por segurança)
-        if (descInput && isCampoEditavel(descInput) && dado.descricao) {
-            descInput.value = dado.descricao;
-        }
-        
-        // Unidade - é readonly, então só preenche se for editável (nunca é, mas por segurança)
-        if (undInput && isCampoEditavel(undInput) && dado.unidade) {
-            undInput.value = dado.unidade;
-        }
-        
-        // Quantidade - editável
-        if (qtdInput && isCampoEditavel(qtdInput) && dado.quantidade) {
-            qtdInput.value = dado.quantidade;
+        if (campo && isCampoEditavel(campo)) {
+            // Para selects, verifica se o valor é válido
+            if (campo.tagName === 'SELECT') {
+                const opcoes = Array.from(campo.options).map(opt => opt.value);
+                // Se o valor existe nas opções, seleciona
+                if (opcoes.includes(valor)) {
+                    campo.value = valor;
+                } else {
+                    // Tenta encontrar por texto
+                    const opcaoPorTexto = Array.from(campo.options).find(opt => 
+                        opt.text.trim().toUpperCase() === valor.toUpperCase() ||
+                        opt.text.trim().includes(valor)
+                    );
+                    if (opcaoPorTexto) {
+                        campo.value = opcaoPorTexto.value;
+                    } else {
+                        console.warn(`⚠️ Valor "${valor}" não encontrado nas opções do select`);
+                    }
+                }
+            } else {
+                // Para inputs
+                if (campo.type === 'number') {
+                    campo.value = parseFloat(valor) || '';
+                } else if (campo.type === 'date') {
+                    // Tenta formatar a data
+                    const dataFormatada = formatarData(valor);
+                    campo.value = dataFormatada;
+                } else {
+                    campo.value = valor;
+                }
+            }
+            
+            // Dispara evento de mudança
+            campo.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            // Se for um campo de código, dispara a busca automática
+            if (classeAlvo === 'item-codigo') {
+                buscarMaterial(campo);
+            }
         }
         
         linhaAtualIndex++;
     }
     
-    // Remove linhas extras se houver (linhas vazias no final)
+    // Remove linhas vazias extras no final
     const linhasFinais = tbody.querySelectorAll('tr');
-    for (let i = linhasFinais.length - 1; i > linhaAtualIndex - 1; i--) {
+    for (let i = linhasFinais.length - 1; i >= linhaAtualIndex; i--) {
         const linha = linhasFinais[i];
         const codigo = linha.querySelector('.item-codigo').value.trim();
         const descricao = linha.querySelector('.item-descricao').value.trim();
@@ -1044,24 +1087,543 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
         }
     }
     
-    // Reconfigura navegação e paste
+    // Reconfigura navegação
     setTimeout(configurarNavegacaoTeclado, 100);
     setTimeout(configurarPopupDescricao, 100);
     setTimeout(configurarPasteEmMassa, 100);
+    setTimeout(adicionarBotoesAcoesMassa, 100);
     
-    // Foca no primeiro campo da primeira linha preenchida
+    // Foca no campo onde colou
     setTimeout(() => {
-        const todasLinhasFinais = tbody.querySelectorAll('tr');
-        if (todasLinhasFinais.length > 0) {
-            const primeiroInput = todasLinhasFinais[primeiroIndice]?.querySelector('.item-codigo');
-            if (primeiroInput && isCampoEditavel(primeiroInput)) {
-                primeiroInput.focus();
-                primeiroInput.select();
-            }
+        elementoAlvo.focus();
+        if (elementoAlvo.tagName === 'INPUT' && elementoAlvo.type === 'text') {
+            elementoAlvo.select();
         }
     }, 200);
     
-    mostrarToast(`✅ ${validos.length} itens adicionados com sucesso!`, 'sucesso');
+    mostrarToast(`✅ ${linhas.length} valores aplicados na coluna`, 'sucesso');
+}
+
+// ============================================
+// FUNÇÃO AUXILIAR PARA FORMATAR DATA
+// ============================================
+
+function formatarData(valor) {
+    // Tenta diferentes formatos de data
+    const data = new Date(valor);
+    if (!isNaN(data.getTime())) {
+        return data.toISOString().split('T')[0];
+    }
+    
+    // Tenta formato DD/MM/YYYY
+    const partes = valor.split('/');
+    if (partes.length === 3) {
+        const dia = partes[0].padStart(2, '0');
+        const mes = partes[1].padStart(2, '0');
+        const ano = partes[2];
+        if (ano.length === 4) {
+            return `${ano}-${mes}-${dia}`;
+        }
+    }
+    
+    // Tenta formato DD-MM-YYYY
+    const partes2 = valor.split('-');
+    if (partes2.length === 3) {
+        const dia = partes2[0].padStart(2, '0');
+        const mes = partes2[1].padStart(2, '0');
+        const ano = partes2[2];
+        if (ano.length === 4) {
+            return `${ano}-${mes}-${dia}`;
+        }
+    }
+    
+    return valor;
+}
+
+// ============================================
+// AÇÕES EM MASSA (BULK ACTIONS)
+// ============================================
+
+function adicionarBotoesAcoesMassa() {
+    // Verifica se o container de ações em massa já existe
+    let container = document.getElementById('bulkActionsContainer');
+    if (container) {
+        container.remove();
+    }
+    
+    const secaoItens = document.getElementById('secaoItens');
+    if (!secaoItens) return;
+    
+    // Verifica se é um tipo que tem itens
+    const tipoInfo = TIPOS[tipoAtual];
+    if (!tipoInfo || !tipoInfo.temItens) return;
+    
+    const isPendencia = tipoAtual === 'pendencia';
+    const isAditivo = tipoAtual === 'aditivo';
+    const isAditivoFisico = tipoAtual === 'aditivo-fisico';
+    
+    // Cria o container
+    container = document.createElement('div');
+    container.id = 'bulkActionsContainer';
+    container.className = 'bulk-actions-container';
+    container.style.cssText = `
+        background: #F7FAFC;
+        border: 1px solid #E2E8F0;
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin: 15px 0;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 15px;
+    `;
+    
+    // Título
+    const titulo = document.createElement('span');
+    titulo.style.cssText = `
+        font-weight: 600;
+        color: #2D3748;
+        font-size: 0.9em;
+        margin-right: 5px;
+    `;
+    titulo.textContent = '⚡ Ações em Massa:';
+    container.appendChild(titulo);
+    
+    // ============================================
+    // BOTÕES PARA PENDÊNCIA DE BAIXA
+    // ============================================
+    if (isPendencia) {
+        // Botão Baixar Todos
+        const btnBaixarTodos = criarBotaoMassa('✅ Baixar Todos', '#48BB78', function() {
+            aplicarEmMassaSelect('item-baixado', 'SIM');
+        });
+        container.appendChild(btnBaixarTodos);
+        
+        // Botão Desbaixar Todos
+        const btnDesbaixarTodos = criarBotaoMassa('⬜ Desbaixar Todos', '#ED8936', function() {
+            aplicarEmMassaSelect('item-baixado', 'NÃO');
+        });
+        container.appendChild(btnDesbaixarTodos);
+        
+        // Separador
+        container.appendChild(criarSeparador());
+        
+        // Aplicar Motivo em Massa
+        const motivoContainer = criarCampoMassa(
+            '📝 Motivo:',
+            'item-motivo',
+            'text',
+            'Digite o motivo...',
+            function(valor) {
+                aplicarEmMassa('item-motivo', valor);
+            }
+        );
+        container.appendChild(motivoContainer);
+        
+        // Aplicar Colaborador em Massa
+        const colaboradorContainer = criarCampoMassa(
+            '👤 Colaborador:',
+            'item-colaborador-item',
+            'text',
+            'Nome do colaborador...',
+            function(valor) {
+                aplicarEmMassa('item-colaborador-item', valor);
+            }
+        );
+        container.appendChild(colaboradorContainer);
+        
+        // Separador
+        container.appendChild(criarSeparador());
+        
+        // Aplicar Pendente Aditivo em Massa
+        const pendenteContainer = criarSelectMassa(
+            '📌 Pend. Aditivo:',
+            'item-pendente-aditivo',
+            ['', 'SIM', 'NÃO'],
+            function(valor) {
+                aplicarEmMassaSelect('item-pendente-aditivo', valor);
+            }
+        );
+        container.appendChild(pendenteContainer);
+        
+        // Aplicar Data Baixa em Massa
+        const dataBaixaContainer = criarCampoMassa(
+            '📅 Data Baixa:',
+            'item-data-baixa',
+            'date',
+            'Data...',
+            function(valor) {
+                aplicarEmMassa('item-data-baixa', valor);
+            }
+        );
+        container.appendChild(dataBaixaContainer);
+    }
+    
+    // ============================================
+    // BOTÕES PARA ADITIVO SISTÊMICO
+    // ============================================
+    if (isAditivo) {
+        const statusContainer = criarSelectMassa(
+            '📊 Status:',
+            'item-status-aditivo',
+            ['ANALISE', 'APROVADO', 'REPROVADO', 'S/ SOLICITAÇÃO'],
+            function(valor) {
+                aplicarEmMassaSelect('item-status-aditivo', valor);
+            },
+            {
+                'ANALISE': '📊 Análise',
+                'APROVADO': '✅ Aprovado',
+                'REPROVADO': '❌ Reprovado',
+                'S/ SOLICITAÇÃO': '📋 Sem Solicitação'
+            }
+        );
+        container.appendChild(statusContainer);
+        
+        // Separador
+        container.appendChild(criarSeparador());
+        
+        // Aplicar Observação em Massa
+        const obsContainer = criarCampoMassa(
+            '📝 Observação:',
+            'item-observacao',
+            'text',
+            'Digite a observação...',
+            function(valor) {
+                aplicarEmMassa('item-observacao', valor);
+            }
+        );
+        container.appendChild(obsContainer);
+    }
+    
+    // ============================================
+    // BOTÕES PARA ADITIVO FÍSICO
+    // ============================================
+    if (isAditivoFisico) {
+        const aplicadoContainer = criarSelectMassa(
+            '🔧 Aplicado:',
+            'item-aplicado',
+            ['PENDENTE', 'NÃO', 'SIM', 'PARCIAL'],
+            function(valor) {
+                aplicarEmMassaSelect('item-aplicado', valor);
+            }
+        );
+        container.appendChild(aplicadoContainer);
+        
+        // Separador
+        container.appendChild(criarSeparador());
+        
+        // Aplicar Colaborador em Massa
+        const colaboradorContainer = criarSelectMassa(
+            '👤 Solicitante:',
+            'item-colaborador',
+            ['', 'MATEUS SANTANA', 'SALES JUNIOR', 'VALENTIM', 'SIVANILDO', 'ERICK VEGA', 'JOSÉ JORDAN', 'ALCIDES', 'FRANCINALDO (DEDÉ)', 'ROMARIO', 'BRENO', 'MAYKE', 'MARIO J.', 'MEYDSON', 'WALISSON'],
+            function(valor) {
+                aplicarEmMassaSelect('item-colaborador', valor);
+            }
+        );
+        container.appendChild(colaboradorContainer);
+        
+        // Aplicar Encarregado em Massa
+        const encarregadoContainer = criarSelectMassa(
+            '👔 Encarregado:',
+            'item-encarregado',
+            ['', 'ROMARIO', 'ERIVANIO', 'RIUSTON', 'E. MARCELO', 'BRENO M.', 'FRANCINALDO(DEDÉ)', 'WALISSON', 'VALENTIM', 'LUCIANO', 'MEYDSON', 'PAULÃO', 'DAMIÃO(MIMA)', 'DEMILSON(PIM)', 'JOSÉ JORDAN', 'ALCIDES', 'EDILSON', 'ANTONIO', 'JUNIOR C.', 'MARCOS', 'ANTONIO D.', 'ANDERSON', 'LEANDRO', 'ROBSON', 'MANOEL C.', 'MARCELO (ERITON)'],
+            function(valor) {
+                aplicarEmMassaSelect('item-encarregado', valor);
+            }
+        );
+        container.appendChild(encarregadoContainer);
+    }
+    
+    // ============================================
+    // BOTÃO LIMPAR CAMPOS (todos os tipos)
+    // ============================================
+    container.appendChild(criarSeparador());
+    
+    const btnLimpar = document.createElement('button');
+    btnLimpar.textContent = '🧹 Limpar Quantidades';
+    btnLimpar.className = 'btn-bulk-action';
+    btnLimpar.style.cssText = `
+        background: #FC8181;
+        color: white;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.85em;
+        transition: all 0.3s ease;
+    `;
+    btnLimpar.onmouseover = function() {
+        this.style.background = '#E53E3E';
+        this.style.transform = 'translateY(-1px)';
+    };
+    btnLimpar.onmouseout = function() {
+        this.style.background = '#FC8181';
+        this.style.transform = 'translateY(0)';
+    };
+    btnLimpar.onclick = function() {
+        if (confirm('⚠️ Tem certeza que deseja limpar todas as quantidades?')) {
+            aplicarEmMassa('item-quantidade', '');
+            mostrarToast('🧹 Quantidades limpas!', 'sucesso');
+        }
+    };
+    container.appendChild(btnLimpar);
+    
+    // Inserir o container antes da tabela de itens
+    const table = document.querySelector('.table-responsive');
+    if (table) {
+        table.parentNode.insertBefore(container, table);
+    }
+}
+
+function criarBotaoMassa(texto, cor, acao) {
+    const btn = document.createElement('button');
+    btn.textContent = texto;
+    btn.className = 'btn-bulk-action';
+    btn.style.cssText = `
+        background: ${cor};
+        color: white;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.85em;
+        transition: all 0.3s ease;
+    `;
+    btn.onmouseover = function() {
+        this.style.transform = 'translateY(-1px)';
+        this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    };
+    btn.onmouseout = function() {
+        this.style.transform = 'translateY(0)';
+        this.style.boxShadow = 'none';
+    };
+    btn.onclick = acao;
+    return btn;
+}
+
+function criarSeparador() {
+    const sep = document.createElement('span');
+    sep.style.cssText = `
+        width: 1px;
+        height: 30px;
+        background: #CBD5E0;
+        display: inline-block;
+    `;
+    return sep;
+}
+
+function criarCampoMassa(label, classe, tipo, placeholder, acao) {
+    const container = document.createElement('div');
+    container.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    `;
+    
+    const lbl = document.createElement('label');
+    lbl.textContent = label;
+    lbl.style.cssText = `
+        font-size: 0.8em;
+        font-weight: 600;
+        color: #4A5568;
+        white-space: nowrap;
+    `;
+    container.appendChild(lbl);
+    
+    const input = document.createElement('input');
+    input.type = tipo;
+    input.placeholder = placeholder;
+    input.className = 'bulk-input';
+    input.style.cssText = `
+        padding: 4px 10px;
+        border: 2px solid #E2E8F0;
+        border-radius: 6px;
+        font-size: 0.85em;
+        width: 140px;
+        transition: all 0.3s ease;
+        background: white;
+    `;
+    input.onfocus = function() {
+        this.style.borderColor = '#4299E1';
+        this.style.boxShadow = '0 0 0 3px rgba(66,153,225,0.1)';
+    };
+    input.onblur = function() {
+        this.style.borderColor = '#E2E8F0';
+        this.style.boxShadow = 'none';
+    };
+    
+    const btn = document.createElement('button');
+    btn.textContent = 'Aplicar';
+    btn.style.cssText = `
+        background: #4299E1;
+        color: white;
+        border: none;
+        padding: 4px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.8em;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    `;
+    btn.onmouseover = function() {
+        this.style.background = '#3182CE';
+    };
+    btn.onmouseout = function() {
+        this.style.background = '#4299E1';
+    };
+    btn.onclick = function() {
+        const valor = input.value.trim();
+        if (valor !== '') {
+            acao(valor);
+            input.value = '';
+            mostrarToast(`✅ Aplicado "${valor}" para todos`, 'sucesso');
+        } else {
+            mostrarToast('⚠️ Digite um valor', 'aviso');
+        }
+    };
+    
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            btn.click();
+        }
+    });
+    
+    container.appendChild(input);
+    container.appendChild(btn);
+    
+    return container;
+}
+
+function criarSelectMassa(label, classe, opcoes, acao, labelsPersonalizados) {
+    const container = document.createElement('div');
+    container.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    `;
+    
+    const lbl = document.createElement('label');
+    lbl.textContent = label;
+    lbl.style.cssText = `
+        font-size: 0.8em;
+        font-weight: 600;
+        color: #4A5568;
+        white-space: nowrap;
+    `;
+    container.appendChild(lbl);
+    
+    const select = document.createElement('select');
+    select.className = 'bulk-select';
+    select.style.cssText = `
+        padding: 4px 8px;
+        border: 2px solid #E2E8F0;
+        border-radius: 6px;
+        font-size: 0.85em;
+        min-width: 120px;
+        background: white;
+        transition: all 0.3s ease;
+    `;
+    select.onfocus = function() {
+        this.style.borderColor = '#4299E1';
+        this.style.boxShadow = '0 0 0 3px rgba(66,153,225,0.1)';
+    };
+    select.onblur = function() {
+        this.style.borderColor = '#E2E8F0';
+        this.style.boxShadow = 'none';
+    };
+    
+    opcoes.forEach(opcao => {
+        const opt = document.createElement('option');
+        opt.value = opcao;
+        if (labelsPersonalizados && labelsPersonalizados[opcao]) {
+            opt.textContent = labelsPersonalizados[opcao];
+        } else {
+            opt.textContent = opcao || '(vazio)';
+        }
+        select.appendChild(opt);
+    });
+    
+    const btn = document.createElement('button');
+    btn.textContent = 'Aplicar';
+    btn.style.cssText = `
+        background: #4299E1;
+        color: white;
+        border: none;
+        padding: 4px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.8em;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    `;
+    btn.onmouseover = function() {
+        this.style.background = '#3182CE';
+    };
+    btn.onmouseout = function() {
+        this.style.background = '#4299E1';
+    };
+    btn.onclick = function() {
+        const valor = select.value;
+        acao(valor);
+        const labelSelecionada = select.options[select.selectedIndex].text;
+        mostrarToast(`✅ Aplicado "${labelSelecionada}" para todos`, 'sucesso');
+    };
+    
+    container.appendChild(select);
+    container.appendChild(btn);
+    
+    return container;
+}
+
+// ============================================
+// FUNÇÕES DE APLICAÇÃO EM MASSA
+// ============================================
+
+function aplicarEmMassa(classe, valor) {
+    const elementos = document.querySelectorAll(`.${classe}`);
+    let contador = 0;
+    
+    elementos.forEach(el => {
+        // Verifica se o campo é editável
+        if (isCampoEditavel(el)) {
+            // Para campos number, converte para número ou vazio
+            if (el.type === 'number') {
+                el.value = valor !== '' ? parseFloat(valor) : '';
+            } else if (el.type === 'date') {
+                // Tenta formatar a data
+                const dataFormatada = formatarData(valor);
+                el.value = dataFormatada;
+            } else {
+                el.value = valor;
+            }
+            // Dispara evento de mudança para atualizar estados
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            contador++;
+        }
+    });
+    
+    console.log(`✅ Aplicado "${valor}" para ${contador} campos da classe "${classe}"`);
+}
+
+function aplicarEmMassaSelect(classe, valor) {
+    const elementos = document.querySelectorAll(`.${classe}`);
+    let contador = 0;
+    
+    elementos.forEach(el => {
+        if (isCampoEditavel(el)) {
+            el.value = valor;
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            contador++;
+        }
+    });
+    
+    console.log(`✅ Aplicado "${valor}" para ${contador} selects da classe "${classe}"`);
 }
 
 // ============================================
@@ -1217,6 +1779,7 @@ function adicionarLinhaItem() {
     setTimeout(configurarNavegacaoTeclado, 50);
     setTimeout(configurarPopupDescricao, 100);
     setTimeout(configurarPasteEmMassa, 100);
+    setTimeout(adicionarBotoesAcoesMassa, 100);
 }
 
 window.adicionarLinhaItem = adicionarLinhaItem;
@@ -1238,6 +1801,7 @@ function removerItem(btn) {
     // Reconfigura navegação e paste após remover
     setTimeout(configurarNavegacaoTeclado, 50);
     setTimeout(configurarPasteEmMassa, 50);
+    setTimeout(adicionarBotoesAcoesMassa, 50);
 }
 
 window.removerItem = removerItem;
@@ -1399,6 +1963,7 @@ function carregarItens(itens) {
     setTimeout(configurarNavegacaoTeclado, 50);
     setTimeout(configurarPopupDescricao, 100);
     setTimeout(configurarPasteEmMassa, 100);
+    setTimeout(adicionarBotoesAcoesMassa, 100);
 }
 
 // ============================================
@@ -1838,6 +2403,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         setTimeout(controlarBotoesNavegacao, 500);
         setTimeout(configurarNavegacaoTeclado, 300);
         setTimeout(configurarPasteEmMassa, 300);
+        setTimeout(adicionarBotoesAcoesMassa, 300);
     });
     window.addEventListener('resize', controlarBotoesNavegacao);
     
@@ -1862,5 +2428,9 @@ window.fecharPopup = fecharPopup;
 window.configurarPopupDescricao = configurarPopupDescricao;
 window.configurarNavegacaoTeclado = configurarNavegacaoTeclado;
 window.configurarPasteEmMassa = configurarPasteEmMassa;
+window.adicionarBotoesAcoesMassa = adicionarBotoesAcoesMassa;
+window.aplicarEmMassa = aplicarEmMassa;
+window.aplicarEmMassaSelect = aplicarEmMassaSelect;
 window.isCampoEditavel = isCampoEditavel;
 window.getElementosEditaveis = getElementosEditaveis;
+window.formatarData = formatarData;
