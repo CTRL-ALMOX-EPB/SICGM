@@ -583,9 +583,272 @@ async function carregarControleFormulario() {
         
         configurarPopupDescricao();
         
+        // Configurar navegação por teclado após carregar os itens
+        configurarNavegacaoTeclado();
+        
     } catch (error) {
         console.error('❌ Erro ao carregar controle:', error);
         mostrarToast('❌ Erro ao carregar controle', 'erro');
+    }
+}
+
+// ============================================
+// NAVEGAÇÃO POR TECLADO (ENTER E SETAS)
+// ============================================
+
+function configurarNavegacaoTeclado() {
+    // Seleciona todos os inputs e selects do formulário
+    const elementos = document.querySelectorAll('#controleForm input, #controleForm select, #controleForm textarea');
+    
+    elementos.forEach(function(el, index) {
+        // Remove listeners antigos para evitar duplicação
+        el.removeEventListener('keydown', handleTeclado);
+        el.addEventListener('keydown', handleTeclado);
+        
+        // Guarda o índice para navegação
+        el.dataset.tabIndex = index;
+    });
+}
+
+function handleTeclado(e) {
+    const key = e.key;
+    const target = e.target;
+    
+    // Verifica se está dentro de uma tabela de itens
+    const isInTable = target.closest('table');
+    
+    // ============================================
+    // 1. ENTER - Avança para o próximo campo
+    // ============================================
+    if (key === 'Enter') {
+        // Previne o comportamento padrão (submissão do formulário)
+        e.preventDefault();
+        
+        // Se estiver em um textarea, permite quebra de linha com Enter
+        if (target.tagName === 'TEXTAREA') {
+            // Se Shift+Enter, permite quebra de linha
+            if (e.shiftKey) {
+                return; // Comportamento padrão
+            }
+            // Enter simples avança
+        }
+        
+        // Avança para o próximo campo
+        avancarParaProximoCampo(target);
+        return;
+    }
+    
+    // ============================================
+    // 2. SETAS - Navegação entre campos
+    // ============================================
+    
+    // Seta para baixo (↓) e Seta para cima (↑)
+    if (key === 'ArrowDown' || key === 'ArrowUp') {
+        e.preventDefault();
+        
+        const direcao = key === 'ArrowDown' ? 1 : -1;
+        
+        // Se estiver em uma tabela, navega verticalmente na tabela
+        if (isInTable) {
+            navegarVerticalTabela(target, direcao);
+            return;
+        }
+        
+        // Navegação geral do formulário
+        navegarVerticalFormulario(target, direcao);
+        return;
+    }
+    
+    // Seta para esquerda (←) e Seta para direita (→)
+    if (key === 'ArrowLeft' || key === 'ArrowRight') {
+        // Só navega horizontalmente se estiver em uma tabela
+        if (isInTable) {
+            e.preventDefault();
+            navegarHorizontalTabela(target, key === 'ArrowRight' ? 1 : -1);
+        }
+        // Fora da tabela, as setas esquerda/direita mantêm comportamento padrão
+        return;
+    }
+}
+
+// ============================================
+// FUNÇÕES DE NAVEGAÇÃO
+// ============================================
+
+function avancarParaProximoCampo(currentElement) {
+    // Obtém todos os elementos interativos do formulário
+    const elementos = document.querySelectorAll('#controleForm input:not([readonly]):not([disabled]), #controleForm select:not([disabled]), #controleForm textarea:not([disabled])');
+    
+    // Filtra apenas os que estão visíveis e habilitados
+    const visiveis = Array.from(elementos).filter(el => {
+        return el.offsetParent !== null && !el.disabled && !el.readOnly;
+    });
+    
+    // Encontra o índice do elemento atual
+    const currentIndex = visiveis.indexOf(currentElement);
+    
+    if (currentIndex === -1 || currentIndex === visiveis.length - 1) {
+        // Se for o último, não faz nada ou pode ir para o próximo campo fora da tabela
+        return;
+    }
+    
+    // Foca no próximo elemento
+    const proximo = visiveis[currentIndex + 1];
+    if (proximo) {
+        proximo.focus();
+        // Seleciona o conteúdo se for um input de texto
+        if (proximo.tagName === 'INPUT' && proximo.type === 'text') {
+            proximo.select();
+        }
+    }
+}
+
+function navegarVerticalFormulario(element, direcao) {
+    const elementos = document.querySelectorAll('#controleForm input:not([readonly]):not([disabled]), #controleForm select:not([disabled]), #controleForm textarea:not([disabled])');
+    
+    const visiveis = Array.from(elementos).filter(el => {
+        return el.offsetParent !== null && !el.disabled && !el.readOnly;
+    });
+    
+    const currentIndex = visiveis.indexOf(element);
+    if (currentIndex === -1) return;
+    
+    // Calcula posição Y do elemento atual
+    const rect = element.getBoundingClientRect();
+    const centroY = rect.top + rect.height / 2;
+    
+    let melhorElemento = null;
+    let melhorDistancia = Infinity;
+    
+    // Procura o próximo elemento na direção vertical
+    for (let i = 0; i < visiveis.length; i++) {
+        if (i === currentIndex) continue;
+        
+        const outroRect = visiveis[i].getBoundingClientRect();
+        const outroCentroY = outroRect.top + outroRect.height / 2;
+        
+        // Verifica se está na direção correta
+        if (direcao === 1 && outroCentroY <= centroY + 5) continue; // Para baixo, deve estar abaixo
+        if (direcao === -1 && outroCentroY >= centroY - 5) continue; // Para cima, deve estar acima
+        
+        // Calcula distância vertical e horizontal
+        const diffY = Math.abs(outroCentroY - centroY);
+        const diffX = Math.abs(outroRect.left - rect.left);
+        
+        // Prioriza elementos com distância vertical menor
+        const distancia = diffY * 2 + diffX * 0.5;
+        
+        if (distancia < melhorDistancia) {
+            melhorDistancia = distancia;
+            melhorElemento = visiveis[i];
+        }
+    }
+    
+    if (melhorElemento) {
+        melhorElemento.focus();
+        if (melhorElemento.tagName === 'INPUT' && melhorElemento.type === 'text') {
+            melhorElemento.select();
+        }
+    }
+}
+
+function navegarVerticalTabela(element, direcao) {
+    const row = element.closest('tr');
+    if (!row) return;
+    
+    const table = element.closest('table');
+    if (!table) return;
+    
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const currentRowIndex = rows.indexOf(row);
+    if (currentRowIndex === -1) return;
+    
+    const targetRowIndex = currentRowIndex + direcao;
+    if (targetRowIndex < 0 || targetRowIndex >= rows.length) return;
+    
+    const targetRow = rows[targetRowIndex];
+    
+    // Encontra a coluna do elemento atual
+    const cells = Array.from(row.querySelectorAll('td'));
+    let targetCellIndex = -1;
+    let elementInCell = null;
+    
+    cells.forEach((cell, idx) => {
+        const inputs = cell.querySelectorAll('input, select, textarea');
+        inputs.forEach(inp => {
+            if (inp === element) {
+                targetCellIndex = idx;
+                elementInCell = inp;
+            }
+        });
+    });
+    
+    if (targetCellIndex === -1) {
+        // Se não encontrou, foca no primeiro campo da linha alvo
+        const firstInput = targetRow.querySelector('input, select, textarea');
+        if (firstInput && !firstInput.disabled && !firstInput.readOnly) {
+            firstInput.focus();
+        }
+        return;
+    }
+    
+    // Tenta encontrar o campo na mesma coluna na linha alvo
+    const targetCells = targetRow.querySelectorAll('td');
+    if (targetCellIndex >= targetCells.length) {
+        // Se a coluna não existe na linha alvo, foca no primeiro campo
+        const firstInput = targetRow.querySelector('input, select, textarea');
+        if (firstInput && !firstInput.disabled && !firstInput.readOnly) {
+            firstInput.focus();
+        }
+        return;
+    }
+    
+    const targetCell = targetCells[targetCellIndex];
+    const targetInput = targetCell.querySelector('input, select, textarea');
+    
+    if (targetInput && !targetInput.disabled && !targetInput.readOnly) {
+        targetInput.focus();
+        if (targetInput.tagName === 'INPUT' && targetInput.type === 'text') {
+            targetInput.select();
+        }
+    } else {
+        // Se o campo na mesma coluna está desabilitado, procura o próximo disponível
+        const allInputs = targetRow.querySelectorAll('input:not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])');
+        if (allInputs.length > 0) {
+            allInputs[0].focus();
+        }
+    }
+}
+
+function navegarHorizontalTabela(element, direcao) {
+    const row = element.closest('tr');
+    if (!row) return;
+    
+    const cells = Array.from(row.querySelectorAll('td'));
+    let currentCellIndex = -1;
+    
+    cells.forEach((cell, idx) => {
+        const inputs = cell.querySelectorAll('input, select, textarea');
+        inputs.forEach(inp => {
+            if (inp === element) {
+                currentCellIndex = idx;
+            }
+        });
+    });
+    
+    if (currentCellIndex === -1) return;
+    
+    const targetCellIndex = currentCellIndex + direcao;
+    if (targetCellIndex < 0 || targetCellIndex >= cells.length) return;
+    
+    const targetCell = cells[targetCellIndex];
+    const targetInput = targetCell.querySelector('input:not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled])');
+    
+    if (targetInput) {
+        targetInput.focus();
+        if (targetInput.tagName === 'INPUT' && targetInput.type === 'text') {
+            targetInput.select();
+        }
     }
 }
 
@@ -608,7 +871,7 @@ function adicionarLinhaItem() {
         <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código"></td>
         <td><input type="text" class="item-descricao input-descricao" readonly placeholder="Descrição"></td>
         <td><input type="text" class="item-unidade" readonly placeholder="Unid."></td>
-        <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" value="1"></td>
+        <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0"></td>
     `;
     
     if (isPendencia) {
@@ -732,6 +995,14 @@ function adicionarLinhaItem() {
     tr.innerHTML = html;
     tbody.appendChild(tr);
     
+    // Foca no primeiro campo da nova linha
+    const primeiroInput = tr.querySelector('input, select');
+    if (primeiroInput) {
+        setTimeout(() => primeiroInput.focus(), 100);
+    }
+    
+    // Reconfigura navegação por teclado para incluir os novos elementos
+    setTimeout(configurarNavegacaoTeclado, 50);
     setTimeout(configurarPopupDescricao, 100);
 }
 
@@ -750,6 +1021,9 @@ function removerItem(btn) {
     }
     const row = btn.closest('tr');
     if (row) row.remove();
+    
+    // Reconfigura navegação após remover
+    setTimeout(configurarNavegacaoTeclado, 50);
 }
 
 window.removerItem = removerItem;
@@ -780,7 +1054,7 @@ function carregarItens(itens) {
             <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" value="${item.codigo || ''}" placeholder="Código" ${isFinalizado ? 'disabled' : ''}></td>
             <td><input type="text" class="item-descricao input-descricao" readonly value="${item.descricao || ''}" placeholder="Descrição"></td>
             <td><input type="text" class="item-unidade" readonly value="${item.unidade || ''}" placeholder="Unid."></td>
-            <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" value="${item.quantidade || 1}" ${isFinalizado ? 'disabled' : ''}></td>
+            <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" value="${item.quantidade || ''}" ${isFinalizado ? 'disabled' : ''}></td>
         `;
         
         if (isPendencia) {
@@ -908,6 +1182,7 @@ function carregarItens(itens) {
         tbody.appendChild(tr);
     });
     
+    setTimeout(configurarNavegacaoTeclado, 50);
     setTimeout(configurarPopupDescricao, 100);
 }
 
@@ -1346,6 +1621,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.addEventListener('scroll', controlarBotoesNavegacao);
     window.addEventListener('load', function() {
         setTimeout(controlarBotoesNavegacao, 500);
+        // Configurar navegação por teclado após carregamento completo
+        setTimeout(configurarNavegacaoTeclado, 300);
     });
     window.addEventListener('resize', controlarBotoesNavegacao);
     
@@ -1368,3 +1645,4 @@ window.finalizarControle = finalizarControle;
 window.mostrarPopup = mostrarPopup;
 window.fecharPopup = fecharPopup;
 window.configurarPopupDescricao = configurarPopupDescricao;
+window.configurarNavegacaoTeclado = configurarNavegacaoTeclado;
