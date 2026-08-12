@@ -1063,7 +1063,7 @@ function formatarData(valor) {
 }
 
 // ============================================
-// AÇÕES EM MASSA (BULK ACTIONS) - ORGANIZADO E HARMONIOSO
+// AÇÕES EM MASSA (BULK ACTIONS) - CORRIGIDO
 // ============================================
 
 function adicionarBotoesAcoesMassa() {
@@ -1081,6 +1081,9 @@ function adicionarBotoesAcoesMassa() {
     const isPendencia = tipoAtual === 'pendencia';
     const isAditivo = tipoAtual === 'aditivo';
     const isAditivoFisico = tipoAtual === 'aditivo-fisico';
+    
+    const isFinalizado = controleAtual?.status === 'FINALIZADO';
+    if (isFinalizado) return;
     
     container = document.createElement('div');
     container.id = 'bulkActionsContainer';
@@ -1123,7 +1126,6 @@ function adicionarBotoesAcoesMassa() {
     container.appendChild(separadorInicial);
     
     if (isPendencia) {
-        // Grupo 1: Baixar/Desbaixar
         const grupoBaixar = document.createElement('span');
         grupoBaixar.style.cssText = `
             display: flex;
@@ -1131,12 +1133,16 @@ function adicionarBotoesAcoesMassa() {
             gap: 6px;
         `;
         
-        const btnBaixarTodos = criarBotaoMassa('✅ Baixar Todos', '#48BB78', function() {
+        const btnBaixarTodos = criarBotaoMassa('✅ Baixar Todos', '#48BB78', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             aplicarEmMassaSelect('item-baixado', 'SIM');
         });
         grupoBaixar.appendChild(btnBaixarTodos);
         
-        const btnDesbaixarTodos = criarBotaoMassa('⬜ Desbaixar', '#ED8936', function() {
+        const btnDesbaixarTodos = criarBotaoMassa('⬜ Desbaixar', '#ED8936', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             aplicarEmMassaSelect('item-baixado', 'NÃO');
         });
         grupoBaixar.appendChild(btnDesbaixarTodos);
@@ -1144,7 +1150,6 @@ function adicionarBotoesAcoesMassa() {
         
         container.appendChild(criarSeparadorPequeno());
         
-        // Grupo 2: Motivo
         const grupoMotivo = document.createElement('span');
         grupoMotivo.style.cssText = `
             display: flex;
@@ -1165,7 +1170,6 @@ function adicionarBotoesAcoesMassa() {
         
         container.appendChild(criarSeparadorPequeno());
         
-        // Grupo 3: Pendente Aditivo
         const grupoPendente = document.createElement('span');
         grupoPendente.style.cssText = `
             display: flex;
@@ -1185,7 +1189,6 @@ function adicionarBotoesAcoesMassa() {
         
         container.appendChild(criarSeparadorPequeno());
         
-        // Grupo 4: Data Baixa
         const grupoDataBaixa = document.createElement('span');
         grupoDataBaixa.style.cssText = `
             display: flex;
@@ -1206,7 +1209,6 @@ function adicionarBotoesAcoesMassa() {
     }
     
     if (isAditivo) {
-        // Grupo: Status
         const grupoStatus = document.createElement('span');
         grupoStatus.style.cssText = `
             display: flex;
@@ -1232,7 +1234,6 @@ function adicionarBotoesAcoesMassa() {
         
         container.appendChild(criarSeparadorPequeno());
         
-        // Grupo: Observação
         const grupoObs = document.createElement('span');
         grupoObs.style.cssText = `
             display: flex;
@@ -1253,7 +1254,6 @@ function adicionarBotoesAcoesMassa() {
     }
     
     if (isAditivoFisico) {
-        // Grupo 1: Aplicado
         const grupoAplicado = document.createElement('span');
         grupoAplicado.style.cssText = `
             display: flex;
@@ -1273,7 +1273,6 @@ function adicionarBotoesAcoesMassa() {
         
         container.appendChild(criarSeparadorPequeno());
         
-        // Grupo 2: Solicitante
         const grupoSolicitante = document.createElement('span');
         grupoSolicitante.style.cssText = `
             display: flex;
@@ -1293,7 +1292,6 @@ function adicionarBotoesAcoesMassa() {
         
         container.appendChild(criarSeparadorPequeno());
         
-        // Grupo 3: Encarregado
         const grupoEncarregado = document.createElement('span');
         grupoEncarregado.style.cssText = `
             display: flex;
@@ -1312,13 +1310,12 @@ function adicionarBotoesAcoesMassa() {
         container.appendChild(grupoEncarregado);
     }
     
-    // Separador antes do botão limpar
     container.appendChild(criarSeparadorPequeno());
     
-    // Botão Limpar Quantidades
     const btnLimpar = document.createElement('button');
     btnLimpar.textContent = '🧹 Limpar Qtds';
     btnLimpar.className = 'btn-bulk-action';
+    btnLimpar.type = 'button';
     btnLimpar.style.cssText = `
         background: #FC8181;
         color: white;
@@ -1341,7 +1338,9 @@ function adicionarBotoesAcoesMassa() {
         this.style.transform = 'translateY(0)';
         this.style.boxShadow = 'none';
     };
-    btnLimpar.onclick = function() {
+    btnLimpar.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         if (confirm('⚠️ Tem certeza que deseja limpar todas as quantidades?')) {
             aplicarEmMassa('item-quantidade', '');
             mostrarToast('🧹 Quantidades limpas!', 'sucesso');
@@ -1371,6 +1370,7 @@ function criarBotaoMassa(texto, cor, acao) {
     const btn = document.createElement('button');
     btn.textContent = texto;
     btn.className = 'btn-bulk-action';
+    btn.type = 'button';
     btn.style.cssText = `
         background: ${cor};
         color: white;
@@ -1391,7 +1391,11 @@ function criarBotaoMassa(texto, cor, acao) {
         this.style.transform = 'translateY(0)';
         this.style.boxShadow = 'none';
     };
-    btn.onclick = acao;
+    btn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        acao(e);
+    };
     return btn;
 }
 
@@ -1439,6 +1443,7 @@ function criarCampoMassa(label, classe, tipo, placeholder, acao) {
     
     const btn = document.createElement('button');
     btn.textContent = 'Aplicar';
+    btn.type = 'button';
     btn.style.cssText = `
         background: #4299E1;
         color: white;
@@ -1458,7 +1463,9 @@ function criarCampoMassa(label, classe, tipo, placeholder, acao) {
     btn.onmouseout = function() {
         this.style.background = '#4299E1';
     };
-    btn.onclick = function() {
+    btn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         const valor = input.value.trim();
         if (valor !== '') {
             acao(valor);
@@ -1472,6 +1479,7 @@ function criarCampoMassa(label, classe, tipo, placeholder, acao) {
     input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
+            e.stopPropagation();
             btn.click();
         }
     });
@@ -1535,6 +1543,7 @@ function criarSelectMassa(label, classe, opcoes, acao, labelsPersonalizados) {
     
     const btn = document.createElement('button');
     btn.textContent = 'Aplicar';
+    btn.type = 'button';
     btn.style.cssText = `
         background: #4299E1;
         color: white;
@@ -1554,7 +1563,9 @@ function criarSelectMassa(label, classe, opcoes, acao, labelsPersonalizados) {
     btn.onmouseout = function() {
         this.style.background = '#4299E1';
     };
-    btn.onclick = function() {
+    btn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
         const valor = select.value;
         acao(valor);
         const labelSelecionada = select.options[select.selectedIndex].text;
@@ -1590,6 +1601,12 @@ function aplicarEmMassa(classe, valor) {
         }
     });
     
+    if (contador > 0) {
+        mostrarToast(`✅ ${contador} campos atualizados com "${valor || '(vazio)'}"`, 'sucesso');
+    } else {
+        mostrarToast('⚠️ Nenhum campo editável encontrado', 'aviso');
+    }
+    
     console.log(`✅ Aplicado "${valor}" para ${contador} campos da classe "${classe}"`);
 }
 
@@ -1604,6 +1621,13 @@ function aplicarEmMassaSelect(classe, valor) {
             contador++;
         }
     });
+    
+    if (contador > 0) {
+        const labelExibicao = valor || '(vazio)';
+        mostrarToast(`✅ ${contador} campos atualizados para "${labelExibicao}"`, 'sucesso');
+    } else {
+        mostrarToast('⚠️ Nenhum campo editável encontrado', 'aviso');
+    }
     
     console.log(`✅ Aplicado "${valor}" para ${contador} selects da classe "${classe}"`);
 }
@@ -1817,7 +1841,6 @@ function carregarItens(itens) {
         `;
         
         if (isPendencia) {
-            // Colaborador: se já tiver valor, mantém; senão, usa o usuário logado
             const colaboradorValue = item.colaborador || nomeUsuario;
             
             html += `
