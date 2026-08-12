@@ -1927,8 +1927,9 @@ function gerarRelatorioTexto(itensCriticos, deposito) {
         return texto;
     }
     
-    texto += 'CODIGO | DESCRICAO                 | UND | MINIMO | FISICO | SISTEMICO | STATUS\n';
-    texto += '-'.repeat(80) + '\n';
+    // Cabeçalho da tabela
+    texto += 'CODIGO   | DESCRICAO                 | UND | MINIMO  | FISICO  | SISTEMICO | STATUS\n';
+    texto += '-'.repeat(85) + '\n';
     
     itensCriticos.forEach(item => {
         const status = (item.fisico_abaixo || item.sistemico_abaixo) ? 'CRITICO' : 'OK';
@@ -1942,7 +1943,7 @@ function gerarRelatorioTexto(itensCriticos, deposito) {
         texto += `${codigo} | ${descricao} | ${und} | ${minimo.padStart(6)} | ${fisico.padStart(6)} | ${sistemico.padStart(8)} | ${status}\n`;
     });
     
-    texto += '-'.repeat(80) + '\n\n';
+    texto += '-'.repeat(85) + '\n\n';
     
     // Resumo por tipo
     const tipos = {};
@@ -1968,7 +1969,7 @@ function gerarRelatorioTexto(itensCriticos, deposito) {
 }
 
 // ============================================
-// FUNÇÃO PARA ENVIAR EMAIL VIA WORKER (VERSÃO SIMPLIFICADA)
+// FUNÇÃO PARA ENVIAR EMAIL VIA WORKER (APENAS TEXTO)
 // ============================================
 
 async function enviarRelatorioEstoque(relatorioTexto, itensCriticos, emailsDestino) {
@@ -1997,7 +1998,6 @@ async function enviarRelatorioEstoque(relatorioTexto, itensCriticos, emailsDesti
                 from: 'alefe.gomes@gpssa.com.br',
                 subject: assunto,
                 text: relatorioTexto,
-                html: relatorioTexto.replace(/\n/g, '<br>'),
                 itensCriticos: itensCriticos,
                 totalItens: totalItens,
                 deposito: depositoAtual
@@ -2034,7 +2034,6 @@ async function enviarRelatorioEstoque(relatorioTexto, itensCriticos, emailsDesti
                             from: 'alefe.gomes@gpssa.com.br',
                             subject: assuntoParcial,
                             text: textoParcial,
-                            html: textoParcial.replace(/\n/g, '<br>'),
                             itensCriticos: itensParciais,
                             totalItens: itensParciais.length,
                             deposito: depositoAtual,
@@ -2133,33 +2132,6 @@ function monitorarEstoqueMinimo(dados) {
             };
             
             itensAbaixoMinimo.push(alerta);
-            
-            let mensagem = `⚠️ **ALERTA DE ESTOQUE MÍNIMO** ⚠️\n\n`;
-            mensagem += `📦 **Código:** ${codigo}\n`;
-            mensagem += `📝 **Descrição:** ${alerta.descricao}\n`;
-            mensagem += `📊 **Estoque Mínimo:** ${estoqueMinimoNecessario} ${alerta.und}\n\n`;
-            
-            if (fisicoAbaixo) {
-                mensagem += `🔴 **Saldo Físico:** ${saldoFisico} ${alerta.und} (Faltam ${faltaFisico.toFixed(2)})\n`;
-            } else {
-                mensagem += `🟢 **Saldo Físico:** ${saldoFisico} ${alerta.und} (OK)\n`;
-            }
-            
-            if (sistemicoAbaixo) {
-                mensagem += `🔴 **Saldo Sistêmico:** ${saldoSistemico} ${alerta.und} (Faltam ${faltaSistemico.toFixed(2)})\n`;
-            } else {
-                mensagem += `🟢 **Saldo Sistêmico:** ${saldoSistemico} ${alerta.und} (OK)\n`;
-            }
-            
-            mensagem += `\n📌 **Tipo:** ${alerta.tipo_material}\n`;
-            mensagem += `👤 **Último usuário:** ${alerta.ultimo_usuario}\n`;
-            mensagem += `📅 **Última atualização:** ${alerta.ultima_data}\n`;
-            mensagem += `🕐 **Gerado em:** ${getDataHoraBrasilString()}`;
-            
-            alertas.push({
-                item: alerta,
-                mensagem: mensagem
-            });
         }
     });
     
