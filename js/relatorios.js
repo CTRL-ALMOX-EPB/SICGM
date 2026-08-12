@@ -1905,6 +1905,188 @@ async function carregarListaEmails() {
 }
 
 // ============================================
+// GERAR RELATÓRIO EM TEXTO PURO (SEM EMOJIS, SEM HTML)
+// ============================================
+
+function gerarRelatorioTexto(itensCriticos, deposito) {
+    const dataHora = getDataHoraBrasilString();
+    const totalItens = itensCriticos.length;
+    
+    let texto = '';
+    
+    texto += '='.repeat(60) + '\n';
+    texto += 'RELATORIO DE ESTOQUE MINIMO - SICGM\n';
+    texto += '='.repeat(60) + '\n';
+    texto += `Data: ${dataHora}\n`;
+    texto += `Deposito: ${deposito || '1050'}\n`;
+    texto += `Total de Itens Criticos: ${totalItens}\n`;
+    texto += '='.repeat(60) + '\n\n';
+    
+    if (totalItens === 0) {
+        texto += 'Nenhum item abaixo do estoque minimo.\n';
+        return texto;
+    }
+    
+    texto += 'CODIGO | DESCRICAO                 | UND | MINIMO | FISICO | SISTEMICO | STATUS\n';
+    texto += '-'.repeat(80) + '\n';
+    
+    itensCriticos.forEach(item => {
+        const status = (item.fisico_abaixo || item.sistemico_abaixo) ? 'CRITICO' : 'OK';
+        const fisico = item.saldo_fisico.toFixed(2);
+        const sistemico = item.saldo_sistemico.toFixed(2);
+        const minimo = item.estoque_minimo.toFixed(2);
+        const codigo = (item.codigo || '').padEnd(8);
+        const descricao = (item.descricao || '').substring(0, 25).padEnd(25);
+        const und = (item.und || '-').padEnd(4);
+        
+        texto += `${codigo} | ${descricao} | ${und} | ${minimo.padStart(6)} | ${fisico.padStart(6)} | ${sistemico.padStart(8)} | ${status}\n`;
+    });
+    
+    texto += '-'.repeat(80) + '\n\n';
+    
+    // Resumo por tipo
+    const tipos = {};
+    itensCriticos.forEach(item => {
+        const tipo = item.tipo_material || 'desconhecido';
+        if (!tipos[tipo]) tipos[tipo] = 0;
+        tipos[tipo]++;
+    });
+    
+    if (Object.keys(tipos).length > 0) {
+        texto += 'RESUMO POR TIPO:\n';
+        Object.entries(tipos).forEach(([tipo, qtd]) => {
+            texto += `  ${tipo}: ${qtd} itens\n`;
+        });
+        texto += '\n';
+    }
+    
+    texto += '='.repeat(60) + '\n';
+    texto += '* Este e um alerta automatico do sistema SICGM *\n';
+    texto += 'Por favor, verifique o estoque dos itens listados.\n';
+    
+    return texto;
+}
+
+// ============================================
+// FUNÇÃO PARA ENVIAR EMAIL VIA WORKER (VERSÃO SIMPLIFICADA)
+// ============================================
+
+async function enviarRelatorioEstoque(relatorioTexto, itensCriticos, emailsDestino) {
+    try {
+        if (!emailsDestino || emailsDestino.length === 0) {
+            console.warn('⚠️ Nenhum email de destino configurado');
+            return { success: false, error: 'Nenhum email de destino' };
+        }
+
+        if (!itensCriticos || itensCriticos.length === 0) {
+            console.log('ℹ️ Nenhum item crítico para enviar');
+            return { success: true, message: 'Nenhum item crítico' };
+        }
+
+        const dataHora = getDataHoraBrasilString();
+        const totalItens = itensCriticos.length;
+        const assunto = `ALERTA ESTOQUE MINIMO - ${dataHora}`;
+
+        console.log(`📧 Enviando relatório com ${totalItens} itens`);
+
+        const response = await fetch(`${API_URL}/enviar-email-estoque`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                to: emailsDestino,
+                from: 'alefe.gomes@gpssa.com.br',
+                subject: assunto,
+                text: relatorioTexto,
+                html: relatorioTexto.replace(/\n/g, '<br>'),
+                itensCriticos: itensCriticos,
+                totalItens: totalItens,
+                deposito: depositoAtual
+            })
+        });
+
+        if (!response.ok) {
+            const erro = await response.text();
+            
+            // Se for erro de tamanho (413), dividir o relatório
+            if (response.status === 413 || erro.includes('size limit')) {
+                console.warn('⚠️ Relatório muito grande, dividindo em partes...');
+                
+                const ITENS_POR_BLOCO = 25;
+                const totalBlocos = Math.ceil(totalItens / ITENS_POR_BLOCO);
+                let resultados = [];
+                let todosSucesso = true;
+                
+                for (let i = 0; i < totalBlocos; i++) {
+                    const inicio = i * ITENS_POR_BLOCO;
+                    const fim = Math.min(inicio + ITENS_POR_BLOCO, totalItens);
+                    const itensParciais = itensCriticos.slice(inicio, fim);
+                    
+                    const textoParcial = gerarRelatorioTexto(itensParciais, depositoAtual);
+                    const assuntoParcial = `${assunto} (Parte ${i+1}/${totalBlocos})`;
+                    
+                    console.log(`📧 Enviando parte ${i+1}/${totalBlocos} (${itensParciais.length} itens)`);
+                    
+                    const responseParcial = await fetch(`${API_URL}/enviar-email-estoque`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            to: emailsDestino,
+                            from: 'alefe.gomes@gpssa.com.br',
+                            subject: assuntoParcial,
+                            text: textoParcial,
+                            html: textoParcial.replace(/\n/g, '<br>'),
+                            itensCriticos: itensParciais,
+                            totalItens: itensParciais.length,
+                            deposito: depositoAtual,
+                            parte: `${i+1}/${totalBlocos}`
+                        })
+                    });
+                    
+                    if (responseParcial.ok) {
+                        const resultado = await responseParcial.json();
+                        console.log(`✅ Parte ${i+1}/${totalBlocos} enviada`);
+                        resultados.push({ parte: i+1, success: true, resultado });
+                    } else {
+                        const erroParcial = await responseParcial.text();
+                        console.error(`❌ Erro na parte ${i+1}/${totalBlocos}:`, erroParcial);
+                        todosSucesso = false;
+                        resultados.push({ parte: i+1, success: false, error: erroParcial });
+                    }
+                    
+                    if (i < totalBlocos - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+                
+                const sucessos = resultados.filter(r => r.success).length;
+                mostrarToast(`📧 ${sucessos}/${totalBlocos} partes enviadas`, 'info');
+                
+                return {
+                    success: todosSucesso,
+                    totalItens: totalItens,
+                    totalEmails: totalBlocos,
+                    sucessos: sucessos,
+                    resultados: resultados,
+                    message: `${sucessos}/${totalBlocos} partes enviadas`
+                };
+            }
+            
+            throw new Error(`Erro ao enviar email: ${response.status} - ${erro}`);
+        }
+
+        const resultado = await response.json();
+        console.log('✅ Email enviado com sucesso:', resultado);
+        mostrarToast(`📧 Relatório enviado para ${emailsDestino.length} destinatários`, 'sucesso');
+        return resultado;
+
+    } catch (error) {
+        console.error('❌ Erro ao enviar email:', error);
+        mostrarToast(`❌ Erro ao enviar email: ${error.message}`, 'erro');
+        return { success: false, error: error.message };
+    }
+}
+
+// ============================================
 // MONITORAR ESTOQUE E GERAR ALERTAS
 // ============================================
 
@@ -1992,333 +2174,6 @@ function monitorarEstoqueMinimo(dados) {
         alertas: alertas,
         total_itens_criticos: itensAbaixoMinimo.length
     };
-}
-
-// ============================================
-// GERAR RELATÓRIO HTML DOS ITENS CRÍTICOS
-// ============================================
-
-function gerarRelatorioHTML(itensCriticos, deposito) {
-    const dataHora = getDataHoraBrasilString();
-    const totalItens = itensCriticos.length;
-    const corHeader = '#E53E3E';
-    const corFundo = '#FFF5F5';
-    
-    let html = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relatório Estoque Mínimo - SICGM</title>
-    <style>
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            background-color: #F7FAFC;
-            margin: 0;
-            padding: 20px;
-            color: #2D3748;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        .header {
-            background: ${corHeader};
-            color: white;
-            padding: 25px 30px;
-            text-align: center;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-        }
-        .header p {
-            margin: 8px 0 0 0;
-            opacity: 0.9;
-            font-size: 14px;
-        }
-        .content {
-            padding: 25px 30px;
-        }
-        .info-box {
-            background: #EDF2F7;
-            border-radius: 8px;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-        }
-        .info-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .info-item .label {
-            font-weight: 600;
-            color: #4A5568;
-        }
-        .info-item .value {
-            font-weight: 700;
-            color: #2D3748;
-        }
-        .alert-count {
-            background: ${corHeader};
-            color: white;
-            padding: 2px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            font-size: 13px;
-        }
-        thead {
-            background: ${corHeader};
-            color: white;
-        }
-        thead th {
-            padding: 12px 15px;
-            text-align: left;
-        }
-        tbody tr {
-            border-bottom: 1px solid #E2E8F0;
-        }
-        tbody tr:last-child {
-            border-bottom: none;
-        }
-        tbody tr.critical {
-            background: ${corFundo};
-        }
-        tbody td {
-            padding: 10px 15px;
-            vertical-align: middle;
-        }
-        .badge {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        .badge-critical {
-            background: #FC8181;
-            color: white;
-        }
-        .badge-ok {
-            background: #48BB78;
-            color: white;
-        }
-        .badge-warning {
-            background: #F6AD55;
-            color: white;
-        }
-        .status-icon {
-            font-size: 18px;
-        }
-        .footer {
-            background: #F7FAFC;
-            padding: 15px 30px;
-            text-align: center;
-            font-size: 12px;
-            color: #718096;
-            border-top: 1px solid #E2E8F0;
-        }
-        @media (max-width: 600px) {
-            .content {
-                padding: 15px;
-            }
-            table {
-                font-size: 11px;
-            }
-            thead th, tbody td {
-                padding: 6px 8px;
-            }
-            .info-box {
-                flex-direction: column;
-                gap: 8px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>⚠️ RELATÓRIO DE ESTOQUE MÍNIMO</h1>
-            <p>SICGM - Sistema de Controle de Gestão de Materiais</p>
-        </div>
-        <div class="content">
-            <div class="info-box">
-                <div class="info-item">
-                    <span class="label">📅 Data:</span>
-                    <span class="value">${dataHora}</span>
-                </div>
-                <div class="info-item">
-                    <span class="label">📦 Depósito:</span>
-                    <span class="value">${deposito || '1050'}</span>
-                </div>
-                <div class="info-item">
-                    <span class="label">⚠️ Itens Críticos:</span>
-                    <span class="value alert-count">${totalItens}</span>
-                </div>
-            </div>
-    `;
-
-    if (totalItens === 0) {
-        html += `
-            <div style="text-align: center; padding: 40px 20px;">
-                <h2 style="color: #48BB78;">✅ Todos os itens estão dentro do estoque mínimo</h2>
-                <p style="color: #718096;">Nenhum item crítico encontrado.</p>
-            </div>
-        `;
-    } else {
-        html += `
-            <h3 style="margin: 0 0 15px 0; color: #E53E3E;">
-                ⚠️ Itens abaixo do estoque mínimo
-            </h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Código</th>
-                        <th>Descrição</th>
-                        <th>UND</th>
-                        <th>Mínimo</th>
-                        <th>Saldo Físico</th>
-                        <th>Saldo Sistêmico</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        itensCriticos.forEach(item => {
-            const rowClass = (item.fisico_abaixo || item.sistemico_abaixo) ? 'critical' : '';
-            
-            html += `
-                <tr class="${rowClass}">
-                    <td><strong>${item.codigo}</strong></td>
-                    <td>${item.descricao}</td>
-                    <td>${item.und}</td>
-                    <td><strong>${item.estoque_minimo}</strong></td>
-                    <td>
-                        <strong>${item.saldo_fisico}</strong>
-                        ${item.fisico_abaixo ? `<span style="color: #E53E3E; font-size: 11px;"> (Faltam ${item.falta_fisico})</span>` : ''}
-                    </td>
-                    <td>
-                        <strong>${item.saldo_sistemico}</strong>
-                        ${item.sistemico_abaixo ? `<span style="color: #E53E3E; font-size: 11px;"> (Faltam ${item.falta_sistemico})</span>` : ''}
-                    </td>
-                    <td>
-                        <span class="badge ${item.fisico_abaixo || item.sistemico_abaixo ? 'badge-critical' : 'badge-ok'}">
-                            ${item.fisico_abaixo || item.sistemico_abaixo ? 'CRÍTICO' : 'OK'}
-                        </span>
-                    </td>
-                </tr>
-            `;
-        });
-
-        html += `
-                </tbody>
-            </table>
-        `;
-    }
-
-    html += `
-        </div>
-        <div class="footer">
-            <p>
-                📧 Este é um alerta automático do sistema SICGM<br>
-                Enviado em ${dataHora} · alefe.gomes@gpssa.com.br
-            </p>
-        </div>
-    </div>
-</body>
-</html>
-    `;
-
-    return html;
-}
-
-// ============================================
-// FUNÇÃO PARA ENVIAR EMAIL VIA WORKER
-// ============================================
-
-async function enviarRelatorioEstoque(relatorioHTML, itensCriticos, emailsDestino) {
-    try {
-        if (!emailsDestino || emailsDestino.length === 0) {
-            console.warn('⚠️ Nenhum email de destino configurado');
-            return { success: false, error: 'Nenhum email de destino' };
-        }
-
-        const dataHora = getDataHoraBrasilString();
-        const assunto = `⚠️ ALERTA ESTOQUE MÍNIMO - ${dataHora}`;
-
-        const corpoTexto = `
-RELATÓRIO DE ESTOQUE MÍNIMO - SICGM
-========================================
-Data: ${dataHora}
-Depósito: ${depositoAtual}
-Total de Itens Críticos: ${itensCriticos.length}
-========================================
-
-${itensCriticos.map((item, index) => `
-${index + 1}. Código: ${item.codigo}
-   Descrição: ${item.descricao}
-   Estoque Mínimo: ${item.estoque_minimo} ${item.und}
-   Saldo Físico: ${item.saldo_fisico} ${item.und} ${item.fisico_abaixo ? '🔴 CRÍTICO' : '🟢 OK'}
-   Saldo Sistêmico: ${item.saldo_sistemico} ${item.und} ${item.sistemico_abaixo ? '🔴 CRÍTICO' : '🟢 OK'}
-   Tipo: ${item.tipo_material}
-   Último Usuário: ${item.ultimo_usuario || '-'}
-   Última Atualização: ${item.ultima_data || '-'}
-----------------------------------------
-`).join('')}
-
-========================================
-*Este é um alerta automático do sistema SICGM*
-*Por favor, verifique o estoque dos itens listados.*
-`;
-
-        const response = await fetch(`${API_URL}/enviar-email-estoque`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                to: emailsDestino,
-                from: 'alefe.gomes@gpssa.com.br',
-                subject: assunto,
-                text: corpoTexto,
-                html: relatorioHTML,
-                itensCriticos: itensCriticos,
-                totalItens: itensCriticos.length,
-                deposito: depositoAtual
-            })
-        });
-
-        if (!response.ok) {
-            const erro = await response.text();
-            throw new Error(`Erro ao enviar email: ${response.status} - ${erro}`);
-        }
-
-        const resultado = await response.json();
-        console.log('✅ Email enviado com sucesso:', resultado);
-        
-        mostrarToast(`📧 Relatório enviado para ${emailsDestino.length} destinatários`, 'sucesso');
-        
-        return resultado;
-
-    } catch (error) {
-        console.error('❌ Erro ao enviar email:', error);
-        mostrarToast(`❌ Erro ao enviar email: ${error.message}`, 'erro');
-        return { success: false, error: error.message };
-    }
 }
 
 // ============================================
@@ -2464,12 +2319,12 @@ async function monitorarEEnviarRelatorio() {
             // Exibe no sistema
             exibirItensCriticos(resultado.itens);
             
-            // Gera o HTML do relatório
-            const relatorioHTML = gerarRelatorioHTML(resultado.itens, depositoAtual);
+            // Gera o relatório em texto puro
+            const relatorioTexto = gerarRelatorioTexto(resultado.itens, depositoAtual);
             
             // Envia o email
             const emailResultado = await enviarRelatorioEstoque(
-                relatorioHTML,
+                relatorioTexto,
                 resultado.itens,
                 emailsDestino
             );
@@ -2624,7 +2479,7 @@ window.criarSnapshotManual = criarSnapshotManual;
 window.carregarEstoqueMinimo = carregarEstoqueMinimo;
 window.carregarListaEmails = carregarListaEmails;
 window.monitorarEstoqueMinimo = monitorarEstoqueMinimo;
-window.gerarRelatorioHTML = gerarRelatorioHTML;
+window.gerarRelatorioTexto = gerarRelatorioTexto;
 window.enviarRelatorioEstoque = enviarRelatorioEstoque;
 window.monitorarEEnviarRelatorio = monitorarEEnviarRelatorio;
 window.exibirItensCriticos = exibirItensCriticos;
