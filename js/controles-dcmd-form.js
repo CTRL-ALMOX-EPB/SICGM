@@ -276,6 +276,217 @@ function buscarMaterialArquivo(codigo) {
     return null;
 }
 
+// ============================================
+// VALIDAÇÃO DE CÓDIGOS DUPLICADOS
+// ============================================
+
+function verificarCodigoDuplicado(codigo, linhaAtual) {
+    if (!codigo || codigo.trim() === '') return false;
+    
+    const codigoUpper = codigo.trim().toUpperCase();
+    const todasLinhas = document.querySelectorAll('#itemsBody tr');
+    let duplicado = false;
+    
+    todasLinhas.forEach(linha => {
+        if (linha === linhaAtual) return;
+        
+        const codigoInput = linha.querySelector('.item-codigo');
+        if (!codigoInput) return;
+        
+        const codigoLinha = codigoInput.value.trim().toUpperCase();
+        if (codigoLinha === codigoUpper) {
+            duplicado = true;
+        }
+    });
+    
+    return duplicado;
+}
+
+function marcarCampoDuplicado(input, isDuplicado) {
+    if (isDuplicado) {
+        input.style.borderColor = '#FC8181';
+        input.style.backgroundColor = '#FFF5F5';
+        input.style.boxShadow = '0 0 0 3px rgba(252, 129, 129, 0.2)';
+        input.title = '⚠️ Código duplicado!';
+        
+        let aviso = input.parentNode.querySelector('.duplicado-aviso');
+        if (!aviso) {
+            aviso = document.createElement('span');
+            aviso.className = 'duplicado-aviso';
+            aviso.textContent = '⚠️';
+            aviso.style.cssText = `
+                position: absolute;
+                right: 4px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 14px;
+                cursor: help;
+                color: #FC8181;
+            `;
+            input.parentNode.style.position = 'relative';
+            input.parentNode.appendChild(aviso);
+        }
+    } else {
+        input.style.borderColor = '';
+        input.style.backgroundColor = '';
+        input.style.boxShadow = '';
+        input.title = '';
+        
+        const aviso = input.parentNode.querySelector('.duplicado-aviso');
+        if (aviso) aviso.remove();
+    }
+}
+
+function validarTodosCodigos() {
+    const codigos = [];
+    const linhas = document.querySelectorAll('#itemsBody tr');
+    let todosValidos = true;
+    
+    linhas.forEach(linha => {
+        const codigoInput = linha.querySelector('.item-codigo');
+        if (!codigoInput) return;
+        
+        const codigo = codigoInput.value.trim().toUpperCase();
+        if (codigo === '') return;
+        
+        if (codigos.includes(codigo)) {
+            marcarCampoDuplicado(codigoInput, true);
+            todosValidos = false;
+        } else {
+            codigos.push(codigo);
+            marcarCampoDuplicado(codigoInput, false);
+        }
+    });
+    
+    return todosValidos;
+}
+
+function verificarECorrigirDuplicados() {
+    const codigos = [];
+    const linhas = document.querySelectorAll('#itemsBody tr');
+    let temDuplicado = false;
+    
+    linhas.forEach(linha => {
+        const codigoInput = linha.querySelector('.item-codigo');
+        if (!codigoInput) return;
+        
+        const codigo = codigoInput.value.trim().toUpperCase();
+        if (codigo === '') {
+            marcarCampoDuplicado(codigoInput, false);
+            return;
+        }
+        
+        if (codigos.includes(codigo)) {
+            marcarCampoDuplicado(codigoInput, true);
+            temDuplicado = true;
+        } else {
+            codigos.push(codigo);
+            marcarCampoDuplicado(codigoInput, false);
+        }
+    });
+    
+    return temDuplicado;
+}
+
+function validarDuplicadosAntesDeSalvar() {
+    const codigos = [];
+    const linhas = document.querySelectorAll('#itemsBody tr');
+    let duplicadoEncontrado = false;
+    
+    linhas.forEach(linha => {
+        const codigoInput = linha.querySelector('.item-codigo');
+        if (!codigoInput) return;
+        
+        const codigo = codigoInput.value.trim().toUpperCase();
+        if (codigo === '') return;
+        
+        if (codigos.includes(codigo)) {
+            marcarCampoDuplicado(codigoInput, true);
+            duplicadoEncontrado = true;
+        } else {
+            codigos.push(codigo);
+            marcarCampoDuplicado(codigoInput, false);
+        }
+    });
+    
+    return duplicadoEncontrado;
+}
+
+function validarDuplicadosNoPaste(linhas, elementoAlvo) {
+    const codigosExistentes = [];
+    const linhasExistentes = document.querySelectorAll('#itemsBody tr');
+    
+    const linhaAlvo = elementoAlvo.closest('tr');
+    linhasExistentes.forEach(linha => {
+        if (linha === linhaAlvo) return;
+        const codigoInput = linha.querySelector('.item-codigo');
+        if (codigoInput) {
+            const codigo = codigoInput.value.trim().toUpperCase();
+            if (codigo) codigosExistentes.push(codigo);
+        }
+    });
+    
+    const duplicados = [];
+    const novosCodigos = [];
+    
+    linhas.forEach(linha => {
+        const codigo = linha.trim().toUpperCase();
+        if (!codigo) return;
+        
+        if (codigosExistentes.includes(codigo) || novosCodigos.includes(codigo)) {
+            duplicados.push(codigo);
+        } else {
+            novosCodigos.push(codigo);
+        }
+    });
+    
+    return duplicados;
+}
+
+function configurarValidacaoDuplicados() {
+    const codigosInputs = document.querySelectorAll('.item-codigo');
+    
+    codigosInputs.forEach(input => {
+        input.removeEventListener('blur', handleValidacaoDuplicado);
+        input.removeEventListener('input', handleValidacaoDuplicadoInput);
+        
+        input.addEventListener('blur', handleValidacaoDuplicado);
+        input.addEventListener('input', handleValidacaoDuplicadoInput);
+    });
+}
+
+function handleValidacaoDuplicado(e) {
+    const input = e.target;
+    const codigo = input.value.trim().toUpperCase();
+    
+    if (codigo === '') {
+        marcarCampoDuplicado(input, false);
+        return;
+    }
+    
+    const row = input.closest('tr');
+    const isDuplicado = verificarCodigoDuplicado(codigo, row);
+    marcarCampoDuplicado(input, isDuplicado);
+}
+
+function handleValidacaoDuplicadoInput(e) {
+    const input = e.target;
+    const codigo = input.value.trim().toUpperCase();
+    
+    if (codigo === '') {
+        marcarCampoDuplicado(input, false);
+        return;
+    }
+    
+    const row = input.closest('tr');
+    const isDuplicado = verificarCodigoDuplicado(codigo, row);
+    marcarCampoDuplicado(input, isDuplicado);
+}
+
+// ============================================
+// BUSCAR MATERIAL COM VALIDAÇÃO DE DUPLICADOS
+// ============================================
+
 async function buscarMaterial(input) {
     const codigo = input.value.trim();
     if (!codigo) {
@@ -289,17 +500,29 @@ async function buscarMaterial(input) {
     
     input.value = codigo.toUpperCase();
     
+    if (verificarCodigoDuplicado(input.value, row)) {
+        marcarCampoDuplicado(input, true);
+        mostrarToast('⚠️ Código já adicionado neste controle!', 'aviso');
+        descInput.value = '';
+        undInput.value = '';
+        return;
+    }
+    
     const material = buscarMaterialArquivo(input.value);
     
     if (material) {
         descInput.value = material.descricao || '';
         undInput.value = material.unidade || 'UN';
+        marcarCampoDuplicado(input, false);
         mostrarToast(`✅ ${material.descricao}`, 'sucesso');
     } else {
         mostrarToast('⚠️ Código não encontrado', 'aviso');
         descInput.value = '';
         undInput.value = '';
+        marcarCampoDuplicado(input, false);
     }
+    
+    verificarECorrigirDuplicados();
 }
 
 window.buscarMaterial = buscarMaterial;
@@ -612,6 +835,8 @@ async function carregarControleFormulario() {
         configurarNavegacaoTeclado();
         configurarPasteEmMassa();
         adicionarBotoesAcoesMassa();
+        setTimeout(configurarValidacaoDuplicados, 200);
+        setTimeout(verificarECorrigirDuplicados, 250);
         
     } catch (error) {
         console.error('❌ Erro ao carregar controle:', error);
@@ -888,6 +1113,18 @@ function handlePasteEmMassa(e) {
 function processarPasteEmMassa(linhas, elementoAlvo) {
     console.log(`📋 Processando ${linhas.length} linhas coladas na coluna:`, elementoAlvo);
     
+    // Verifica se está colando na coluna de código
+    const isCodigoColumn = elementoAlvo.classList.contains('item-codigo');
+    
+    // Se for coluna de código, valida duplicados
+    if (isCodigoColumn) {
+        const duplicados = validarDuplicadosNoPaste(linhas, elementoAlvo);
+        if (duplicados.length > 0) {
+            mostrarToast(`⚠️ Códigos duplicados encontrados: ${duplicados.join(', ')}`, 'erro');
+            return;
+        }
+    }
+    
     const classesAlvo = Array.from(elementoAlvo.classList);
     let classeAlvo = '';
     
@@ -1018,6 +1255,8 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
     setTimeout(configurarPopupDescricao, 100);
     setTimeout(configurarPasteEmMassa, 100);
     setTimeout(adicionarBotoesAcoesMassa, 100);
+    setTimeout(configurarValidacaoDuplicados, 150);
+    setTimeout(verificarECorrigirDuplicados, 200);
     
     setTimeout(() => {
         elementoAlvo.focus();
@@ -1063,7 +1302,7 @@ function formatarData(valor) {
 }
 
 // ============================================
-// AÇÕES EM MASSA (BULK ACTIONS) - CORRIGIDO
+// AÇÕES EM MASSA (BULK ACTIONS)
 // ============================================
 
 function adicionarBotoesAcoesMassa() {
@@ -1633,6 +1872,162 @@ function aplicarEmMassaSelect(classe, valor) {
 }
 
 // ============================================
+// SALVAR CONTROLE COM VALIDAÇÃO DE DUPLICADOS
+// ============================================
+
+async function salvarControle() {
+    if (!controleAtual) {
+        mostrarToast('⚠️ Nenhum controle carregado', 'erro');
+        return;
+    }
+    
+    if (controleAtual.status === 'FINALIZADO') {
+        mostrarToast('⚠️ Este controle já foi finalizado', 'aviso');
+        return;
+    }
+    
+    const tipoInfo = TIPOS[tipoAtual];
+    const isFarol = tipoAtual === 'farol';
+    const isDevolucao = tipoAtual === 'devolucao';
+    const isPendencia = tipoAtual === 'pendencia';
+    const isAditivo = tipoAtual === 'aditivo';
+    const isAditivoFisico = tipoAtual === 'aditivo-fisico';
+    const isMovimento = tipoAtual === 'movimento';
+    const temItens = tipoInfo.temItens;
+    
+    const formObra = document.getElementById('formObra');
+    const formData = document.getElementById('formData');
+    
+    const obra = formObra ? formObra.value.trim() : '';
+    const data_programacao = formData ? formData.value : '';
+    
+    if (!obra) {
+        mostrarToast('⚠️ Preencha o número da obra', 'aviso');
+        return;
+    }
+    
+    if (!data_programacao) {
+        mostrarToast('⚠️ Preencha a data de programação', 'aviso');
+        return;
+    }
+    
+    if (temItens) {
+        const temDuplicado = validarDuplicadosAntesDeSalvar();
+        if (temDuplicado) {
+            mostrarToast('⚠️ Existem códigos duplicados! Corrija antes de salvar.', 'erro');
+            const tabela = document.querySelector('.table-responsive');
+            if (tabela) {
+                tabela.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return;
+        }
+    }
+    
+    let itens = [];
+    if (temItens) {
+        itens = getItensFormulario();
+        if (itens.length === 0) {
+            mostrarToast('⚠️ Adicione pelo menos um item', 'aviso');
+            return;
+        }
+    }
+    
+    const data = {
+        obra: obra,
+        data_programacao: data_programacao,
+        criado_por: dadosSessao.matricula || 'Sistema'
+    };
+    
+    if (temItens) {
+        data.itens = itens;
+    }
+    
+    if (isAditivoFisico) {
+        const formTipoAditivoFisico = document.getElementById('formTipoAditivoFisico');
+        const formDataExecucao = document.getElementById('formDataExecucao');
+        data.tipo = formTipoAditivoFisico?.value || 'SAÍDA';
+        data.data_execucao = formDataExecucao?.value || '';
+    }
+    
+    if (isFarol) {
+        const formSetor = document.getElementById('formSetor');
+        const formDataRecebimento = document.getElementById('formDataRecebimento');
+        const formSeparador = document.getElementById('formSeparador');
+        const formDataSeparacao = document.getElementById('formDataSeparacao');
+        const formObraTeveSaida = document.getElementById('formObraTeveSaida');
+        const formDataSaida = document.getElementById('formDataSaida');
+        const formAditivo = document.getElementById('formAditivo');
+        const formObraProgramada = document.getElementById('formObraProgramada');
+        const formDevolvida = document.getElementById('formDevolvida');
+        const formCancelada = document.getElementById('formCancelada');
+        const formObservacaoGeral = document.getElementById('formObservacaoGeral');
+        
+        data.setor = formSetor?.value || '';
+        data.data_recebimento = formDataRecebimento?.value || '';
+        data.separador = formSeparador?.value || '';
+        data.data_separacao = formDataSeparacao?.value || '';
+        data.obra_teve_saida = formObraTeveSaida?.value || 'NÃO';
+        data.data_saida = formDataSaida?.value || '';
+        data.aditivo = formAditivo?.value || 'NÃO';
+        data.obra_programada = formObraProgramada?.value || 'NÃO';
+        data.devolvida = formDevolvida?.value || 'NÃO';
+        data.cancelada = formCancelada?.value || 'NÃO';
+        data.observacao = formObservacaoGeral?.value || '';
+    }
+    
+    if (isDevolucao) {
+        const formDataDescarga = document.getElementById('formDataDescarga');
+        const formEncarregado = document.getElementById('formEncarregado');
+        const formDataDevolucaoFisica = document.getElementById('formDataDevolucaoFisica');
+        const formMotivoPendencia = document.getElementById('formMotivoPendencia');
+        const formSolucaoPendencia = document.getElementById('formSolucaoPendencia');
+        const formPendenciaPor = document.getElementById('formPendenciaPor');
+        const formObservacaoDevolucao = document.getElementById('formObservacaoDevolucao');
+        
+        data.data_descarga = formDataDescarga?.value || '';
+        data.encarregado = formEncarregado?.value || '';
+        data.data_devolucao_fisica = formDataDevolucaoFisica?.value || '';
+        data.motivo_pendencia = formMotivoPendencia?.value || '';
+        data.solucao_pendencia = formSolucaoPendencia?.value || '';
+        data.pendencia_por = formPendenciaPor?.value || '';
+        data.observacao = formObservacaoDevolucao?.value || '';
+    }
+    
+    if (isMovimento) {
+        const formTipoMovimento = document.getElementById('formTipoMovimento');
+        const formCodMovimentacao = document.getElementById('formCodMovimentacao');
+        data.tipo_movimento = formTipoMovimento?.value || 'RMA';
+        data.cod_movimentacao = formCodMovimentacao?.value || '';
+    }
+    
+    const url = `${API_URL}${tipoInfo.endpoint}/${controleAtual.numero}`;
+    
+    try {
+        mostrarToast('⏳ Salvando...', 'info');
+        
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao salvar');
+        }
+        
+        mostrarToast('✅ Salvo com sucesso!', 'sucesso');
+        await carregarControleFormulario();
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar:', error);
+        mostrarToast('❌ ' + error.message, 'erro');
+    }
+}
+
+window.salvarControle = salvarControle;
+
+// ============================================
 // ADICIONAR LINHA DE ITEM
 // ============================================
 
@@ -1644,7 +2039,6 @@ function adicionarLinhaItem() {
     const isAditivoFisico = tipoAtual === 'aditivo-fisico';
     const isPendencia = tipoAtual === 'pendencia';
     const nomeUsuario = getNomeUsuarioLogado();
-    const matriculaUsuario = getMatriculaUsuarioLogado();
     
     const tr = document.createElement('tr');
     
@@ -1785,6 +2179,7 @@ function adicionarLinhaItem() {
     setTimeout(configurarPopupDescricao, 100);
     setTimeout(configurarPasteEmMassa, 100);
     setTimeout(adicionarBotoesAcoesMassa, 100);
+    setTimeout(configurarValidacaoDuplicados, 150);
 }
 
 window.adicionarLinhaItem = adicionarLinhaItem;
@@ -1806,6 +2201,8 @@ function removerItem(btn) {
     setTimeout(configurarNavegacaoTeclado, 50);
     setTimeout(configurarPasteEmMassa, 50);
     setTimeout(adicionarBotoesAcoesMassa, 50);
+    setTimeout(configurarValidacaoDuplicados, 100);
+    setTimeout(verificarECorrigirDuplicados, 150);
 }
 
 window.removerItem = removerItem;
@@ -1971,6 +2368,8 @@ function carregarItens(itens) {
     setTimeout(configurarPopupDescricao, 100);
     setTimeout(configurarPasteEmMassa, 100);
     setTimeout(adicionarBotoesAcoesMassa, 100);
+    setTimeout(configurarValidacaoDuplicados, 150);
+    setTimeout(verificarECorrigirDuplicados, 200);
 }
 
 // ============================================
@@ -2056,150 +2455,6 @@ function getItensFormulario() {
     
     return items;
 }
-
-// ============================================
-// SALVAR CONTROLE
-// ============================================
-
-async function salvarControle() {
-    if (!controleAtual) {
-        mostrarToast('⚠️ Nenhum controle carregado', 'erro');
-        return;
-    }
-    
-    if (controleAtual.status === 'FINALIZADO') {
-        mostrarToast('⚠️ Este controle já foi finalizado', 'aviso');
-        return;
-    }
-    
-    const tipoInfo = TIPOS[tipoAtual];
-    const isFarol = tipoAtual === 'farol';
-    const isDevolucao = tipoAtual === 'devolucao';
-    const isPendencia = tipoAtual === 'pendencia';
-    const isAditivo = tipoAtual === 'aditivo';
-    const isAditivoFisico = tipoAtual === 'aditivo-fisico';
-    const isMovimento = tipoAtual === 'movimento';
-    const temItens = tipoInfo.temItens;
-    
-    const formObra = document.getElementById('formObra');
-    const formData = document.getElementById('formData');
-    
-    const obra = formObra ? formObra.value.trim() : '';
-    const data_programacao = formData ? formData.value : '';
-    
-    if (!obra) {
-        mostrarToast('⚠️ Preencha o número da obra', 'aviso');
-        return;
-    }
-    
-    if (!data_programacao) {
-        mostrarToast('⚠️ Preencha a data de programação', 'aviso');
-        return;
-    }
-    
-    let itens = [];
-    if (temItens) {
-        itens = getItensFormulario();
-        if (itens.length === 0) {
-            mostrarToast('⚠️ Adicione pelo menos um item', 'aviso');
-            return;
-        }
-    }
-    
-    const data = {
-        obra: obra,
-        data_programacao: data_programacao,
-        criado_por: dadosSessao.matricula || 'Sistema'
-    };
-    
-    if (temItens) {
-        data.itens = itens;
-    }
-    
-    if (isAditivoFisico) {
-        const formTipoAditivoFisico = document.getElementById('formTipoAditivoFisico');
-        const formDataExecucao = document.getElementById('formDataExecucao');
-        data.tipo = formTipoAditivoFisico?.value || 'SAÍDA';
-        data.data_execucao = formDataExecucao?.value || '';
-    }
-    
-    if (isFarol) {
-        const formSetor = document.getElementById('formSetor');
-        const formDataRecebimento = document.getElementById('formDataRecebimento');
-        const formSeparador = document.getElementById('formSeparador');
-        const formDataSeparacao = document.getElementById('formDataSeparacao');
-        const formObraTeveSaida = document.getElementById('formObraTeveSaida');
-        const formDataSaida = document.getElementById('formDataSaida');
-        const formAditivo = document.getElementById('formAditivo');
-        const formObraProgramada = document.getElementById('formObraProgramada');
-        const formDevolvida = document.getElementById('formDevolvida');
-        const formCancelada = document.getElementById('formCancelada');
-        const formObservacaoGeral = document.getElementById('formObservacaoGeral');
-        
-        data.setor = formSetor?.value || '';
-        data.data_recebimento = formDataRecebimento?.value || '';
-        data.separador = formSeparador?.value || '';
-        data.data_separacao = formDataSeparacao?.value || '';
-        data.obra_teve_saida = formObraTeveSaida?.value || 'NÃO';
-        data.data_saida = formDataSaida?.value || '';
-        data.aditivo = formAditivo?.value || 'NÃO';
-        data.obra_programada = formObraProgramada?.value || 'NÃO';
-        data.devolvida = formDevolvida?.value || 'NÃO';
-        data.cancelada = formCancelada?.value || 'NÃO';
-        data.observacao = formObservacaoGeral?.value || '';
-    }
-    
-    if (isDevolucao) {
-        const formDataDescarga = document.getElementById('formDataDescarga');
-        const formEncarregado = document.getElementById('formEncarregado');
-        const formDataDevolucaoFisica = document.getElementById('formDataDevolucaoFisica');
-        const formMotivoPendencia = document.getElementById('formMotivoPendencia');
-        const formSolucaoPendencia = document.getElementById('formSolucaoPendencia');
-        const formPendenciaPor = document.getElementById('formPendenciaPor');
-        const formObservacaoDevolucao = document.getElementById('formObservacaoDevolucao');
-        
-        data.data_descarga = formDataDescarga?.value || '';
-        data.encarregado = formEncarregado?.value || '';
-        data.data_devolucao_fisica = formDataDevolucaoFisica?.value || '';
-        data.motivo_pendencia = formMotivoPendencia?.value || '';
-        data.solucao_pendencia = formSolucaoPendencia?.value || '';
-        data.pendencia_por = formPendenciaPor?.value || '';
-        data.observacao = formObservacaoDevolucao?.value || '';
-    }
-    
-    if (isMovimento) {
-        const formTipoMovimento = document.getElementById('formTipoMovimento');
-        const formCodMovimentacao = document.getElementById('formCodMovimentacao');
-        data.tipo_movimento = formTipoMovimento?.value || 'RMA';
-        data.cod_movimentacao = formCodMovimentacao?.value || '';
-    }
-    
-    const url = `${API_URL}${tipoInfo.endpoint}/${controleAtual.numero}`;
-    
-    try {
-        mostrarToast('⏳ Salvando...', 'info');
-        
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Erro ao salvar');
-        }
-        
-        mostrarToast('✅ Salvo com sucesso!', 'sucesso');
-        await carregarControleFormulario();
-        
-    } catch (error) {
-        console.error('❌ Erro ao salvar:', error);
-        mostrarToast('❌ ' + error.message, 'erro');
-    }
-}
-
-window.salvarControle = salvarControle;
 
 // ============================================
 // FINALIZAR CONTROLE
@@ -2406,6 +2661,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         setTimeout(configurarNavegacaoTeclado, 300);
         setTimeout(configurarPasteEmMassa, 300);
         setTimeout(adicionarBotoesAcoesMassa, 300);
+        setTimeout(configurarValidacaoDuplicados, 400);
+        setTimeout(verificarECorrigirDuplicados, 450);
     });
     window.addEventListener('resize', controlarBotoesNavegacao);
     
@@ -2438,3 +2695,10 @@ window.getElementosEditaveis = getElementosEditaveis;
 window.formatarData = formatarData;
 window.getNomeUsuarioLogado = getNomeUsuarioLogado;
 window.getMatriculaUsuarioLogado = getMatriculaUsuarioLogado;
+window.verificarCodigoDuplicado = verificarCodigoDuplicado;
+window.marcarCampoDuplicado = marcarCampoDuplicado;
+window.validarTodosCodigos = validarTodosCodigos;
+window.verificarECorrigirDuplicados = verificarECorrigirDuplicados;
+window.validarDuplicadosAntesDeSalvar = validarDuplicadosAntesDeSalvar;
+window.configurarValidacaoDuplicados = configurarValidacaoDuplicados;
+window.validarDuplicadosNoPaste = validarDuplicadosNoPaste;
