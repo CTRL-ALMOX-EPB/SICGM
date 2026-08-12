@@ -865,18 +865,49 @@ function handleTeclado(e) {
     
     const isInTable = target.closest('table');
     
+    // ============================================
+    // ENTER - Vai para o campo abaixo ou adiciona novo item
+    // ============================================
     if (key === 'Enter') {
         e.preventDefault();
         
+        // Se estiver em um textarea, permite quebra de linha com Shift+Enter
         if (target.tagName === 'TEXTAREA') {
             if (e.shiftKey) {
-                return;
+                return; // Comportamento padrão (quebra de linha)
             }
         }
         
-        avancarParaProximoCampo(target);
+        // Se estiver na tabela, navega verticalmente
+        if (isInTable) {
+            const proximo = navegarParaProximoCampoAbaixo(target);
+            if (!proximo) {
+                // Não há campo abaixo - adiciona novo item
+                adicionarLinhaItem();
+                // Foca no primeiro campo da nova linha
+                setTimeout(() => {
+                    const novasLinhas = document.querySelectorAll('#itemsBody tr');
+                    const ultimaLinha = novasLinhas[novasLinhas.length - 1];
+                    if (ultimaLinha) {
+                        const primeiroCampo = ultimaLinha.querySelector('.item-codigo');
+                        if (primeiroCampo && isCampoEditavel(primeiroCampo)) {
+                            primeiroCampo.focus();
+                            primeiroCampo.select();
+                        }
+                    }
+                }, 50);
+            }
+            return;
+        }
+        
+        // Fora da tabela, navega verticalmente no formulário
+        navegarVerticalFormulario(target, 1);
         return;
     }
+    
+    // ============================================
+    // SETAS - Navegação entre campos
+    // ============================================
     
     if (key === 'ArrowDown' || key === 'ArrowUp') {
         e.preventDefault();
@@ -898,6 +929,73 @@ function handleTeclado(e) {
         }
         return;
     }
+}
+
+// ============================================
+// NAVEGAÇÃO PARA O CAMPO ABAIXO (ENTER)
+// ============================================
+
+function navegarParaProximoCampoAbaixo(element) {
+    const row = element.closest('tr');
+    if (!row) return null;
+    
+    const table = element.closest('table');
+    if (!table) return null;
+    
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const currentRowIndex = rows.indexOf(row);
+    if (currentRowIndex === -1) return null;
+    
+    // Encontra a coluna do elemento atual
+    const cells = Array.from(row.querySelectorAll('td'));
+    let targetCellIndex = -1;
+    
+    cells.forEach((cell, idx) => {
+        const inputs = cell.querySelectorAll('input, select, textarea');
+        inputs.forEach(inp => {
+            if (inp === element) {
+                targetCellIndex = idx;
+            }
+        });
+    });
+    
+    if (targetCellIndex === -1) return null;
+    
+    // Verifica se há uma próxima linha
+    const nextRowIndex = currentRowIndex + 1;
+    if (nextRowIndex >= rows.length) return null;
+    
+    const nextRow = rows[nextRowIndex];
+    const nextCells = nextRow.querySelectorAll('td');
+    
+    if (targetCellIndex >= nextCells.length) return null;
+    
+    // Busca o campo na mesma coluna na linha abaixo
+    const targetCell = nextCells[targetCellIndex];
+    const targetInput = targetCell.querySelector('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+    
+    if (targetInput && isCampoEditavel(targetInput)) {
+        targetInput.focus();
+        if (targetInput.tagName === 'INPUT' && targetInput.type === 'text') {
+            targetInput.select();
+        }
+        return targetInput;
+    }
+    
+    // Se o campo na mesma coluna não é editável, busca o próximo editável na linha
+    const allInputs = nextRow.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+    if (allInputs.length > 0) {
+        const firstEditable = allInputs[0];
+        if (isCampoEditavel(firstEditable)) {
+            firstEditable.focus();
+            if (firstEditable.tagName === 'INPUT' && firstEditable.type === 'text') {
+                firstEditable.select();
+            }
+            return firstEditable;
+        }
+    }
+    
+    return null;
 }
 
 function avancarParaProximoCampo(currentElement) {
@@ -1872,162 +1970,6 @@ function aplicarEmMassaSelect(classe, valor) {
 }
 
 // ============================================
-// SALVAR CONTROLE COM VALIDAÇÃO DE DUPLICADOS
-// ============================================
-
-async function salvarControle() {
-    if (!controleAtual) {
-        mostrarToast('⚠️ Nenhum controle carregado', 'erro');
-        return;
-    }
-    
-    if (controleAtual.status === 'FINALIZADO') {
-        mostrarToast('⚠️ Este controle já foi finalizado', 'aviso');
-        return;
-    }
-    
-    const tipoInfo = TIPOS[tipoAtual];
-    const isFarol = tipoAtual === 'farol';
-    const isDevolucao = tipoAtual === 'devolucao';
-    const isPendencia = tipoAtual === 'pendencia';
-    const isAditivo = tipoAtual === 'aditivo';
-    const isAditivoFisico = tipoAtual === 'aditivo-fisico';
-    const isMovimento = tipoAtual === 'movimento';
-    const temItens = tipoInfo.temItens;
-    
-    const formObra = document.getElementById('formObra');
-    const formData = document.getElementById('formData');
-    
-    const obra = formObra ? formObra.value.trim() : '';
-    const data_programacao = formData ? formData.value : '';
-    
-    if (!obra) {
-        mostrarToast('⚠️ Preencha o número da obra', 'aviso');
-        return;
-    }
-    
-    if (!data_programacao) {
-        mostrarToast('⚠️ Preencha a data de programação', 'aviso');
-        return;
-    }
-    
-    if (temItens) {
-        const temDuplicado = validarDuplicadosAntesDeSalvar();
-        if (temDuplicado) {
-            mostrarToast('⚠️ Existem códigos duplicados! Corrija antes de salvar.', 'erro');
-            const tabela = document.querySelector('.table-responsive');
-            if (tabela) {
-                tabela.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-            return;
-        }
-    }
-    
-    let itens = [];
-    if (temItens) {
-        itens = getItensFormulario();
-        if (itens.length === 0) {
-            mostrarToast('⚠️ Adicione pelo menos um item', 'aviso');
-            return;
-        }
-    }
-    
-    const data = {
-        obra: obra,
-        data_programacao: data_programacao,
-        criado_por: dadosSessao.matricula || 'Sistema'
-    };
-    
-    if (temItens) {
-        data.itens = itens;
-    }
-    
-    if (isAditivoFisico) {
-        const formTipoAditivoFisico = document.getElementById('formTipoAditivoFisico');
-        const formDataExecucao = document.getElementById('formDataExecucao');
-        data.tipo = formTipoAditivoFisico?.value || 'SAÍDA';
-        data.data_execucao = formDataExecucao?.value || '';
-    }
-    
-    if (isFarol) {
-        const formSetor = document.getElementById('formSetor');
-        const formDataRecebimento = document.getElementById('formDataRecebimento');
-        const formSeparador = document.getElementById('formSeparador');
-        const formDataSeparacao = document.getElementById('formDataSeparacao');
-        const formObraTeveSaida = document.getElementById('formObraTeveSaida');
-        const formDataSaida = document.getElementById('formDataSaida');
-        const formAditivo = document.getElementById('formAditivo');
-        const formObraProgramada = document.getElementById('formObraProgramada');
-        const formDevolvida = document.getElementById('formDevolvida');
-        const formCancelada = document.getElementById('formCancelada');
-        const formObservacaoGeral = document.getElementById('formObservacaoGeral');
-        
-        data.setor = formSetor?.value || '';
-        data.data_recebimento = formDataRecebimento?.value || '';
-        data.separador = formSeparador?.value || '';
-        data.data_separacao = formDataSeparacao?.value || '';
-        data.obra_teve_saida = formObraTeveSaida?.value || 'NÃO';
-        data.data_saida = formDataSaida?.value || '';
-        data.aditivo = formAditivo?.value || 'NÃO';
-        data.obra_programada = formObraProgramada?.value || 'NÃO';
-        data.devolvida = formDevolvida?.value || 'NÃO';
-        data.cancelada = formCancelada?.value || 'NÃO';
-        data.observacao = formObservacaoGeral?.value || '';
-    }
-    
-    if (isDevolucao) {
-        const formDataDescarga = document.getElementById('formDataDescarga');
-        const formEncarregado = document.getElementById('formEncarregado');
-        const formDataDevolucaoFisica = document.getElementById('formDataDevolucaoFisica');
-        const formMotivoPendencia = document.getElementById('formMotivoPendencia');
-        const formSolucaoPendencia = document.getElementById('formSolucaoPendencia');
-        const formPendenciaPor = document.getElementById('formPendenciaPor');
-        const formObservacaoDevolucao = document.getElementById('formObservacaoDevolucao');
-        
-        data.data_descarga = formDataDescarga?.value || '';
-        data.encarregado = formEncarregado?.value || '';
-        data.data_devolucao_fisica = formDataDevolucaoFisica?.value || '';
-        data.motivo_pendencia = formMotivoPendencia?.value || '';
-        data.solucao_pendencia = formSolucaoPendencia?.value || '';
-        data.pendencia_por = formPendenciaPor?.value || '';
-        data.observacao = formObservacaoDevolucao?.value || '';
-    }
-    
-    if (isMovimento) {
-        const formTipoMovimento = document.getElementById('formTipoMovimento');
-        const formCodMovimentacao = document.getElementById('formCodMovimentacao');
-        data.tipo_movimento = formTipoMovimento?.value || 'RMA';
-        data.cod_movimentacao = formCodMovimentacao?.value || '';
-    }
-    
-    const url = `${API_URL}${tipoInfo.endpoint}/${controleAtual.numero}`;
-    
-    try {
-        mostrarToast('⏳ Salvando...', 'info');
-        
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Erro ao salvar');
-        }
-        
-        mostrarToast('✅ Salvo com sucesso!', 'sucesso');
-        await carregarControleFormulario();
-        
-    } catch (error) {
-        console.error('❌ Erro ao salvar:', error);
-        mostrarToast('❌ ' + error.message, 'erro');
-    }
-}
-
-window.salvarControle = salvarControle;
-
-// ============================================
 // ADICIONAR LINHA DE ITEM
 // ============================================
 
@@ -2163,8 +2105,9 @@ function adicionarLinhaItem() {
         `;
     }
     
+    // BOTÃO DE EXCLUSÃO - SEMPRE NO FINAL
     html += `
-        <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
+        <td><button class="remove-item" onclick="removerItem(this)" title="Remover item">✕</button></td>
     `;
     
     tr.innerHTML = html;
@@ -2356,8 +2299,9 @@ function carregarItens(itens) {
             `;
         }
         
+        // BOTÃO DE EXCLUSÃO - SEMPRE NO FINAL
         html += `
-            <td><button class="remove-item" onclick="removerItem(this)" ${isFinalizado ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>✕</button></td>
+            <td><button class="remove-item" onclick="removerItem(this)" ${isFinalizado ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''} title="Remover item">✕</button></td>
         `;
         
         tr.innerHTML = html;
@@ -2455,6 +2399,162 @@ function getItensFormulario() {
     
     return items;
 }
+
+// ============================================
+// SALVAR CONTROLE COM VALIDAÇÃO DE DUPLICADOS
+// ============================================
+
+async function salvarControle() {
+    if (!controleAtual) {
+        mostrarToast('⚠️ Nenhum controle carregado', 'erro');
+        return;
+    }
+    
+    if (controleAtual.status === 'FINALIZADO') {
+        mostrarToast('⚠️ Este controle já foi finalizado', 'aviso');
+        return;
+    }
+    
+    const tipoInfo = TIPOS[tipoAtual];
+    const isFarol = tipoAtual === 'farol';
+    const isDevolucao = tipoAtual === 'devolucao';
+    const isPendencia = tipoAtual === 'pendencia';
+    const isAditivo = tipoAtual === 'aditivo';
+    const isAditivoFisico = tipoAtual === 'aditivo-fisico';
+    const isMovimento = tipoAtual === 'movimento';
+    const temItens = tipoInfo.temItens;
+    
+    const formObra = document.getElementById('formObra');
+    const formData = document.getElementById('formData');
+    
+    const obra = formObra ? formObra.value.trim() : '';
+    const data_programacao = formData ? formData.value : '';
+    
+    if (!obra) {
+        mostrarToast('⚠️ Preencha o número da obra', 'aviso');
+        return;
+    }
+    
+    if (!data_programacao) {
+        mostrarToast('⚠️ Preencha a data de programação', 'aviso');
+        return;
+    }
+    
+    if (temItens) {
+        const temDuplicado = validarDuplicadosAntesDeSalvar();
+        if (temDuplicado) {
+            mostrarToast('⚠️ Existem códigos duplicados! Corrija antes de salvar.', 'erro');
+            const tabela = document.querySelector('.table-responsive');
+            if (tabela) {
+                tabela.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return;
+        }
+    }
+    
+    let itens = [];
+    if (temItens) {
+        itens = getItensFormulario();
+        if (itens.length === 0) {
+            mostrarToast('⚠️ Adicione pelo menos um item', 'aviso');
+            return;
+        }
+    }
+    
+    const data = {
+        obra: obra,
+        data_programacao: data_programacao,
+        criado_por: dadosSessao.matricula || 'Sistema'
+    };
+    
+    if (temItens) {
+        data.itens = itens;
+    }
+    
+    if (isAditivoFisico) {
+        const formTipoAditivoFisico = document.getElementById('formTipoAditivoFisico');
+        const formDataExecucao = document.getElementById('formDataExecucao');
+        data.tipo = formTipoAditivoFisico?.value || 'SAÍDA';
+        data.data_execucao = formDataExecucao?.value || '';
+    }
+    
+    if (isFarol) {
+        const formSetor = document.getElementById('formSetor');
+        const formDataRecebimento = document.getElementById('formDataRecebimento');
+        const formSeparador = document.getElementById('formSeparador');
+        const formDataSeparacao = document.getElementById('formDataSeparacao');
+        const formObraTeveSaida = document.getElementById('formObraTeveSaida');
+        const formDataSaida = document.getElementById('formDataSaida');
+        const formAditivo = document.getElementById('formAditivo');
+        const formObraProgramada = document.getElementById('formObraProgramada');
+        const formDevolvida = document.getElementById('formDevolvida');
+        const formCancelada = document.getElementById('formCancelada');
+        const formObservacaoGeral = document.getElementById('formObservacaoGeral');
+        
+        data.setor = formSetor?.value || '';
+        data.data_recebimento = formDataRecebimento?.value || '';
+        data.separador = formSeparador?.value || '';
+        data.data_separacao = formDataSeparacao?.value || '';
+        data.obra_teve_saida = formObraTeveSaida?.value || 'NÃO';
+        data.data_saida = formDataSaida?.value || '';
+        data.aditivo = formAditivo?.value || 'NÃO';
+        data.obra_programada = formObraProgramada?.value || 'NÃO';
+        data.devolvida = formDevolvida?.value || 'NÃO';
+        data.cancelada = formCancelada?.value || 'NÃO';
+        data.observacao = formObservacaoGeral?.value || '';
+    }
+    
+    if (isDevolucao) {
+        const formDataDescarga = document.getElementById('formDataDescarga');
+        const formEncarregado = document.getElementById('formEncarregado');
+        const formDataDevolucaoFisica = document.getElementById('formDataDevolucaoFisica');
+        const formMotivoPendencia = document.getElementById('formMotivoPendencia');
+        const formSolucaoPendencia = document.getElementById('formSolucaoPendencia');
+        const formPendenciaPor = document.getElementById('formPendenciaPor');
+        const formObservacaoDevolucao = document.getElementById('formObservacaoDevolucao');
+        
+        data.data_descarga = formDataDescarga?.value || '';
+        data.encarregado = formEncarregado?.value || '';
+        data.data_devolucao_fisica = formDataDevolucaoFisica?.value || '';
+        data.motivo_pendencia = formMotivoPendencia?.value || '';
+        data.solucao_pendencia = formSolucaoPendencia?.value || '';
+        data.pendencia_por = formPendenciaPor?.value || '';
+        data.observacao = formObservacaoDevolucao?.value || '';
+    }
+    
+    if (isMovimento) {
+        const formTipoMovimento = document.getElementById('formTipoMovimento');
+        const formCodMovimentacao = document.getElementById('formCodMovimentacao');
+        data.tipo_movimento = formTipoMovimento?.value || 'RMA';
+        data.cod_movimentacao = formCodMovimentacao?.value || '';
+    }
+    
+    const url = `${API_URL}${tipoInfo.endpoint}/${controleAtual.numero}`;
+    
+    try {
+        mostrarToast('⏳ Salvando...', 'info');
+        
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao salvar');
+        }
+        
+        mostrarToast('✅ Salvo com sucesso!', 'sucesso');
+        await carregarControleFormulario();
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar:', error);
+        mostrarToast('❌ ' + error.message, 'erro');
+    }
+}
+
+window.salvarControle = salvarControle;
 
 // ============================================
 // FINALIZAR CONTROLE
