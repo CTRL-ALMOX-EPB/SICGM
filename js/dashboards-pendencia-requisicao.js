@@ -328,7 +328,7 @@ function parsearMovimentosSiago(texto) {
 }
 
 // ============================================
-// FUNÇÃO: PARSEAR DEVOLUÇÃO COMPILADA (CORRIGIDA)
+// FUNÇÃO: PARSEAR DEVOLUÇÃO COMPILADA
 // ============================================
 
 function parsearDevolucaoCompilada(texto) {
@@ -366,6 +366,7 @@ function parsearDevolucaoCompilada(texto) {
         const partes = linha.split('\t');
         if (partes.length < 7) continue;
         
+        // ===== CONVERTER DATA =====
         let dataOriginal = partes[indices.data]?.trim() || '';
         let dataConvertida = dataOriginal;
         
@@ -435,30 +436,112 @@ function parsearDevolucaoCompilada(texto) {
 }
 
 // ============================================
-// FUNÇÃO: CONSOLIDAR PENDÊNCIAS MGM (COM SOMA DE MÚLTIPLOS DOCUMENTOS)
+// FUNÇÃO: CONSOLIDAR PENDÊNCIAS MGM (LINK OBRA+DATA)
 // ============================================
 
 function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanco) {
-    console.log('🔄 Consolidando pendências MGM (com soma de múltiplos documentos)...');
+    console.log('🔄 Consolidando pendências MGM (linkando obra+data)...');
     
     const pendencias = [];
     
-    // Mapa de movimentos do banco por cod_movimentacao
-    const bancoPorCodMov = {};
+    // ============================================
+    // PASSO 1: Criar mapa de movimentos do banco por obra + data
+    // ============================================
+    const movimentosPorObraData = {};
     movimentosBanco.forEach(m => {
-        if (m.cod_movimentacao) {
-            bancoPorCodMov[m.cod_movimentacao] = m;
+        const obraNorm = normalizarObra(m.obra);
+        const chave = `${obraNorm}|${m.data_programacao}`;
+        if (!movimentosPorObraData[chave]) {
+            movimentosPorObraData[chave] = [];
         }
+        movimentosPorObraData[chave].push(m);
     });
     
-    // Agrupar itens da devolução por: obra + data + codigo
-    // Para cada grupo, vamos acumular as quantidades e documentos
+    console.log(`📊 ${Object.keys(movimentosPorObraData).length} combinações obra+data no banco`);
+    
+    // ============================================
+    // PASSO 2: Para cada item da devolução, encontrar o movimento correspondente
+    // ============================================
     const gruposPorChave = {};
     
     devolucaoItens.forEach(item => {
         const obraNorm = normalizarObra(item.obra);
         const chave = `${obraNorm}|${item.data}|${item.codigo}`;
         
+        // Buscar movimentos do banco que correspondem a obra + data
+        const chaveObraData = `${obraNorm}|${item.data}`;
+        const movimentosEncontrados = movimentosPorObraData[chaveObraData] || [];
+        
+        // Para cada movimento encontrado, buscar os itens no SIAGO
+        let qtdEncontrada = 0;
+        let docsEncontrados = [];
+        let tipoMovimento = null;
+        let siglaMovimento = null;
+        let statusBanco = null;
+        let encontrado = false;
+        
+        for (const movBanco of movimentosEncontrados) {
+            const codMov = movBanco.cod_movimentacao;
+            const movimentoSiago = movimentosSiago[codMov];
+            
+            if (movimentoSiago) {
+                // Verifica se o item existe neste movimento
+                const itemMov = movimentoSiago.itens.find(i => 
+                    i.codmat_mov === item.codigo || 
+                    i.dscmat === item.descricao
+                );
+                
+                if (itemMov) {
+                    encontrado = true;
+                    qtdEncontrada += itemMov.qtdmov || 0;
+                    if (!docsEncontrados.includes(codMov)) {
+                        docsEncontrados.push(codMov);
+                    }
+                    if (!tipoMovimento) {
+                        tipoMovimento = movimentoSiago.orgmov || 'DESCONHECIDO';
+                        siglaMovimento = movimentoSiago.sigla_mov_mat || '';
+                        statusBanco = movBanco.status;
+                    }
+                }
+            }
+        }
+        
+        // Se não encontrou movimento pelo link obra+data, tenta buscar apenas por obra (fallback)
+        if (!encontrado) {
+            const movimentosPorObra = movimentosBanco.filter(m => {
+                const obraMov = normalizarObra(m.obra);
+                return obraMov === obraNorm;
+            });
+            
+            for (const movBanco of movimentosPorObra) {
+                const codMov = movBanco.cod_movimentacao;
+                const movimentoSiago = movimentosSiago[codMov];
+                
+                if (movimentoSiago) {
+                    const itemMov = movimentoSiago.itens.find(i => 
+                        i.codmat_mov === item.codigo || 
+                        i.dscmat === item.descricao
+                    );
+                    
+                    if (itemMov) {
+                        encontrado = true;
+                        qtdEncontrada += itemMov.qtdmov || 0;
+                        if (!docsEncontrados.includes(codMov)) {
+                            docsEncontrados.push(codMov);
+                        }
+                        if (!tipoMovimento) {
+                            tipoMovimento = movimentoSiago.orgmov || 'DESCONHECIDO';
+                            siglaMovimento = movimentoSiago.sigla_mov_mat || '';
+                            statusBanco = movBanco.status;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // ============================================
+        // PASSO 3: Agrupar por obra+data+codigo para somar quantidades
+        // ============================================
         if (!gruposPorChave[chave]) {
             gruposPorChave[chave] = {
                 obra: obraNorm,
@@ -469,107 +552,72 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
                 qtdDmaTotal: 0,
                 qtdEsperadaTotal: 0,
                 documentos: [],
-                itensOriginais: []
+                itensOriginais: [],
+                movimentosEncontrados: [],
+                qtdEncontradaTotal: 0,
+                tipoMovimento: null,
+                siglaMovimento: null,
+                statusBanco: null,
+                encontrado: false
             };
         }
+        
+        const grupo = gruposPorChave[chave];
         
         // Acumula quantidades
         const qtdAplicada = item.qtdAplicada || 0;
         const qtdDma = item.qtdDma || 0;
         const qtdEsperada = qtdAplicada > 0 ? qtdAplicada : qtdDma;
         
-        gruposPorChave[chave].qtdAplicadaTotal += qtdAplicada;
-        gruposPorChave[chave].qtdDmaTotal += qtdDma;
-        gruposPorChave[chave].qtdEsperadaTotal += qtdEsperada;
-        gruposPorChave[chave].itensOriginais.push(item);
+        grupo.qtdAplicadaTotal += qtdAplicada;
+        grupo.qtdDmaTotal += qtdDma;
+        grupo.qtdEsperadaTotal += qtdEsperada;
+        grupo.itensOriginais.push(item);
+        grupo.qtdEncontradaTotal += qtdEncontrada;
+        grupo.encontrado = grupo.encontrado || encontrado;
         
-        // Extrai número do documento do arquivo (ex: "Devolução Ex - Obra X (23.07.2026) - Lucena. (1).xlsx")
-        if (item.arquivo) {
-            const matchDoc = item.arquivo.match(/\((\d+)\)\.xlsx$/);
-            if (matchDoc) {
-                const docNum = matchDoc[1];
-                if (!gruposPorChave[chave].documentos.includes(docNum)) {
-                    gruposPorChave[chave].documentos.push(docNum);
-                }
-            } else {
-                // Se não conseguiu extrair, usa o nome do arquivo como identificador
-                if (!gruposPorChave[chave].documentos.includes(item.arquivo)) {
-                    gruposPorChave[chave].documentos.push(item.arquivo);
-                }
+        // Acumula documentos
+        docsEncontrados.forEach(doc => {
+            if (!grupo.documentos.includes(doc)) {
+                grupo.documentos.push(doc);
             }
+        });
+        
+        if (!grupo.tipoMovimento && tipoMovimento) {
+            grupo.tipoMovimento = tipoMovimento;
+            grupo.siglaMovimento = siglaMovimento;
+            grupo.statusBanco = statusBanco;
         }
     });
     
     console.log(`📊 ${Object.keys(gruposPorChave).length} grupos de itens encontrados`);
     
-    // Para cada grupo, buscar os movimentos correspondentes
+    // ============================================
+    // PASSO 4: Gerar pendências consolidadas
+    // ============================================
     for (const chave in gruposPorChave) {
         const grupo = gruposPorChave[chave];
-        const { obra, data, codigo, descricao, qtdEsperadaTotal, documentos, itensOriginais } = grupo;
+        const { 
+            obra, data, codigo, descricao, qtdEsperadaTotal, qtdEncontradaTotal,
+            documentos, encontrado, tipoMovimento, siglaMovimento, statusBanco
+        } = grupo;
         
-        // Buscar movimentos do banco para esta obra
-        const movimentosRelacionados = movimentosBanco.filter(m => {
-            const obraMov = normalizarObra(m.obra);
-            return obraMov === obra;
-        });
-        
-        let encontrado = false;
-        let qtdEncontrada = 0;
-        let movimentosEncontrados = [];
-        let tipoMovimento = null;
-        let siglaMovimento = null;
-        let statusBanco = null;
-        
-        // Buscar em todos os movimentos relacionados
-        for (const movBanco of movimentosRelacionados) {
-            const codMov = movBanco.cod_movimentacao;
-            const movimentoSiago = movimentosSiago[codMov];
-            
-            if (movimentoSiago) {
-                // Verifica se o item existe neste movimento (por código ou descrição)
-                const itemMov = movimentoSiago.itens.find(i => 
-                    i.codmat_mov === codigo || 
-                    i.dscmat === descricao
-                );
-                
-                if (itemMov) {
-                    encontrado = true;
-                    qtdEncontrada += itemMov.qtdmov || 0;
-                    movimentosEncontrados.push({
-                        numdoc: codMov,
-                        quantidade: itemMov.qtdmov || 0,
-                        orgmov: movimentoSiago.orgmov || 'DESCONHECIDO',
-                        sigla: movimentoSiago.sigla_mov_mat || '',
-                        status: movBanco.status
-                    });
-                    
-                    if (!tipoMovimento) {
-                        tipoMovimento = movimentoSiago.orgmov || 'DESCONHECIDO';
-                        siglaMovimento = movimentoSiago.sigla_mov_mat || '';
-                        statusBanco = movBanco.status;
-                    }
-                }
-            }
-        }
-        
-        // Determinar status com base na quantidade total
         let status = 'PENDENTE';
         let motivo = '';
         let sobra = 0;
         let falta = 0;
-        let docsEncontrados = movimentosEncontrados.map(m => m.numdoc).filter(d => d);
         
         if (encontrado) {
-            if (qtdEncontrada === qtdEsperadaTotal) {
+            if (qtdEncontradaTotal === qtdEsperadaTotal) {
                 status = 'ATENDIDO';
                 motivo = 'Quantidade exata';
-            } else if (qtdEncontrada > qtdEsperadaTotal) {
+            } else if (qtdEncontradaTotal > qtdEsperadaTotal) {
                 status = 'SOBRA';
-                sobra = qtdEncontrada - qtdEsperadaTotal;
+                sobra = qtdEncontradaTotal - qtdEsperadaTotal;
                 motivo = `Excedente de ${sobra.toFixed(2)} unidades (precisa devolver)`;
-            } else if (qtdEncontrada > 0 && qtdEncontrada < qtdEsperadaTotal) {
+            } else if (qtdEncontradaTotal > 0 && qtdEncontradaTotal < qtdEsperadaTotal) {
                 status = 'PARCIAL';
-                falta = qtdEsperadaTotal - qtdEncontrada;
+                falta = qtdEsperadaTotal - qtdEncontradaTotal;
                 motivo = `Faltam ${falta.toFixed(2)} unidades (precisa requisitar)`;
             } else {
                 status = 'PENDENTE';
@@ -577,18 +625,14 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
             }
         } else {
             status = 'PENDENTE';
-            motivo = 'Nenhum movimento encontrado para esta obra';
+            motivo = 'Nenhum movimento encontrado para esta obra e data';
         }
         
         if (statusBanco === 'FINALIZADO' && status === 'PENDENTE') {
             motivo = 'Movimento finalizado mas item não encontrado';
         }
         
-        // Se temos múltiplos documentos, combina as informações
-        const todosDocumentos = [...new Set([...documentos, ...docsEncontrados])];
-        const docsStr = todosDocumentos.length > 0 ? todosDocumentos.join(', ') : 'Nenhum';
-        
-        // Verifica se tem múltiplos documentos de devolução compilada
+        const docsStr = documentos.length > 0 ? documentos.join(', ') : 'Nenhum';
         const temMultiplosDocs = documentos.length > 1;
         
         pendencias.push({
@@ -600,21 +644,20 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
             qtdAplicada: grupo.qtdAplicadaTotal,
             qtdDma: grupo.qtdDmaTotal,
             qtdEsperada: qtdEsperadaTotal,
-            qtdEncontrada: qtdEncontrada,
+            qtdEncontrada: qtdEncontradaTotal,
             sobra: sobra,
             falta: falta,
             status: status,
             motivo: motivo,
-            movimentoEncontrado: docsEncontrados.length > 0 ? docsEncontrados.join(', ') : null,
+            movimentoEncontrado: documentos.length > 0 ? documentos.join(', ') : null,
             tipoMovimento: tipoMovimento,
             siglaMovimento: siglaMovimento,
             statusBanco: statusBanco,
-            documentos: todosDocumentos,
+            documentos: documentos,
             documentosStr: docsStr,
             temMultiplosDocs: temMultiplosDocs,
             qtdDocumentos: documentos.length,
-            arquivo: itensOriginais.length > 0 ? itensOriginais[0].arquivo : '',
-            movimentosEncontrados: movimentosEncontrados
+            arquivo: grupo.itensOriginais.length > 0 ? grupo.itensOriginais[0].arquivo : ''
         });
     }
     
@@ -1098,7 +1141,7 @@ function selecionarDataObraMGM(obra, data) {
 }
 
 // ============================================
-// FUNÇÃO: RENDERIZAR DETALHES DA OBRA MGM (COM MÚLTIPLOS DOCUMENTOS)
+// FUNÇÃO: RENDERIZAR DETALHES DA OBRA MGM
 // ============================================
 
 function renderizarDetalhesObraMGM(itemSelecionado) {
