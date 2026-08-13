@@ -4,46 +4,42 @@
 
 console.log('🚀 dashboards-pendencia-requisicao.js carregado!');
 
-// URL do Cloudflare R2 - USANDO PROXY DO WORKER
-const R2_URL = `${API_URL}/proxy/posicao-estoque`;
-
-// URLs R2 para a nova funcionalidade - USANDO PROXY DO WORKER
-const ARQUIVOS_R2_NOVO = {
+// URLs R2 - Usando binding do Worker (via proxy)
+const ARQUIVOS_R2 = {
     movimentosSiago: `${API_URL}/proxy/movimentos-siago`,
     devolucaoCompilada: `${API_URL}/proxy/devolucao-compilada`
 };
 
-console.log('📡 URLs R2 configuradas via proxy:');
-console.log(`   📄 Movimentos Siago: ${ARQUIVOS_R2_NOVO.movimentosSiago}`);
-console.log(`   📄 Devolução Compilada: ${ARQUIVOS_R2_NOVO.devolucaoCompilada}`);
-console.log(`   📄 Posição Estoque: ${R2_URL}`);
+console.log('📡 URLs R2 configuradas:');
+console.log(`   📄 Movimentos Siago: ${ARQUIVOS_R2.movimentosSiago}`);
+console.log(`   📄 Devolução Compilada: ${ARQUIVOS_R2.devolucaoCompilada}`);
 
 // ============================================
-// VARIÁVEIS GLOBAIS - DASHBOARD ORIGINAL
+// VARIÁVEIS GLOBAIS - DASHBOARD ANTIGO (SEPARAÇÃO)
 // ============================================
 
 let dadosCompletos = [];
 let dadosFiltrados = [];
 let dadosExibidos = [];
 let itemSelecionado = null;
-let abaAtual = 'materiais';
+let abaAtual = 'separacao';
 let mesSelecionado = null;
 let filtroAtivo = null;
 let posicaoEstoque = {};
 
 // ============================================
-// VARIÁVEIS PARA A NOVA FUNCIONALIDADE (MGM)
+// VARIÁVEIS PARA O DASHBOARD NOVO (MGM)
 // ============================================
 
-let dadosMovimentosSiagoNovo = {};
-let dadosDevolucaoCompiladaNovo = [];
-let movimentosDoBancoNovo = [];
-let pendenciasConsolidadasNovo = [];
-let dadosFiltradosNovo = [];
+let dadosMovimentosSiago = {};
+let dadosDevolucaoCompilada = [];
+let movimentosDoBanco = [];
+let pendenciasConsolidadas = [];
+let dadosFiltradosMGM = [];
 
-let abaAtualNovo = 'mgm';
-let itemSelecionadoNovo = null;
-let dadosCarregadosNovo = false;
+let abaAtualMGM = 'mgm';
+let itemSelecionadoMGM = null;
+let dadosCarregadosMGM = false;
 
 // ============================================
 // FUNÇÃO: MOSTRAR TOAST
@@ -70,6 +66,27 @@ function mostrarToast(mensagem, tipo = 'info') {
 // ============================================
 
 function formatarObraParaExibicao(obra) {
+    if (!obra) return '';
+    let limpo = obra.trim().replace(/[^0-9]/g, '');
+    if (limpo.length !== 10) return obra;
+    return limpo.substring(0, 3) + '-' + 
+           limpo.substring(3, 5) + '-' + 
+           limpo.substring(5, 10);
+}
+
+function normalizarObra(obra) {
+    if (!obra) return '';
+    let limpo = obra.trim().replace(/[^0-9]/g, '');
+    if (limpo.length === 10) return limpo;
+    if (limpo.length === 9) return '0' + limpo;
+    if (limpo.length < 9) {
+        const padStart = 10 - limpo.length;
+        return '0'.repeat(padStart) + limpo;
+    }
+    return obra;
+}
+
+function formatarObra(obra) {
     if (!obra) return '';
     let limpo = obra.trim().replace(/[^0-9]/g, '');
     if (limpo.length !== 10) return obra;
@@ -131,30 +148,17 @@ function formatarData(dataString) {
 }
 
 // ============================================
-// FUNÇÃO: BUSCAR VALOR DO ITEM NO R2
-// ============================================
-
-function buscarValorItem(codigo) {
-    if (!codigo) return 0;
-    const item = posicaoEstoque[codigo];
-    if (item && item.valor_unitario) {
-        return item.valor_unitario;
-    }
-    return 0;
-}
-
-// ============================================
-// FUNÇÃO: CARREGAR POSIÇÃO DE ESTOQUE DO R2
+// FUNÇÃO: CARREGAR POSIÇÃO DE ESTOQUE (via proxy)
 // ============================================
 
 async function carregarPosicaoEstoque() {
     try {
-        console.log('🔄 Carregando posição de estoque do R2 via proxy...');
+        console.log('🔄 Carregando posição de estoque...');
         
-        const response = await fetch(R2_URL);
+        const response = await fetch(`${API_URL}/proxy/posicao-estoque`);
         
         if (!response.ok) {
-            console.warn(`⚠️ Arquivo posicao-de-estoque-1050.txt não encontrado (Status: ${response.status})`);
+            console.warn(`⚠️ Arquivo posicao-de-estoque não encontrado (Status: ${response.status})`);
             return;
         }
         
@@ -210,32 +214,20 @@ async function carregarPosicaoEstoque() {
     }
 }
 
-// ============================================
-// FUNÇÕES PARA A NOVA FUNCIONALIDADE (MGM)
-// ============================================
-
-function normalizarObraNovo(obra) {
-    if (!obra) return '';
-    let limpo = obra.trim().replace(/[^0-9]/g, '');
-    if (limpo.length === 10) return limpo;
-    if (limpo.length === 9) return '0' + limpo;
-    if (limpo.length < 9) {
-        const padStart = 10 - limpo.length;
-        return '0'.repeat(padStart) + limpo;
+function buscarValorItem(codigo) {
+    if (!codigo) return 0;
+    const item = posicaoEstoque[codigo];
+    if (item && item.valor_unitario) {
+        return item.valor_unitario;
     }
-    return obra;
+    return 0;
 }
 
-function formatarObraNovo(obra) {
-    if (!obra) return '';
-    let limpo = obra.trim().replace(/[^0-9]/g, '');
-    if (limpo.length !== 10) return obra;
-    return limpo.substring(0, 3) + '-' + 
-           limpo.substring(3, 5) + '-' + 
-           limpo.substring(5, 10);
-}
+// ============================================
+// FUNÇÕES PARA O DASHBOARD MGM (NOVO)
+// ============================================
 
-async function buscarMovimentosDoBancoNovo() {
+async function buscarMovimentosDoBanco() {
     console.log('📡 Buscando movimentos do banco de dados...');
     try {
         const response = await fetch(`${API_URL}/movimento?limit=1000`);
@@ -243,17 +235,17 @@ async function buscarMovimentosDoBancoNovo() {
             throw new Error(`HTTP ${response.status}`);
         }
         const data = await response.json();
-        movimentosDoBancoNovo = data.data || [];
-        console.log(`✅ ${movimentosDoBancoNovo.length} movimentos carregados do banco`);
-        return movimentosDoBancoNovo;
+        movimentosDoBanco = data.data || [];
+        console.log(`✅ ${movimentosDoBanco.length} movimentos carregados do banco`);
+        return movimentosDoBanco;
     } catch (error) {
         console.error('❌ Erro ao buscar movimentos:', error);
         return [];
     }
 }
 
-async function carregarArquivoR2Novo(url, nomeArquivo) {
-    console.log(`📥 Carregando ${nomeArquivo} via proxy...`);
+async function carregarArquivoR2(url, nomeArquivo) {
+    console.log(`📥 Carregando ${nomeArquivo}...`);
     try {
         const response = await fetch(url);
         if (!response.ok) {
@@ -268,7 +260,7 @@ async function carregarArquivoR2Novo(url, nomeArquivo) {
     }
 }
 
-function parsearMovimentosSiagoNovo(texto) {
+function parsearMovimentosSiago(texto) {
     console.log('🔄 Parseando movimentos_siago.txt...');
     const linhas = texto.trim().split('\n');
     
@@ -334,7 +326,7 @@ function parsearMovimentosSiagoNovo(texto) {
     return movimentos;
 }
 
-function parsearDevolucaoCompiladaNovo(texto) {
+function parsearDevolucaoCompilada(texto) {
     console.log('🔄 Parseando devolucao_compilada.txt...');
     const linhas = texto.trim().split('\n');
     
@@ -386,7 +378,7 @@ function parsearDevolucaoCompiladaNovo(texto) {
     return itens;
 }
 
-function consolidarPendenciasNovo(devolucaoItens, movimentosSiago, movimentosBanco) {
+function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanco) {
     console.log('🔄 Consolidando pendências MGM...');
     
     const pendencias = [];
@@ -400,7 +392,7 @@ function consolidarPendenciasNovo(devolucaoItens, movimentosSiago, movimentosBan
     
     const gruposPorObra = {};
     devolucaoItens.forEach(item => {
-        const obraNorm = normalizarObraNovo(item.obra);
+        const obraNorm = normalizarObra(item.obra);
         if (!gruposPorObra[obraNorm]) {
             gruposPorObra[obraNorm] = {
                 obra: obraNorm,
@@ -418,7 +410,7 @@ function consolidarPendenciasNovo(devolucaoItens, movimentosSiago, movimentosBan
         const { obra, data, itens } = grupo;
         
         const movimentosRelacionados = movimentosBanco.filter(m => {
-            const obraMov = normalizarObraNovo(m.obra);
+            const obraMov = normalizarObra(m.obra);
             return obraMov === obraNorm;
         });
         
@@ -479,7 +471,7 @@ function consolidarPendenciasNovo(devolucaoItens, movimentosSiago, movimentosBan
             
             pendencias.push({
                 obra: obraNorm,
-                obraFormatada: formatarObraNovo(obraNorm),
+                obraFormatada: formatarObra(obraNorm),
                 data: data,
                 codigo: itemDev.codigo,
                 descricao: itemDev.descricao,
@@ -502,52 +494,53 @@ function consolidarPendenciasNovo(devolucaoItens, movimentosSiago, movimentosBan
     return pendencias;
 }
 
-async function carregarDadosCompletosNovo() {
-    console.log('🚀 Iniciando carregamento completo da visão MGM...');
+async function carregarDadosMGM() {
+    console.log('🚀 Iniciando carregamento dos dados MGM...');
     
     try {
         const [textoMovimentos, textoDevolucao, movimentosBanco] = await Promise.all([
-            carregarArquivoR2Novo(ARQUIVOS_R2_NOVO.movimentosSiago, 'movimentos_siago.txt'),
-            carregarArquivoR2Novo(ARQUIVOS_R2_NOVO.devolucaoCompilada, 'devolucao_compilada.txt'),
-            buscarMovimentosDoBancoNovo()
+            carregarArquivoR2(ARQUIVOS_R2.movimentosSiago, 'movimentos_siago.txt'),
+            carregarArquivoR2(ARQUIVOS_R2.devolucaoCompilada, 'devolucao_compilada.txt'),
+            buscarMovimentosDoBanco()
         ]);
         
-        dadosMovimentosSiagoNovo = parsearMovimentosSiagoNovo(textoMovimentos);
-        dadosDevolucaoCompiladaNovo = parsearDevolucaoCompiladaNovo(textoDevolucao);
-        movimentosDoBancoNovo = movimentosBanco;
+        dadosMovimentosSiago = parsearMovimentosSiago(textoMovimentos);
+        dadosDevolucaoCompilada = parsearDevolucaoCompilada(textoDevolucao);
+        movimentosDoBanco = movimentosBanco;
         
-        pendenciasConsolidadasNovo = consolidarPendenciasNovo(
-            dadosDevolucaoCompiladaNovo, 
-            dadosMovimentosSiagoNovo, 
-            movimentosDoBancoNovo
+        pendenciasConsolidadas = consolidarPendenciasMGM(
+            dadosDevolucaoCompilada, 
+            dadosMovimentosSiago, 
+            movimentosDoBanco
         );
-        dadosFiltradosNovo = [...pendenciasConsolidadasNovo];
+        dadosFiltradosMGM = [...pendenciasConsolidadas];
         
-        dadosCarregadosNovo = true;
+        dadosCarregadosMGM = true;
         
-        console.log(`📊 Dados carregados (visão MGM):`);
-        console.log(`   - Movimentos Siago: ${Object.keys(dadosMovimentosSiagoNovo).length}`);
-        console.log(`   - Itens Devolução: ${dadosDevolucaoCompiladaNovo.length}`);
-        console.log(`   - Movimentos Banco: ${movimentosDoBancoNovo.length}`);
-        console.log(`   - Pendências Consolidadas: ${pendenciasConsolidadasNovo.length}`);
+        console.log(`📊 Dados MGM carregados:`);
+        console.log(`   - Movimentos Siago: ${Object.keys(dadosMovimentosSiago).length}`);
+        console.log(`   - Itens Devolução: ${dadosDevolucaoCompilada.length}`);
+        console.log(`   - Movimentos Banco: ${movimentosDoBanco.length}`);
+        console.log(`   - Pendências Consolidadas: ${pendenciasConsolidadas.length}`);
         
-        const loadingElement = document.getElementById('loadingNovo');
+        // Esconder loading e mostrar dashboard MGM
+        const loadingElement = document.getElementById('loadingMGM');
         if (loadingElement) loadingElement.style.display = 'none';
         
-        atualizarDashboardNovo();
+        renderizarDashboardMGM();
         
         return true;
         
     } catch (error) {
-        console.error('❌ Erro ao carregar dados (visão MGM):', error);
-        const loadingElement = document.getElementById('loadingNovo');
+        console.error('❌ Erro ao carregar dados MGM:', error);
+        const loadingElement = document.getElementById('loadingMGM');
         if (loadingElement) {
             loadingElement.innerHTML = `
                 <div style="color: #FC8181; text-align: center; padding: 20px;">
                     <div style="font-size: 36px;">❌</div>
                     <p style="margin-top: 10px;">Erro ao carregar dados MGM</p>
                     <p style="font-size: 12px; color: #718096;">${error.message}</p>
-                    <button onclick="carregarDadosCompletosNovo()" style="margin-top: 10px; padding: 8px 20px; background: #4299E1; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    <button onclick="carregarDadosMGM()" style="margin-top: 10px; padding: 8px 20px; background: #4299E1; color: white; border: none; border-radius: 6px; cursor: pointer;">
                         🔄 Tentar novamente
                     </button>
                 </div>
@@ -557,33 +550,42 @@ async function carregarDadosCompletosNovo() {
     }
 }
 
-function atualizarDashboardNovo() {
-    console.log('🔄 Atualizando dashboard (visão MGM)...');
+// ============================================
+// RENDERIZAÇÃO DO DASHBOARD MGM
+// ============================================
+
+function renderizarDashboardMGM() {
+    console.log('🔄 Renderizando dashboard MGM...');
     
-    const containerNovo = document.getElementById('dashboardNovo');
-    if (!containerNovo) {
-        console.warn('⚠️ Container da visão MGM não encontrado');
+    const container = document.getElementById('dashboardMGMContent');
+    if (!container) {
+        console.warn('⚠️ Container MGM não encontrado');
         return;
     }
     
-    const dadosExibir = abaAtualNovo === 'mgm' 
-        ? dadosFiltradosNovo 
-        : dadosFiltradosNovo.filter(p => p.status === 'PENDENTE' || p.status === 'PARCIAL');
+    const dadosExibir = abaAtualMGM === 'mgm' 
+        ? dadosFiltradosMGM 
+        : dadosFiltradosMGM.filter(p => p.status === 'PENDENTE' || p.status === 'PARCIAL');
     
-    atualizarKPIsNovo(dadosExibir);
-    renderizarListaPendenciasNovo(dadosExibir);
-    renderizarGraficosNovo(dadosExibir);
+    renderizarKPIsMGM(dadosExibir);
+    renderizarListaObrasMGM(dadosExibir);
+    renderizarGraficosMGM(dadosExibir);
     
-    const totalRegistros = document.getElementById('totalRegistrosNovo');
+    const totalRegistros = document.getElementById('totalRegistrosMGM');
     if (totalRegistros) {
         totalRegistros.textContent = `${dadosExibir.length} pendências`;
+    }
+    
+    // Se tem item selecionado, mostra detalhes
+    if (itemSelecionadoMGM) {
+        renderizarDetalhesObraMGM(itemSelecionadoMGM);
     }
     
     console.log(`✅ Dashboard MGM atualizado com ${dadosExibir.length} registros`);
 }
 
-function atualizarKPIsNovo(pendencias) {
-    const container = document.getElementById('kpiGridNovo');
+function renderizarKPIsMGM(pendencias) {
+    const container = document.getElementById('kpiGridMGM');
     if (!container) return;
     
     const total = pendencias.length;
@@ -638,8 +640,8 @@ function atualizarKPIsNovo(pendencias) {
     `;
 }
 
-function renderizarListaPendenciasNovo(pendencias) {
-    const container = document.getElementById('itemListNovo');
+function renderizarListaObrasMGM(pendencias) {
+    const container = document.getElementById('itemListMGM');
     if (!container) return;
     
     if (!pendencias || pendencias.length === 0) {
@@ -653,82 +655,95 @@ function renderizarListaPendenciasNovo(pendencias) {
         return;
     }
     
-    const gruposPorObra = {};
+    // Agrupar por obra e data
+    const grupos = {};
     pendencias.forEach(p => {
-        const obra = p.obraFormatada || p.obra;
-        if (!gruposPorObra[obra]) {
-            gruposPorObra[obra] = {
-                obra: obra,
-                obraRaw: p.obra,
+        const chave = `${p.obra}|${p.data}`;
+        if (!grupos[chave]) {
+            grupos[chave] = {
+                obra: p.obra,
+                obraFormatada: p.obraFormatada,
+                data: p.data,
                 itens: [],
                 totalPendentes: 0,
                 totalAtendidos: 0,
-                totalParciais: 0
+                totalParciais: 0,
+                status: 'PENDENTE'
             };
         }
-        gruposPorObra[obra].itens.push(p);
-        if (p.status === 'PENDENTE') gruposPorObra[obra].totalPendentes++;
-        else if (p.status === 'PARCIAL') gruposPorObra[obra].totalParciais++;
-        else if (p.status === 'ATENDIDO') gruposPorObra[obra].totalAtendidos++;
+        grupos[chave].itens.push(p);
+        if (p.status === 'PENDENTE') grupos[chave].totalPendentes++;
+        else if (p.status === 'PARCIAL') grupos[chave].totalParciais++;
+        else if (p.status === 'ATENDIDO') grupos[chave].totalAtendidos++;
+        
+        if (grupos[chave].totalPendentes > 0 || grupos[chave].totalParciais > 0) {
+            grupos[chave].status = 'PENDENTE';
+        } else {
+            grupos[chave].status = 'ATENDIDO';
+        }
     });
     
     let html = `
-        <div class="list-header" style="display: grid; grid-template-columns: 120px 1fr 80px 90px 100px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 120px 120px 1fr 80px 90px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
-            <span>Descrição / Status</span>
+            <span>Data</span>
+            <span>Descrição</span>
             <span style="text-align: right;">Qtd</span>
             <span style="text-align: center;">Status</span>
-            <span style="text-align: right;">Movimento</span>
         </div>
     `;
     
-    for (const obra in gruposPorObra) {
-        const grupo = gruposPorObra[obra];
-        const isActive = itemSelecionadoNovo && itemSelecionadoNovo.obra === obra;
-        const totalPend = grupo.totalPendentes + grupo.totalParciais;
+    for (const chave in grupos) {
+        const grupo = grupos[chave];
+        const isActive = itemSelecionadoMGM && 
+            itemSelecionadoMGM.obra === grupo.obra && 
+            itemSelecionadoMGM.data === grupo.data;
         
-        let statusBadgeObra = '';
+        const totalPend = grupo.totalPendentes + grupo.totalParciais;
+        const totalItens = grupo.itens.length;
+        
+        let statusBadge = '';
         if (totalPend > 0) {
-            statusBadgeObra = grupo.totalParciais > 0 
+            statusBadge = grupo.totalParciais > 0 
                 ? '<span class="badge-status" style="background: #FEFCBF; color: #975A16;">⏳ Parcial</span>'
                 : '<span class="badge-status pendente">⏳ Pendente</span>';
         } else {
-            statusBadgeObra = '<span class="badge-status baixado">✅ Atendido</span>';
+            statusBadge = '<span class="badge-status baixado">✅ Atendido</span>';
         }
         
+        const dataFormatada = formatarData(grupo.data);
+        
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObraPendenciaNovo('${obra}')" style="display: grid; grid-template-columns: 120px 1fr 80px 90px 100px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
-                <span class="item-code">🏗️ ${obra}</span>
-                <span class="item-desc">${grupo.itens.length} itens (${totalPend} pendentes)</span>
-                <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${grupo.itens.length}</span>
-                <span style="text-align: center;">${statusBadgeObra}</span>
-                <span style="text-align: right; font-size: 11px; color: #718096;">
-                    ${totalPend > 0 ? 'Pendente' : 'Atendido'}
-                </span>
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObraMGM('${grupo.obra}', '${grupo.data}')" style="display: grid; grid-template-columns: 120px 120px 1fr 80px 90px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+                <span class="item-code">${grupo.obraFormatada}</span>
+                <span style="font-size: 12px; color: #718096;">${dataFormatada}</span>
+                <span class="item-desc">${totalItens} itens (${totalPend} pendentes)</span>
+                <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${totalItens}</span>
+                <span style="text-align: center;">${statusBadge}</span>
             </div>
         `;
         
+        // Se selecionado, mostra os itens detalhados
         if (isActive) {
             grupo.itens.forEach(item => {
-                const statusBadge = item.status === 'ATENDIDO' 
+                const statusBadgeItem = item.status === 'ATENDIDO' 
                     ? '<span class="badge-status baixado">✅ Atendido</span>'
                     : item.status === 'PARCIAL'
                     ? '<span class="badge-status" style="background: #FEFCBF; color: #975A16;">⏳ Parcial</span>'
                     : '<span class="badge-status pendente">⏳ Pendente</span>';
                 
+                const qtdInfo = `${item.qtdEncontrada.toFixed(2)}/${item.qtdEsperada.toFixed(2)}`;
                 const movInfo = item.movimentoEncontrado 
                     ? `${item.movimentoEncontrado} (${item.tipoMovimento || '?'})`
                     : 'Nenhum';
                 
-                const qtdInfo = `${item.qtdEncontrada.toFixed(2)}/${item.qtdEsperada.toFixed(2)}`;
-                
                 html += `
-                    <div style="display: grid; grid-template-columns: 120px 1fr 80px 90px 100px; gap: 8px; padding: 6px 12px 6px 30px; border-bottom: 1px solid #EDF2F7; font-size: 12px; background: #F7FAFC;">
+                    <div style="display: grid; grid-template-columns: 120px 120px 1fr 80px 90px; gap: 8px; padding: 6px 12px 6px 30px; border-bottom: 1px solid #EDF2F7; font-size: 12px; background: #F7FAFC;">
                         <span style="color: #718096; font-size: 11px;">${item.codigo}</span>
+                        <span style="color: #718096; font-size: 11px;"></span>
                         <span style="color: #4A5568; font-size: 11px;">${item.descricao}</span>
                         <span style="text-align: right; font-weight: 500; font-size: 11px;">${qtdInfo}</span>
-                        <span style="text-align: center;">${statusBadge}</span>
-                        <span style="text-align: right; font-size: 10px; color: #718096;">${movInfo}</span>
+                        <span style="text-align: center;">${statusBadgeItem}</span>
                     </div>
                 `;
             });
@@ -738,7 +753,7 @@ function renderizarListaPendenciasNovo(pendencias) {
     container.innerHTML = html;
 }
 
-function renderizarGraficosNovo(pendencias) {
+function renderizarGraficosMGM(pendencias) {
     const statusCount = {
         'PENDENTE': 0,
         'PARCIAL': 0,
@@ -784,8 +799,9 @@ function renderizarGraficosNovo(pendencias) {
         `;
     }
     
-    document.getElementById('statusChartNovo').innerHTML = htmlStatus;
+    document.getElementById('statusChartMGM').innerHTML = htmlStatus;
     
+    // Gráfico de Obras
     const obrasSet = new Set(pendencias.map(p => p.obra));
     const obrasComPendencia = new Set(
         pendencias.filter(p => p.status === 'PENDENTE' || p.status === 'PARCIAL')
@@ -822,248 +838,151 @@ function renderizarGraficosNovo(pendencias) {
         </div>
     `;
     
-    document.getElementById('valorChartNovo').innerHTML = htmlObras;
+    document.getElementById('valorChartMGM').innerHTML = htmlObras;
 }
 
-function selecionarObraPendenciaNovo(obra) {
-    console.log(`🔍 Selecionando obra MGM: ${obra}`);
-    if (itemSelecionadoNovo && itemSelecionadoNovo.obra === obra) {
-        itemSelecionadoNovo = null;
+function selecionarObraMGM(obra, data) {
+    console.log(`🔍 Selecionando obra MGM: ${obra} - ${data}`);
+    
+    if (itemSelecionadoMGM && itemSelecionadoMGM.obra === obra && itemSelecionadoMGM.data === data) {
+        itemSelecionadoMGM = null;
     } else {
-        itemSelecionadoNovo = { obra: obra };
+        itemSelecionadoMGM = { obra: obra, data: data };
     }
-    atualizarDashboardNovo();
+    
+    renderizarDashboardMGM();
 }
 
-function trocarAbaNovo(aba) {
-    console.log(`🔄 Trocando para aba: ${aba} (visão MGM)`);
-    abaAtualNovo = aba;
-    itemSelecionadoNovo = null;
+function renderizarDetalhesObraMGM(itemSelecionado) {
+    const container = document.getElementById('itemDetailsMGM');
+    if (!container) return;
     
-    document.querySelectorAll('.btn-aba-novo').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.aba === aba);
-    });
-    
-    const listTitle = document.getElementById('listTitleNovo');
-    if (listTitle) {
-        const titles = {
-            'mgm': '📌 Pendências MGM',
-            'separacao': '📦 Pendências Separação'
-        };
-        listTitle.textContent = titles[aba] || '📌 Pendências MGM';
-    }
-    
-    atualizarDashboardNovo();
-}
-
-function aplicarFiltrosNovo() {
-    console.log('🔄 Aplicando filtros (visão MGM)...');
-    const filtroStatus = document.getElementById('filterStatusNovo')?.value || 'todos';
-    const buscaTexto = document.getElementById('filterBuscaNovo')?.value?.toLowerCase() || '';
-    const buscaObra = document.getElementById('filterObraNovo')?.value || '';
-    
-    let filtrados = [...pendenciasConsolidadasNovo];
-    
-    if (filtroStatus !== 'todos') {
-        filtrados = filtrados.filter(p => p.status === filtroStatus);
-    }
-    
-    if (buscaTexto) {
-        filtrados = filtrados.filter(p => 
-            p.codigo.toLowerCase().includes(buscaTexto) || 
-            p.descricao.toLowerCase().includes(buscaTexto)
-        );
-    }
-    
-    if (buscaObra) {
-        const obraNorm = normalizarObraNovo(buscaObra);
-        filtrados = filtrados.filter(p => 
-            p.obra.includes(obraNorm) || 
-            p.obraFormatada.includes(buscaObra)
-        );
-    }
-    
-    if (abaAtualNovo === 'separacao') {
-        filtrados = filtrados.filter(p => p.status === 'PENDENTE' || p.status === 'PARCIAL');
-    }
-    
-    dadosFiltradosNovo = filtrados;
-    
-    const totalRegistros = document.getElementById('totalRegistrosNovo');
-    if (totalRegistros) {
-        totalRegistros.textContent = `${filtrados.length} pendências`;
-    }
-    
-    atualizarDashboardNovo();
-}
-
-function limparFiltrosNovo() {
-    console.log('🧹 Limpando filtros (visão MGM)...');
-    document.getElementById('filterStatusNovo').value = 'todos';
-    document.getElementById('filterBuscaNovo').value = '';
-    document.getElementById('filterObraNovo').value = '';
-    dadosFiltradosNovo = [...pendenciasConsolidadasNovo];
-    aplicarFiltrosNovo();
-}
-
-function exportarPendenciasNovo() {
-    console.log('📤 Exportando pendências (visão MGM)...');
-    
-    const dados = dadosFiltradosNovo.map(p => ({
-        'Obra': p.obraFormatada || p.obra,
-        'Data': p.data,
-        'Código': p.codigo,
-        'Descrição': p.descricao,
-        'Qtd Esperada': p.qtdEsperada,
-        'Qtd Encontrada': p.qtdEncontrada,
-        'Status': p.status,
-        'Motivo': p.motivo,
-        'Movimento': p.movimentoEncontrado || '',
-        'Tipo': p.tipoMovimento || '',
-        'Sigla': p.siglaMovimento || ''
-    }));
-    
-    if (dados.length === 0) {
-        mostrarToast('⚠️ Nenhum dado MGM para exportar', 'warning');
+    if (!itemSelecionado) {
+        container.innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">👆</div>
+                <p>Selecione uma obra para ver os detalhes</p>
+            </div>
+        `;
         return;
     }
     
-    const headers = Object.keys(dados[0]);
-    let csv = headers.join(';') + '\n';
-    dados.forEach(row => {
-        csv += headers.map(h => {
-            let val = row[h] || '';
-            if (typeof val === 'string' && val.includes(';')) {
-                val = `"${val}"`;
-            }
-            return val;
-        }).join(';') + '\n';
-    });
+    const pendencias = dadosFiltradosMGM.filter(p => 
+        p.obra === itemSelecionado.obra && p.data === itemSelecionado.data
+    );
     
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `pendencias_mgm_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    mostrarToast(`✅ ${dados.length} pendências MGM exportadas`, 'success');
-}
-
-function criarContainerNovo() {
-    console.log('🔧 Criando container da visão MGM...');
-    
-    const dashboardContent = document.getElementById('dashboardContent');
-    if (!dashboardContent) {
-        console.error('❌ Dashboard content não encontrado');
+    if (pendencias.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">📭</div>
+                <p>Nenhum detalhe encontrado</p>
+            </div>
+        `;
         return;
     }
     
-    const containerNovo = document.createElement('div');
-    containerNovo.id = 'dashboardNovo';
-    containerNovo.style.display = 'block';
+    const obra = pendencias[0].obraFormatada;
+    const data = formatarData(pendencias[0].data);
     
-    containerNovo.innerHTML = `
-        <div style="margin-top: 30px; border-top: 2px solid #E2E8F0; padding-top: 20px;">
-            <h2 style="color: #2D3748; font-size: 18px; margin-bottom: 15px;">📊 Visão MGM - Pendências Integradas</h2>
+    let totalPendentes = 0;
+    let totalAtendidos = 0;
+    let totalParciais = 0;
+    let valorTotal = 0;
+    
+    pendencias.forEach(p => {
+        if (p.status === 'PENDENTE') totalPendentes++;
+        else if (p.status === 'PARCIAL') totalParciais++;
+        else if (p.status === 'ATENDIDO') totalAtendidos++;
+        valorTotal += p.qtdEsperada * buscarValorItem(p.codigo);
+    });
+    
+    let html = `
+        <div class="detail-title">🏗️ ${obra}</div>
+        <div class="detail-row">
+            <span class="label">📅 Data de Programação:</span>
+            <span class="value">${data}</span>
         </div>
-        
-        <div class="abas-container" style="margin-top: 0;">
-            <button class="btn-aba btn-aba-novo active" data-aba="mgm" onclick="trocarAbaNovo('mgm')">
-                📌 Pendências MGM
-            </button>
-            <button class="btn-aba btn-aba-novo" data-aba="separacao" onclick="trocarAbaNovo('separacao')">
-                📦 Pendências Separação
-            </button>
+        <div class="detail-row">
+            <span class="label">📦 Total de Itens:</span>
+            <span class="value">${pendencias.length}</span>
         </div>
-
-        <div class="filters-bar">
-            <div class="filter-group">
-                <label>📊 Status:</label>
-                <select id="filterStatusNovo">
-                    <option value="todos">Todos</option>
-                    <option value="PENDENTE">⏳ Pendente</option>
-                    <option value="PARCIAL">⏳ Parcial</option>
-                    <option value="ATENDIDO">✅ Atendido</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>🔍 Buscar:</label>
-                <input type="text" id="filterBuscaNovo" placeholder="Código ou descrição..." style="width: 180px;">
-            </div>
-            <div class="filter-group">
-                <label>🏗️ Obra:</label>
-                <input type="text" id="filterObraNovo" placeholder="Número da obra..." style="width: 140px;">
-            </div>
-            <button class="btn-filter primary" onclick="aplicarFiltrosNovo()">🔍 Filtrar</button>
-            <button class="btn-filter secondary" onclick="limparFiltrosNovo()">🧹 Limpar</button>
-            <button class="btn-filter primary" onclick="exportarPendenciasNovo()" style="background: #48BB78;">📤 Exportar</button>
-            <span class="total-registros" id="totalRegistrosNovo">0 pendências</span>
+        <div class="detail-row">
+            <span class="label">⏳ Pendentes:</span>
+            <span class="value" style="color: #ED8936;">${totalPendentes}</span>
         </div>
-
-        <div id="loadingNovo" style="padding: 40px; text-align: center;">
-            <div class="spinner" style="margin: 0 auto; width: 40px; height: 40px; border: 4px solid #E2E8F0; border-top-color: #ED8936; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
-            <p style="margin-top: 15px; color: #718096;">Carregando dados da visão MGM...</p>
+        <div class="detail-row">
+            <span class="label">⏳ Parciais:</span>
+            <span class="value" style="color: #F6AD55;">${totalParciais}</span>
         </div>
-
-        <div class="kpi-grid" id="kpiGridNovo">
-            <div class="loading-dashboard" style="min-height: 60px; grid-column: 1 / -1;">
-                <div class="spinner"></div>
-            </div>
+        <div class="detail-row">
+            <span class="label">✅ Atendidos:</span>
+            <span class="value" style="color: #48BB78;">${totalAtendidos}</span>
         </div>
-
-        <div class="dashboard-main">
-            <div class="dashboard-card">
-                <h3 id="listTitleNovo">📌 Pendências MGM</h3>
-                <div id="itemListNovo" class="item-group-list">
-                    <div class="loading-dashboard">
-                        <div class="spinner"></div>
-                        <p>Carregando itens...</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="dashboard-card">
-                <h3>📋 Detalhes</h3>
-                <div id="itemDetailsNovo" class="item-details-panel">
-                    <div class="empty-state-dashboard">
-                        <div class="icon">👆</div>
-                        <p>Selecione uma obra para ver os detalhes</p>
-                    </div>
-                </div>
-            </div>
+        <div class="detail-row">
+            <span class="label">💰 Valor Total:</span>
+            <span class="value" style="color: #ED8936; font-weight: 700;">${formatarValor(valorTotal)}</span>
         </div>
-
-        <div class="dashboard-charts">
-            <div class="dashboard-card">
-                <h3>📊 Status das Pendências</h3>
-                <div id="statusChartNovo" class="chart-container">
-                    <div class="loading-dashboard" style="min-height: 100px;">
-                        <div class="spinner"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="dashboard-card">
-                <h3>🏗️ Situação das Obras</h3>
-                <div id="valorChartNovo" class="chart-container">
-                    <div class="loading-dashboard" style="min-height: 100px;">
-                        <div class="spinner"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div class="detail-section-title">📋 Itens Pendentes:</div>
+        <div class="item-detail-obras">
     `;
     
-    dashboardContent.appendChild(containerNovo);
-    console.log('✅ Container da visão MGM criado!');
+    pendencias.forEach(item => {
+        const statusBadge = item.status === 'ATENDIDO' 
+            ? '<span class="badge-status baixado">✅ Atendido</span>'
+            : item.status === 'PARCIAL'
+            ? '<span class="badge-status" style="background: #FEFCBF; color: #975A16;">⏳ Parcial</span>'
+            : '<span class="badge-status pendente">⏳ Pendente</span>';
+        
+        const qtdInfo = `${item.qtdEncontrada.toFixed(2)}/${item.qtdEsperada.toFixed(2)}`;
+        const valorItem = item.qtdEsperada * buscarValorItem(item.codigo);
+        
+        html += `
+            <div class="obra-row">
+                <span><strong>${item.codigo}</strong> - ${item.descricao}</span>
+                <span>${qtdInfo} ${statusBadge} 💰 ${formatarValor(valorItem)}</span>
+            </div>
+        `;
+    });
+    
+    html += `</div>`;
+    
+    container.innerHTML = html;
 }
 
 // ============================================
-// FUNÇÕES ORIGINAIS DO DASHBOARD (SEPARAÇÃO)
+// FUNÇÕES DE TROCA DE ABA
+// ============================================
+
+function trocarAbaPrincipal(aba) {
+    console.log(`🔄 Trocando para aba: ${aba}`);
+    abaAtual = aba;
+    
+    // Atualizar botões
+    document.querySelectorAll('.btn-aba-principal').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.aba === aba);
+    });
+    
+    // Esconder/mostrar conteúdos
+    const containerSeparacao = document.getElementById('dashboardSeparacao');
+    const containerMGM = document.getElementById('dashboardMGM');
+    
+    if (aba === 'separacao') {
+        containerSeparacao.style.display = 'block';
+        containerMGM.style.display = 'none';
+    } else {
+        containerSeparacao.style.display = 'none';
+        containerMGM.style.display = 'block';
+        // Se dados MGM ainda não foram carregados, carregar
+        if (!dadosCarregadosMGM) {
+            carregarDadosMGM();
+        } else {
+            renderizarDashboardMGM();
+        }
+    }
+}
+
+// ============================================
+// FUNÇÕES DO DASHBOARD ANTIGO (SEPARAÇÃO)
 // ============================================
 
 function criarMeses() {
@@ -1125,81 +1044,8 @@ function filtrarPorMes(mes) {
     aplicarFiltros();
 }
 
-function criarAbas() {
-    const mainContainer = document.querySelector('.dashboard-main');
-    if (!mainContainer) return;
-    
-    const existingAbas = document.querySelector('.abas-container');
-    if (existingAbas && !existingAbas.closest('#dashboardNovo')) existingAbas.remove();
-    
-    const abaContainer = document.createElement('div');
-    abaContainer.className = 'abas-container';
-    abaContainer.id = 'abasContainerOriginal';
-    abaContainer.innerHTML = `
-        <button class="btn-aba active" data-aba="materiais" onclick="trocarAba('materiais')">
-            📦 Materiais
-        </button>
-        <button class="btn-aba" data-aba="obras" onclick="trocarAba('obras')">
-            🏗️ Obras
-        </button>
-    `;
-    
-    mainContainer.parentNode.insertBefore(abaContainer, mainContainer);
-}
-
-function trocarAba(aba) {
-    abaAtual = aba;
-    itemSelecionado = null;
-    filtroAtivo = null;
-    
-    document.querySelectorAll('#abasContainerOriginal .btn-aba').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.aba === aba);
-    });
-    
-    const listTitle = document.getElementById('listTitle');
-    if (listTitle) {
-        const titles = {
-            'materiais': '📦 Itens Pendentes',
-            'obras': '🏗️ Obras com Pendências'
-        };
-        listTitle.textContent = titles[aba] || '📦 Itens Pendentes';
-    }
-    
-    renderizarDashboard(dadosFiltrados);
-}
-
-function aplicarFiltroCard(tipo, valor) {
-    console.log(`🔍 Aplicando filtro do card: ${tipo} = ${valor}`);
-    
-    if (filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor) {
-        filtroAtivo = null;
-        dadosExibidos = [...dadosFiltrados];
-    } else {
-        filtroAtivo = { tipo, valor };
-        
-        if (tipo === 'status') {
-            dadosExibidos = dadosFiltrados.filter(pendencia => {
-                const itens = (pendencia.itens || []).filter(item => 
-                    (item.baixado || 'NÃO') === valor
-                );
-                return itens.length > 0;
-            });
-        } else if (tipo === 'total') {
-            dadosExibidos = [...dadosFiltrados];
-        }
-    }
-    
-    const totalRegistros = document.getElementById('totalRegistros');
-    if (totalRegistros) {
-        const textoFiltro = filtroAtivo ? ` (filtrado: ${filtroAtivo.tipo})` : '';
-        totalRegistros.textContent = `${dadosExibidos.length} pendências${textoFiltro}`;
-    }
-    
-    renderizarDashboard(dadosExibidos);
-}
-
 function aplicarFiltros() {
-    console.log('🔄 Aplicando filtros...');
+    console.log('🔄 Aplicando filtros (Separação)...');
     const dataInicio = document.getElementById('filterDataInicio')?.value || '';
     const dataFim = document.getElementById('filterDataFim')?.value || '';
     const filtroStatus = document.getElementById('filterStatus')?.value || 'todos';
@@ -1213,7 +1059,6 @@ function aplicarFiltros() {
             const mes = getMesAno(item.data_programacao);
             return mes === mesSelecionado;
         });
-        console.log(`📅 Após filtro de mês: ${filtrados.length} pendências`);
     }
     
     if (dataInicio || dataFim) {
@@ -1223,7 +1068,6 @@ function aplicarFiltros() {
             if (dataFim && dataItem > new Date(dataFim)) return false;
             return true;
         });
-        console.log(`📅 Após filtro de período: ${filtrados.length} pendências`);
     }
     
     if (filtroStatus !== 'todos') {
@@ -1238,7 +1082,6 @@ function aplicarFiltros() {
                 (item.baixado || 'NÃO') === statusValue
             )
         })).filter(pendencia => pendencia.itens && pendencia.itens.length > 0);
-        console.log(`📊 Após filtro de status: ${filtrados.length} pendências`);
     }
     
     if (buscaTexto) {
@@ -1250,7 +1093,6 @@ function aplicarFiltros() {
                 return codigo.includes(buscaTexto) || descricao.includes(buscaTexto);
             })
         })).filter(pendencia => pendencia.itens && pendencia.itens.length > 0);
-        console.log(`🔍 Após filtro de busca: ${filtrados.length} pendências`);
     }
     
     if (buscaObra) {
@@ -1258,7 +1100,6 @@ function aplicarFiltros() {
             const obra = (pendencia.obra || '').toLowerCase();
             return obra.includes(buscaObra.toLowerCase());
         });
-        console.log(`🏗️ Após filtro de obra: ${filtrados.length} pendências`);
     }
     
     dadosFiltrados = filtrados;
@@ -1270,7 +1111,7 @@ function aplicarFiltros() {
         totalRegistros.textContent = `${filtrados.length} pendências`;
     }
     
-    renderizarDashboard(filtrados);
+    renderizarDashboardSeparacao(filtrados);
 }
 
 function limparFiltros() {
@@ -1291,6 +1132,30 @@ function limparFiltros() {
     });
     
     aplicarFiltros();
+}
+
+function renderizarDashboardSeparacao(pendencias) {
+    if (!pendencias || pendencias.length === 0) {
+        document.getElementById('itemList').innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">📭</div>
+                <p>Nenhuma pendência encontrada</p>
+                <p class="sub">Tente ajustar os filtros</p>
+            </div>
+        `;
+        document.getElementById('itemDetails').innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">👆</div>
+                <p>Selecione um item para ver os detalhes</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const itensAgrupados = agruparItensPorCodigo(pendencias);
+    renderizarListaItensSeparacao(itensAgrupados);
+    renderizarGraficosSeparacao(itensAgrupados);
+    atualizarKPIsSeparacao(itensAgrupados);
 }
 
 function agruparItensPorCodigo(pendencias) {
@@ -1370,213 +1235,7 @@ function agruparItensPorCodigo(pendencias) {
     return resultado;
 }
 
-function agruparPorObra(pendencias) {
-    console.log(`🏗️ Agrupando por obra...`);
-    const obras = {};
-    
-    pendencias.forEach(pendencia => {
-        const obra = pendencia.obra || 'SEM OBRA';
-        const itens = pendencia.itens || [];
-        const dataProgramacao = pendencia.data_programacao || '';
-        
-        if (!obras[obra]) {
-            obras[obra] = {
-                obra: obra,
-                datas: new Set(),
-                itens: [],
-                totalItens: 0,
-                skus: [],
-                skusSet: new Set()
-            };
-        }
-        
-        obras[obra].datas.add(dataProgramacao);
-        
-        itens.forEach(item => {
-            obras[obra].itens.push({
-                ...item,
-                data: dataProgramacao,
-                numero: pendencia.numero
-            });
-            const qtd = parseFloat(item.quantidade) || 0;
-            obras[obra].totalItens += qtd;
-            
-            if (item.codigo) {
-                obras[obra].skus.push(item.codigo);
-                obras[obra].skusSet.add(item.codigo);
-            }
-        });
-    });
-    
-    const resultado = Object.values(obras).map(obra => ({
-        ...obra,
-        datas: Array.from(obra.datas).sort(),
-        skusCount: obra.skus.length,
-        skusUnico: obra.skusSet.size
-    })).sort((a, b) => b.skusCount - a.skusCount);
-    
-    console.log(`✅ ${resultado.length} obras agrupadas`);
-    return resultado;
-}
-
-function renderizarDashboard(pendencias) {
-    if (!pendencias || pendencias.length === 0) {
-        console.log('📭 Nenhuma pendência para renderizar');
-        document.getElementById('itemList').innerHTML = `
-            <div class="empty-state-dashboard">
-                <div class="icon">📭</div>
-                <p>Nenhuma pendência encontrada</p>
-                <p class="sub">Tente ajustar os filtros</p>
-            </div>
-        `;
-        document.getElementById('itemDetails').innerHTML = `
-            <div class="empty-state-dashboard">
-                <div class="icon">👆</div>
-                <p>Selecione um item para ver os detalhes</p>
-            </div>
-        `;
-        return;
-    }
-    
-    if (abaAtual === 'materiais') {
-        const itensAgrupados = agruparItensPorCodigo(pendencias);
-        renderizarKPIsMateriais(itensAgrupados);
-        renderizarListaItens(itensAgrupados);
-        renderizarGraficos(itensAgrupados);
-        
-        if (itemSelecionado && itemSelecionado.tipo === 'material') {
-            const encontrado = itensAgrupados.find(i => i.codigo === itemSelecionado.codigo);
-            if (encontrado) {
-                renderizarDetalhes(encontrado);
-            } else {
-                document.getElementById('itemDetails').innerHTML = `
-                    <div class="empty-state-dashboard">
-                        <div class="icon">👆</div>
-                        <p>Item não encontrado</p>
-                    </div>
-                `;
-            }
-        }
-    } else {
-        const obrasAgrupadas = agruparPorObra(pendencias);
-        renderizarListaObras(obrasAgrupadas);
-        renderizarKPIsObras(obrasAgrupadas);
-        
-        if (itemSelecionado && itemSelecionado.tipo === 'obra') {
-            const encontrado = obrasAgrupadas.find(o => o.obra === itemSelecionado.obra);
-            if (encontrado) {
-                renderizarDetalhesObra(encontrado);
-            }
-        }
-    }
-}
-
-function renderizarKPIsMateriais(itensAgrupados) {
-    const container = document.getElementById('kpiGrid');
-    if (!container) return;
-    
-    const totalOcorrencias = itensAgrupados.reduce((sum, item) => sum + item.total, 0);
-    const totalSkusUnicos = itensAgrupados.length;
-    
-    const obrasSet = new Set();
-    itensAgrupados.forEach(item => {
-        item.obras.forEach(o => obrasSet.add(o.obra));
-        item.saidas.forEach(s => obrasSet.add(s.obra));
-    });
-    const totalObras = obrasSet.size;
-    
-    const statusCount = { PENDENTE: 0, BAIXADO: 0 };
-    itensAgrupados.forEach(item => {
-        Object.keys(statusCount).forEach(status => {
-            statusCount[status] += item.statusCount[status] || 0;
-        });
-    });
-    
-    let valorTotal = 0;
-    itensAgrupados.forEach(item => {
-        valorTotal += item.quantidadeTotal * item.valorUnitario;
-    });
-    
-    const isFilterActive = (tipo, valor) => {
-        return filtroAtivo && filtroAtivo.tipo === tipo && filtroAtivo.valor === valor;
-    };
-    
-    container.innerHTML = `
-        <div class="kpi-card status-total ${isFilterActive('total', 'TOTAL') ? 'active' : ''}" onclick="aplicarFiltroCard('total', 'TOTAL')" style="cursor: pointer; ${isFilterActive('total', 'TOTAL') ? 'border: 2px solid #4299E1; background: #EBF8FF;' : ''}">
-            <div class="kpi-icon">📦</div>
-            <div class="kpi-value">${totalOcorrencias}</div>
-            <div class="kpi-label">Ocorrências</div>
-        </div>
-        <div class="kpi-card" style="cursor: default;">
-            <div class="kpi-icon">📋</div>
-            <div class="kpi-value">${totalSkusUnicos}</div>
-            <div class="kpi-label">SKUs com Pendência</div>
-        </div>
-        <div class="kpi-card" style="cursor: default;">
-            <div class="kpi-icon">🏗️</div>
-            <div class="kpi-value">${totalObras}</div>
-            <div class="kpi-label">Obras com Pendência</div>
-        </div>
-        <div class="kpi-card status-pendente ${isFilterActive('status', 'NÃO') ? 'active' : ''}" onclick="aplicarFiltroCard('status', 'NÃO')" style="cursor: pointer; ${isFilterActive('status', 'NÃO') ? 'border: 2px solid #ED8936; background: #FFFAF0;' : ''}">
-            <div class="kpi-icon">⏳</div>
-            <div class="kpi-value">${statusCount.PENDENTE}</div>
-            <div class="kpi-label">Pendentes</div>
-        </div>
-        <div class="kpi-card status-baixado ${isFilterActive('status', 'SIM') ? 'active' : ''}" onclick="aplicarFiltroCard('status', 'SIM')" style="cursor: pointer; ${isFilterActive('status', 'SIM') ? 'border: 2px solid #48BB78; background: #F0FFF4;' : ''}">
-            <div class="kpi-icon">✅</div>
-            <div class="kpi-value">${statusCount.BAIXADO}</div>
-            <div class="kpi-label">Baixados</div>
-        </div>
-        <div class="kpi-card status-valor" style="border-color: #48BB78; cursor: default;">
-            <div class="kpi-icon">💰</div>
-            <div class="kpi-value" style="color: #48BB78; font-size: 20px;">${formatarValor(valorTotal)}</div>
-            <div class="kpi-label">Valor Total Pendente</div>
-        </div>
-    `;
-}
-
-function renderizarKPIsObras(obrasAgrupadas) {
-    const container = document.getElementById('kpiGrid');
-    if (!container) return;
-    
-    const totalObras = obrasAgrupadas.length;
-    const totalSkusOcorrencias = obrasAgrupadas.reduce((sum, o) => sum + o.skusCount, 0);
-    const totalSkusUnicos = obrasAgrupadas.reduce((sum, o) => sum + o.skusUnico, 0);
-    
-    let valorTotal = 0;
-    obrasAgrupadas.forEach(obra => {
-        obra.itens.forEach(item => {
-            const qtd = parseFloat(item.quantidade) || 0;
-            const valorUnitario = buscarValorItem(item.codigo);
-            valorTotal += qtd * valorUnitario;
-        });
-    });
-    
-    container.innerHTML = `
-        <div class="kpi-card status-total">
-            <div class="kpi-icon">🏗️</div>
-            <div class="kpi-value">${totalObras}</div>
-            <div class="kpi-label">Total de Obras</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-icon">📦</div>
-            <div class="kpi-value">${totalSkusOcorrencias}</div>
-            <div class="kpi-label">Ocorrências de SKUs</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-icon">📋</div>
-            <div class="kpi-value">${totalSkusUnicos}</div>
-            <div class="kpi-label">SKUs Únicos</div>
-        </div>
-        <div class="kpi-card status-valor" style="border-color: #48BB78; cursor: default;">
-            <div class="kpi-icon">💰</div>
-            <div class="kpi-value" style="color: #48BB78; font-size: 20px;">${formatarValor(valorTotal)}</div>
-            <div class="kpi-label">Valor Total Pendente</div>
-        </div>
-    `;
-}
-
-function renderizarListaItens(itensAgrupados) {
+function renderizarListaItensSeparacao(itensAgrupados) {
     const container = document.getElementById('itemList');
     if (!container) return;
     
@@ -1601,10 +1260,10 @@ function renderizarListaItens(itensAgrupados) {
     `;
     
     itensAgrupados.forEach(item => {
-        const isActive = itemSelecionado && itemSelecionado.tipo === 'material' && itemSelecionado.codigo === item.codigo;
+        const isActive = itemSelecionado && itemSelecionado.codigo === item.codigo;
         const valorTotal = item.quantidadeTotal * item.valorUnitario;
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarItem('${item.codigo}')" style="display: grid; grid-template-columns: 80px 1fr 70px 80px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarItemSeparacao('${item.codigo}')" style="display: grid; grid-template-columns: 80px 1fr 70px 80px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
                 <span class="item-code">${item.codigo}</span>
                 <span class="item-desc">${item.descricao}</span>
                 <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${item.total}</span>
@@ -1616,161 +1275,19 @@ function renderizarListaItens(itensAgrupados) {
     container.innerHTML = html;
 }
 
-function renderizarListaObras(obrasAgrupadas) {
-    const container = document.getElementById('itemList');
-    if (!container) return;
-    
-    if (!obrasAgrupadas || obrasAgrupadas.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state-dashboard">
-                <div class="icon">📭</div>
-                <p>Nenhuma obra encontrada</p>
-                <p class="sub">Tente ajustar os filtros</p>
-            </div>
-        `;
-        return;
-    }
-    
-    let html = `
-        <div class="list-header" style="display: grid; grid-template-columns: 100px 1fr 70px 70px 80px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
-            <span>Obra</span>
-            <span>Informações</span>
-            <span style="text-align: right;">Ocorr.</span>
-            <span style="text-align: right;">SKUs Ún.</span>
-            <span style="text-align: right;">Valor</span>
-        </div>
-    `;
-    
-    obrasAgrupadas.forEach(obra => {
-        const isActive = itemSelecionado && itemSelecionado.tipo === 'obra' && itemSelecionado.obra === obra.obra;
-        const obraFormatada = formatarObraParaExibicao(obra.obra);
-        
-        let valorTotal = 0;
-        obra.itens.forEach(item => {
-            const qtd = parseFloat(item.quantidade) || 0;
-            const valorUnitario = buscarValorItem(item.codigo);
-            valorTotal += qtd * valorUnitario;
-        });
-        
-        html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObra('${obra.obra}')" style="display: grid; grid-template-columns: 100px 1fr 70px 70px 80px; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
-                <span class="item-code">🏗️ ${obraFormatada}</span>
-                <span class="item-desc">${obra.skusCount} SKUs pendentes</span>
-                <span style="text-align: right; font-weight: 700; color: #2B6CB0;">${obra.skusCount}</span>
-                <span style="text-align: right; font-weight: 600; color: #48BB78;">${obra.skusUnico}</span>
-                <span style="text-align: right; font-weight: 600; color: #ED8936; font-size: 12px;">${formatarValor(valorTotal)}</span>
-            </div>
-        `;
-    });
-    
-    container.innerHTML = html;
-}
-
-function selecionarObra(obraNome) {
-    console.log(`🔍 Selecionando obra: ${obraNome}`);
-    const obrasAgrupadas = agruparPorObra(dadosExibidos);
-    const obra = obrasAgrupadas.find(o => o.obra === obraNome);
-    
-    if (obra) {
-        itemSelecionado = { obra: obra.obra, tipo: 'obra' };
-        renderizarDetalhesObra(obra);
-        renderizarListaObras(obrasAgrupadas);
-    }
-}
-
-function renderizarDetalhesObra(obra) {
-    const container = document.getElementById('itemDetails');
-    if (!container) return;
-    
-    const obraFormatada = formatarObraParaExibicao(obra.obra);
-    
-    let valorTotal = 0;
-    obra.itens.forEach(item => {
-        const qtd = parseFloat(item.quantidade) || 0;
-        const valorUnitario = buscarValorItem(item.codigo);
-        valorTotal += qtd * valorUnitario;
-    });
-    
-    let html = `
-        <div class="detail-title">🏗️ ${obraFormatada}</div>
-        <div class="detail-row">
-            <span class="label">Ocorrências de SKUs:</span>
-            <span class="value">${obra.skusCount}</span>
-        </div>
-        <div class="detail-row">
-            <span class="label">SKUs Únicos:</span>
-            <span class="value">${obra.skusUnico}</span>
-        </div>
-        <div class="detail-row">
-            <span class="label">Valor Total Pendente:</span>
-            <span class="value" style="color: #ED8936; font-weight: 700;">${formatarValor(valorTotal)}</span>
-        </div>
-        <div class="detail-section-title">📅 Datas de Programação:</div>
-        <div class="item-detail-obras">
-    `;
-    
-    obra.datas.forEach(data => {
-        html += `
-            <div class="obra-row">
-                <span>📅 ${formatarData(data)}</span>
-            </div>
-        `;
-    });
-    
-    html += `</div>`;
-    
-    html += `<div class="detail-section-title">📦 Materiais Pendentes:</div>
-    <div class="item-detail-obras">`;
-    
-    const itensPorCodigo = {};
-    obra.itens.forEach(item => {
-        const codigo = item.codigo || 'SEM_CODIGO';
-        if (!itensPorCodigo[codigo]) {
-            itensPorCodigo[codigo] = {
-                codigo: codigo,
-                descricao: item.descricao || 'Sem descrição',
-                quantidade: 0,
-                status: item.status || 'PENDENTE',
-                ocorrencias: 0,
-                valorUnitario: buscarValorItem(codigo)
-            };
-        }
-        itensPorCodigo[codigo].quantidade += parseFloat(item.quantidade) || 0;
-        itensPorCodigo[codigo].ocorrencias += 1;
-    });
-    
-    Object.values(itensPorCodigo).forEach(item => {
-        const qtdFormatada = Number.isInteger(item.quantidade) ? item.quantidade : item.quantidade.toFixed(2);
-        const valorTotalItem = item.quantidade * item.valorUnitario;
-        const badge = item.status === 'BAIXADO' 
-            ? '<span class="badge-status baixado">✅ Baixado</span>'
-            : '<span class="badge-status pendente">⏳ Pendente</span>';
-        html += `
-            <div class="obra-row">
-                <span><strong>${item.codigo}</strong> - ${item.descricao} (${item.ocorrencias}x) 💰 ${formatarValor(valorTotalItem)}</span>
-                <span>${qtdFormatada} ${badge}</span>
-            </div>
-        `;
-    });
-    
-    html += `</div>`;
-    
-    container.innerHTML = html;
-}
-
-function selecionarItem(codigo) {
+function selecionarItemSeparacao(codigo) {
     console.log(`🔍 Selecionando item: ${codigo}`);
     const itensAgrupados = agruparItensPorCodigo(dadosExibidos);
     const item = itensAgrupados.find(i => i.codigo === codigo);
     
     if (item) {
-        itemSelecionado = { codigo: item.codigo, tipo: 'material' };
-        renderizarDetalhes(item);
-        renderizarListaItens(itensAgrupados);
+        itemSelecionado = { codigo: item.codigo };
+        renderizarDetalhesItemSeparacao(item);
+        renderizarDashboardSeparacao(dadosExibidos);
     }
 }
 
-function renderizarDetalhes(item) {
+function renderizarDetalhesItemSeparacao(item) {
     const container = document.getElementById('itemDetails');
     if (!container) return;
     
@@ -1816,14 +1333,6 @@ function renderizarDetalhes(item) {
             <span class="label">Valor Total:</span>
             <span class="value" style="color: #ED8936; font-weight: 700;">${formatarValor(valorTotal)}</span>
         </div>
-        <div class="detail-row">
-            <span class="label">Obras:</span>
-            <span class="value">${item.obras.length}</span>
-        </div>
-        <div class="detail-row">
-            <span class="label">Saídas:</span>
-            <span class="value">${item.saidas.length}</span>
-        </div>
         <div class="detail-status-count">
             <span class="status-item"><span class="count status-pendente">${statusMap.PENDENTE}</span> ⏳ Pendentes</span>
             <span class="status-item"><span class="count status-baixado">${statusMap.BAIXADO}</span> ✅ Baixados</span>
@@ -1848,29 +1357,71 @@ function renderizarDetalhes(item) {
         html += `</div>`;
     }
     
-    if (item.saidas.length > 0) {
-        html += `<div class="detail-section-title">🚚 Saídas:</div>
-        <div class="item-detail-obras">`;
-        item.saidas.forEach(o => {
-            const badge = o.status === 'BAIXADO' 
-                ? '<span class="badge-status baixado">✅ Baixado</span>'
-                : '<span class="badge-status pendente">⏳ Pendente</span>';
-            const obraFormatada = formatarObraParaExibicao(o.obra);
-            html += `
-                <div class="obra-row">
-                    <span>${obraFormatada}</span>
-                    <span>${badge}</span>
-                </div>
-            `;
-        });
-        html += `</div>`;
-    }
-    
     container.innerHTML = html;
 }
 
-function renderizarGraficos(itensAgrupados) {
-    console.log('📊 Renderizando gráficos...');
+function atualizarKPIsSeparacao(itensAgrupados) {
+    const container = document.getElementById('kpiGrid');
+    if (!container) return;
+    
+    const totalOcorrencias = itensAgrupados.reduce((sum, item) => sum + item.total, 0);
+    const totalSkusUnicos = itensAgrupados.length;
+    
+    const obrasSet = new Set();
+    itensAgrupados.forEach(item => {
+        item.obras.forEach(o => obrasSet.add(o.obra));
+        item.saidas.forEach(s => obrasSet.add(s.obra));
+    });
+    const totalObras = obrasSet.size;
+    
+    const statusCount = { PENDENTE: 0, BAIXADO: 0 };
+    itensAgrupados.forEach(item => {
+        Object.keys(statusCount).forEach(status => {
+            statusCount[status] += item.statusCount[status] || 0;
+        });
+    });
+    
+    let valorTotal = 0;
+    itensAgrupados.forEach(item => {
+        valorTotal += item.quantidadeTotal * item.valorUnitario;
+    });
+    
+    container.innerHTML = `
+        <div class="kpi-card status-total" style="cursor: default;">
+            <div class="kpi-icon">📦</div>
+            <div class="kpi-value">${totalOcorrencias}</div>
+            <div class="kpi-label">Ocorrências</div>
+        </div>
+        <div class="kpi-card" style="cursor: default;">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-value">${totalSkusUnicos}</div>
+            <div class="kpi-label">SKUs com Pendência</div>
+        </div>
+        <div class="kpi-card" style="cursor: default;">
+            <div class="kpi-icon">🏗️</div>
+            <div class="kpi-value">${totalObras}</div>
+            <div class="kpi-label">Obras com Pendência</div>
+        </div>
+        <div class="kpi-card status-pendente" style="cursor: default;">
+            <div class="kpi-icon">⏳</div>
+            <div class="kpi-value">${statusCount.PENDENTE}</div>
+            <div class="kpi-label">Pendentes</div>
+        </div>
+        <div class="kpi-card status-baixado" style="cursor: default;">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-value">${statusCount.BAIXADO}</div>
+            <div class="kpi-label">Baixados</div>
+        </div>
+        <div class="kpi-card status-valor" style="border-color: #48BB78; cursor: default;">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-value" style="color: #48BB78; font-size: 20px;">${formatarValor(valorTotal)}</div>
+            <div class="kpi-label">Valor Total Pendente</div>
+        </div>
+    `;
+}
+
+function renderizarGraficosSeparacao(itensAgrupados) {
+    console.log('📊 Renderizando gráficos (Separação)...');
     
     const statusCount = { PENDENTE: 0, BAIXADO: 0 };
     itensAgrupados.forEach(item => {
@@ -1974,7 +1525,7 @@ function renderizarGraficos(itensAgrupados) {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('📋 DOM carregado, iniciando dashboard Pendência de Requisição...');
+    console.log('📋 DOM carregado, iniciando dashboard...');
     
     const loadingOverlay = document.getElementById('loadingOverlay');
     const dashboardContent = document.getElementById('dashboardContent');
@@ -2001,13 +1552,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         console.log('📡 Iniciando busca de dados (Pendência de Baixa)...');
         
-        const startTime = Date.now();
-        
         dadosCompletos = await buscarPendenciasBaixa();
         
-        const elapsed = Date.now() - startTime;
-        
-        console.log(`✅ ${dadosCompletos.length} pendências carregadas em ${elapsed}ms`);
+        console.log(`✅ ${dadosCompletos.length} pendências carregadas`);
         
         let totalItens = 0;
         dadosCompletos.forEach(p => {
@@ -2022,17 +1569,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             mostrarToast('⚠️ Nenhuma pendência de requisição encontrada', 'warning');
         }
         
-        criarAbas();
         criarMeses();
         aplicarFiltros();
         
-        // ============================================
-        // INICIALIZAR A VISÃO MGM
-        // ============================================
-        criarContainerNovo();
+        // Inicializar a aba padrão (Separação)
+        trocarAbaPrincipal('separacao');
         
+        // Carregar dados MGM em background
         setTimeout(() => {
-            carregarDadosCompletosNovo();
+            carregarDadosMGM();
         }, 500);
         
         loadingOverlay.classList.remove('active');
@@ -2062,20 +1607,13 @@ document.addEventListener('DOMContentLoaded', async function() {
 // EXPORTAR FUNÇÕES PARA USO GLOBAL
 // ============================================
 
+window.trocarAbaPrincipal = trocarAbaPrincipal;
 window.aplicarFiltros = aplicarFiltros;
 window.limparFiltros = limparFiltros;
-window.selecionarItem = selecionarItem;
-window.selecionarObra = selecionarObra;
-window.trocarAba = trocarAba;
-window.renderizarDashboard = renderizarDashboard;
 window.filtrarPorMes = filtrarPorMes;
-window.aplicarFiltroCard = aplicarFiltroCard;
-
-window.trocarAbaNovo = trocarAbaNovo;
-window.aplicarFiltrosNovo = aplicarFiltrosNovo;
-window.limparFiltrosNovo = limparFiltrosNovo;
-window.selecionarObraPendenciaNovo = selecionarObraPendenciaNovo;
-window.exportarPendenciasNovo = exportarPendenciasNovo;
-window.carregarDadosCompletosNovo = carregarDadosCompletosNovo;
+window.selecionarItemSeparacao = selecionarItemSeparacao;
+window.selecionarObraMGM = selecionarObraMGM;
+window.carregarDadosMGM = carregarDadosMGM;
+window.renderizarDashboardMGM = renderizarDashboardMGM;
 
 console.log('✅ dashboards-pendencia-requisicao.js inicializado!');

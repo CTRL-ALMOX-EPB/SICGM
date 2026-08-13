@@ -1043,3 +1043,95 @@
         padding: 3px 10px;
     }
 }
+
+/* ============================================ */
+/* ESTILOS PARA A NOVA VISÃO MGM                */
+/* ============================================ */
+
+/* Badge para status parcial */
+.badge-status.parcial {
+    background: #FEFCBF;
+    color: #975A16;
+}
+
+/* KPI card com valores monetários */
+.kpi-card.status-valor .kpi-value {
+    color: #48BB78;
+    font-size: 20px;
+}
+
+/* Barra para status parcial */
+.bar-fill.bar-parcial {
+    background: linear-gradient(90deg, #ED8936, #F6AD55);
+}
+
+/* Abas principais */
+.btn-aba-principal {
+    padding: 10px 28px;
+    border: 2px solid #E2E8F0;
+    border-radius: 8px;
+    background: #F7FAFC;
+    color: #4A5568;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-aba-principal:hover:not(.active) {
+    background: #EDF2F7;
+    border-color: #CBD5E0;
+}
+
+.btn-aba-principal.active {
+    background: #ED8936;
+    color: white;
+    border-color: #ED8936;
+    box-shadow: 0 2px 8px rgba(237, 137, 54, 0.25);
+}
+
+/* Ajustes para o container MGM */
+#dashboardMGM .dashboard-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+#dashboardMGM .item-group-list {
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+#dashboardMGM .item-details-panel {
+    min-height: 200px;
+    overflow-y: auto;
+}
+
+/* Responsividade MGM */
+@media (max-width: 768px) {
+    #dashboardMGM .dashboard-main {
+        grid-template-columns: 1fr;
+    }
+    
+    #dashboardMGM .item-group-item {
+        grid-template-columns: 1fr !important;
+        gap: 4px !important;
+        padding: 8px 10px !important;
+    }
+    
+    #dashboardMGM .list-header {
+        display: none !important;
+    }
+    
+    #dashboardMGM .kpi-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+@media (max-width: 480px) {
+    #dashboardMGM .kpi-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+}
