@@ -36,6 +36,7 @@ let dadosDevolucaoCompilada = [];
 let movimentosDoBanco = [];
 let pendenciasConsolidadas = [];
 let dadosFiltradosMGM = [];
+let filtroStatusMGMAtivo = null;
 
 let abaAtualMGM = 'mgm';
 let itemSelecionadoMGM = null;
@@ -365,12 +366,10 @@ function parsearDevolucaoCompilada(texto) {
         const partes = linha.split('\t');
         if (partes.length < 7) continue;
         
-        // CORREÇÃO: Converter data de DD.MM.YYYY ou DD/MM/YYYY para YYYY-MM-DD
         let dataOriginal = partes[indices.data]?.trim() || '';
         let dataConvertida = dataOriginal;
         
         if (dataOriginal) {
-            // Verifica se está no formato DD.MM.YYYY
             if (dataOriginal.includes('.')) {
                 const partesData = dataOriginal.split('.');
                 if (partesData.length === 3) {
@@ -381,7 +380,6 @@ function parsearDevolucaoCompilada(texto) {
                     dataConvertida = `${anoCompleto}-${mes}-${dia}`;
                 }
             }
-            // Verifica se está no formato DD/MM/YYYY
             else if (dataOriginal.includes('/')) {
                 const partesData = dataOriginal.split('/');
                 if (partesData.length === 3) {
@@ -392,7 +390,6 @@ function parsearDevolucaoCompilada(texto) {
                     dataConvertida = `${anoCompleto}-${mes}-${dia}`;
                 }
             }
-            // Verifica se está no formato YYYY-MM-DD (já está correto)
             else if (dataOriginal.includes('-')) {
                 const partesData = dataOriginal.split('-');
                 if (partesData.length === 3) {
@@ -401,7 +398,6 @@ function parsearDevolucaoCompilada(texto) {
             }
         }
         
-        // Se a data original não foi convertida, tenta com regex
         if (!dataConvertida || dataConvertida === dataOriginal) {
             const testDate = new Date(dataOriginal);
             if (isNaN(testDate.getTime()) && dataOriginal) {
@@ -439,14 +435,15 @@ function parsearDevolucaoCompilada(texto) {
 }
 
 // ============================================
-// FUNÇÃO: CONSOLIDAR PENDÊNCIAS MGM (COM SOBRA E FALTA)
+// FUNÇÃO: CONSOLIDAR PENDÊNCIAS MGM (COM SOMA DE MÚLTIPLOS DOCUMENTOS)
 // ============================================
 
 function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanco) {
-    console.log('🔄 Consolidando pendências MGM (com cálculo de sobra e falta)...');
+    console.log('🔄 Consolidando pendências MGM (com soma de múltiplos documentos)...');
     
     const pendencias = [];
     
+    // Mapa de movimentos do banco por cod_movimentacao
     const bancoPorCodMov = {};
     movimentosBanco.forEach(m => {
         if (m.cod_movimentacao) {
@@ -454,114 +451,170 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
         }
     });
     
-    const gruposPorObraData = {};
+    // Agrupar itens da devolução por: obra + data + codigo
+    // Para cada grupo, vamos acumular as quantidades e documentos
+    const gruposPorChave = {};
+    
     devolucaoItens.forEach(item => {
         const obraNorm = normalizarObra(item.obra);
-        const chave = `${obraNorm}|${item.data}`;
-        if (!gruposPorObraData[chave]) {
-            gruposPorObraData[chave] = {
+        const chave = `${obraNorm}|${item.data}|${item.codigo}`;
+        
+        if (!gruposPorChave[chave]) {
+            gruposPorChave[chave] = {
                 obra: obraNorm,
                 data: item.data,
-                itens: []
+                codigo: item.codigo,
+                descricao: item.descricao,
+                qtdAplicadaTotal: 0,
+                qtdDmaTotal: 0,
+                qtdEsperadaTotal: 0,
+                documentos: [],
+                itensOriginais: []
             };
         }
-        gruposPorObraData[chave].itens.push(item);
+        
+        // Acumula quantidades
+        const qtdAplicada = item.qtdAplicada || 0;
+        const qtdDma = item.qtdDma || 0;
+        const qtdEsperada = qtdAplicada > 0 ? qtdAplicada : qtdDma;
+        
+        gruposPorChave[chave].qtdAplicadaTotal += qtdAplicada;
+        gruposPorChave[chave].qtdDmaTotal += qtdDma;
+        gruposPorChave[chave].qtdEsperadaTotal += qtdEsperada;
+        gruposPorChave[chave].itensOriginais.push(item);
+        
+        // Extrai número do documento do arquivo (ex: "Devolução Ex - Obra X (23.07.2026) - Lucena. (1).xlsx")
+        if (item.arquivo) {
+            const matchDoc = item.arquivo.match(/\((\d+)\)\.xlsx$/);
+            if (matchDoc) {
+                const docNum = matchDoc[1];
+                if (!gruposPorChave[chave].documentos.includes(docNum)) {
+                    gruposPorChave[chave].documentos.push(docNum);
+                }
+            } else {
+                // Se não conseguiu extrair, usa o nome do arquivo como identificador
+                if (!gruposPorChave[chave].documentos.includes(item.arquivo)) {
+                    gruposPorChave[chave].documentos.push(item.arquivo);
+                }
+            }
+        }
     });
     
-    console.log(`📊 ${Object.keys(gruposPorObraData).length} grupos obra+data encontrados`);
+    console.log(`📊 ${Object.keys(gruposPorChave).length} grupos de itens encontrados`);
     
-    for (const chave in gruposPorObraData) {
-        const grupo = gruposPorObraData[chave];
-        const { obra, data, itens } = grupo;
+    // Para cada grupo, buscar os movimentos correspondentes
+    for (const chave in gruposPorChave) {
+        const grupo = gruposPorChave[chave];
+        const { obra, data, codigo, descricao, qtdEsperadaTotal, documentos, itensOriginais } = grupo;
         
+        // Buscar movimentos do banco para esta obra
         const movimentosRelacionados = movimentosBanco.filter(m => {
             const obraMov = normalizarObra(m.obra);
             return obraMov === obra;
         });
         
-        itens.forEach(itemDev => {
-            const qtdEsperada = itemDev.qtdAplicada > 0 ? itemDev.qtdAplicada : itemDev.qtdDma;
+        let encontrado = false;
+        let qtdEncontrada = 0;
+        let movimentosEncontrados = [];
+        let tipoMovimento = null;
+        let siglaMovimento = null;
+        let statusBanco = null;
+        
+        // Buscar em todos os movimentos relacionados
+        for (const movBanco of movimentosRelacionados) {
+            const codMov = movBanco.cod_movimentacao;
+            const movimentoSiago = movimentosSiago[codMov];
             
-            let encontrado = false;
-            let qtdEncontrada = 0;
-            let movimentoEncontrado = null;
-            let tipoMovimento = null;
-            let siglaMovimento = null;
-            let statusBanco = null;
-            
-            for (const movBanco of movimentosRelacionados) {
-                const codMov = movBanco.cod_movimentacao;
-                const movimentoSiago = movimentosSiago[codMov];
+            if (movimentoSiago) {
+                // Verifica se o item existe neste movimento (por código ou descrição)
+                const itemMov = movimentoSiago.itens.find(i => 
+                    i.codmat_mov === codigo || 
+                    i.dscmat === descricao
+                );
                 
-                if (movimentoSiago) {
-                    const itemMov = movimentoSiago.itens.find(i => 
-                        i.codmat_mov === itemDev.codigo || 
-                        i.dscmat === itemDev.descricao
-                    );
+                if (itemMov) {
+                    encontrado = true;
+                    qtdEncontrada += itemMov.qtdmov || 0;
+                    movimentosEncontrados.push({
+                        numdoc: codMov,
+                        quantidade: itemMov.qtdmov || 0,
+                        orgmov: movimentoSiago.orgmov || 'DESCONHECIDO',
+                        sigla: movimentoSiago.sigla_mov_mat || '',
+                        status: movBanco.status
+                    });
                     
-                    if (itemMov) {
-                        encontrado = true;
-                        qtdEncontrada += itemMov.qtdmov || 0;
-                        if (!movimentoEncontrado) {
-                            movimentoEncontrado = codMov;
-                            tipoMovimento = movimentoSiago.orgmov || 'DESCONHECIDO';
-                            siglaMovimento = movimentoSiago.sigla_mov_mat || '';
-                            statusBanco = movBanco.status;
-                        }
+                    if (!tipoMovimento) {
+                        tipoMovimento = movimentoSiago.orgmov || 'DESCONHECIDO';
+                        siglaMovimento = movimentoSiago.sigla_mov_mat || '';
+                        statusBanco = movBanco.status;
                     }
                 }
             }
-            
-            let status = 'PENDENTE';
-            let motivo = '';
-            let sobra = 0;
-            let falta = 0;
-            
-            if (encontrado) {
-                if (qtdEncontrada === qtdEsperada) {
-                    status = 'ATENDIDO';
-                    motivo = 'Quantidade exata';
-                } else if (qtdEncontrada > qtdEsperada) {
-                    status = 'SOBRA';
-                    sobra = qtdEncontrada - qtdEsperada;
-                    motivo = `Excedente de ${sobra.toFixed(2)} unidades (precisa devolver)`;
-                } else if (qtdEncontrada > 0 && qtdEncontrada < qtdEsperada) {
-                    status = 'PARCIAL';
-                    falta = qtdEsperada - qtdEncontrada;
-                    motivo = `Faltam ${falta.toFixed(2)} unidades`;
-                } else {
-                    status = 'PENDENTE';
-                    motivo = 'Quantidade zero no movimento';
-                }
+        }
+        
+        // Determinar status com base na quantidade total
+        let status = 'PENDENTE';
+        let motivo = '';
+        let sobra = 0;
+        let falta = 0;
+        let docsEncontrados = movimentosEncontrados.map(m => m.numdoc).filter(d => d);
+        
+        if (encontrado) {
+            if (qtdEncontrada === qtdEsperadaTotal) {
+                status = 'ATENDIDO';
+                motivo = 'Quantidade exata';
+            } else if (qtdEncontrada > qtdEsperadaTotal) {
+                status = 'SOBRA';
+                sobra = qtdEncontrada - qtdEsperadaTotal;
+                motivo = `Excedente de ${sobra.toFixed(2)} unidades (precisa devolver)`;
+            } else if (qtdEncontrada > 0 && qtdEncontrada < qtdEsperadaTotal) {
+                status = 'PARCIAL';
+                falta = qtdEsperadaTotal - qtdEncontrada;
+                motivo = `Faltam ${falta.toFixed(2)} unidades (precisa requisitar)`;
             } else {
                 status = 'PENDENTE';
-                motivo = 'Nenhum movimento encontrado para esta obra';
+                motivo = 'Quantidade zero no movimento';
             }
-            
-            if (statusBanco === 'FINALIZADO' && status === 'PENDENTE') {
-                motivo = 'Movimento finalizado mas item não encontrado';
-            }
-            
-            pendencias.push({
-                obra: obra,
-                obraFormatada: formatarObra(obra),
-                data: data,
-                codigo: itemDev.codigo,
-                descricao: itemDev.descricao,
-                qtdAplicada: itemDev.qtdAplicada,
-                qtdDma: itemDev.qtdDma,
-                qtdEsperada: qtdEsperada,
-                qtdEncontrada: qtdEncontrada,
-                sobra: sobra,
-                falta: falta,
-                status: status,
-                motivo: motivo,
-                movimentoEncontrado: movimentoEncontrado,
-                tipoMovimento: tipoMovimento,
-                siglaMovimento: siglaMovimento,
-                statusBanco: statusBanco,
-                arquivo: itemDev.arquivo
-            });
+        } else {
+            status = 'PENDENTE';
+            motivo = 'Nenhum movimento encontrado para esta obra';
+        }
+        
+        if (statusBanco === 'FINALIZADO' && status === 'PENDENTE') {
+            motivo = 'Movimento finalizado mas item não encontrado';
+        }
+        
+        // Se temos múltiplos documentos, combina as informações
+        const todosDocumentos = [...new Set([...documentos, ...docsEncontrados])];
+        const docsStr = todosDocumentos.length > 0 ? todosDocumentos.join(', ') : 'Nenhum';
+        
+        // Verifica se tem múltiplos documentos de devolução compilada
+        const temMultiplosDocs = documentos.length > 1;
+        
+        pendencias.push({
+            obra: obra,
+            obraFormatada: formatarObra(obra),
+            data: data,
+            codigo: codigo,
+            descricao: descricao,
+            qtdAplicada: grupo.qtdAplicadaTotal,
+            qtdDma: grupo.qtdDmaTotal,
+            qtdEsperada: qtdEsperadaTotal,
+            qtdEncontrada: qtdEncontrada,
+            sobra: sobra,
+            falta: falta,
+            status: status,
+            motivo: motivo,
+            movimentoEncontrado: docsEncontrados.length > 0 ? docsEncontrados.join(', ') : null,
+            tipoMovimento: tipoMovimento,
+            siglaMovimento: siglaMovimento,
+            statusBanco: statusBanco,
+            documentos: todosDocumentos,
+            documentosStr: docsStr,
+            temMultiplosDocs: temMultiplosDocs,
+            qtdDocumentos: documentos.length,
+            arquivo: itensOriginais.length > 0 ? itensOriginais[0].arquivo : '',
+            movimentosEncontrados: movimentosEncontrados
         });
     }
     
@@ -625,6 +678,39 @@ async function carregarDadosMGM() {
 }
 
 // ============================================
+// FUNÇÃO: FILTRAR POR STATUS (KPI INTERATIVO)
+// ============================================
+
+function aplicarFiltroStatusMGM(status) {
+    console.log(`🔍 Filtrando por status: ${status}`);
+    
+    if (filtroStatusMGMAtivo === status) {
+        filtroStatusMGMAtivo = null;
+        dadosFiltradosMGM = [...pendenciasConsolidadas];
+    } else {
+        filtroStatusMGMAtivo = status;
+        dadosFiltradosMGM = pendenciasConsolidadas.filter(p => p.status === status);
+    }
+    
+    document.querySelectorAll('.kpi-card-mgm').forEach(el => {
+        el.classList.remove('active-filter');
+        const cardStatus = el.dataset.status;
+        if (cardStatus && cardStatus === filtroStatusMGMAtivo) {
+            el.classList.add('active-filter');
+        }
+    });
+    
+    const selectStatus = document.getElementById('filterStatusMGM');
+    if (selectStatus) {
+        selectStatus.value = filtroStatusMGMAtivo || 'todos';
+    }
+    
+    itemSelecionadoMGM = null;
+    
+    renderizarDashboardMGM();
+}
+
+// ============================================
 // RENDERIZAÇÃO DO DASHBOARD MGM
 // ============================================
 
@@ -637,9 +723,7 @@ function renderizarDashboardMGM() {
         return;
     }
     
-    const dadosExibir = abaAtualMGM === 'mgm' 
-        ? dadosFiltradosMGM 
-        : dadosFiltradosMGM.filter(p => p.status === 'PENDENTE' || p.status === 'PARCIAL' || p.status === 'SOBRA');
+    const dadosExibir = dadosFiltradosMGM;
     
     renderizarKPIsMGM(dadosExibir);
     renderizarListaObrasMGM(dadosExibir);
@@ -692,57 +776,59 @@ function renderizarKPIsMGM(pendencias) {
         totalFalta += p.falta || 0;
     });
     
+    const isActive = (status) => filtroStatusMGMAtivo === status;
+    
     container.innerHTML = `
-        <div class="kpi-card status-total" style="cursor: default;">
+        <div class="kpi-card kpi-card-mgm status-total ${isActive('TOTAL') ? 'active-filter' : ''}" data-status="TOTAL" onclick="aplicarFiltroStatusMGM('TOTAL')" style="cursor: pointer;">
             <div class="kpi-icon">📦</div>
             <div class="kpi-value">${total}</div>
             <div class="kpi-label">Total de Pendências</div>
         </div>
-        <div class="kpi-card status-pendente" style="cursor: default;">
-            <div class="kpi-icon">⏳</div>
-            <div class="kpi-value">${pendentes + parciais}</div>
-            <div class="kpi-label">Abertas (${parciais} parciais)</div>
+        <div class="kpi-card kpi-card-mgm status-pendente ${isActive('PENDENTE') ? 'active-filter' : ''}" data-status="PENDENTE" onclick="aplicarFiltroStatusMGM('PENDENTE')" style="cursor: pointer; border-color: ${isActive('PENDENTE') ? '#E53E3E' : '#E2E8F0'};">
+            <div class="kpi-icon">🔴</div>
+            <div class="kpi-value" style="color: #E53E3E;">${pendentes + parciais}</div>
+            <div class="kpi-label">🔴 Pendentes (${parciais} parciais)</div>
         </div>
-        <div class="kpi-card status-baixado" style="cursor: default;">
+        <div class="kpi-card kpi-card-mgm status-baixado ${isActive('ATENDIDO') ? 'active-filter' : ''}" data-status="ATENDIDO" onclick="aplicarFiltroStatusMGM('ATENDIDO')" style="cursor: pointer; border-color: ${isActive('ATENDIDO') ? '#48BB78' : '#E2E8F0'};">
             <div class="kpi-icon">✅</div>
-            <div class="kpi-value">${atendidos}</div>
-            <div class="kpi-label">Atendidas</div>
+            <div class="kpi-value" style="color: #48BB78;">${atendidos}</div>
+            <div class="kpi-label">✅ Atendidos</div>
         </div>
-        <div class="kpi-card" style="border-color: #D69E2E; cursor: default;">
-            <div class="kpi-icon">⚠️</div>
+        <div class="kpi-card kpi-card-mgm status-sobra ${isActive('SOBRA') ? 'active-filter' : ''}" data-status="SOBRA" onclick="aplicarFiltroStatusMGM('SOBRA')" style="cursor: pointer; border-color: ${isActive('SOBRA') ? '#D69E2E' : '#E2E8F0'};">
+            <div class="kpi-icon">🟠</div>
             <div class="kpi-value" style="color: #D69E2E;">${sobras}</div>
-            <div class="kpi-label">Sobras (excedentes)</div>
+            <div class="kpi-label">🟠 Devolver (sobras)</div>
         </div>
-        <div class="kpi-card" style="cursor: default;">
+        <div class="kpi-card kpi-card-mgm" style="cursor: default;">
             <div class="kpi-icon">🏗️</div>
             <div class="kpi-value">${totalObras}</div>
             <div class="kpi-label">Obras Impactadas</div>
         </div>
-        <div class="kpi-card status-valor" style="border-color: #4299E1; cursor: default;">
+        <div class="kpi-card kpi-card-mgm status-valor" style="border-color: #4299E1; cursor: default;">
             <div class="kpi-icon">📊</div>
             <div class="kpi-value" style="color: #4299E1; font-size: 18px;">${totalQuantidadeEsperada.toFixed(0)}</div>
             <div class="kpi-label">Qtd. Esperada</div>
         </div>
-        <div class="kpi-card status-total" style="border-color: #48BB78; cursor: default;">
+        <div class="kpi-card kpi-card-mgm status-total" style="border-color: #48BB78; cursor: default;">
             <div class="kpi-icon">📈</div>
             <div class="kpi-value" style="color: #48BB78; font-size: 18px;">${totalQuantidadeEncontrada.toFixed(0)}</div>
             <div class="kpi-label">Qtd. Encontrada</div>
         </div>
-        <div class="kpi-card" style="border-color: #D69E2E; cursor: default;">
+        <div class="kpi-card kpi-card-mgm" style="border-color: #D69E2E; cursor: default;">
             <div class="kpi-icon">🔄</div>
             <div class="kpi-value" style="color: #D69E2E; font-size: 18px;">${totalSobra.toFixed(0)}</div>
             <div class="kpi-label">Total de Sobras</div>
         </div>
-        <div class="kpi-card" style="border-color: #FC8181; cursor: default;">
+        <div class="kpi-card kpi-card-mgm" style="border-color: #E53E3E; cursor: default;">
             <div class="kpi-icon">❌</div>
-            <div class="kpi-value" style="color: #FC8181; font-size: 18px;">${totalFalta.toFixed(0)}</div>
+            <div class="kpi-value" style="color: #E53E3E; font-size: 18px;">${totalFalta.toFixed(0)}</div>
             <div class="kpi-label">Total de Faltas</div>
         </div>
     `;
 }
 
 // ============================================
-// FUNÇÃO: RENDERIZAR LISTA DE OBRAS MGM (SEM DATA)
+// FUNÇÃO: RENDERIZAR LISTA DE OBRAS MGM
 // ============================================
 
 function renderizarListaObrasMGM(pendencias) {
@@ -760,7 +846,6 @@ function renderizarListaObrasMGM(pendencias) {
         return;
     }
     
-    // Agrupar por obra (sem data)
     const grupos = {};
     pendencias.forEach(p => {
         const obra = p.obra;
@@ -776,11 +861,13 @@ function renderizarListaObrasMGM(pendencias) {
                 totalSobras: 0,
                 totalSobraQtd: 0,
                 totalFaltaQtd: 0,
+                totalDocumentos: 0,
                 status: 'PENDENTE'
             };
         }
         grupos[obra].itens.push(p);
         grupos[obra].datas.add(p.data);
+        grupos[obra].totalDocumentos += p.qtdDocumentos || 1;
         
         if (p.status === 'PENDENTE') grupos[obra].totalPendentes++;
         else if (p.status === 'PARCIAL') {
@@ -800,12 +887,12 @@ function renderizarListaObrasMGM(pendencias) {
     });
     
     let html = `
-        <div class="list-header" style="display: grid; grid-template-columns: 100px 1fr 60px 60px 60px 70px; gap: 6px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 11px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 100px 1fr 50px 60px 60px 70px; gap: 6px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 11px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
             <span>Descrição</span>
             <span style="text-align: right;">Qtd</span>
-            <span style="text-align: center; color: #D69E2E;">⚠️ Sobra</span>
-            <span style="text-align: center; color: #FC8181;">❌ Falta</span>
+            <span style="text-align: center; color: #D69E2E;">🟠 Devolver</span>
+            <span style="text-align: center; color: #E53E3E;">🔴 Faltam</span>
             <span style="text-align: center;">Status</span>
         </div>
     `;
@@ -821,29 +908,36 @@ function renderizarListaObrasMGM(pendencias) {
         const temFalta = grupo.totalFaltaQtd > 0;
         
         let statusBadge = '';
+        let statusClass = '';
         if (temSobra && temFalta) {
-            statusBadge = `<span class="badge-status" style="background: #FEFCBF; color: #D69E2E;">⚠️ + ❌</span>`;
+            statusBadge = `🟠+🔴`;
+            statusClass = 'status-misto';
         } else if (temSobra) {
-            statusBadge = `<span class="badge-status" style="background: #FEFCBF; color: #D69E2E;">⚠️ ${grupo.totalSobraQtd.toFixed(0)}</span>`;
+            statusBadge = `🟠 ${grupo.totalSobraQtd.toFixed(0)}`;
+            statusClass = 'status-sobra';
         } else if (temFalta) {
-            statusBadge = `<span class="badge-status" style="background: #FED7D7; color: #E53E3E;">❌ ${grupo.totalFaltaQtd.toFixed(0)}</span>`;
+            statusBadge = `🔴 ${grupo.totalFaltaQtd.toFixed(0)}`;
+            statusClass = 'status-falta';
         } else if (totalPend > 0) {
-            statusBadge = '<span class="badge-status pendente">⏳ Pendente</span>';
+            statusBadge = '⏳ Pendente';
+            statusClass = 'status-pendente';
         } else {
-            statusBadge = '<span class="badge-status baixado">✅ Atendido</span>';
+            statusBadge = '✅ Atendido';
+            statusClass = 'status-atendido';
         }
         
-        const totalSobraExibicao = temSobra ? `⚠️ ${grupo.totalSobraQtd.toFixed(0)}` : '-';
-        const totalFaltaExibicao = temFalta ? `❌ ${grupo.totalFaltaQtd.toFixed(0)}` : '-';
+        const totalSobraExibicao = temSobra ? `🟠 ${grupo.totalSobraQtd.toFixed(0)}` : '-';
+        const totalFaltaExibicao = temFalta ? `🔴 ${grupo.totalFaltaQtd.toFixed(0)}` : '-';
+        const docsInfo = grupo.totalDocumentos > 1 ? `📄${grupo.totalDocumentos}` : '';
         
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObraMGM('${grupo.obra}')" style="display: grid; grid-template-columns: 100px 1fr 60px 60px 60px 70px; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+            <div class="item-group-item ${isActive ? 'active' : ''} ${statusClass}" onclick="selecionarObraMGM('${grupo.obra}')" style="display: grid; grid-template-columns: 100px 1fr 50px 60px 60px 70px; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s; ${temSobra ? 'border-left: 4px solid #D69E2E;' : ''} ${temFalta ? 'border-right: 4px solid #E53E3E;' : ''}">
                 <span class="item-code" style="font-size: 12px;">${grupo.obraFormatada}</span>
-                <span class="item-desc" style="font-size: 12px;">${totalItens} itens (${grupo.datas.size} datas)</span>
+                <span class="item-desc" style="font-size: 12px;">${totalItens} itens (${grupo.datas.size} datas) ${docsInfo}</span>
                 <span style="text-align: right; font-weight: 700; color: #2B6CB0; font-size: 12px;">${totalItens}</span>
                 <span style="text-align: center; font-weight: 600; color: ${temSobra ? '#D69E2E' : '#A0AEC0'}; font-size: 12px;">${totalSobraExibicao}</span>
-                <span style="text-align: center; font-weight: 600; color: ${temFalta ? '#FC8181' : '#A0AEC0'}; font-size: 12px;">${totalFaltaExibicao}</span>
-                <span style="text-align: center;">${statusBadge}</span>
+                <span style="text-align: center; font-weight: 600; color: ${temFalta ? '#E53E3E' : '#A0AEC0'}; font-size: 12px;">${totalFaltaExibicao}</span>
+                <span style="text-align: center;"><span class="badge-status ${statusClass}">${statusBadge}</span></span>
             </div>
         `;
     }
@@ -868,10 +962,10 @@ function renderizarGraficosMGM(pendencias) {
     const total = Object.values(statusCount).reduce((a, b) => a + b, 0) || 1;
     
     const statusLabels = {
-        'PENDENTE': 'Pendentes',
-        'PARCIAL': 'Parciais',
-        'ATENDIDO': 'Atendidos',
-        'SOBRA': 'Sobras'
+        'PENDENTE': '🔴 Pendentes',
+        'PARCIAL': '🔴 Parciais',
+        'ATENDIDO': '✅ Atendidos',
+        'SOBRA': '🟠 Sobras'
     };
     
     const statusColors = {
@@ -908,7 +1002,7 @@ function renderizarGraficosMGM(pendencias) {
     );
     
     const obrasSet = new Set(pendencias.map(p => p.obra));
-    const obrasComPendencia = new Set(
+    const obrasComFalta = new Set(
         pendencias.filter(p => p.status === 'PENDENTE' || p.status === 'PARCIAL')
             .map(p => p.obra)
     );
@@ -919,22 +1013,22 @@ function renderizarGraficosMGM(pendencias) {
     );
     
     const totalObras = obrasSet.size || 1;
-    const obrasPendentes = obrasComPendencia.size;
+    const obrasFalta = obrasComFalta.size;
     const obrasAtendidasCount = obrasAtendidas.size;
     const obrasSobra = obrasComSobra.size;
     
     let htmlObras = `
         <div class="chart-bar-indicator">
-            <span class="label">Com Pendência</span>
+            <span class="label">🔴 Com Falta</span>
             <div class="bar-track">
-                <div class="bar-fill bar-pendente" style="width: ${(obrasPendentes / totalObras) * 100}%;">
-                    <span class="value">${obrasPendentes}</span>
+                <div class="bar-fill bar-pendente" style="width: ${(obrasFalta / totalObras) * 100}%;">
+                    <span class="value">${obrasFalta}</span>
                 </div>
             </div>
-            <span class="percent">${((obrasPendentes / totalObras) * 100).toFixed(0)}%</span>
+            <span class="percent">${((obrasFalta / totalObras) * 100).toFixed(0)}%</span>
         </div>
         <div class="chart-bar-indicator">
-            <span class="label">Com Sobras</span>
+            <span class="label">🟠 Com Sobras</span>
             <div class="bar-track">
                 <div class="bar-fill bar-sobra" style="width: ${(obrasSobra / totalObras) * 100}%;">
                     <span class="value">${obrasSobra}</span>
@@ -943,7 +1037,7 @@ function renderizarGraficosMGM(pendencias) {
             <span class="percent">${((obrasSobra / totalObras) * 100).toFixed(0)}%</span>
         </div>
         <div class="chart-bar-indicator">
-            <span class="label">Atendidas</span>
+            <span class="label">✅ Atendidas</span>
             <div class="bar-track">
                 <div class="bar-fill bar-baixado" style="width: ${(obrasAtendidasCount / totalObras) * 100}%;">
                     <span class="value">${obrasAtendidasCount}</span>
@@ -1004,7 +1098,7 @@ function selecionarDataObraMGM(obra, data) {
 }
 
 // ============================================
-// FUNÇÃO: RENDERIZAR DETALHES DA OBRA MGM (COM DATAS)
+// FUNÇÃO: RENDERIZAR DETALHES DA OBRA MGM (COM MÚLTIPLOS DOCUMENTOS)
 // ============================================
 
 function renderizarDetalhesObraMGM(itemSelecionado) {
@@ -1035,6 +1129,15 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         `;
         return;
     }
+    
+    // Calcular total de documentos únicos
+    const todosDocumentos = new Set();
+    todosItens.forEach(p => {
+        if (p.documentos && p.documentos.length > 0) {
+            p.documentos.forEach(doc => todosDocumentos.add(doc));
+        }
+    });
+    const totalDocs = todosDocumentos.size;
     
     const datasMap = {};
     todosItens.forEach(p => {
@@ -1097,7 +1200,7 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
     let html = `
         <div class="detail-header">
             <div class="detail-title">🏗️ ${obraFormatada}</div>
-            <div class="detail-subtitle">📦 ${todosItens.length} itens no total</div>
+            <div class="detail-subtitle">📦 ${todosItens.length} itens no total ${totalDocs > 1 ? `| 📄 ${totalDocs} documentos` : ''}</div>
         </div>
         
         <div class="detail-stats-grid">
@@ -1106,15 +1209,15 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
                 <span class="stat-value">${todosItens.length}</span>
             </div>
             <div class="detail-stat">
-                <span class="stat-label">⏳ Pendentes</span>
-                <span class="stat-value" style="color: #ED8936;">${totalPendentes}</span>
+                <span class="stat-label">🔴 Pendentes</span>
+                <span class="stat-value" style="color: #E53E3E;">${totalPendentes}</span>
             </div>
             <div class="detail-stat">
-                <span class="stat-label">⏳ Parciais</span>
-                <span class="stat-value" style="color: #F6AD55;">${totalParciais}</span>
+                <span class="stat-label">🔴 Parciais</span>
+                <span class="stat-value" style="color: #E53E3E;">${totalParciais}</span>
             </div>
             <div class="detail-stat">
-                <span class="stat-label">⚠️ Sobras</span>
+                <span class="stat-label">🟠 Sobras</span>
                 <span class="stat-value" style="color: #D69E2E;">${totalSobras}</span>
             </div>
             <div class="detail-stat">
@@ -1129,12 +1232,12 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         
         <div class="detail-summary">
             <div class="summary-item" style="background: #FEFCBF; border-left: 4px solid #D69E2E;">
-                <span class="summary-label">⚠️ Excedentes (Sobras)</span>
+                <span class="summary-label">🟠 Excedentes (Sobras)</span>
                 <span class="summary-value" style="color: #D69E2E; font-weight: 700;">${totalSobraQtd.toFixed(0)} unidades</span>
             </div>
-            <div class="summary-item" style="background: #FED7D7; border-left: 4px solid #FC8181;">
-                <span class="summary-label">❌ Faltas</span>
-                <span class="summary-value" style="color: #FC8181; font-weight: 700;">${totalFaltaQtd.toFixed(0)} unidades</span>
+            <div class="summary-item" style="background: #FED7D7; border-left: 4px solid #E53E3E;">
+                <span class="summary-label">🔴 Faltas (Pendentes)</span>
+                <span class="summary-value" style="color: #E53E3E; font-weight: 700;">${totalFaltaQtd.toFixed(0)} unidades</span>
             </div>
         </div>
         
@@ -1148,23 +1251,29 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         const totalPend = info.totalPendentes + info.totalParciais + info.totalSobras;
         
         let statusBadge = '';
+        let badgeClass = '';
         if (info.totalSobraQtd > 0 && info.totalFaltaQtd > 0) {
-            statusBadge = `⚠️+❌`;
+            statusBadge = `🟠+🔴`;
+            badgeClass = 'status-misto';
         } else if (info.totalSobraQtd > 0) {
-            statusBadge = `⚠️ ${info.totalSobraQtd.toFixed(0)}`;
+            statusBadge = `🟠 ${info.totalSobraQtd.toFixed(0)}`;
+            badgeClass = 'status-sobra';
         } else if (info.totalFaltaQtd > 0) {
-            statusBadge = `❌ ${info.totalFaltaQtd.toFixed(0)}`;
+            statusBadge = `🔴 ${info.totalFaltaQtd.toFixed(0)}`;
+            badgeClass = 'status-falta';
         } else if (totalPend > 0) {
             statusBadge = '⏳';
+            badgeClass = 'status-pendente';
         } else {
             statusBadge = '✅';
+            badgeClass = 'status-atendido';
         }
         
         html += `
-            <div class="detail-data-item ${isActive ? 'active' : ''}" onclick="selecionarDataObraMGM('${obra}', '${data}')">
+            <div class="detail-data-item ${isActive ? 'active' : ''} ${badgeClass}" onclick="selecionarDataObraMGM('${obra}', '${data}')">
                 <span class="data-label">📅 ${info.dataFormatada}</span>
                 <span class="data-badge">${info.itens.length} itens</span>
-                <span class="data-status">${statusBadge}</span>
+                <span class="data-status ${badgeClass}">${statusBadge}</span>
             </div>
         `;
     });
@@ -1183,20 +1292,28 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
             statusBadge = '✅ Atendido';
             statusClass = 'status-atendido';
         } else if (item.status === 'SOBRA') {
-            statusBadge = `⚠️ +${item.sobra.toFixed(0)}`;
+            statusBadge = `🟠 +${item.sobra.toFixed(0)}`;
             statusClass = 'status-sobra';
         } else if (item.status === 'PARCIAL') {
-            statusBadge = `⏳ -${item.falta.toFixed(0)}`;
-            statusClass = 'status-parcial';
+            statusBadge = `🔴 -${item.falta.toFixed(0)}`;
+            statusClass = 'status-falta';
         } else {
-            statusBadge = '⏳ Pendente';
+            statusBadge = '🔴 Pendente';
             statusClass = 'status-pendente';
         }
         
         const qtdInfo = `${item.qtdEncontrada.toFixed(2)} / ${item.qtdEsperada.toFixed(2)}`;
-        const movInfo = item.movimentoEncontrado 
-            ? `${item.movimentoEncontrado}`
-            : 'Nenhum';
+        
+        // Mostra os documentos relacionados
+        let docsInfo = '';
+        if (item.documentos && item.documentos.length > 0) {
+            const docsExibicao = item.documentos.slice(0, 3).join(', ');
+            docsInfo = item.documentos.length > 3 
+                ? `📄 ${docsExibicao}... (+${item.documentos.length - 3})`
+                : `📄 ${docsExibicao}`;
+        } else {
+            docsInfo = '📄 Nenhum';
+        }
         
         html += `
             <div class="detail-item ${statusClass}">
@@ -1204,7 +1321,7 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
                 <div class="item-desc-detail">${item.descricao}</div>
                 <div class="item-qtd-detail">${qtdInfo}</div>
                 <div class="item-status-detail ${statusClass}">${statusBadge}</div>
-                <div class="item-mov-detail">📄 ${movInfo}</div>
+                <div class="item-mov-detail" style="font-size: 10px; color: #718096;">${docsInfo}</div>
             </div>
         `;
     });
@@ -1230,6 +1347,9 @@ function aplicarFiltrosMGM() {
     
     if (filtroStatus !== 'todos') {
         filtrados = filtrados.filter(p => p.status === filtroStatus);
+        filtroStatusMGMAtivo = filtroStatus;
+    } else {
+        filtroStatusMGMAtivo = null;
     }
     
     if (buscaTexto) {
@@ -1247,11 +1367,8 @@ function aplicarFiltrosMGM() {
         );
     }
     
-    if (abaAtualMGM === 'separacao') {
-        filtrados = filtrados.filter(p => p.status === 'PENDENTE' || p.status === 'PARCIAL' || p.status === 'SOBRA');
-    }
-    
     dadosFiltradosMGM = filtrados;
+    itemSelecionadoMGM = null;
     
     const totalRegistros = document.getElementById('totalRegistrosMGM');
     if (totalRegistros) {
@@ -1266,8 +1383,15 @@ function limparFiltrosMGM() {
     document.getElementById('filterStatusMGM').value = 'todos';
     document.getElementById('filterBuscaMGM').value = '';
     document.getElementById('filterObraMGM').value = '';
+    filtroStatusMGMAtivo = null;
     dadosFiltradosMGM = [...pendenciasConsolidadas];
-    aplicarFiltrosMGM();
+    itemSelecionadoMGM = null;
+    
+    document.querySelectorAll('.kpi-card-mgm').forEach(el => {
+        el.classList.remove('active-filter');
+    });
+    
+    renderizarDashboardMGM();
 }
 
 // ============================================
@@ -1303,7 +1427,7 @@ function trocarAbaPrincipal(aba) {
 }
 
 // ============================================
-// FUNÇÕES DO DASHBOARD ANTIGO (SEPARAÇÃO)
+// FUNÇÕES DO DASHBOARD ANTIGO (SEPARAÇÃO) - MANTIDAS
 // ============================================
 
 function criarMeses() {
@@ -1937,5 +2061,6 @@ window.carregarDadosMGM = carregarDadosMGM;
 window.aplicarFiltrosMGM = aplicarFiltrosMGM;
 window.limparFiltrosMGM = limparFiltrosMGM;
 window.renderizarDashboardMGM = renderizarDashboardMGM;
+window.aplicarFiltroStatusMGM = aplicarFiltroStatusMGM;
 
 console.log('✅ dashboards-pendencia-requisicao.js inicializado!');

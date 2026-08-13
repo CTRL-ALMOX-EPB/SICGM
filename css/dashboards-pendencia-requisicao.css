@@ -359,11 +359,39 @@
     margin-top: 2px;
 }
 
-.kpi-card.status-pendente .kpi-value { color: #ED8936; }
+.kpi-card.status-pendente .kpi-value { color: #E53E3E; }
 .kpi-card.status-baixado .kpi-value { color: #48BB78; }
 .kpi-card.status-total .kpi-value { color: #4299E1; }
 .kpi-card.status-valor .kpi-value { color: #48BB78; font-size: 20px; }
 .kpi-card.status-sobra .kpi-value { color: #D69E2E; }
+
+/* KPI interativo - filtro ativo */
+.kpi-card-mgm {
+    cursor: pointer !important;
+    transition: all 0.3s ease;
+}
+
+.kpi-card-mgm:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.kpi-card-mgm.active-filter {
+    border-color: #4299E1 !important;
+    background: #EBF8FF !important;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.3);
+    transform: translateY(-3px);
+}
+
+.kpi-card-mgm.active-filter::after {
+    content: '✓';
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    font-size: 14px;
+    color: #4299E1;
+    font-weight: 700;
+}
 
 /* ===== CONTEÚDO PRINCIPAL ===== */
 .dashboard-main {
@@ -463,6 +491,36 @@
     white-space: nowrap;
 }
 
+/* ===== BADGES PARA STATUS MGM ===== */
+.badge-status.status-falta {
+    background: #FED7D7;
+    color: #E53E3E;
+    font-weight: 600;
+}
+
+.badge-status.status-sobra {
+    background: #FEFCBF;
+    color: #D69E2E;
+    font-weight: 600;
+}
+
+.badge-status.status-misto {
+    background: #FEFCBF;
+    color: #D69E2E;
+    font-weight: 600;
+    border: 1px solid #E53E3E;
+}
+
+.badge-status.status-pendente {
+    background: #FED7D7;
+    color: #E53E3E;
+}
+
+.badge-status.status-atendido {
+    background: #C6F6D5;
+    color: #276749;
+}
+
 /* ===== LIST HEADER ===== */
 .list-header {
     display: grid;
@@ -535,7 +593,7 @@
     font-size: 16px;
 }
 
-.item-details-panel .detail-status-count .count.status-pendente { color: #ED8936; }
+.item-details-panel .detail-status-count .count.status-pendente { color: #E53E3E; }
 .item-details-panel .detail-status-count .count.status-baixado { color: #48BB78; }
 
 .item-details-panel .detail-section-title {
@@ -580,7 +638,7 @@
     white-space: nowrap;
 }
 
-.badge-status.pendente { background: #FEFCBF; color: #975A16; }
+.badge-status.pendente { background: #FED7D7; color: #E53E3E; }
 .badge-status.baixado { background: #C6F6D5; color: #276749; }
 .badge-status.parcial { background: #FEFCBF; color: #975A16; }
 .badge-status.sobra { background: #FEFCBF; color: #D69E2E; }
@@ -654,10 +712,10 @@
     flex-shrink: 0;
 }
 
-.bar-fill.bar-pendente { background: linear-gradient(90deg, #ED8936, #C05621); }
+.bar-fill.bar-pendente { background: linear-gradient(90deg, #E53E3E, #C53030); }
 .bar-fill.bar-baixado { background: linear-gradient(90deg, #48BB78, #276749); }
 .bar-fill.bar-total { background: linear-gradient(90deg, #4299E1, #2B6CB0); }
-.bar-fill.bar-parcial { background: linear-gradient(90deg, #ED8936, #F6AD55); }
+.bar-fill.bar-parcial { background: linear-gradient(90deg, #E53E3E, #C53030); }
 .bar-fill.bar-sobra { background: linear-gradient(90deg, #D69E2E, #B7791F); }
 
 /* ===== EMPTY STATE ===== */
@@ -863,10 +921,31 @@
     font-weight: 600;
 }
 
+.detail-data-item .data-status.status-falta {
+    color: #E53E3E;
+}
+
+.detail-data-item .data-status.status-sobra {
+    color: #D69E2E;
+}
+
+.detail-data-item .data-status.status-misto {
+    color: #D69E2E;
+}
+
+.detail-data-item .data-status.status-atendido {
+    color: #48BB78;
+}
+
+.detail-data-item .data-status.status-pendente {
+    color: #E53E3E;
+}
+
 .detail-data-item.active .data-label {
     color: #2B6CB0;
 }
 
+/* ===== LISTA DE ITENS DOS DETALHES ===== */
 .detail-items-list {
     max-height: 300px;
     overflow-y: auto;
@@ -951,9 +1030,9 @@
     color: #D69E2E;
 }
 
-.detail-item .item-status-detail.status-parcial {
-    background: #FEFCBF;
-    color: #975A16;
+.detail-item .item-status-detail.status-falta {
+    background: #FED7D7;
+    color: #E53E3E;
 }
 
 .detail-item .item-status-detail.status-pendente {
@@ -978,8 +1057,8 @@
     border-left: 3px solid #D69E2E;
 }
 
-.detail-item.status-parcial {
-    border-left: 3px solid #F6AD55;
+.detail-item.status-falta {
+    border-left: 3px solid #E53E3E;
 }
 
 .detail-item.status-pendente {
