@@ -594,6 +594,16 @@ function renderizarDashboardMGM() {
     // Se tem item selecionado, mostra detalhes
     if (itemSelecionadoMGM) {
         renderizarDetalhesObraMGM(itemSelecionadoMGM);
+    } else {
+        const detalhesContainer = document.getElementById('itemDetailsMGM');
+        if (detalhesContainer) {
+            detalhesContainer.innerHTML = `
+                <div class="empty-state-dashboard">
+                    <div class="icon">👆</div>
+                    <p>Selecione uma obra para ver os detalhes</p>
+                </div>
+            `;
+        }
     }
     
     console.log(`✅ Dashboard MGM atualizado com ${dadosExibir.length} registros`);
@@ -770,37 +780,6 @@ function renderizarListaObrasMGM(pendencias) {
                 <span style="text-align: center;">${statusBadge}</span>
             </div>
         `;
-        
-        // Se selecionado, mostra os itens detalhados
-        if (isActive) {
-            grupo.itens.forEach(item => {
-                let statusBadgeItem = '';
-                if (item.status === 'ATENDIDO') {
-                    statusBadgeItem = '<span class="badge-status baixado">✅ Atendido</span>';
-                } else if (item.status === 'SOBRA') {
-                    statusBadgeItem = `<span class="badge-status" style="background: #FEFCBF; color: #D69E2E;">⚠️ +${item.sobra.toFixed(0)}</span>`;
-                } else if (item.status === 'PARCIAL') {
-                    statusBadgeItem = `<span class="badge-status" style="background: #FEFCBF; color: #975A16;">⏳ -${item.falta.toFixed(0)}</span>`;
-                } else {
-                    statusBadgeItem = '<span class="badge-status pendente">⏳ Pendente</span>';
-                }
-                
-                const qtdInfo = `${item.qtdEncontrada.toFixed(2)}/${item.qtdEsperada.toFixed(2)}`;
-                
-                html += `
-                    <div style="display: grid; grid-template-columns: 100px 110px 1fr 60px 60px 70px; gap: 6px; padding: 6px 12px 6px 30px; border-bottom: 1px solid #EDF2F7; font-size: 11px; background: #F7FAFC;">
-                        <span style="color: #718096;">${item.codigo}</span>
-                        <span style="color: #718096;"></span>
-                        <span style="color: #4A5568;">${item.descricao}</span>
-                        <span style="text-align: right; font-weight: 500;">${qtdInfo}</span>
-                        <span style="text-align: center; font-weight: 600; color: ${item.status === 'SOBRA' ? '#D69E2E' : '#A0AEC0'};">
-                            ${item.status === 'SOBRA' ? `+${item.sobra.toFixed(0)}` : '-'}
-                        </span>
-                        <span style="text-align: center;">${statusBadgeItem}</span>
-                    </div>
-                `;
-            });
-        }
     }
     
     container.innerHTML = html;
@@ -921,7 +900,25 @@ function selecionarObraMGM(obra, data) {
         itemSelecionadoMGM = { obra: obra, data: data };
     }
     
-    renderizarDashboardMGM();
+    // Renderiza apenas os detalhes
+    renderizarDetalhesObraMGM(itemSelecionadoMGM);
+    
+    // Atualiza a lista para mostrar o item selecionado (sem re-renderizar tudo)
+    const container = document.getElementById('itemListMGM');
+    if (container) {
+        document.querySelectorAll('#itemListMGM .item-group-item').forEach(el => {
+            el.classList.remove('active');
+        });
+        if (itemSelecionadoMGM) {
+            const items = document.querySelectorAll('#itemListMGM .item-group-item');
+            items.forEach(el => {
+                const onclickAttr = el.getAttribute('onclick');
+                if (onclickAttr && onclickAttr.includes(`'${itemSelecionadoMGM.obra}'`) && onclickAttr.includes(`'${itemSelecionadoMGM.data}'`)) {
+                    el.classList.add('active');
+                }
+            });
+        }
+    }
 }
 
 function renderizarDetalhesObraMGM(itemSelecionado) {
@@ -977,69 +974,89 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
     });
     
     let html = `
-        <div class="detail-title">🏗️ ${obra}</div>
-        <div class="detail-row">
-            <span class="label">📅 Data de Programação:</span>
-            <span class="value">${data}</span>
+        <div class="detail-header">
+            <div class="detail-title">🏗️ ${obra}</div>
+            <div class="detail-subtitle">📅 ${data}</div>
         </div>
-        <div class="detail-row">
-            <span class="label">📦 Total de Itens:</span>
-            <span class="value">${pendencias.length}</span>
+        
+        <div class="detail-stats-grid">
+            <div class="detail-stat">
+                <span class="stat-label">📦 Total de Itens</span>
+                <span class="stat-value">${pendencias.length}</span>
+            </div>
+            <div class="detail-stat">
+                <span class="stat-label">⏳ Pendentes</span>
+                <span class="stat-value" style="color: #ED8936;">${totalPendentes}</span>
+            </div>
+            <div class="detail-stat">
+                <span class="stat-label">⏳ Parciais</span>
+                <span class="stat-value" style="color: #F6AD55;">${totalParciais}</span>
+            </div>
+            <div class="detail-stat">
+                <span class="stat-label">⚠️ Sobras</span>
+                <span class="stat-value" style="color: #D69E2E;">${totalSobras}</span>
+            </div>
+            <div class="detail-stat">
+                <span class="stat-label">✅ Atendidos</span>
+                <span class="stat-value" style="color: #48BB78;">${totalAtendidos}</span>
+            </div>
+            <div class="detail-stat">
+                <span class="stat-label">💰 Valor Total</span>
+                <span class="stat-value" style="color: #2B6CB0; font-weight: 700;">${formatarValor(valorTotal)}</span>
+            </div>
         </div>
-        <div class="detail-row">
-            <span class="label">⏳ Pendentes:</span>
-            <span class="value" style="color: #ED8936;">${totalPendentes}</span>
+        
+        <div class="detail-summary">
+            <div class="summary-item" style="background: #FEFCBF; border-left: 4px solid #D69E2E;">
+                <span class="summary-label">⚠️ Excedentes (Sobras)</span>
+                <span class="summary-value" style="color: #D69E2E; font-weight: 700;">${totalSobraQtd.toFixed(0)} unidades</span>
+            </div>
+            <div class="summary-item" style="background: #FED7D7; border-left: 4px solid #FC8181;">
+                <span class="summary-label">❌ Faltas</span>
+                <span class="summary-value" style="color: #FC8181; font-weight: 700;">${totalFaltaQtd.toFixed(0)} unidades</span>
+            </div>
         </div>
-        <div class="detail-row">
-            <span class="label">⏳ Parciais (falta ${totalFaltaQtd.toFixed(0)}):</span>
-            <span class="value" style="color: #F6AD55;">${totalParciais}</span>
-        </div>
-        <div class="detail-row">
-            <span class="label">⚠️ Sobras (${totalSobraQtd.toFixed(0)} excedentes):</span>
-            <span class="value" style="color: #D69E2E; font-weight: 700;">${totalSobras}</span>
-        </div>
-        <div class="detail-row">
-            <span class="label">✅ Atendidos:</span>
-            <span class="value" style="color: #48BB78;">${totalAtendidos}</span>
-        </div>
-        <div class="detail-row">
-            <span class="label">💰 Valor Total:</span>
-            <span class="value" style="color: #ED8936; font-weight: 700;">${formatarValor(valorTotal)}</span>
-        </div>
-        <div class="detail-section-title">📋 Itens da Obra:</div>
-        <div class="item-detail-obras">
+        
+        <div class="detail-section-title">📋 Itens da Obra</div>
+        <div class="detail-items-list">
     `;
     
     pendencias.forEach(item => {
         let statusBadge = '';
+        let statusClass = '';
         if (item.status === 'ATENDIDO') {
-            statusBadge = '<span class="badge-status baixado">✅ Atendido</span>';
+            statusBadge = '✅ Atendido';
+            statusClass = 'status-atendido';
         } else if (item.status === 'SOBRA') {
-            statusBadge = `<span class="badge-status" style="background: #FEFCBF; color: #D69E2E;">⚠️ +${item.sobra.toFixed(0)}</span>`;
+            statusBadge = `⚠️ +${item.sobra.toFixed(0)}`;
+            statusClass = 'status-sobra';
         } else if (item.status === 'PARCIAL') {
-            statusBadge = `<span class="badge-status" style="background: #FEFCBF; color: #975A16;">⏳ -${item.falta.toFixed(0)}</span>`;
+            statusBadge = `⏳ -${item.falta.toFixed(0)}`;
+            statusClass = 'status-parcial';
         } else {
-            statusBadge = '<span class="badge-status pendente">⏳ Pendente</span>';
+            statusBadge = '⏳ Pendente';
+            statusClass = 'status-pendente';
         }
         
-        const qtdInfo = `${item.qtdEncontrada.toFixed(2)}/${item.qtdEsperada.toFixed(2)}`;
-        const valorItem = item.qtdEsperada * buscarValorItem(item.codigo);
+        const qtdInfo = `${item.qtdEncontrada.toFixed(2)} / ${item.qtdEsperada.toFixed(2)}`;
         const movInfo = item.movimentoEncontrado 
-            ? `${item.movimentoEncontrado} (${item.tipoMovimento || '?'})`
+            ? `${item.movimentoEncontrado}`
             : 'Nenhum';
         
         html += `
-            <div class="obra-row" style="display: grid; grid-template-columns: 100px 1fr 80px 80px 80px; gap: 8px; padding: 6px 8px; background: #F7FAFC; border-radius: 4px; border-bottom: 1px solid #EDF2F7;">
-                <span style="font-weight: 600; color: #2D3748; font-size: 12px;">${item.codigo}</span>
-                <span style="color: #4A5568; font-size: 12px;">${item.descricao}</span>
-                <span style="text-align: right; font-weight: 500; font-size: 12px;">${qtdInfo}</span>
-                <span style="text-align: center; font-size: 12px;">${statusBadge}</span>
-                <span style="text-align: right; font-size: 11px; color: #718096;">${movInfo}</span>
+            <div class="detail-item ${statusClass}">
+                <div class="item-code-detail">${item.codigo}</div>
+                <div class="item-desc-detail">${item.descricao}</div>
+                <div class="item-qtd-detail">${qtdInfo}</div>
+                <div class="item-status-detail ${statusClass}">${statusBadge}</div>
+                <div class="item-mov-detail">📄 ${movInfo}</div>
             </div>
         `;
     });
     
-    html += `</div>`;
+    html += `
+        </div>
+    `;
     
     container.innerHTML = html;
 }
@@ -1106,26 +1123,22 @@ function trocarAbaPrincipal(aba) {
     console.log(`🔄 Trocando para aba: ${aba}`);
     abaAtual = aba;
     
-    // Atualizar botões
     document.querySelectorAll('.btn-aba-principal').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.aba === aba);
     });
     
-    // Esconder/mostrar conteúdos
     const containerSeparacao = document.getElementById('dashboardSeparacao');
     const containerMGM = document.getElementById('dashboardMGM');
     
     if (aba === 'separacao') {
         containerSeparacao.style.display = 'block';
         containerMGM.style.display = 'none';
-        // Re-renderizar separação se necessário
         if (dadosFiltrados.length > 0) {
             renderizarDashboardSeparacao(dadosFiltrados);
         }
     } else {
         containerSeparacao.style.display = 'none';
         containerMGM.style.display = 'block';
-        // Se dados MGM ainda não foram carregados, carregar
         if (!dadosCarregadosMGM) {
             carregarDadosMGM();
         } else {

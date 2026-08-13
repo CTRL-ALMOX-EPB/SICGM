@@ -333,28 +333,13 @@
     border: 2px solid #E2E8F0;
     text-align: center;
     transition: all 0.25s ease;
-    cursor: pointer;
+    cursor: default;
     position: relative;
 }
 
 .kpi-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.kpi-card.active {
-    border-color: #4299E1;
-    background: #EBF8FF;
-}
-
-.kpi-card.active::after {
-    content: '✓';
-    position: absolute;
-    top: 4px;
-    right: 8px;
-    font-size: 12px;
-    color: #4299E1;
-    font-weight: 700;
 }
 
 .kpi-card .kpi-icon {
@@ -752,19 +737,203 @@
     overflow-y: auto;
 }
 
-#dashboardMGM .item-details-panel .obra-row {
+/* ===== DETALHES DA OBRA MGM ===== */
+.detail-header {
+    margin-bottom: 15px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #E2E8F0;
+}
+
+.detail-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2D3748;
+}
+
+.detail-subtitle {
+    font-size: 13px;
+    color: #718096;
+    margin-top: 2px;
+}
+
+.detail-stats-grid {
     display: grid;
-    grid-template-columns: 100px 1fr 80px 80px 80px;
-    gap: 8px;
-    padding: 6px 8px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.detail-stat {
     background: #F7FAFC;
-    border-radius: 4px;
-    border-bottom: 1px solid #EDF2F7;
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.detail-stat .stat-label {
+    display: block;
+    font-size: 11px;
+    color: #718096;
+    font-weight: 500;
+}
+
+.detail-stat .stat-value {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    color: #2D3748;
+    margin-top: 2px;
+}
+
+.detail-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.summary-item {
+    padding: 10px 14px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
 }
 
-#dashboardMGM .item-details-panel .obra-row span {
+.summary-item .summary-label {
     font-size: 12px;
+    font-weight: 600;
+    color: #4A5568;
+}
+
+.summary-item .summary-value {
+    font-size: 16px;
+}
+
+.detail-items-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+}
+
+.detail-items-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.detail-items-list::-webkit-scrollbar-track {
+    background: #F7FAFC;
+    border-radius: 4px;
+}
+
+.detail-items-list::-webkit-scrollbar-thumb {
+    background: #CBD5E0;
+    border-radius: 4px;
+}
+
+.detail-item {
+    display: grid;
+    grid-template-columns: 90px 1fr 80px 80px 100px;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #EDF2F7;
+    align-items: center;
+    font-size: 12px;
+    transition: background 0.15s;
+}
+
+.detail-item:hover {
+    background: #F7FAFC;
+}
+
+.detail-item:last-child {
+    border-bottom: none;
+}
+
+.detail-item .item-code-detail {
+    font-weight: 600;
+    color: #2D3748;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.detail-item .item-desc-detail {
+    color: #4A5568;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.detail-item .item-qtd-detail {
+    text-align: right;
+    font-weight: 500;
+    color: #4A5568;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.detail-item .item-status-detail {
+    text-align: center;
+    font-weight: 600;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    white-space: nowrap;
+}
+
+.detail-item .item-status-detail.status-atendido {
+    background: #C6F6D5;
+    color: #276749;
+}
+
+.detail-item .item-status-detail.status-sobra {
+    background: #FEFCBF;
+    color: #D69E2E;
+}
+
+.detail-item .item-status-detail.status-parcial {
+    background: #FEFCBF;
+    color: #975A16;
+}
+
+.detail-item .item-status-detail.status-pendente {
+    background: #FED7D7;
+    color: #E53E3E;
+}
+
+.detail-item .item-mov-detail {
+    font-size: 11px;
+    color: #718096;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.detail-item.status-atendido {
+    border-left: 3px solid #48BB78;
+}
+
+.detail-item.status-sobra {
+    border-left: 3px solid #D69E2E;
+}
+
+.detail-item.status-parcial {
+    border-left: 3px solid #F6AD55;
+}
+
+.detail-item.status-pendente {
+    border-left: 3px solid #E53E3E;
+}
+
+.detail-section-title {
+    font-weight: 600;
+    color: #4A5568;
+    margin: 12px 0 8px 0;
+    font-size: 13px;
 }
 
 /* ===== TOAST ===== */
@@ -910,10 +1079,38 @@
     #dashboardMGM .kpi-grid {
         grid-template-columns: repeat(2, 1fr) !important;
     }
+
+    /* Detalhes MGM */
+    .detail-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
     
-    #dashboardMGM .item-details-panel .obra-row {
+    .detail-summary {
         grid-template-columns: 1fr;
-        gap: 2px;
+    }
+    
+    .detail-item {
+        grid-template-columns: 80px 1fr;
+        gap: 4px;
+        padding: 6px 10px;
+    }
+    
+    .detail-item .item-qtd-detail {
+        text-align: left;
+        grid-column: 1 / 2;
+    }
+    
+    .detail-item .item-status-detail {
+        text-align: left;
+        grid-column: 2 / 3;
+        justify-self: start;
+    }
+    
+    .detail-item .item-mov-detail {
+        text-align: left;
+        grid-column: 1 / 3;
+        font-size: 10px;
+        color: #A0AEC0;
     }
 
     .btn-aba-principal {
@@ -1055,5 +1252,50 @@
     #dashboardMGM .kpi-grid {
         grid-template-columns: 1fr 1fr !important;
         gap: 8px !important;
+    }
+
+    /* Detalhes MGM - Mobile */
+    .detail-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+    
+    .detail-stat {
+        padding: 6px 8px;
+    }
+    
+    .detail-stat .stat-value {
+        font-size: 16px;
+    }
+    
+    .detail-item {
+        grid-template-columns: 1fr;
+        gap: 2px;
+        padding: 6px 8px;
+    }
+    
+    .detail-item .item-code-detail {
+        font-weight: 700;
+        font-size: 13px;
+    }
+    
+    .detail-item .item-desc-detail {
+        font-size: 11px;
+        white-space: normal;
+    }
+    
+    .detail-item .item-qtd-detail {
+        text-align: left;
+        font-size: 11px;
+    }
+    
+    .detail-item .item-status-detail {
+        text-align: left;
+        justify-self: start;
+        font-size: 10px;
+    }
+    
+    .detail-item .item-mov-detail {
+        font-size: 10px;
     }
 }
