@@ -326,6 +326,10 @@ function parsearMovimentosSiago(texto) {
     return movimentos;
 }
 
+// ============================================
+// FUNÇÃO: PARSEAR DEVOLUÇÃO COMPILADA (CORRIGIDA)
+// ============================================
+
 function parsearDevolucaoCompilada(texto) {
     console.log('🔄 Parseando devolucao_compilada.txt...');
     const linhas = texto.trim().split('\n');
@@ -348,8 +352,11 @@ function parsearDevolucaoCompilada(texto) {
         arquivo: cabecalho.indexOf('ARQUIVO')
     };
     
+    console.log('📌 Índices mapeados:', indices);
+    
     const itens = [];
     let linhasProcessadas = 0;
+    let datasInvalidas = 0;
     
     for (let i = 1; i < linhas.length; i++) {
         const linha = linhas[i].trim();
@@ -358,9 +365,62 @@ function parsearDevolucaoCompilada(texto) {
         const partes = linha.split('\t');
         if (partes.length < 7) continue;
         
+        // CORREÇÃO: Converter data de DD.MM.YYYY ou DD/MM/YYYY para YYYY-MM-DD
+        let dataOriginal = partes[indices.data]?.trim() || '';
+        let dataConvertida = dataOriginal;
+        
+        if (dataOriginal) {
+            // Verifica se está no formato DD.MM.YYYY
+            if (dataOriginal.includes('.')) {
+                const partesData = dataOriginal.split('.');
+                if (partesData.length === 3) {
+                    const dia = partesData[0].padStart(2, '0');
+                    const mes = partesData[1].padStart(2, '0');
+                    const ano = partesData[2];
+                    const anoCompleto = ano.length === 2 ? '20' + ano : ano;
+                    dataConvertida = `${anoCompleto}-${mes}-${dia}`;
+                }
+            }
+            // Verifica se está no formato DD/MM/YYYY
+            else if (dataOriginal.includes('/')) {
+                const partesData = dataOriginal.split('/');
+                if (partesData.length === 3) {
+                    const dia = partesData[0].padStart(2, '0');
+                    const mes = partesData[1].padStart(2, '0');
+                    const ano = partesData[2];
+                    const anoCompleto = ano.length === 2 ? '20' + ano : ano;
+                    dataConvertida = `${anoCompleto}-${mes}-${dia}`;
+                }
+            }
+            // Verifica se está no formato YYYY-MM-DD (já está correto)
+            else if (dataOriginal.includes('-')) {
+                const partesData = dataOriginal.split('-');
+                if (partesData.length === 3) {
+                    dataConvertida = dataOriginal;
+                }
+            }
+        }
+        
+        // Se a data original não foi convertida, tenta com regex
+        if (!dataConvertida || dataConvertida === dataOriginal) {
+            const testDate = new Date(dataOriginal);
+            if (isNaN(testDate.getTime()) && dataOriginal) {
+                datasInvalidas++;
+                const regexMatch = dataOriginal.match(/(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})/);
+                if (regexMatch) {
+                    const dia = regexMatch[1].padStart(2, '0');
+                    const mes = regexMatch[2].padStart(2, '0');
+                    let ano = regexMatch[3];
+                    if (ano.length === 2) ano = '20' + ano;
+                    dataConvertida = `${ano}-${mes}-${dia}`;
+                }
+            }
+        }
+        
         const item = {
             obra: partes[indices.obra]?.trim() || '',
-            data: partes[indices.data]?.trim() || '',
+            data: dataConvertida,
+            dataOriginal: dataOriginal,
             codigo: partes[indices.codigo]?.trim() || '',
             descricao: partes[indices.descricao]?.trim() || '',
             qtdAplicada: parseFloat(partes[indices.qtdAplicada]?.trim().replace(',', '.') || '0'),
@@ -374,16 +434,16 @@ function parsearDevolucaoCompilada(texto) {
         }
     }
     
-    console.log(`✅ ${linhasProcessadas} itens processados`);
+    console.log(`✅ ${linhasProcessadas} itens processados (${datasInvalidas} datas inválidas corrigidas)`);
     return itens;
 }
 
 // ============================================
-// FUNÇÃO: CONSOLIDAR PENDÊNCIAS MGM (COM SOBRA)
+// FUNÇÃO: CONSOLIDAR PENDÊNCIAS MGM (COM SOBRA E FALTA)
 // ============================================
 
 function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanco) {
-    console.log('🔄 Consolidando pendências MGM (com cálculo de sobra)...');
+    console.log('🔄 Consolidando pendências MGM (com cálculo de sobra e falta)...');
     
     const pendencias = [];
     
@@ -538,7 +598,6 @@ async function carregarDadosMGM() {
         console.log(`   - Movimentos Banco: ${movimentosDoBanco.length}`);
         console.log(`   - Pendências Consolidadas: ${pendenciasConsolidadas.length}`);
         
-        // Esconder loading e mostrar dashboard MGM
         const loadingElement = document.getElementById('loadingMGM');
         if (loadingElement) loadingElement.style.display = 'none';
         
@@ -591,7 +650,6 @@ function renderizarDashboardMGM() {
         totalRegistros.textContent = `${dadosExibir.length} pendências`;
     }
     
-    // Se tem item selecionado, mostra detalhes
     if (itemSelecionadoMGM) {
         renderizarDetalhesObraMGM(itemSelecionadoMGM);
     } else {
@@ -683,6 +741,10 @@ function renderizarKPIsMGM(pendencias) {
     `;
 }
 
+// ============================================
+// FUNÇÃO: RENDERIZAR LISTA DE OBRAS MGM (SEM DATA)
+// ============================================
+
 function renderizarListaObrasMGM(pendencias) {
     const container = document.getElementById('itemListMGM');
     if (!container) return;
@@ -698,15 +760,15 @@ function renderizarListaObrasMGM(pendencias) {
         return;
     }
     
-    // Agrupar por obra e data
+    // Agrupar por obra (sem data)
     const grupos = {};
     pendencias.forEach(p => {
-        const chave = `${p.obra}|${p.data}`;
-        if (!grupos[chave]) {
-            grupos[chave] = {
-                obra: p.obra,
+        const obra = p.obra;
+        if (!grupos[obra]) {
+            grupos[obra] = {
+                obra: obra,
                 obraFormatada: p.obraFormatada,
-                data: p.data,
+                datas: new Set(),
                 itens: [],
                 totalPendentes: 0,
                 totalAtendidos: 0,
@@ -717,66 +779,70 @@ function renderizarListaObrasMGM(pendencias) {
                 status: 'PENDENTE'
             };
         }
-        grupos[chave].itens.push(p);
-        if (p.status === 'PENDENTE') grupos[chave].totalPendentes++;
+        grupos[obra].itens.push(p);
+        grupos[obra].datas.add(p.data);
+        
+        if (p.status === 'PENDENTE') grupos[obra].totalPendentes++;
         else if (p.status === 'PARCIAL') {
-            grupos[chave].totalParciais++;
-            grupos[chave].totalFaltaQtd += p.falta || 0;
-        } else if (p.status === 'ATENDIDO') grupos[chave].totalAtendidos++;
+            grupos[obra].totalParciais++;
+            grupos[obra].totalFaltaQtd += p.falta || 0;
+        } else if (p.status === 'ATENDIDO') grupos[obra].totalAtendidos++;
         else if (p.status === 'SOBRA') {
-            grupos[chave].totalSobras++;
-            grupos[chave].totalSobraQtd += p.sobra || 0;
+            grupos[obra].totalSobras++;
+            grupos[obra].totalSobraQtd += p.sobra || 0;
         }
         
-        if (grupos[chave].totalPendentes > 0 || grupos[chave].totalParciais > 0 || grupos[chave].totalSobras > 0) {
-            grupos[chave].status = 'PENDENTE';
+        if (grupos[obra].totalPendentes > 0 || grupos[obra].totalParciais > 0 || grupos[obra].totalSobras > 0) {
+            grupos[obra].status = 'PENDENTE';
         } else {
-            grupos[chave].status = 'ATENDIDO';
+            grupos[obra].status = 'ATENDIDO';
         }
     });
     
     let html = `
-        <div class="list-header" style="display: grid; grid-template-columns: 100px 110px 1fr 60px 60px 70px; gap: 6px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 11px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 100px 1fr 60px 60px 60px 70px; gap: 6px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 11px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
-            <span>Data</span>
             <span>Descrição</span>
             <span style="text-align: right;">Qtd</span>
-            <span style="text-align: center;">Sobra</span>
+            <span style="text-align: center; color: #D69E2E;">⚠️ Sobra</span>
+            <span style="text-align: center; color: #FC8181;">❌ Falta</span>
             <span style="text-align: center;">Status</span>
         </div>
     `;
     
-    for (const chave in grupos) {
-        const grupo = grupos[chave];
+    for (const obra in grupos) {
+        const grupo = grupos[obra];
         const isActive = itemSelecionadoMGM && 
-            itemSelecionadoMGM.obra === grupo.obra && 
-            itemSelecionadoMGM.data === grupo.data;
+            itemSelecionadoMGM.obra === grupo.obra;
         
         const totalPend = grupo.totalPendentes + grupo.totalParciais + grupo.totalSobras;
         const totalItens = grupo.itens.length;
-        const temSobra = grupo.totalSobras > 0;
+        const temSobra = grupo.totalSobraQtd > 0;
+        const temFalta = grupo.totalFaltaQtd > 0;
         
         let statusBadge = '';
-        if (temSobra) {
-            statusBadge = `<span class="badge-status" style="background: #FEFCBF; color: #D69E2E;">⚠️ ${grupo.totalSobraQtd.toFixed(0)} sobrando</span>`;
+        if (temSobra && temFalta) {
+            statusBadge = `<span class="badge-status" style="background: #FEFCBF; color: #D69E2E;">⚠️ + ❌</span>`;
+        } else if (temSobra) {
+            statusBadge = `<span class="badge-status" style="background: #FEFCBF; color: #D69E2E;">⚠️ ${grupo.totalSobraQtd.toFixed(0)}</span>`;
+        } else if (temFalta) {
+            statusBadge = `<span class="badge-status" style="background: #FED7D7; color: #E53E3E;">❌ ${grupo.totalFaltaQtd.toFixed(0)}</span>`;
         } else if (totalPend > 0) {
-            statusBadge = grupo.totalParciais > 0 
-                ? `<span class="badge-status" style="background: #FEFCBF; color: #975A16;">⏳ ${grupo.totalFaltaQtd.toFixed(0)} faltando</span>`
-                : '<span class="badge-status pendente">⏳ Pendente</span>';
+            statusBadge = '<span class="badge-status pendente">⏳ Pendente</span>';
         } else {
             statusBadge = '<span class="badge-status baixado">✅ Atendido</span>';
         }
         
-        const dataFormatada = formatarData(grupo.data);
-        const totalSobraExibicao = grupo.totalSobraQtd > 0 ? `⚠️ ${grupo.totalSobraQtd.toFixed(0)}` : '-';
+        const totalSobraExibicao = temSobra ? `⚠️ ${grupo.totalSobraQtd.toFixed(0)}` : '-';
+        const totalFaltaExibicao = temFalta ? `❌ ${grupo.totalFaltaQtd.toFixed(0)}` : '-';
         
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObraMGM('${grupo.obra}', '${grupo.data}')" style="display: grid; grid-template-columns: 100px 110px 1fr 60px 60px 70px; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
+            <div class="item-group-item ${isActive ? 'active' : ''}" onclick="selecionarObraMGM('${grupo.obra}')" style="display: grid; grid-template-columns: 100px 1fr 60px 60px 60px 70px; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;">
                 <span class="item-code" style="font-size: 12px;">${grupo.obraFormatada}</span>
-                <span style="font-size: 11px; color: #718096;">${dataFormatada}</span>
-                <span class="item-desc" style="font-size: 12px;">${totalItens} itens (${totalPend} pendentes)</span>
+                <span class="item-desc" style="font-size: 12px;">${totalItens} itens (${grupo.datas.size} datas)</span>
                 <span style="text-align: right; font-weight: 700; color: #2B6CB0; font-size: 12px;">${totalItens}</span>
-                <span style="text-align: center; font-weight: 600; color: ${grupo.totalSobraQtd > 0 ? '#D69E2E' : '#A0AEC0'}; font-size: 12px;">${totalSobraExibicao}</span>
+                <span style="text-align: center; font-weight: 600; color: ${temSobra ? '#D69E2E' : '#A0AEC0'}; font-size: 12px;">${totalSobraExibicao}</span>
+                <span style="text-align: center; font-weight: 600; color: ${temFalta ? '#FC8181' : '#A0AEC0'}; font-size: 12px;">${totalFaltaExibicao}</span>
                 <span style="text-align: center;">${statusBadge}</span>
             </div>
         `;
@@ -836,7 +902,6 @@ function renderizarGraficosMGM(pendencias) {
     
     document.getElementById('statusChartMGM').innerHTML = htmlStatus;
     
-    // Gráfico de Obras com Sobras
     const obrasComSobra = new Set(
         pendencias.filter(p => p.status === 'SOBRA')
             .map(p => p.obra)
@@ -891,41 +956,62 @@ function renderizarGraficosMGM(pendencias) {
     document.getElementById('valorChartMGM').innerHTML = htmlObras;
 }
 
-function selecionarObraMGM(obra, data) {
-    console.log(`🔍 Selecionando obra MGM: ${obra} - ${data}`);
+// ============================================
+// FUNÇÃO: SELECIONAR OBRA MGM
+// ============================================
+
+function selecionarObraMGM(obra) {
+    console.log(`🔍 Selecionando obra MGM: ${obra}`);
     
-    if (itemSelecionadoMGM && itemSelecionadoMGM.obra === obra && itemSelecionadoMGM.data === data) {
+    if (itemSelecionadoMGM && itemSelecionadoMGM.obra === obra) {
         itemSelecionadoMGM = null;
     } else {
-        itemSelecionadoMGM = { obra: obra, data: data };
+        itemSelecionadoMGM = { obra: obra, dataSelecionada: null };
     }
     
-    // Renderiza apenas os detalhes
     renderizarDetalhesObraMGM(itemSelecionadoMGM);
     
-    // Atualiza a lista para mostrar o item selecionado (sem re-renderizar tudo)
-    const container = document.getElementById('itemListMGM');
-    if (container) {
-        document.querySelectorAll('#itemListMGM .item-group-item').forEach(el => {
-            el.classList.remove('active');
+    document.querySelectorAll('#itemListMGM .item-group-item').forEach(el => {
+        el.classList.remove('active');
+    });
+    if (itemSelecionadoMGM) {
+        const items = document.querySelectorAll('#itemListMGM .item-group-item');
+        items.forEach(el => {
+            const onclickAttr = el.getAttribute('onclick');
+            if (onclickAttr && onclickAttr.includes(`'${itemSelecionadoMGM.obra}'`)) {
+                el.classList.add('active');
+            }
         });
-        if (itemSelecionadoMGM) {
-            const items = document.querySelectorAll('#itemListMGM .item-group-item');
-            items.forEach(el => {
-                const onclickAttr = el.getAttribute('onclick');
-                if (onclickAttr && onclickAttr.includes(`'${itemSelecionadoMGM.obra}'`) && onclickAttr.includes(`'${itemSelecionadoMGM.data}'`)) {
-                    el.classList.add('active');
-                }
-            });
-        }
     }
 }
+
+// ============================================
+// FUNÇÃO: SELECIONAR DATA NA OBRA
+// ============================================
+
+function selecionarDataObraMGM(obra, data) {
+    console.log(`📅 Selecionando data ${data} da obra ${obra}`);
+    
+    if (!itemSelecionadoMGM || itemSelecionadoMGM.obra !== obra) {
+        itemSelecionadoMGM = { obra: obra, dataSelecionada: data };
+    } else if (itemSelecionadoMGM.dataSelecionada === data) {
+        itemSelecionadoMGM.dataSelecionada = null;
+    } else {
+        itemSelecionadoMGM.dataSelecionada = data;
+    }
+    
+    renderizarDetalhesObraMGM(itemSelecionadoMGM);
+}
+
+// ============================================
+// FUNÇÃO: RENDERIZAR DETALHES DA OBRA MGM (COM DATAS)
+// ============================================
 
 function renderizarDetalhesObraMGM(itemSelecionado) {
     const container = document.getElementById('itemDetailsMGM');
     if (!container) return;
     
-    if (!itemSelecionado) {
+    if (!itemSelecionado || !itemSelecionado.obra) {
         container.innerHTML = `
             <div class="empty-state-dashboard">
                 <div class="icon">👆</div>
@@ -935,32 +1021,67 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         return;
     }
     
-    const pendencias = dadosFiltradosMGM.filter(p => 
-        p.obra === itemSelecionado.obra && p.data === itemSelecionado.data
-    );
+    const obra = itemSelecionado.obra;
+    const dataSelecionada = itemSelecionado.dataSelecionada;
     
-    if (pendencias.length === 0) {
+    let todosItens = dadosFiltradosMGM.filter(p => p.obra === obra);
+    
+    if (todosItens.length === 0) {
         container.innerHTML = `
             <div class="empty-state-dashboard">
                 <div class="icon">📭</div>
-                <p>Nenhum detalhe encontrado</p>
+                <p>Nenhum detalhe encontrado para esta obra</p>
             </div>
         `;
         return;
     }
     
-    const obra = pendencias[0].obraFormatada;
-    const data = formatarData(pendencias[0].data);
+    const datasMap = {};
+    todosItens.forEach(p => {
+        if (!datasMap[p.data]) {
+            datasMap[p.data] = {
+                data: p.data,
+                dataFormatada: formatarData(p.data),
+                itens: [],
+                totalPendentes: 0,
+                totalAtendidos: 0,
+                totalParciais: 0,
+                totalSobras: 0,
+                totalSobraQtd: 0,
+                totalFaltaQtd: 0
+            };
+        }
+        datasMap[p.data].itens.push(p);
+        if (p.status === 'PENDENTE') datasMap[p.data].totalPendentes++;
+        else if (p.status === 'PARCIAL') {
+            datasMap[p.data].totalParciais++;
+            datasMap[p.data].totalFaltaQtd += p.falta || 0;
+        } else if (p.status === 'ATENDIDO') datasMap[p.data].totalAtendidos++;
+        else if (p.status === 'SOBRA') {
+            datasMap[p.data].totalSobras++;
+            datasMap[p.data].totalSobraQtd += p.sobra || 0;
+        }
+    });
     
-    let totalPendentes = 0;
-    let totalAtendidos = 0;
-    let totalParciais = 0;
-    let totalSobras = 0;
-    let totalSobraQtd = 0;
-    let totalFaltaQtd = 0;
-    let valorTotal = 0;
+    const datasOrdenadas = Object.keys(datasMap).sort();
+    const obraFormatada = todosItens[0].obraFormatada;
     
-    pendencias.forEach(p => {
+    let itensParaMostrar = [];
+    let dataAtiva = dataSelecionada;
+    
+    if (dataSelecionada && datasMap[dataSelecionada]) {
+        itensParaMostrar = datasMap[dataSelecionada].itens;
+    } else {
+        todosItens.forEach(p => {
+            itensParaMostrar.push(p);
+        });
+        dataAtiva = null;
+    }
+    
+    let totalPendentes = 0, totalAtendidos = 0, totalParciais = 0, totalSobras = 0;
+    let totalSobraQtd = 0, totalFaltaQtd = 0, valorTotal = 0;
+    
+    todosItens.forEach(p => {
         if (p.status === 'PENDENTE') totalPendentes++;
         else if (p.status === 'PARCIAL') {
             totalParciais++;
@@ -975,14 +1096,14 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
     
     let html = `
         <div class="detail-header">
-            <div class="detail-title">🏗️ ${obra}</div>
-            <div class="detail-subtitle">📅 ${data}</div>
+            <div class="detail-title">🏗️ ${obraFormatada}</div>
+            <div class="detail-subtitle">📦 ${todosItens.length} itens no total</div>
         </div>
         
         <div class="detail-stats-grid">
             <div class="detail-stat">
-                <span class="stat-label">📦 Total de Itens</span>
-                <span class="stat-value">${pendencias.length}</span>
+                <span class="stat-label">📦 Total</span>
+                <span class="stat-value">${todosItens.length}</span>
             </div>
             <div class="detail-stat">
                 <span class="stat-label">⏳ Pendentes</span>
@@ -1017,11 +1138,45 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
             </div>
         </div>
         
-        <div class="detail-section-title">📋 Itens da Obra</div>
+        <div class="detail-section-title">📅 Datas de Programação</div>
+        <div class="detail-datas-list">
+    `;
+    
+    datasOrdenadas.forEach(data => {
+        const info = datasMap[data];
+        const isActive = dataAtiva === data;
+        const totalPend = info.totalPendentes + info.totalParciais + info.totalSobras;
+        
+        let statusBadge = '';
+        if (info.totalSobraQtd > 0 && info.totalFaltaQtd > 0) {
+            statusBadge = `⚠️+❌`;
+        } else if (info.totalSobraQtd > 0) {
+            statusBadge = `⚠️ ${info.totalSobraQtd.toFixed(0)}`;
+        } else if (info.totalFaltaQtd > 0) {
+            statusBadge = `❌ ${info.totalFaltaQtd.toFixed(0)}`;
+        } else if (totalPend > 0) {
+            statusBadge = '⏳';
+        } else {
+            statusBadge = '✅';
+        }
+        
+        html += `
+            <div class="detail-data-item ${isActive ? 'active' : ''}" onclick="selecionarDataObraMGM('${obra}', '${data}')">
+                <span class="data-label">📅 ${info.dataFormatada}</span>
+                <span class="data-badge">${info.itens.length} itens</span>
+                <span class="data-status">${statusBadge}</span>
+            </div>
+        `;
+    });
+    
+    html += `
+        </div>
+        
+        <div class="detail-section-title">📋 Itens ${dataAtiva ? 'da data selecionada' : 'da obra'}</div>
         <div class="detail-items-list">
     `;
     
-    pendencias.forEach(item => {
+    itensParaMostrar.forEach(item => {
         let statusBadge = '';
         let statusClass = '';
         if (item.status === 'ATENDIDO') {
@@ -1738,10 +1893,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         criarMeses();
         aplicarFiltros();
         
-        // Inicializar a aba padrão (Separação)
         trocarAbaPrincipal('separacao');
         
-        // Carregar dados MGM em background
         setTimeout(() => {
             carregarDadosMGM();
         }, 500);
@@ -1779,6 +1932,7 @@ window.limparFiltros = limparFiltros;
 window.filtrarPorMes = filtrarPorMes;
 window.selecionarItemSeparacao = selecionarItemSeparacao;
 window.selecionarObraMGM = selecionarObraMGM;
+window.selecionarDataObraMGM = selecionarDataObraMGM;
 window.carregarDadosMGM = carregarDadosMGM;
 window.aplicarFiltrosMGM = aplicarFiltrosMGM;
 window.limparFiltrosMGM = limparFiltrosMGM;
