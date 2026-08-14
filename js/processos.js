@@ -1,5 +1,5 @@
 // ============================================
-// PROCESSOS - PASSO A PASSO
+// PROCESSOS - PASSO A PASSO SIMPLIFICADO
 // ============================================
 
 // ============================================
@@ -15,6 +15,7 @@ const DEPARTAMENTOS_DATA = {
 
 const DEPARTAMENTOS_NOMES = {
     'DCMD': 'DCMD - Construção e Manutenção da Distribuição',
+    'DMPC': 'DMPC - Materiais Próprios Control',
     'DECP': 'DECP - Combate a Perdas',
     'DEOP': 'DEOP - Operacional'
 };
@@ -33,21 +34,14 @@ const DADOS_FALLBACK = {
             expanded: false,
             etapaAtual: 0,
             etapas: [
-                { titulo: '📧 1. Verificar E-mails', descricao: 'Verificar e-mails que Maria Clara envia diariamente com os números das SS\'s atendidas. Procurar no Drive pelo número da SS na pasta da Área Técnica.' },
-                { titulo: '📧 2. Verificar E-mails e Drive', descricao: 'Verificar e-mails de Maria Clara diariamente. Procurar no Drive pelo número da SS na pasta da Área Técnica.' },
-                { titulo: '🔍 3. SS encontrada no Drive?', descricao: 'Procurar no Drive pelo número da SS. Se encontrada, verificar se a ficha já está com a gente.' },
-                { titulo: '📋 4. Ficha está conosco (casada)?', descricao: 'Se a ficha já está com a gente (casada) -> conferir se os materiais da ficha batem com os do Drive. Caso não estejam compatíveis, verificar com Rafael (Supervisor) ou Maria Clara.' },
-                { titulo: '⚠️ 5. Materiais batem com o Drive?', descricao: 'Conferir se os materiais da ficha batem com os do Drive. Caso não estejam compatíveis verificar com Rafael ou Maria Clara. Documento assinado não pode ser alterado!' },
-                { titulo: '📊 6. Lançar na Planilha', descricao: 'Passar materiais e quantidades para a planilha (Almoxarifado -> 15- Gestão de indicadores -> "06 - CONTROLE DE SS EMERGENCIAL 2024"), preenchendo todos os dados.' },
-                { titulo: '🔍 7. SS já tem obra?', descricao: 'Verificar na planilha da Energisa "Acionamento Control 2024 1", filtrar número da SS e procurar a coluna "Nº Obra".' },
-                { titulo: '📦 8. Realizar RMA dos Materiais', descricao: 'SIAGO -> Movimentos -> 4 -> 3 -> 2. Depósito: 1853, 1854 ou 1855. Verificar se materiais e quantidades disponíveis estão condizentes.' },
-                { titulo: '📋 9. Realizar DMA da Obra', descricao: 'SIAGO -> Movimentos -> 4 -> 4 -> 1. Desativação: depósito 1050. Clicar em SUCATA. Transformadores: marcar REFORMA.' },
-                { titulo: '📊 10. Atualizar Planilhas', descricao: 'Atualizar planilha de SS. Ir para planilha Energisa, preencher coluna "dt RMA/DMA" com data da baixa. Senha: 784224.' },
-                { titulo: '⚡ 11. SS com TRANSFORMADORES?', descricao: 'Verificar fotos no Drive. Imprimir ficha com dados dos transformadores.' },
-                { titulo: '🔄 12. Processar Transformadores', descricao: 'Passar dados do transformador de REFORMA para planilha "19 - Controle de Transformadores de Reforma".' },
-                { titulo: '📊 13. Falta de saldo?', descricao: 'Verificar saldo em outras bases. Se não houver, informar na coluna "OBSERVAÇÃO DA RMA" que está sem saldo.' },
-                { titulo: '🔄 14. Realizar Transferência', descricao: 'SIAGO -> Movimentos -> 4 -> 5 -> 1. Permitido pois SS tem prioridade.' },
-                { titulo: '✅ 15. Finalizar e Guardar SS\'s', descricao: 'Guardar SS\'s em ordem numérica na pasta "Solicitação de Serviço Emergencial (SS) 2024". Materiais não baixados devem ser informados na coluna de observação.' }
+                { titulo: '📧 1. Verificar E-mails e Drive', descricao: 'Verificar e-mails que Maria Clara envia diariamente com os números das SS\'s atendidas. Procurar no Drive pelo número da SS na pasta da Área Técnica.' },
+                { titulo: '📋 2. Verificar Ficha e Materiais', descricao: 'Se a ficha já está com a gente (casada), conferir se os materiais batem com os do Drive. Caso não estejam compatíveis, consultar Rafael (Supervisor) ou Maria Clara. Se a ficha não estiver conosco (equipes noturnas/interior), imprimir diretamente.' },
+                { titulo: '📊 3. Lançar na Planilha de SS', descricao: 'Passar materiais e quantidades para a planilha (Almoxarifado -> 15- Gestão de indicadores -> \'06 - CONTROLE DE SS EMERGENCIAL 2024\'), preenchendo todos os dados solicitados.' },
+                { titulo: '🔍 4. Verificar Obra na Energisa', descricao: 'Verificar na planilha da Energisa \'Acionamento Control 2024 1\' se a SS já possui obra (coluna \'Nº Obra\'). Se tiver, preencher a planilha com o número da obra e prosseguir.' },
+                { titulo: '📦 5. Realizar RMA e DMA', descricao: 'Acessar SIAGO -> Movimentos -> 4 -> 3 -> 2 para RMA (depósito 1853/1854/1855). Depois SIAGO -> Movimentos -> 4 -> 4 -> 1 para DMA (depósito 1050). Em transformadores, marcar REFORMA em vez de SUCATA. Salvar e atualizar planilha com data da baixa (senha: 784224).' },
+                { titulo: '⚡ 6. Verificar Transformadores', descricao: 'Verificar fotos na pasta do Drive para confirmar se os transformadores (retirado e instalado) batem com os códigos da SS. Passar dados do transformador de REFORMA para a planilha \'19 - Controle de Transformadores de Reforma\'.' },
+                { titulo: '🔄 7. Verificar Saldo e Transferir', descricao: 'Verificar saldo dos materiais em outras bases. Se houver saldo, realizar transferência (SIAGO -> Movimentos -> 4 -> 5 -> 1). Se não houver, informar na coluna \'OBSERVAÇÃO DA RMA\' que está sem saldo para baixa futura.' },
+                { titulo: '✅ 8. RESUMO - Finalizar Processo', descricao: '📌 **Resumo do Processo de SS Emergencial:**\n\n• Verificar e-mails de Maria Clara e localizar SS no Drive\n• Conferir ficha (casada ou não) e materiais\n• Lançar dados na planilha de controle\n• Verificar se SS tem obra na Energisa\n• Realizar RMA e DMA no SIAGO\n• Verificar transformadores (fotos e planilha de reforma)\n• Verificar saldo e transferir se necessário\n• Guardar SS\'s em ordem numérica\n\n📞 **Contatos:**\n• Francisco Davi - Pendências de obras (Energisa)\n• Elissandra Maria - Pendências de reserva (Energisa)\n• Maria Clara - Demais dúvidas sobre SS (Control)\n• Rafael - Supervisor (divergências em fichas)' }
             ]
         }
     ]
@@ -120,7 +114,6 @@ async function carregarProcessos(depto) {
                     etapas: []
                 };
 
-                // Extrai etapas do passo a passo
                 if (partes.length > 3) {
                     const etapasRaw = partes.slice(3).filter(e => e);
                     etapasRaw.forEach(etapa => {
@@ -144,6 +137,17 @@ async function carregarProcessos(depto) {
         console.error('Erro ao carregar processos:', error);
         return DADOS_FALLBACK[depto] || [];
     }
+}
+
+// ============================================
+// FORMATAÇÃO DE DESCRIÇÃO
+// ============================================
+
+function formatarDescricao(texto) {
+    if (!texto) return 'Descrição não disponível.';
+    texto = texto.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    texto = texto.replace(/\n/g, '<br>');
+    return texto;
 }
 
 // ============================================
@@ -179,14 +183,17 @@ function renderizarPassoAPasso(processo, index) {
             textColor = 'white';
         }
         
+        // Extrai apenas o número para exibir no círculo
+        const numero = e.titulo.match(/\d+/)?.[0] || (idx + 1);
+        
         html += `
             <div onclick="irParaEtapa(${index}, ${idx})" 
-                 style="cursor: pointer; display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 50px; position: relative; z-index: 1;">
-                <div style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; background: ${bgColor}; border: 3px solid ${borderColor}; color: ${textColor}; transition: all 0.3s; box-shadow: ${idx === etapaAtual ? '0 0 0 4px rgba(237, 137, 54, 0.2)' : 'none'};">
-                    ${idx + 1}
+                 style="cursor: pointer; display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 40px; position: relative; z-index: 1;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; background: ${bgColor}; border: 3px solid ${borderColor}; color: ${textColor}; transition: all 0.3s; box-shadow: ${idx === etapaAtual ? '0 0 0 4px rgba(237, 137, 54, 0.2)' : 'none'};">
+                    ${numero}
                 </div>
-                <div style="font-size: 8px; color: ${idx === etapaAtual ? '#ED8936' : '#A0AEC0'}; text-align: center; margin-top: 4px; font-weight: ${idx === etapaAtual ? '700' : '400'}; max-width: 55px; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    ${e.titulo.replace(/^\d+\.\s*/, '').substring(0, 12)}
+                <div style="font-size: 7px; color: ${idx === etapaAtual ? '#ED8936' : '#A0AEC0'}; text-align: center; margin-top: 3px; font-weight: ${idx === etapaAtual ? '700' : '400'}; max-width: 45px; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${e.titulo.replace(/^[📧📋📊🔍📦⚡🔄✅]\s*\d+\.\s*/, '').substring(0, 10)}
                 </div>
             </div>
         `;
@@ -200,7 +207,7 @@ function renderizarPassoAPasso(processo, index) {
                 <span>${etapa.titulo}</span>
                 <span style="background: #ED8936; color: white; padding: 2px 12px; border-radius: 12px; font-size: 11px;">${etapaAtual + 1} de ${totalEtapas}</span>
             </div>
-            <div style="color: #4A5568; line-height: 1.7; font-size: 14px; background: #F7FAFC; padding: 14px; border-radius: 8px; border-left: 4px solid #ED8936; max-height: 150px; overflow-y: auto;">
+            <div style="color: #4A5568; line-height: 1.7; font-size: 14px; background: #F7FAFC; padding: 14px; border-radius: 8px; border-left: 4px solid ${etapaAtual === totalEtapas - 1 ? '#48BB78' : '#ED8936'}; max-height: 180px; overflow-y: auto;">
                 ${formatarDescricao(etapa.descricao)}
             </div>
             
@@ -224,25 +231,10 @@ function renderizarPassoAPasso(processo, index) {
 }
 
 // ============================================
-// FORMATAÇÃO DE DESCRIÇÃO
-// ============================================
-
-function formatarDescricao(texto) {
-    if (!texto) return 'Descrição não disponível.';
-    texto = texto.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    texto = texto.replace(/(?:^|\n)\s*[•\-]\s*(.*?)(?=\n|$)/g, '<li>$1</li>');
-    if (texto.includes('<li>')) {
-        texto = texto.replace(/(<li>.*?<\/li>\s*)+/g, '<ul style="margin: 8px 0; padding-left: 18px;">$&</ul>');
-    }
-    texto = texto.replace(/\n/g, '<br>');
-    return texto;
-}
-
-// ============================================
 // RENDERIZAÇÃO PRINCIPAL
 // ============================================
 
-function renderizarProcessos(depto, processos, fluxos) {
+function renderizarProcessos(depto, processos) {
     const container = document.getElementById('processosContent');
 
     let html = `
@@ -268,9 +260,6 @@ function renderizarProcessos(depto, processos, fluxos) {
         processos.forEach((processo, index) => {
             const isExpanded = processo.expanded || false;
             
-            // Busca o fluxograma correspondente
-            const fluxo = fluxos ? fluxos.find(f => f.id === processo.id) : null;
-            
             html += `
                 <div class="processo-card" data-id="${processo.id}" data-index="${index}">
                     <div class="processo-header" onclick="toggleProcesso(${index})">
@@ -279,7 +268,7 @@ function renderizarProcessos(depto, processos, fluxos) {
                             <span class="processo-nome">${processo.nome}</span>
                         </div>
                         <button class="expand-btn" onclick="event.stopPropagation(); toggleProcesso(${index})">
-                            ${isExpanded ? 'Fechar' : 'Ver Workflow'}
+                            ${isExpanded ? 'Fechar' : 'Ver Passo a Passo'}
                             <span class="arrow ${isExpanded ? 'open' : ''}">▼</span>
                         </button>
                     </div>
@@ -290,53 +279,13 @@ function renderizarProcessos(depto, processos, fluxos) {
                     </div>
                     
                     <div class="workflow-container ${isExpanded ? 'open' : ''}" id="workflow-${index}">
-                        <!-- PASSO A PASSO -->
-                        <div style="margin-bottom: 15px;">
+                        <div style="margin-bottom: 5px;">
                             <h4 style="color: #2D3748; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
                                 📋 Passo a Passo
                                 <span style="font-size: 10px; color: #718096; font-weight: 400;">(clique nos números para navegar)</span>
                             </h4>
                             ${renderizarPassoAPasso(processo, index)}
                         </div>
-                        
-                        <!-- FLUXOGRAMA (usando o fluxograma.js) -->
-                        <div style="margin-top: 10px; padding-top: 12px; border-top: 1px solid #E2E8F0;">
-                            <h4 style="color: #2D3748; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                                🗺️ Fluxograma Visual
-                                <span style="font-size: 10px; color: #718096; font-weight: 400;">(visão geral do processo)</span>
-                            </h4>
-                            ${fluxo && fluxo.nodes && fluxo.nodes.length > 0 ? 
-                                window.renderizarFluxograma ? window.renderizarFluxograma(fluxo.nodes) : 
-                                `<p style="padding: 12px; color: #A0AEC0; text-align: center; font-size: 12px;">⚠️ Função de fluxograma não disponível.</p>` :
-                                `<p style="padding: 12px; color: #A0AEC0; text-align: center; font-size: 12px;">📭 Este processo não possui fluxograma.</p>`
-                            }
-                        </div>
-                        
-                        <!-- CONTATOS -->
-                        ${processo.id === 'P001' ? `
-                        <div class="contatos-box">
-                            <h4>📞 Contatos para Dúvidas</h4>
-                            <div class="contato-item">
-                                <span class="contato-icon">👤</span>
-                                <span class="contato-nome">Francisco Davi</span>
-                                <span class="contato-setor">- Pendências de obras (Energisa)</span>
-                            </div>
-                            <div class="contato-item">
-                                <span class="contato-icon">👤</span>
-                                <span class="contato-nome">Elissandra Maria Barbosa</span>
-                                <span class="contato-setor">- Pendências de reserva (Energisa)</span>
-                            </div>
-                            <div class="contato-item">
-                                <span class="contato-icon">👤</span>
-                                <span class="contato-nome">Maria Clara</span>
-                                <span class="contato-setor">- Demais dúvidas sobre SS (Control)</span>
-                            </div>
-                            <div class="contato-item">
-                                <span class="contato-icon">👤</span>
-                                <span class="contato-nome">Rafael</span>
-                                <span class="contato-setor">- Supervisor (divergências em fichas)</span>
-                            </div>
-                        </div>` : ''}
                     </div>
                 </div>
             `;
@@ -367,7 +316,7 @@ function toggleProcesso(index) {
             if (window.processos && window.processos[idx]) {
                 window.processos[idx].expanded = false;
                 const btn = document.querySelector(`.processo-card[data-index="${idx}"] .expand-btn`);
-                if (btn) btn.innerHTML = 'Ver Workflow <span class="arrow">▼</span>';
+                if (btn) btn.innerHTML = 'Ver Passo a Passo <span class="arrow">▼</span>';
             }
         }
     });
@@ -379,7 +328,7 @@ function toggleProcesso(index) {
         if (processo.expanded) {
             btn.innerHTML = 'Fechar <span class="arrow open">▼</span>';
         } else {
-            btn.innerHTML = 'Ver Workflow <span class="arrow">▼</span>';
+            btn.innerHTML = 'Ver Passo a Passo <span class="arrow">▼</span>';
         }
     }
     
@@ -399,7 +348,7 @@ function irParaEtapa(index, novaEtapa) {
     
     const container = document.getElementById(`workflow-${index}`);
     if (container) {
-        const passoSection = container.querySelector('div[style*="margin-bottom: 15px;"]');
+        const passoSection = container.querySelector('div[style*="margin-bottom: 5px;"]');
         if (passoSection) {
             passoSection.innerHTML = `
                 <h4 style="color: #2D3748; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
@@ -458,18 +407,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     const urlParams = new URLSearchParams(window.location.search);
     const depto = urlParams.get('depto') || 'DCMD';
 
-    // Carrega passo a passo
     const processos = await carregarProcessos(depto);
     window.processos = processos;
     
-    // Carrega fluxograma (usando o fluxograma.js)
-    let fluxos = [];
-    if (typeof window.carregarFluxograma === 'function') {
-        fluxos = await window.carregarFluxograma(depto);
-        console.log(`📊 ${fluxos.length} fluxogramas carregados`);
-    }
-    
-    renderizarProcessos(depto, processos, fluxos);
+    renderizarProcessos(depto, processos);
     
     setTimeout(() => {
         loadingOverlay.style.display = 'none';
