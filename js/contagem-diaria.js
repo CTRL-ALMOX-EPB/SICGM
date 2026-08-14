@@ -210,6 +210,52 @@ if (document.getElementById('contagemForm')) {
     let posicaoEstoque = {};
     
     // ============================================
+    // FUNÇÃO PARA BUSCAR O PRÓXIMO TOMBAMENTO DE BOBINA
+    // ============================================
+    
+    async function buscarProximoTombamentoBobina() {
+        try {
+            console.log(`🔍 Buscando maior tombamento para bobinas no depósito ${depositoAtual}...`);
+
+            const response = await fetch(`${API_URL_CONTAGEM}/api/buscar-tombamentos-bobina`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deposito: depositoAtual })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`❌ Erro ao buscar tombamentos: ${response.status} - ${errorText}`);
+                return null;
+            }
+
+            const resultado = await response.json();
+
+            if (!resultado.success || !resultado.dados || resultado.dados.length === 0) {
+                console.log('📭 Nenhum tombamento encontrado para bobinas.');
+                return 1;
+            }
+
+            let maiorNumero = 0;
+            resultado.dados.forEach(item => {
+                if (item.tombamento) {
+                    const numero = parseInt(item.tombamento.replace(/\D/g, ''));
+                    if (!isNaN(numero) && numero > maiorNumero) {
+                        maiorNumero = numero;
+                    }
+                }
+            });
+
+            console.log(`✅ Maior tombamento encontrado: ${maiorNumero}`);
+            return maiorNumero + 1;
+
+        } catch (error) {
+            console.error('❌ Erro ao buscar próximo tombamento:', error);
+            return null;
+        }
+    }
+    
+    // ============================================
     // PREENCHER DATA AUTOMATICAMENTE
     // ============================================
     
@@ -283,7 +329,6 @@ if (document.getElementById('contagemForm')) {
     function carregarTrafosPorDepositoComManuais(deposito) {
         console.log(`🔍 Carregando trafos do depósito ${deposito} (incluindo manuais)`);
         
-        // Trafos do banco - APENAS ATIVOS (ativo = 1 ou true)
         const trafosDoBanco = todosRegistrosDB.filter(item => {
             const isTrafo = item.tipo_material === 'trafo' || 
                             (item.numero_serie || item.oleo || item.cor);
@@ -297,7 +342,6 @@ if (document.getElementById('contagemForm')) {
             return isTrafo && isAtivo && isDeposito;
         });
         
-        // Trafos manuais (novos, não salvos) - APENAS do depósito atual
         const trafosManuais = materiaisManuais.filter(t => {
             const isNew = t.isNew === true || t.id === null || t.id === 'null' || t.id === '' || t.id === undefined;
             const isDeposito = t.deposito === deposito;
@@ -597,15 +641,12 @@ if (document.getElementById('contagemForm')) {
         let html = '';
         
         itens.forEach((codigo, index) => {
-            // CORREÇÃO: Busca primeiro no materiaisBanco, depois na posicaoEstoque
             let material = buscarDadosCodigo(codigo);
             
-            // Se não encontrar no materiais.txt, busca na posição de estoque
             if (!material) {
                 material = posicaoEstoque[codigo];
             }
             
-            // Se ainda não encontrar, cria um placeholder
             if (!material) {
                 material = {
                     codigo: codigo,
@@ -2572,7 +2613,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR BOBINAS
+    // RENDERIZAR BOBINAS (MODIFICADO)
     // ============================================
     
     function renderizarBobinas(materiais) {
@@ -3002,14 +3043,14 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÃO ADICIONAR BOBINA
+    // FUNÇÃO ADICIONAR BOBINA (MODIFICADA)
     // ============================================
     
     function adicionarBobina() {
         console.log('🧵 Função adicionarBobina chamada - Depósito atual:', depositoAtual);
-        
+
         salvarDadosBobinasAtuais();
-        
+
         const novaBobina = {
             codigo: '',
             descricao: '',
@@ -3027,13 +3068,33 @@ if (document.getElementById('contagemForm')) {
             _jaRegistrado: false,
             deposito: depositoAtual
         };
-        
+
         bobinasManuais.unshift(novaBobina);
         materiaisPorCategoria['bobinas'] = bobinasManuais;
-        
+
         recarregarAbaAtual();
         atualizarContadorBobinas();
-        
+
+        buscarProximoTombamentoBobina().then(proximoNumero => {
+            if (proximoNumero !== null) {
+                bobinasManuais[0].tombamento = proximoNumero.toString();
+                
+                const tombamentoInput = document.getElementById('bobina-tombamento-0');
+                if (tombamentoInput) {
+                    tombamentoInput.value = proximoNumero.toString();
+                    tombamentoInput.style.borderColor = '#48BB78';
+                    tombamentoInput.style.backgroundColor = '#F0FFF4';
+                    setTimeout(() => {
+                        tombamentoInput.style.borderColor = '';
+                        tombamentoInput.style.backgroundColor = '';
+                    }, 2000);
+                }
+                console.log(`📝 Tombamento preenchido: ${proximoNumero}`);
+            } else {
+                console.warn('⚠️ Não foi possível buscar o próximo tombamento, campo permanecerá vazio.');
+            }
+        });
+
         setTimeout(() => {
             const tabAtiva = document.querySelector('.tab-content.active');
             if (tabAtiva) {
@@ -3637,13 +3698,11 @@ if (document.getElementById('contagemForm')) {
     function buscarDadosCodigo(codigo) {
         if (!codigo) return null;
         
-        // Primeiro busca no materiaisBanco
         if (materiaisBanco && materiaisBanco.length > 0) {
             const material = materiaisBanco.find(m => m.codigo === codigo.trim());
             if (material) return material;
         }
         
-        // Se não encontrar, busca na posição de estoque
         if (posicaoEstoque && posicaoEstoque[codigo.trim()]) {
             const est = posicaoEstoque[codigo.trim()];
             return {
@@ -4006,7 +4065,6 @@ if (document.getElementById('contagemForm')) {
         const codigo = item.dataset.codigo || '';
         const existeNoBanco = idRegistro && idRegistro !== 'null' && idRegistro !== '' && idRegistro !== null;
         
-        // CORREÇÃO: Se o item NÃO existe no banco, consideramos como modificação
         if (!existeNoBanco) {
             if (qtdAtual > 0) {
                 console.log(`✅ Item ${codigo} não existe no banco - QTD=${qtdAtual} > 0, será enviado`);
@@ -4448,7 +4506,7 @@ if (document.getElementById('contagemForm')) {
             }
         });
         
-        // MISCELÂNEAS (Contagem Semanal) - CORREÇÃO PRINCIPAL
+        // MISCELÂNEAS (Contagem Semanal)
         const miscelaneaItems = document.querySelectorAll('.miscelanea-item');
         miscelaneaItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
@@ -4529,11 +4587,9 @@ if (document.getElementById('contagemForm')) {
                 }
             });
             
-            // CORREÇÃO: Busca o material na posição de estoque se não encontrar na categoria
             const materiaisDaCategoria = materiaisPorCategoria['miscelaneas'] || [];
             let material = materiaisDaCategoria.find(m => m.codigo === codigo);
             
-            // Se não encontrar na categoria, busca na posição de estoque
             if (!material && posicaoEstoque && posicaoEstoque[codigo]) {
                 const est = posicaoEstoque[codigo];
                 material = {
@@ -4544,12 +4600,10 @@ if (document.getElementById('contagemForm')) {
                 console.log(`📦 Miscelânea ${codigo} - material encontrado na posição de estoque`);
             }
             
-            // Se ainda não encontrou, tenta buscar no materiaisBanco pelo código
             if (!material) {
                 material = buscarDadosCodigo(codigo);
             }
             
-            // Se ainda não encontrou, cria um placeholder com os dados do item
             if (!material) {
                 const descricaoInput = item.querySelector('.input-descricao');
                 const undInput = item.querySelector('.input-readonly:not(.input-qtd-anterior)');
@@ -5070,6 +5124,7 @@ if (document.getElementById('contagemForm')) {
     window.inserirMovimentacaoBuscaTrafo = inserirMovimentacaoBuscaTrafo;
     window.executarBaixa = executarBaixa;
     window.buscarDadosCodigo = buscarDadosCodigo;
+    window.buscarProximoTombamentoBobina = buscarProximoTombamentoBobina;
     
     // ============================================
     // INICIALIZAR
