@@ -1,5 +1,5 @@
 // ============================================
-// FLUXOGRAMA - LÓGICA COMPLETA (HORIZONTAL)
+// FLUXOGRAMA - LÓGICA COMPLETA (ÁRVORE VERTICAL)
 // ============================================
 
 // ============================================
@@ -74,23 +74,23 @@ async function carregarFluxograma(depto) {
 }
 
 // ============================================
-// RENDERIZAR SVG DO FLUXOGRAMA (HORIZONTAL)
+// RENDERIZAR SVG DO FLUXOGRAMA (ÁRVORE VERTICAL)
 // ============================================
 
 function renderizarFluxograma(nodes) {
     if (!nodes || nodes.length === 0) {
         return `
-            <div style="padding: 20px; text-align: center; color: #A0AEC0; font-size: 13px;">
+            <div style="padding: 20px; text-align: center; color: #A0AEC0; font-size: 14px;">
                 📭 Este processo não possui fluxograma.
             </div>
         `;
     }
 
-    // Layout horizontal (esquerda → direita)
-    const larguraNo = 110;
-    const alturaNo = 38;
-    const espacamentoX = 30;
-    const espacamentoY = 60;
+    // Layout em árvore vertical
+    const larguraNo = 160;
+    const alturaNo = 50;
+    const espacamentoX = 40;
+    const espacamentoY = 70;
     const posicoes = {};
     let larguraMax = 0;
     let alturaMax = 0;
@@ -101,38 +101,52 @@ function renderizarFluxograma(nodes) {
         return `<p style="padding: 20px; color: #A0AEC0; text-align: center;">Nó inicial não encontrado.</p>`;
     }
 
-    function posicionar(node, x, y) {
+    // Posiciona em árvore (vertical)
+    function posicionar(node, x, y, nivel) {
         if (posicoes[node.id]) return;
-        posicoes[node.id] = { x, y };
+        posicoes[node.id] = { x, y, nivel: nivel || 0 };
         if (x + larguraNo > larguraMax) larguraMax = x + larguraNo;
         if (y + alturaNo > alturaMax) alturaMax = y + alturaNo;
 
         if (node.conexoes && node.conexoes.length > 0) {
             const numFilhos = node.conexoes.length;
-            const inicioY = y - (numFilhos - 1) * (alturaNo + espacamentoY) / 2;
+            const larguraTotal = numFilhos * (larguraNo + espacamentoX);
+            const inicioX = x - (larguraTotal / 2) + (larguraNo + espacamentoX) / 2;
 
             node.conexoes.forEach((destinoId, index) => {
                 const destino = nodes.find(n => n.id === destinoId);
                 if (destino) {
-                    const filhoX = x + larguraNo + espacamentoX;
-                    const filhoY = inicioY + index * (alturaNo + espacamentoY);
-                    posicionar(destino, filhoX, filhoY);
+                    const filhoX = inicioX + index * (larguraNo + espacamentoX);
+                    const filhoY = y + alturaNo + espacamentoY;
+                    posicionar(destino, filhoX, filhoY, (nivel || 0) + 1);
                 }
             });
         }
     }
 
-    posicionar(root, 15, 15);
+    // Posiciona a partir da raiz, centralizando
+    const larguraTotal = nodes.reduce((acc, node) => {
+        if (node.conexoes) return acc + node.conexoes.length;
+        return acc;
+    }, 0) * (larguraNo + espacamentoX);
 
-    const totalLargura = Math.max(600, larguraMax + 30);
-    const totalAltura = Math.max(300, alturaMax + 30);
+    const inicioX = Math.max(20, (larguraTotal || 800) / 2 - larguraNo / 2);
+    posicionar(root, inicioX, 20, 0);
+
+    // Ajusta largura e altura
+    const totalLargura = Math.max(800, larguraMax + 100);
+    const totalAltura = Math.max(400, alturaMax + 80);
 
     let svg = `
-        <svg viewBox="0 0 ${totalLargura} ${totalAltura}" xmlns="http://www.w3.org/2000/svg" style="width: 100%; background: #FAFAFA; border-radius: 8px; max-height: 380px; min-height: 180px; overflow: visible;">
+        <div style="overflow-x: auto; overflow-y: auto; max-height: 500px; width: 100%;">
+        <svg viewBox="0 0 ${totalLargura} ${totalAltura}" xmlns="http://www.w3.org/2000/svg" style="width: 100%; background: #FAFAFA; border-radius: 8px; min-height: 400px;">
             <defs>
-                <marker id="arrowhead" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
-                    <polygon points="0 0, 7 2.5, 0 5" fill="#A0AEC0" />
+                <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#A0AEC0" />
                 </marker>
+                <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+                    <feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.1"/>
+                </filter>
             </defs>
     `;
 
@@ -146,16 +160,19 @@ function renderizarFluxograma(nodes) {
                 const destino = posicoes[destinoId];
                 if (!destino) return;
 
-                const x1 = origem.x + larguraNo;
-                const y1 = origem.y + alturaNo / 2;
-                const x2 = destino.x;
-                const y2 = destino.y + alturaNo / 2;
-                const midX = (x1 + x2) / 2;
-                const label = index === 0 ? 'S' : index === 1 ? 'N' : '';
+                const x1 = origem.x + larguraNo / 2;
+                const y1 = origem.y + alturaNo;
+                const x2 = destino.x + larguraNo / 2;
+                const y2 = destino.y;
+                const midY = (y1 + y2) / 2;
+                const label = index === 0 ? 'SIM' : index === 1 ? 'NÃO' : '';
 
+                // Seta com curva
                 svg += `
-                    <path d="M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}" stroke="#A0AEC0" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" />
-                    ${label ? `<text x="${midX - 5}" y="${(y1 + y2) / 2 - 6}" fill="#718096" font-size="8" font-weight="700">${label}</text>` : ''}
+                    <path d="M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}" 
+                          stroke="#A0AEC0" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" />
+                    ${label ? `<rect x="${(x1 + x2) / 2 - 14}" y="${midY - 10}" width="28" height="16" rx="4" fill="white" stroke="#E2E8F0" stroke-width="1"/>` : ''}
+                    ${label ? `<text x="${(x1 + x2) / 2}" y="${midY + 1}" fill="#ED8936" font-size="9" font-weight="700" text-anchor="middle">${label}</text>` : ''}
                 `;
             });
         }
@@ -172,63 +189,77 @@ function renderizarFluxograma(nodes) {
         const w = larguraNo;
         const h = alturaNo;
 
+        // Cores por tipo
         const cores = {
-            'start': { fill: '#EBF8FF', stroke: '#4299E1', rx: 16 },
-            'acao': { fill: '#F7FAFC', stroke: '#4A5568', rx: 5 },
-            'decisao': { fill: '#FFFAF0', stroke: '#ED8936', rx: 0, losango: true },
-            'inicio': { fill: '#F0FFF4', stroke: '#48BB78', rx: 16 },
-            'fim': { fill: '#FFF5F5', stroke: '#FC8181', rx: 16 },
-            'call': { fill: '#EBF8FF', stroke: '#4299E1', rx: 5, strokeWidth: 2.5 },
-            'rma': { fill: '#EBF8FF', stroke: '#4299E1', rx: 5 },
-            'dma': { fill: '#E6FFFA', stroke: '#38B2AC', rx: 5 }
+            'start': { fill: '#EBF8FF', stroke: '#4299E1', rx: 20, textColor: '#2B6CB0', icon: '📧' },
+            'acao': { fill: '#F7FAFC', stroke: '#4A5568', rx: 8, textColor: '#2D3748', icon: '⚡' },
+            'decisao': { fill: '#FFFAF0', stroke: '#ED8936', rx: 0, textColor: '#C05621', icon: '🔍', losango: true },
+            'inicio': { fill: '#F0FFF4', stroke: '#48BB78', rx: 20, textColor: '#276749', icon: '✅' },
+            'fim': { fill: '#FFF5F5', stroke: '#FC8181', rx: 20, textColor: '#9B2C2C', icon: '🏁' },
+            'call': { fill: '#EBF8FF', stroke: '#4299E1', rx: 8, textColor: '#2B6CB0', icon: '📞', strokeWidth: 3 },
+            'rma': { fill: '#EBF8FF', stroke: '#4299E1', rx: 8, textColor: '#2B6CB0', icon: '📦' },
+            'dma': { fill: '#E6FFFA', stroke: '#38B2AC', rx: 8, textColor: '#234E52', icon: '📋' }
         };
 
         const cor = cores[node.tipo] || cores['acao'];
+        const icone = cor.icon || '📌';
+        const titulo = node.titulo || node.id;
+
+        // Conteúdo do nó
+        let nodeContent = '';
 
         if (cor.losango) {
+            // Losango para decisão
             const cx = x + w / 2;
             const cy = y + h / 2;
-            const metade = Math.min(w, h) / 2 - 3;
-            svg += `
+            const metade = Math.min(w, h) / 2 - 2;
+            nodeContent = `
                 <polygon points="${cx - metade},${cy} ${cx},${cy - metade} ${cx + metade},${cy} ${cx},${cy + metade}"
-                         fill="${cor.fill}" stroke="${cor.stroke}" stroke-width="1.5" />
-                <text x="${cx}" y="${cy}" font-size="9" font-weight="600" fill="#2D3748" text-anchor="middle" dominant-baseline="central">${node.titulo}</text>
+                         fill="${cor.fill}" stroke="${cor.stroke}" stroke-width="2" filter="url(#shadow)" />
+                <text x="${cx}" y="${cy - 5}" font-size="11" font-weight="700" fill="${cor.textColor}" text-anchor="middle">${titulo}</text>
+                <text x="${cx}" y="${cy + 12}" font-size="8" fill="#718096" text-anchor="middle">${node.descricao || ''}</text>
             `;
         } else {
-            const rx = cor.rx || 5;
-            const strokeWidth = cor.strokeWidth || 1.5;
-            svg += `
-                <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${cor.fill}" stroke="${cor.stroke}" stroke-width="${strokeWidth}" />
-                <text x="${x + w / 2}" y="${y + h / 2}" font-size="9" font-weight="600" fill="#2D3748" text-anchor="middle" dominant-baseline="central">${node.titulo}</text>
+            // Retângulo
+            const rx = cor.rx || 8;
+            const strokeWidth = cor.strokeWidth || 2;
+            nodeContent = `
+                <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${cor.fill}" stroke="${cor.stroke}" stroke-width="${strokeWidth}" filter="url(#shadow)" />
+                <text x="${x + 12}" y="${y + h / 2 - 4}" font-size="13" font-weight="700" fill="${cor.textColor}">${icone}</text>
+                <text x="${x + 32}" y="${y + h / 2 - 4}" font-size="11" font-weight="600" fill="${cor.textColor}">${titulo}</text>
+                <text x="${x + 32}" y="${y + h / 2 + 14}" font-size="8" fill="#718096">${node.descricao || ''}</text>
             `;
         }
+
+        svg += `
+            <g class="fluxo-node" data-id="${node.id}">
+                ${nodeContent}
+            </g>
+        `;
     });
 
-    svg += `</svg>`;
+    svg += `</svg></div>`;
 
-    // Legenda compacta
+    // Legenda
     svg += `
-        <div style="display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 8px; background: white; border-radius: 4px; margin-top: 4px; border: 1px solid #E2E8F0;">
-            <span style="display: flex; align-items: center; gap: 3px; font-size: 8px; color: #4A5568;">
-                <span style="display: inline-block; width: 9px; height: 9px; background: #EBF8FF; border: 1.5px solid #4299E1; border-radius: 50%;"></span> Início
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 12px; background: white; border-radius: 6px; margin-top: 8px; border: 1px solid #E2E8F0;">
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #EBF8FF; border: 2px solid #4299E1; border-radius: 50%;"></span> Início
             </span>
-            <span style="display: flex; align-items: center; gap: 3px; font-size: 8px; color: #4A5568;">
-                <span style="display: inline-block; width: 9px; height: 9px; background: #F7FAFC; border: 1.5px solid #4A5568; border-radius: 3px;"></span> Ação
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #F7FAFC; border: 2px solid #4A5568; border-radius: 4px;"></span> Ação
             </span>
-            <span style="display: flex; align-items: center; gap: 3px; font-size: 8px; color: #4A5568;">
-                <span style="display: inline-block; width: 9px; height: 9px; background: #FFFAF0; border: 1.5px solid #ED8936; transform: rotate(45deg);"></span> Decisão
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #FFFAF0; border: 2px solid #ED8936; transform: rotate(45deg);"></span> Decisão
             </span>
-            <span style="display: flex; align-items: center; gap: 3px; font-size: 8px; color: #4A5568;">
-                <span style="display: inline-block; width: 9px; height: 9px; background: #F0FFF4; border: 1.5px solid #48BB78; border-radius: 50%;"></span> Fim
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #F0FFF4; border: 2px solid #48BB78; border-radius: 50%;"></span> Fim
             </span>
-            <span style="display: flex; align-items: center; gap: 3px; font-size: 8px; color: #4A5568;">
-                <span style="display: inline-block; width: 9px; height: 9px; background: #EBF8FF; border: 2px solid #4299E1; border-radius: 3px;"></span> Call
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #EBF8FF; border: 3px solid #4299E1; border-radius: 4px;"></span> Call
             </span>
-            <span style="display: flex; align-items: center; gap: 3px; font-size: 8px; color: #4A5568;">
-                <span style="display: inline-block; width: 9px; height: 9px; background: #E6FFFA; border: 1.5px solid #38B2AC; border-radius: 3px;"></span> RMA/DMA
-            </span>
-            <span style="display: flex; align-items: center; gap: 3px; font-size: 8px; color: #4A5568; margin-left: auto;">
-                S = SIM | N = NÃO
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #E6FFFA; border: 2px solid #38B2AC; border-radius: 4px;"></span> RMA/DMA
             </span>
         </div>
     `;

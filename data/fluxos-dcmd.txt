@@ -1,23 +1,23 @@
 # FLUXOGRAMA - Processos DCMD
-# Formato: ID|NOME|NODE_ID|TIPO|TITULO_CURTO|DESCRICAO_CURTA|CONEXOES
+# Formato: ID|NOME|NODE_ID|TIPO|TITULO|DESCRICAO_CURTA|CONEXOES
 
 P001|POP - 01 Processos de Obras Emergenciais "SS"|
-INICIO|start|📧 Início|Verificar e-mails Maria Clara|VERIFICAR_EMAILS
-VERIFICAR_EMAILS|acao|📧 Verificar|Verificar e-mails e Drive|SS_ENCONTRADA
-SS_ENCONTRADA|decisao|🔍 SS no Drive?|Procurar SS no Drive|FICHA_CASADA|AGUARDAR_OBRA
-FICHA_CASADA|decisao|📋 Ficha Casada?|Verificar se ficha está conosco|MATERIAIS_BATEM|IMPRIMIR_FICHA
-MATERIAIS_BATEM|decisao|⚠️ Batem?|Conferir materiais com Drive|LANCAR_PLANILHA|CONSULTAR_RAFAEL
-LANCAR_PLANILHA|acao|📊 Lançar|Lançar na planilha de controle|VERIFICAR_OBRA
-CONSULTAR_RAFAEL|call|📞 Consultar|Verificar divergências Rafael|VERIFICAR_EMAILS
-IMPRIMIR_FICHA|acao|🖨️ Imprimir|Imprimir ficha equipes noturnas|LANCAR_PLANILHA
-VERIFICAR_OBRA|decisao|🔍 Tem obra?|Verificar obra na Energisa|RMA|AGUARDAR_OBRA
-AGUARDAR_OBRA|acao|⏳ Aguardar|Aguardar atribuição de obra|RMA
-RMA|rma|📦 RMA|SIAGO 4-3-2. Depósito 1853/1854/1855|DMA
-DMA|dma|📋 DMA|SIAGO 4-4-1. Depósito 1050|ATUALIZAR_PLANILHA
-ATUALIZAR_PLANILHA|acao|📊 Atualizar|Atualizar planilhas. Senha: 784224|TRANSFORMADOR
-TRANSFORMADOR|decisao|⚡ Transformador?|Verificar fotos do transformador|PROCESSAR_TRANSF|CONTINUAR
-PROCESSAR_TRANSF|acao|🔄 Processar|Lançar na planilha de reforma|CONTINUAR
-CONTINUAR|decisao|📊 Falta saldo?|Verificar saldo em outras bases|TRANSFERIR|FINALIZAR
-TRANSFERIR|acao|🔄 Transferir|SIAGO 4-5-1. Prioridade SS|FINALIZAR
-FINALIZAR|acao|✅ Finalizar|Guardar SS's em ordem numérica|FIM
-FIM|fim|🏁 Fim|Processo concluído|
+INICIO|start|Início|Verificar e-mails de Maria Clara|VERIFICAR_EMAILS
+VERIFICAR_EMAILS|acao|Verificar E-mails|Verificar e-mails e Drive|SS_ENCONTRADA
+SS_ENCONTRADA|decisao|SS no Drive?|Procurar SS no Drive|FICHA_CASADA|AGUARDAR_OBRA
+FICHA_CASADA|decisao|Ficha Casada?|Verificar se ficha está conosco|MATERIAIS_BATEM|IMPRIMIR_FICHA
+MATERIAIS_BATEM|decisao|Materiais batem?|Conferir materiais com Drive|LANCAR_PLANILHA|CONSULTAR_RAFAEL
+LANCAR_PLANILHA|acao|Lançar Planilha|Lançar na planilha de controle|VERIFICAR_OBRA
+CONSULTAR_RAFAEL|call|Consultar Rafael|Verificar divergências|VERIFICAR_EMAILS
+IMPRIMIR_FICHA|acao|Imprimir Ficha|Imprimir para equipes noturnas|LANCAR_PLANILHA
+VERIFICAR_OBRA|decisao|SS tem obra?|Verificar obra na Energisa|RMA|AGUARDAR_OBRA
+AGUARDAR_OBRA|acao|Aguardar Obra|Aguardar atribuição de obra|RMA
+RMA|rma|Realizar RMA|SIAGO 4-3-2. Depósito 1853/1854/1855|DMA
+DMA|dma|Realizar DMA|SIAGO 4-4-1. Depósito 1050|ATUALIZAR_PLANILHA
+ATUALIZAR_PLANILHA|acao|Atualizar Planilhas|Atualizar planilhas. Senha: 784224|TRANSFORMADOR
+TRANSFORMADOR|decisao|Transformador?|Verificar fotos do transformador|PROCESSAR_TRANSF|CONTINUAR
+PROCESSAR_TRANSF|acao|Processar Transformador|Lançar na planilha de reforma|CONTINUAR
+CONTINUAR|decisao|Falta saldo?|Verificar saldo em outras bases|TRANSFERIR|FINALIZAR
+TRANSFERIR|acao|Transferir|SIAGO 4-5-1. Prioridade SS|FINALIZAR
+FINALIZAR|acao|Finalizar|Guardar SS's em ordem numérica|FIM
+FIM|fim|Fim|Processo concluído|
