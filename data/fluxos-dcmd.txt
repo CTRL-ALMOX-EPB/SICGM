@@ -1,0 +1,13 @@
+# FLUXOGRAMA - Processos DCMD
+# Formato: ID|NOME|NODE_ID|TIPO|TITULO|DESCRICAO|CONEXOES
+
+P001|POP - 01 Processos de Obras Emergenciais "SS"|
+INICIO|start|📧 Início do Processo|Verificar e-mails diários de Maria Clara com números das SS's atendidas.|VERIFICAR_EMAILS
+VERIFICAR_EMAILS|acao|📧 Verificar E-mails|Verificar e-mails que Maria Clara envia diariamente com os números das SS's atendidas.|SS_ENCONTRADA
+SS_ENCONTRADA|decisao|🔍 SS encontrada no Drive?|Procurar no Drive pelo número da SS na pasta da Área Técnica.|FICHA_CASADA|AGUARDAR_OBRA
+FICHA_CASADA|decisao|📋 Ficha está conosco (casada)?|Verificar se a ficha já está com a gente (equipes próprias).|MATERIAIS_BATEM|IMPRIMIR_FICHA
+MATERIAIS_BATEM|decisao|⚠️ Materiais batem com o Drive?|Conferir se os materiais da ficha são compatíveis com os do Drive.|LANCAR_PLANILHA|CONSULTAR_RAFAEL
+LANCAR_PLANILHA|acao|📊 Lançar na Planilha|Passar materiais e quantidades para planilha de controle SS Emergencial.|FIM
+CONSULTAR_RAFAEL|acao|📞 Consultar Rafael|Verificar divergências com Rafael (Supervisor) ou Maria Clara.|FIM
+IMPRIMIR_FICHA|acao|🖨️ Imprimir Ficha|Imprimir ficha das equipes noturnas/interior. Lançar na planilha.|FIM
+AGUARDAR_OBRA|acao|⏳ Aguardar Obra|SS sem obra definida. Aguardar atribuição na planilha Energisa.|FIM
