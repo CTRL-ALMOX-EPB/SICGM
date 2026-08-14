@@ -7,10 +7,10 @@
 // ============================================
 
 const DEPARTAMENTOS_DATA = {
-    'DCMD': 'data/processos-dcmd.txt',
-    'DMPC': 'data/processos-dmpc.txt',
-    'DECP': 'data/processos-decp.txt',
-    'DEOP': 'data/processos-deop.txt'
+    'DCMD': '../data/processos-dcmd.txt',
+    'DMPC': '../data/processos-dmpc.txt',
+    'DECP': '../data/processos-decp.txt',
+    'DEOP': '../data/processos-deop.txt'
 };
 
 const DEPARTAMENTOS_NOMES = {
@@ -21,6 +21,35 @@ const DEPARTAMENTOS_NOMES = {
 };
 
 // ============================================
+// DADOS DE FALLBACK (caso o arquivo não seja encontrado)
+// ============================================
+
+const DADOS_FALLBACK = {
+    'DCMD': [
+        {
+            id: 'P001',
+            nome: 'POP - 01 Processos de Obras Emergenciais "SS"',
+            descricao: 'Processo completo para gerenciamento de Solicitações de Serviço (SS) emergenciais.',
+            status: 'EM_ANDAMENTO',
+            etapas: [
+                { titulo: '1. Verificar E-mails', descricao: 'Verificar e-mails que Maria Clara envia diariamente com os números das SS\'s atendidas. Procurar no Drive pelo número da SS na pasta da Área Técnica.' },
+                { titulo: '2. Verificar Ficha Casada', descricao: 'Conferir se os materiais da ficha batem com os do Drive. Caso não estejam compatíveis, verificar com Rafael ou Maria Clara.' },
+                { titulo: '3. Ficha não está Conosco', descricao: 'Imprimir a ficha e passar os materiais e quantidades para a planilha de controle.' },
+                { titulo: '4. Verificar se SS tem Obra', descricao: 'Consultar planilha da Energisa "Acionamento Control 2024 1". Filtrar pelo número da SS e procurar a coluna "Nº Obra".' },
+                { titulo: '5. Realizar RMA', descricao: 'Acessar SIAGO -> Movimentos -> 4 -> 3 -> 2. Preencher campos com dados da obra.' },
+                { titulo: '6. Realizar DMA', descricao: 'Acessar SIAGO -> Movimentos -> 4 -> 4 -> 1. Preencher campos com dados da obra.' },
+                { titulo: '7. Preencher Planilha Energisa', descricao: 'Preencher coluna "dt RMA/DMA" com a data da baixa. Senha: 784224.' },
+                { titulo: '8. Transformadores', descricao: 'Verificar fotos no Drive. Passar dados do transformador para planilha de controle.' },
+                { titulo: '9. Falta de Saldo', descricao: 'Verificar saldo em outras bases e realizar transferência (SIAGO -> Movimentos -> 4 -> 5 -> 1).' },
+                { titulo: '10. Guardar SS\'s', descricao: 'Guardar SS\'s em ordem numérica na pasta "Solicitação de Serviço Emergencial (SS) 2024".' }
+            ],
+            expanded: false,
+            etapaAtual: 0
+        }
+    ]
+};
+
+// ============================================
 // CARREGAMENTO DE DADOS
 // ============================================
 
@@ -28,18 +57,24 @@ async function carregarProcessos(depto) {
     try {
         const filePath = DEPARTAMENTOS_DATA[depto];
         if (!filePath) {
-            console.error('Departamento não encontrado:', depto);
-            return [];
+            console.warn('Departamento não encontrado, usando fallback:', depto);
+            return DADOS_FALLBACK[depto] || [];
         }
 
         const response = await fetch(filePath);
         if (!response.ok) {
-            throw new Error(`Erro ao carregar dados: ${response.status}`);
+            console.warn(`Erro ao carregar dados (${response.status}), usando fallback para:`, depto);
+            return DADOS_FALLBACK[depto] || [];
         }
 
         const text = await response.text();
         const linhas = text.split('\n')
             .filter(line => line.trim() && !line.startsWith('#'));
+
+        if (linhas.length === 0) {
+            console.warn('Arquivo vazio, usando fallback para:', depto);
+            return DADOS_FALLBACK[depto] || [];
+        }
 
         const processos = linhas.map(line => {
             const partes = line.split('|').map(p => p.trim());
@@ -49,7 +84,6 @@ async function carregarProcessos(depto) {
             const etapasRaw = partes.slice(3).filter(e => e);
             
             const etapas = etapasRaw.map(etapa => {
-                // Divide o título da descrição
                 const parts = etapa.split(':');
                 const titulo = parts[0].trim();
                 const descricao = parts.slice(1).join(':').trim();
@@ -67,10 +101,10 @@ async function carregarProcessos(depto) {
             };
         });
 
-        return processos;
+        return processos.length > 0 ? processos : (DADOS_FALLBACK[depto] || []);
     } catch (error) {
-        console.error('Erro ao carregar processos:', error);
-        return [];
+        console.error('Erro ao carregar processos, usando fallback:', error);
+        return DADOS_FALLBACK[depto] || [];
     }
 }
 
@@ -265,16 +299,14 @@ function renderizarWorkflow(processo, index) {
 // ============================================
 
 function formatarDescricao(texto) {
+    if (!texto) return 'Descrição não disponível.';
+    
     // Formata negritos
     texto = texto.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     
     // Formata listas (itens com - ou •)
     texto = texto.replace(/(?:^|\n)\s*[•\-]\s*(.*?)(?=\n|$)/g, '<li>$1</li>');
     if (texto.includes('<li>')) {
-        texto = texto.replace(/<li>.*?<\/li>/g, (match) => {
-            return match;
-        });
-        // Envolve listas em <ul>
         texto = texto.replace(/(<li>.*?<\/li>\s*)+/g, '<ul>$&</ul>');
     }
     
