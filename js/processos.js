@@ -1,5 +1,5 @@
 // ============================================
-// PROCESSOS - LÓGICA COMPLETA COM FLUXOGRAMA
+// PROCESSOS - LÓGICA COMPLETA COM FLUXOGRAMA COMPACTO
 // ============================================
 
 // ============================================
@@ -21,7 +21,7 @@ const DEPARTAMENTOS_NOMES = {
 };
 
 // ============================================
-// DADOS DE FALLBACK (usados se o arquivo não for encontrado)
+// DADOS DE FALLBACK
 // ============================================
 
 const DADOS_FALLBACK = {
@@ -29,22 +29,30 @@ const DADOS_FALLBACK = {
         {
             id: 'P001',
             nome: 'POP - 01 Processos de Obras Emergenciais "SS"',
-            descricao: 'Processo completo para gerenciamento de Solicitações de Serviço (SS) emergenciais.',
+            descricao: 'Processo completo para gerenciamento de Solicitações de Serviço (SS) emergenciais, desde o recebimento até a baixa de materiais no sistema.',
             status: 'EM_ANDAMENTO',
             expanded: false,
-            // Dados do fluxograma
             fluxo: {
                 nodes: [
-                    { id: 'INICIO', tipo: 'start', titulo: '📧 Início do Processo', descricao: 'Verificar e-mails diários de Maria Clara com números das SS\'s atendidas.', conexoes: ['VERIFICAR_EMAILS'] },
-                    { id: 'VERIFICAR_EMAILS', tipo: 'acao', titulo: '📧 Verificar E-mails', descricao: 'Verificar e-mails que Maria Clara envia diariamente com os números das SS\'s atendidas.', conexoes: ['SS_ENCONTRADA'] },
-                    { id: 'SS_ENCONTRADA', tipo: 'decisao', titulo: '🔍 SS encontrada no Drive?', descricao: 'Procurar no Drive pelo número da SS na pasta da Área Técnica.', conexoes: ['FICHA_CASADA', 'AGUARDAR_OBRA'] },
-                    { id: 'FICHA_CASADA', tipo: 'decisao', titulo: '📋 Ficha está conosco (casada)?', descricao: 'Verificar se a ficha já está com a gente (equipes próprias).', conexoes: ['MATERIAIS_BATEM', 'IMPRIMIR_FICHA'] },
-                    { id: 'MATERIAIS_BATEM', tipo: 'decisao', titulo: '⚠️ Materiais batem com o Drive?', descricao: 'Conferir se os materiais da ficha são compatíveis com os do Drive.', conexoes: ['LANCAR_PLANILHA', 'CONSULTAR_RAFAEL'] },
-                    { id: 'LANCAR_PLANILHA', tipo: 'acao', titulo: '📊 Lançar na Planilha', descricao: 'Passar materiais e quantidades para planilha de controle SS Emergencial.', conexoes: ['FIM'] },
-                    { id: 'CONSULTAR_RAFAEL', tipo: 'call', titulo: '📞 Consultar Rafael', descricao: 'Verificar divergências com Rafael (Supervisor) ou Maria Clara.', conexoes: ['FIM'] },
-                    { id: 'IMPRIMIR_FICHA', tipo: 'acao', titulo: '🖨️ Imprimir Ficha', descricao: 'Imprimir ficha das equipes noturnas/interior. Lançar na planilha.', conexoes: ['FIM'] },
-                    { id: 'AGUARDAR_OBRA', tipo: 'acao', titulo: '⏳ Aguardar Obra', descricao: 'SS sem obra definida. Aguardar atribuição na planilha Energisa.', conexoes: ['FIM'] },
-                    { id: 'FIM', tipo: 'fim', titulo: '🏁 Finalizar Processo', descricao: 'Guardar SS\'s em ordem numérica na pasta.', conexoes: [] }
+                    { id: 'INICIO', tipo: 'start', titulo: '📧 Início', descricao: 'Verificar e-mails de Maria Clara', conexoes: ['VERIFICAR_EMAILS'] },
+                    { id: 'VERIFICAR_EMAILS', tipo: 'acao', titulo: '📧 Verificar', descricao: 'Verificar e-mails e Drive', conexoes: ['SS_ENCONTRADA'] },
+                    { id: 'SS_ENCONTRADA', tipo: 'decisao', titulo: '🔍 SS no Drive?', descricao: 'Procurar SS', conexoes: ['FICHA_CASADA', 'AGUARDAR_OBRA'] },
+                    { id: 'FICHA_CASADA', tipo: 'decisao', titulo: '📋 Ficha Casada?', descricao: 'Verificar ficha', conexoes: ['MATERIAIS_BATEM', 'IMPRIMIR_FICHA'] },
+                    { id: 'MATERIAIS_BATEM', tipo: 'decisao', titulo: '⚠️ Batem?', descricao: 'Conferir materiais', conexoes: ['LANCAR_PLANILHA', 'CONSULTAR_RAFAEL'] },
+                    { id: 'LANCAR_PLANILHA', tipo: 'acao', titulo: '📊 Lançar', descricao: 'Lançar na planilha', conexoes: ['VERIFICAR_OBRA'] },
+                    { id: 'CONSULTAR_RAFAEL', tipo: 'call', titulo: '📞 Consultar', descricao: 'Consultar Rafael', conexoes: ['VERIFICAR_EMAILS'] },
+                    { id: 'IMPRIMIR_FICHA', tipo: 'acao', titulo: '🖨️ Imprimir', descricao: 'Imprimir ficha', conexoes: ['LANCAR_PLANILHA'] },
+                    { id: 'VERIFICAR_OBRA', tipo: 'decisao', titulo: '🔍 Tem obra?', descricao: 'Verificar obra', conexoes: ['RMA', 'AGUARDAR_OBRA'] },
+                    { id: 'AGUARDAR_OBRA', tipo: 'acao', titulo: '⏳ Aguardar', descricao: 'Aguardar obra', conexoes: ['RMA'] },
+                    { id: 'RMA', tipo: 'rma', titulo: '📦 RMA', descricao: 'Realizar RMA', conexoes: ['DMA'] },
+                    { id: 'DMA', tipo: 'dma', titulo: '📋 DMA', descricao: 'Realizar DMA', conexoes: ['ATUALIZAR_PLANILHA'] },
+                    { id: 'ATUALIZAR_PLANILHA', tipo: 'acao', titulo: '📊 Atualizar', descricao: 'Atualizar planilhas', conexoes: ['TRANSFORMADOR'] },
+                    { id: 'TRANSFORMADOR', tipo: 'decisao', titulo: '⚡ Transformador?', descricao: 'Verificar transformador', conexoes: ['PROCESSAR_TRANSF', 'CONTINUAR'] },
+                    { id: 'PROCESSAR_TRANSF', tipo: 'acao', titulo: '🔄 Processar', descricao: 'Processar transformador', conexoes: ['CONTINUAR'] },
+                    { id: 'CONTINUAR', tipo: 'decisao', titulo: '📊 Falta saldo?', descricao: 'Verificar saldo', conexoes: ['TRANSFERIR', 'FINALIZAR'] },
+                    { id: 'TRANSFERIR', tipo: 'acao', titulo: '🔄 Transferir', descricao: 'Realizar transferência', conexoes: ['FINALIZAR'] },
+                    { id: 'FINALIZAR', tipo: 'acao', titulo: '✅ Finalizar', descricao: 'Guardar SS\'s', conexoes: ['FIM'] },
+                    { id: 'FIM', tipo: 'fim', titulo: '🏁 Fim', descricao: 'Processo concluído', conexoes: [] }
                 ]
             }
         }
@@ -52,7 +60,7 @@ const DADOS_FALLBACK = {
 };
 
 // ============================================
-// FUNÇÃO DE NAVEGAÇÃO CORRIGIDA
+// FUNÇÃO DE NAVEGAÇÃO
 // ============================================
 
 function redirecionarParaHome() {
@@ -71,10 +79,8 @@ function redirecionarParaHome() {
         };
         
         const homePage = homeMap[perfil] || '/SICGM/home-gestao.html';
-        console.log(`🏠 Redirecionando para: ${homePage}`);
         window.location.href = homePage;
     } catch (e) {
-        console.error('Erro ao redirecionar:', e);
         window.location.href = '/SICGM/index.html';
     }
 }
@@ -87,13 +93,11 @@ async function carregarProcessos(depto) {
     try {
         const filePath = DEPARTAMENTOS_DATA[depto];
         if (!filePath) {
-            console.warn('Departamento não encontrado, usando fallback:', depto);
             return DADOS_FALLBACK[depto] || [];
         }
 
         const response = await fetch(filePath);
         if (!response.ok) {
-            console.warn(`Erro ao carregar dados (${response.status}), usando fallback para:`, depto);
             return DADOS_FALLBACK[depto] || [];
         }
 
@@ -102,7 +106,6 @@ async function carregarProcessos(depto) {
             .filter(line => line.trim() && !line.startsWith('#'));
 
         if (linhas.length === 0) {
-            console.warn('Arquivo vazio, usando fallback para:', depto);
             return DADOS_FALLBACK[depto] || [];
         }
 
@@ -112,7 +115,6 @@ async function carregarProcessos(depto) {
         linhas.forEach(line => {
             const partes = line.split('|').map(p => p.trim());
             
-            // Verifica se é uma nova entrada de processo (começa com ID)
             if (partes.length >= 2 && partes[0].match(/^P\d{3}/)) {
                 if (processoAtual) {
                     processos.push(processoAtual);
@@ -123,13 +125,9 @@ async function carregarProcessos(depto) {
                     descricao: partes[2] || 'Processo sem descrição',
                     status: 'EM_ANDAMENTO',
                     expanded: false,
-                    // Se tiver dados de fluxo (a partir da 4ª posição)
-                    fluxo: partes.length > 3 ? {
-                        nodes: []
-                    } : null
+                    fluxo: { nodes: [] }
                 };
 
-                // Se tiver dados de fluxo, processa os nós
                 if (partes.length > 3) {
                     const nodesRaw = partes.slice(3).filter(e => e);
                     nodesRaw.forEach(nodeStr => {
@@ -154,39 +152,36 @@ async function carregarProcessos(depto) {
 
         return processos.length > 0 ? processos : (DADOS_FALLBACK[depto] || []);
     } catch (error) {
-        console.error('Erro ao carregar processos, usando fallback:', error);
+        console.error('Erro ao carregar processos:', error);
         return DADOS_FALLBACK[depto] || [];
     }
 }
 
 // ============================================
-// RENDERIZA O FLUXOGRAMA (SVG)
+// RENDERIZA FLUXOGRAMA COMPACTO (SVG)
 // ============================================
 
-function renderizarFluxogramaSVG(nodes) {
+function renderizarFluxogramaCompacto(nodes) {
     if (!nodes || nodes.length === 0) {
         return `
             <div style="padding: 20px; text-align: center; color: #A0AEC0;">
-                <p>📭 Este processo não possui fluxograma detalhado.</p>
-                <p style="font-size: 12px;">Utilize o formato: ID|NOME|DESCRICAO|NODE_ID:TIPO:TITULO:DESC:CONEXAO1:CONEXAO2</p>
+                <p>📭 Este processo não possui fluxograma.</p>
             </div>
         `;
     }
 
-    // Layout automático simples
-    const larguraNo = 180;
-    const alturaNo = 60;
-    const espacamentoX = 80;
-    const espacamentoY = 80;
+    // Layout compacto
+    const larguraNo = 130;
+    const alturaNo = 44;
+    const espacamentoX = 50;
+    const espacamentoY = 60;
     const posicoes = {};
     let larguraMax = 0;
     let alturaMax = 0;
 
-    // Encontra o nó raiz
     const root = nodes.find(n => n.tipo === 'start' || n.tipo === 'inicio');
     if (!root) return '<p style="padding: 20px; color: #A0AEC0;">Nó inicial não encontrado.</p>';
 
-    // Posiciona recursivamente
     function posicionar(node, x, y) {
         if (posicoes[node.id]) return;
         posicoes[node.id] = { x, y };
@@ -209,21 +204,21 @@ function renderizarFluxogramaSVG(nodes) {
         }
     }
 
-    posicionar(root, 50, 50);
+    posicionar(root, 20, 20);
 
-    const totalLargura = larguraMax + 100;
-    const totalAltura = alturaMax + 100;
+    const totalLargura = Math.max(600, larguraMax + 80);
+    const totalAltura = Math.max(300, alturaMax + 80);
 
     let svg = `
-        <svg class="fluxograma-svg" viewBox="0 0 ${Math.max(600, totalLargura)} ${Math.max(400, totalAltura)}" xmlns="http://www.w3.org/2000/svg" style="width: 100%; background: #FAFAFA; border-radius: 8px;">
+        <svg class="fluxograma-svg" viewBox="0 0 ${totalLargura} ${totalAltura}" xmlns="http://www.w3.org/2000/svg" style="width: 100%; background: #FAFAFA; border-radius: 8px; max-height: 500px;">
             <defs>
-                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-                    <polygon points="0 0, 10 3.5, 0 7" fill="#A0AEC0" />
+                <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#A0AEC0" />
                 </marker>
             </defs>
     `;
 
-    // Desenha as conexões
+    // Desenha conexões
     nodes.forEach(node => {
         if (node.conexoes && node.conexoes.length > 0) {
             const origem = posicoes[node.id];
@@ -238,17 +233,17 @@ function renderizarFluxogramaSVG(nodes) {
                 const x2 = destino.x + larguraNo / 2;
                 const y2 = destino.y;
                 const midY = (y1 + y2) / 2;
-                const label = index === 0 ? 'SIM' : index === 1 ? 'NÃO' : '';
+                const label = index === 0 ? 'S' : index === 1 ? 'N' : '';
 
                 svg += `
-                    <path d="M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}" stroke="#A0AEC0" stroke-width="2" fill="none" marker-end="url(#arrowhead)" />
-                    ${label ? `<text x="${(x1 + x2) / 2 - 10}" y="${midY - 8}" fill="#718096" font-size="11" font-weight="600">${label}</text>` : ''}
+                    <path d="M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}" stroke="#A0AEC0" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" />
+                    ${label ? `<text x="${(x1 + x2) / 2 - 6}" y="${midY - 6}" fill="#718096" font-size="9" font-weight="700">${label}</text>` : ''}
                 `;
             });
         }
     });
 
-    // Desenha os nós
+    // Desenha nós
     Object.keys(posicoes).forEach(nodeId => {
         const pos = posicoes[nodeId];
         const node = nodes.find(n => n.id === nodeId);
@@ -259,67 +254,60 @@ function renderizarFluxogramaSVG(nodes) {
         const w = larguraNo;
         const h = alturaNo;
 
-        // Cores por tipo
         const cores = {
-            'start': { fill: '#EBF8FF', stroke: '#4299E1', rx: 25 },
-            'acao': { fill: '#F7FAFC', stroke: '#4A5568', rx: 8 },
+            'start': { fill: '#EBF8FF', stroke: '#4299E1', rx: 20 },
+            'acao': { fill: '#F7FAFC', stroke: '#4A5568', rx: 6 },
             'decisao': { fill: '#FFFAF0', stroke: '#ED8936', rx: 0, losango: true },
-            'inicio': { fill: '#F0FFF4', stroke: '#48BB78', rx: 25 },
-            'fim': { fill: '#FFF5F5', stroke: '#FC8181', rx: 25 },
-            'call': { fill: '#EBF8FF', stroke: '#4299E1', rx: 8, strokeWidth: 3 },
-            'analisar': { fill: '#FFF5F5', stroke: '#FC8181', rx: 8, dashed: true }
+            'inicio': { fill: '#F0FFF4', stroke: '#48BB78', rx: 20 },
+            'fim': { fill: '#FFF5F5', stroke: '#FC8181', rx: 20 },
+            'call': { fill: '#EBF8FF', stroke: '#4299E1', rx: 6, strokeWidth: 2.5 },
+            'rma': { fill: '#EBF8FF', stroke: '#4299E1', rx: 6 },
+            'dma': { fill: '#E6FFFA', stroke: '#38B2AC', rx: 6 }
         };
 
         const cor = cores[node.tipo] || cores['acao'];
 
         if (cor.losango) {
-            // Losango para decisão
             const cx = x + w / 2;
             const cy = y + h / 2;
-            const metade = Math.min(w, h) / 2;
+            const metade = Math.min(w, h) / 2 - 4;
             svg += `
                 <polygon points="${cx - metade},${cy} ${cx},${cy - metade} ${cx + metade},${cy} ${cx},${cy + metade}"
-                         fill="${cor.fill}" stroke="${cor.stroke}" stroke-width="2" />
-                <text x="${cx}" y="${cy}" font-size="12" font-weight="600" fill="#2D3748" text-anchor="middle" dominant-baseline="central">${node.titulo || node.id}</text>
+                         fill="${cor.fill}" stroke="${cor.stroke}" stroke-width="1.5" />
+                <text x="${cx}" y="${cy}" font-size="10" font-weight="600" fill="#2D3748" text-anchor="middle" dominant-baseline="central">${node.titulo}</text>
             `;
         } else {
-            // Retângulo
-            const rx = cor.rx || 8;
-            const strokeWidth = cor.strokeWidth || 2;
-            const dashed = cor.dashed ? 'stroke-dasharray="6 4"' : '';
+            const rx = cor.rx || 6;
+            const strokeWidth = cor.strokeWidth || 1.5;
             svg += `
-                <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${cor.fill}" stroke="${cor.stroke}" stroke-width="${strokeWidth}" ${dashed} />
-                <text x="${x + w / 2}" y="${y + h / 2}" font-size="12" font-weight="600" fill="#2D3748" text-anchor="middle" dominant-baseline="central">${node.titulo || node.id}</text>
-                ${node.descricao ? `<text x="${x + w / 2}" y="${y + h / 2 + 18}" font-size="10" fill="#718096" text-anchor="middle">${node.descricao}</text>` : ''}
+                <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${cor.fill}" stroke="${cor.stroke}" stroke-width="${strokeWidth}" />
+                <text x="${x + w / 2}" y="${y + h / 2}" font-size="10" font-weight="600" fill="#2D3748" text-anchor="middle" dominant-baseline="central">${node.titulo}</text>
             `;
         }
     });
 
     svg += `</svg>`;
 
-    // Legenda
+    // Legenda compacta
     svg += `
-        <div style="display: flex; flex-wrap: wrap; gap: 12px; padding: 12px 16px; background: white; border-radius: 8px; margin-top: 12px; border: 1px solid #E2E8F0;">
-            <span style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4A5568;">
-                <span style="display: inline-block; width: 14px; height: 14px; background: #EBF8FF; border: 2px solid #4299E1; border-radius: 4px;"></span> Início
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 12px; background: white; border-radius: 6px; margin-top: 8px; border: 1px solid #E2E8F0;">
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #EBF8FF; border: 1.5px solid #4299E1; border-radius: 50%;"></span> Início
             </span>
-            <span style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4A5568;">
-                <span style="display: inline-block; width: 14px; height: 14px; background: #F7FAFC; border: 2px solid #4A5568; border-radius: 4px;"></span> Ação
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #F7FAFC; border: 1.5px solid #4A5568; border-radius: 3px;"></span> Ação
             </span>
-            <span style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4A5568;">
-                <span style="display: inline-block; width: 14px; height: 14px; background: #FFFAF0; border: 2px solid #ED8936; transform: rotate(45deg);"></span> Decisão
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #FFFAF0; border: 1.5px solid #ED8936; transform: rotate(45deg);"></span> Decisão
             </span>
-            <span style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4A5568;">
-                <span style="display: inline-block; width: 14px; height: 14px; background: #F0FFF4; border: 2px solid #48BB78; border-radius: 50%;"></span> Sucesso
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #F0FFF4; border: 1.5px solid #48BB78; border-radius: 50%;"></span> Fim
             </span>
-            <span style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4A5568;">
-                <span style="display: inline-block; width: 14px; height: 14px; background: #FFF5F5; border: 2px solid #FC8181; border-radius: 50%;"></span> Fim
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #EBF8FF; border: 2.5px solid #4299E1; border-radius: 3px;"></span> Call
             </span>
-            <span style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4A5568;">
-                <span style="display: inline-block; width: 14px; height: 14px; background: #EBF8FF; border: 3px solid #4299E1; border-radius: 4px;"></span> Call
-            </span>
-            <span style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4A5568;">
-                <span style="display: inline-block; width: 14px; height: 14px; background: #FFF5F5; border: 2px dashed #FC8181; border-radius: 4px;"></span> Analisar
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #E6FFFA; border: 1.5px solid #38B2AC; border-radius: 3px;"></span> RMA/DMA
             </span>
         </div>
     `;
@@ -335,7 +323,6 @@ function renderizarProcessos(depto, processos) {
     const container = document.getElementById('processosContent');
 
     let html = `
-        <!-- Cabeçalho -->
         <div class="processos-header">
             <h1>
                 📚 Workflow dos Processos
@@ -343,8 +330,6 @@ function renderizarProcessos(depto, processos) {
             </h1>
             <button class="btn-voltar" onclick="redirecionarParaHome()">← Voltar</button>
         </div>
-
-        <!-- Lista de Processos -->
         <div class="processos-list">
     `;
 
@@ -362,7 +347,6 @@ function renderizarProcessos(depto, processos) {
             
             html += `
                 <div class="processo-card" data-id="${processo.id}" data-index="${index}">
-                    <!-- Header do Processo -->
                     <div class="processo-header" onclick="toggleProcesso(${index})">
                         <div class="processo-info">
                             <span class="processo-id">${processo.id}</span>
@@ -374,18 +358,20 @@ function renderizarProcessos(depto, processos) {
                         </button>
                     </div>
                     
-                    <!-- Descrição -->
+                    <!-- DESCRIÇÃO COMPLETA (mantida como estava) -->
                     <div class="processo-descricao">
-                        <span>${processo.descricao || 'Sem descrição disponível'}</span>
+                        <span>${processo.descricao}</span>
                         <span class="expand-hint ${isExpanded ? 'rotated' : ''}">▼</span>
                     </div>
                     
-                    <!-- Fluxograma -->
+                    <!-- FLUXOGRAMA COMPACTO (adição) -->
                     <div class="workflow-container ${isExpanded ? 'open' : ''}" id="workflow-${index}">
-                        ${processo.fluxo ? renderizarFluxogramaSVG(processo.fluxo.nodes) : 
-                          `<p style="padding: 20px; color: #A0AEC0; text-align: center;">📭 Este processo não possui workflow detalhado.</p>`}
+                        ${processo.fluxo && processo.fluxo.nodes.length > 0 ? 
+                            renderizarFluxogramaCompacto(processo.fluxo.nodes) : 
+                            `<p style="padding: 20px; color: #A0AEC0; text-align: center;">📭 Este processo não possui fluxograma.</p>`
+                        }
                         
-                        <!-- Contatos (se for P001) -->
+                        <!-- Contatos -->
                         ${processo.id === 'P001' ? `
                         <div class="contatos-box">
                             <h4>📞 Contatos para Dúvidas</h4>
@@ -416,10 +402,7 @@ function renderizarProcessos(depto, processos) {
         });
     }
 
-    html += `
-        </div>
-    `;
-
+    html += `</div>`;
     container.innerHTML = html;
 }
 
@@ -436,7 +419,6 @@ function toggleProcesso(index) {
     const container = document.getElementById(`workflow-${index}`);
     if (!container) return;
     
-    // Fecha todos os outros workflows
     document.querySelectorAll('.workflow-container.open').forEach(el => {
         if (el.id !== `workflow-${index}`) {
             el.classList.remove('open');
@@ -449,10 +431,8 @@ function toggleProcesso(index) {
         }
     });
     
-    // Alterna o atual
     container.classList.toggle('open');
     
-    // Atualiza botão
     const btn = document.querySelector(`.processo-card[data-index="${index}"] .expand-btn`);
     if (btn) {
         if (processo.expanded) {
@@ -462,7 +442,6 @@ function toggleProcesso(index) {
         }
     }
     
-    // Atualiza hint
     const hint = document.querySelector(`.processo-card[data-index="${index}"] .expand-hint`);
     if (hint) hint.classList.toggle('rotated');
 }
@@ -483,7 +462,6 @@ window.renderizarProcessos = renderizarProcessos;
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Inicializando página de processos...');
     
-    // Loading
     const loadingOverlay = document.getElementById('loadingOverlay');
     const content = document.getElementById('processosContent');
     
@@ -491,40 +469,30 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadingOverlay.classList.add('active');
     content.style.display = 'none';
     
-    // Verifica sessão
     const sessao = window.verificarSessao();
     if (!sessao) {
-        console.log('🔒 Sessão inválida - Redirecionando para login');
         window.location.href = '/SICGM/login.html';
         return;
     }
 
     if (sessao.perfil !== 'GESTAO') {
-        console.log(`🔒 Perfil ${sessao.perfil} não autorizado`);
         alert('Acesso restrito a usuários de gestão.');
         redirecionarParaHome();
         return;
     }
 
-    console.log(`✅ Usuário autenticado: ${sessao.nome} (${sessao.perfil})`);
-
-    // Pega o departamento da URL
     const urlParams = new URLSearchParams(window.location.search);
     const depto = urlParams.get('depto') || 'DCMD';
-    console.log(`📂 Departamento selecionado: ${depto}`);
 
-    // Carrega e renderiza os processos
     const processos = await carregarProcessos(depto);
     window.processos = processos;
-    console.log(`📋 ${processos.length} processos carregados`);
     
     renderizarProcessos(depto, processos);
     
-    // Esconde loading
     setTimeout(() => {
         loadingOverlay.style.display = 'none';
         loadingOverlay.classList.remove('active');
         content.style.display = 'block';
-        console.log('✅ Página de processos carregada com sucesso!');
+        console.log('✅ Página carregada com sucesso!');
     }, 500);
 });
