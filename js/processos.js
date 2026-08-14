@@ -21,7 +21,7 @@ const DEPARTAMENTOS_NOMES = {
 };
 
 // ============================================
-// DADOS DE FALLBACK (usados se o arquivo não for encontrado)
+// DADOS DE FALLBACK
 // ============================================
 
 const DADOS_FALLBACK = {
@@ -48,6 +48,34 @@ const DADOS_FALLBACK = {
         }
     ]
 };
+
+// ============================================
+// FUNÇÃO DE NAVEGAÇÃO CORRIGIDA (CAMINHO ABSOLUTO)
+// ============================================
+
+function redirecionarParaHome() {
+    try {
+        const sessao = window.verificarSessao();
+        if (!sessao) {
+            window.location.href = '/SICGM/login.html';
+            return;
+        }
+        
+        const perfil = sessao.perfil || 'GESTAO';
+        const homeMap = {
+            'OPERACIONAL': '/SICGM/home-operacional.html',
+            'GESTAO': '/SICGM/home-gestao.html',
+            'VISUALIZACAO': '/SICGM/home-visualizacao.html'
+        };
+        
+        const homePage = homeMap[perfil] || '/SICGM/home-gestao.html';
+        console.log(`🏠 Redirecionando para: ${homePage}`);
+        window.location.href = homePage;
+    } catch (e) {
+        console.error('Erro ao redirecionar:', e);
+        window.location.href = '/SICGM/index.html';
+    }
+}
 
 // ============================================
 // CARREGAMENTO DE DADOS
@@ -109,7 +137,7 @@ async function carregarProcessos(depto) {
 }
 
 // ============================================
-// RENDERIZAÇÃO PRINCIPAL
+// RENDERIZAÇÃO
 // ============================================
 
 function renderizarProcessos(depto, processos) {
@@ -122,7 +150,7 @@ function renderizarProcessos(depto, processos) {
                 📚 Passo a Passo dos Processos
                 <span class="depto-badge">${depto}</span>
             </h1>
-            <button class="btn-voltar" onclick="window.redirecionarParaHome()">← Voltar</button>
+            <button class="btn-voltar" onclick="redirecionarParaHome()">← Voltar</button>
         </div>
 
         <!-- Lista de Processos -->
@@ -185,7 +213,7 @@ function renderizarProcessos(depto, processos) {
 }
 
 // ============================================
-// RENDERIZA WORKFLOW (DETALHES DO PROCESSO)
+// RENDERIZA WORKFLOW
 // ============================================
 
 function renderizarWorkflow(processo, index) {
@@ -263,7 +291,7 @@ function renderizarWorkflow(processo, index) {
         </div>
     `;
 
-    // Adiciona contatos se for o processo específico do DCMD
+    // Adiciona contatos se for o processo específico
     if (id === 'P001') {
         html += `
             <div class="contatos-box">
@@ -318,7 +346,7 @@ function formatarDescricao(texto) {
 }
 
 // ============================================
-// INTERAÇÃO DO USUÁRIO
+// INTERAÇÃO
 // ============================================
 
 function toggleProcesso(index) {
@@ -386,14 +414,8 @@ function atualizarWorkflow(index) {
     const container = document.getElementById(`workflow-${index}`);
     if (!container) return;
     
-    // Salva a altura atual para manter consistência
-    const currentHeight = container.scrollHeight;
-    
     // Re-renderiza o workflow
     container.innerHTML = renderizarWorkflow(processo, index);
-    
-    // Mantém a altura consistente
-    container.style.minHeight = currentHeight + 'px';
     
     // Rolagem suave para o detalhe
     setTimeout(() => {
@@ -401,10 +423,6 @@ function atualizarWorkflow(index) {
         if (detail) {
             detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        // Remove a altura fixa após a animação
-        setTimeout(() => {
-            container.style.minHeight = '';
-        }, 500);
     }, 200);
 }
 
@@ -425,6 +443,7 @@ function adicionarImagemEtapa(index, imagemUrl) {
 // EXPORTA FUNÇÕES PARA USO GLOBAL
 // ============================================
 
+window.redirecionarParaHome = redirecionarParaHome;
 window.toggleProcesso = toggleProcesso;
 window.irParaEtapa = irParaEtapa;
 window.atualizarWorkflow = atualizarWorkflow;
@@ -443,22 +462,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     const loadingOverlay = document.getElementById('loadingOverlay');
     const content = document.getElementById('processosContent');
     
+    // Mostra loading
+    loadingOverlay.style.display = 'flex';
     loadingOverlay.classList.add('active');
     content.style.display = 'none';
     
-    // Verifica sessão (usando a função do script.js)
+    // Verifica sessão
     const sessao = window.verificarSessao();
     if (!sessao) {
         console.log('🔒 Sessão inválida - Redirecionando para login');
-        window.location.href = '../login.html';
+        window.location.href = '/SICGM/login.html';
         return;
     }
 
-    // Verifica permissão (apenas gestão)
+    // Verifica permissão
     if (sessao.perfil !== 'GESTAO') {
         console.log(`🔒 Perfil ${sessao.perfil} não autorizado`);
         alert('Acesso restrito a usuários de gestão.');
-        window.redirecionarParaHome();
+        redirecionarParaHome();
         return;
     }
 
@@ -476,8 +497,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     renderizarProcessos(depto, processos);
     
-    // Esconde loading
+    // Esconde loading e mostra conteúdo
     setTimeout(() => {
+        loadingOverlay.style.display = 'none';
         loadingOverlay.classList.remove('active');
         content.style.display = 'block';
         console.log('✅ Página de processos carregada com sucesso!');
