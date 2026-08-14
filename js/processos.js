@@ -20,8 +20,15 @@ const DEPARTAMENTOS_NOMES = {
     'DEOP': 'DEOP - Operacional'
 };
 
+// Mapeamento de perfil para página inicial
+const HOME_PAGES = {
+    'OPERACIONAL': '../home-operacional.html',
+    'GESTAO': '../home-gestao.html',
+    'VISUALIZACAO': '../home-visualizacao.html'
+};
+
 // ============================================
-// DADOS DE FALLBACK (caso o arquivo não seja encontrado)
+// DADOS DE FALLBACK
 // ============================================
 
 const DADOS_FALLBACK = {
@@ -48,6 +55,28 @@ const DADOS_FALLBACK = {
         }
     ]
 };
+
+// ============================================
+// FUNÇÃO DE NAVEGAÇÃO CORRIGIDA
+// ============================================
+
+function redirecionarParaHome() {
+    try {
+        const sessao = sessionStorage.getItem('sessaoSICGM');
+        if (sessao) {
+            const dados = JSON.parse(sessao);
+            const perfil = dados.perfil || 'GESTAO';
+            const homePage = HOME_PAGES[perfil] || '../home-gestao.html';
+            console.log(`🏠 Redirecionando para: ${homePage}`);
+            window.location.href = homePage;
+        } else {
+            window.location.href = '../index.html';
+        }
+    } catch (e) {
+        console.error('Erro ao redirecionar:', e);
+        window.location.href = '../index.html';
+    }
+}
 
 // ============================================
 // CARREGAMENTO DE DADOS
@@ -123,7 +152,7 @@ function renderizarProcessos(depto, processos) {
                 📚 Passo a Passo dos Processos
                 <span class="depto-badge">${depto}</span>
             </h1>
-            <a href="home-gestao.html" class="btn-voltar">← Voltar</a>
+            <button class="btn-voltar" onclick="redirecionarParaHome()">← Voltar</button>
         </div>
 
         <!-- Lista de Processos -->
@@ -220,7 +249,7 @@ function renderizarWorkflow(processo, index) {
     html += `
         </div>
         
-        <!-- Detalhe da Etapa -->
+        <!-- Detalhe da Etapa - com altura fixa -->
         <div class="workflow-detail" id="workflow-detail-${index}">
             <div class="step-title">
                 <span>${etapa.titulo}</span>
@@ -231,7 +260,9 @@ function renderizarWorkflow(processo, index) {
             </div>
             
             <!-- Espaço para imagem futura -->
-            <img src="" alt="Imagem da etapa" class="step-image" id="step-image-${index}">
+            <div class="step-image-container">
+                <img src="" alt="Imagem da etapa" class="step-image" id="step-image-${index}">
+            </div>
             
             <!-- Navegação -->
             <div class="workflow-nav">
@@ -336,7 +367,6 @@ function toggleProcesso(index) {
             const idx = parseInt(el.id.split('-')[1]);
             if (window.processos && window.processos[idx]) {
                 window.processos[idx].expanded = false;
-                // Atualiza texto do botão
                 const btn = document.querySelector(`.processo-card[data-index="${idx}"] .expand-btn`);
                 if (btn) btn.innerHTML = 'Ver Passo a Passo <span class="arrow">▼</span>';
             }
@@ -386,8 +416,14 @@ function atualizarWorkflow(index) {
     const container = document.getElementById(`workflow-${index}`);
     if (!container) return;
     
+    // Salva a altura atual para manter consistência
+    const currentHeight = container.scrollHeight;
+    
     // Re-renderiza o workflow
     container.innerHTML = renderizarWorkflow(processo, index);
+    
+    // Mantém a altura consistente
+    container.style.minHeight = currentHeight + 'px';
     
     // Rolagem suave para o detalhe
     setTimeout(() => {
@@ -395,6 +431,10 @@ function atualizarWorkflow(index) {
         if (detail) {
             detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+        // Remove a altura fixa após a animação
+        setTimeout(() => {
+            container.style.minHeight = '';
+        }, 500);
     }, 200);
 }
 
@@ -426,14 +466,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Verifica sessão
     const sessao = verificarSessao();
     if (!sessao) {
-        window.location.href = 'index.html';
+        window.location.href = '../index.html';
         return;
     }
 
     // Verifica permissão
     if (sessao.perfil !== 'GESTAO') {
         alert('Acesso restrito a usuários de gestão.');
-        window.location.href = 'home-gestao.html';
+        redirecionarParaHome();
         return;
     }
 

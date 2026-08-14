@@ -7,6 +7,8 @@
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
+    width: 100%;
+    overflow-x: hidden;
 }
 
 /* ===== HEADER ===== */
@@ -21,6 +23,9 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 15px;
+    min-height: 80px;
+    width: 100%;
+    overflow: hidden;
 }
 
 .processos-header h1 {
@@ -29,6 +34,8 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    margin: 0;
+    white-space: nowrap;
 }
 
 .processos-header .depto-badge {
@@ -38,15 +45,7 @@
     border-radius: 20px;
     font-size: 14px;
     font-weight: 600;
-}
-
-.processos-header .processo-badge {
-    background: #2B6CB0;
-    color: white;
-    padding: 4px 16px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 600;
+    white-space: nowrap;
 }
 
 .btn-voltar {
@@ -62,6 +61,10 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    font-size: 14px;
+    min-width: 80px;
+    justify-content: center;
+    white-space: nowrap;
 }
 
 .btn-voltar:hover {
@@ -75,6 +78,7 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: 20px;
+    width: 100%;
 }
 
 .processo-card {
@@ -83,6 +87,7 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     overflow: hidden;
     transition: all 0.3s ease;
+    width: 100%;
 }
 
 .processo-card:hover {
@@ -101,6 +106,8 @@
     border-bottom: 1px solid #E2E8F0;
     cursor: pointer;
     transition: background 0.2s;
+    min-height: 70px;
+    width: 100%;
 }
 
 .processo-card .processo-header:hover {
@@ -112,6 +119,7 @@
     align-items: center;
     gap: 15px;
     flex: 1;
+    min-width: 0;
 }
 
 .processo-card .processo-id {
@@ -128,24 +136,27 @@
     font-size: 18px;
     font-weight: 600;
     color: #2D3748;
-}
-
-.processo-card .processo-status {
-    padding: 4px 16px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    background: #BEE3F8;
-    color: #2B6CB0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .processo-card .processo-descricao {
     color: #718096;
     font-size: 14px;
-    padding: 12px 25px 0 25px;
+    padding: 12px 25px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 10px;
+    min-height: 50px;
+}
+
+.processo-card .processo-descricao span:first-child {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .processo-card .expand-hint {
@@ -154,6 +165,7 @@
     transition: transform 0.3s;
     cursor: pointer;
     padding: 5px 10px;
+    flex-shrink: 0;
 }
 
 .processo-card .expand-hint.rotated {
@@ -174,6 +186,8 @@
     align-items: center;
     gap: 8px;
     font-size: 14px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .expand-btn:hover {
@@ -198,6 +212,7 @@
     border-top: 1px solid #E2E8F0;
     display: none;
     animation: slideDown 0.4s ease;
+    width: 100%;
 }
 
 .workflow-container.open {
@@ -224,6 +239,7 @@
     padding: 30px 0 20px 0;
     gap: 5px;
     overflow-x: auto;
+    width: 100%;
 }
 
 .workflow-timeline::before {
@@ -315,7 +331,7 @@
     color: #A0AEC0;
 }
 
-/* ===== DETALHE DA ETAPA ===== */
+/* ===== DETALHE DA ETAPA - ALTURA FIXA ===== */
 .workflow-detail {
     background: white;
     border-radius: 12px;
@@ -323,6 +339,10 @@
     margin-top: 10px;
     border: 1px solid #E2E8F0;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    min-height: 250px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
 }
 
 .workflow-detail .step-title {
@@ -334,6 +354,7 @@
     align-items: center;
     gap: 15px;
     flex-wrap: wrap;
+    flex-shrink: 0;
 }
 
 .workflow-detail .step-title .step-badge {
@@ -353,6 +374,10 @@
     padding: 20px;
     border-radius: 8px;
     border-left: 4px solid #ED8936;
+    flex: 1;
+    overflow-y: auto;
+    max-height: 200px;
+    min-height: 100px;
 }
 
 .workflow-detail .step-description strong {
@@ -368,12 +393,20 @@
     margin: 5px 0;
 }
 
+/* ===== IMAGEM ===== */
+.step-image-container {
+    min-height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
 .workflow-detail .step-image {
-    width: 100%;
-    max-height: 400px;
+    max-width: 100%;
+    max-height: 200px;
     object-fit: contain;
     border-radius: 8px;
-    margin: 15px 0;
     display: none;
     border: 1px solid #E2E8F0;
     padding: 10px;
@@ -394,6 +427,7 @@
     border-top: 1px solid #E2E8F0;
     flex-wrap: wrap;
     gap: 10px;
+    flex-shrink: 0;
 }
 
 .workflow-nav .nav-btn {
@@ -409,6 +443,8 @@
     align-items: center;
     gap: 8px;
     font-size: 14px;
+    min-width: 100px;
+    justify-content: center;
 }
 
 .workflow-nav .nav-btn:hover:not(:disabled) {
@@ -438,6 +474,7 @@
     color: #718096;
     font-size: 14px;
     font-weight: 500;
+    flex-shrink: 0;
 }
 
 /* ===== INFO ADICIONAL ===== */
@@ -448,6 +485,8 @@
     margin-top: 20px;
     padding-top: 20px;
     border-top: 1px solid #E2E8F0;
+    flex-shrink: 0;
+    width: 100%;
 }
 
 .workflow-info .info-item {
@@ -469,6 +508,9 @@
     color: #2D3748;
     margin-top: 3px;
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* ===== CONTATOS ===== */
@@ -478,6 +520,8 @@
     border-radius: 12px;
     padding: 20px;
     margin-top: 20px;
+    flex-shrink: 0;
+    width: 100%;
 }
 
 .contatos-box h4 {
@@ -511,7 +555,34 @@
     font-size: 13px;
 }
 
-/* ===== RESPONSIVIDADE ===== */
+/* ===== DEPTO EMPTY ===== */
+.depto-empty {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    width: 100%;
+}
+
+.depto-empty .empty-icon {
+    font-size: 64px;
+    margin-bottom: 15px;
+}
+
+.depto-empty h3 {
+    color: #4A5568;
+    margin-bottom: 8px;
+}
+
+.depto-empty p {
+    color: #A0AEC0;
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE                               */
+/* ============================================ */
+
 @media (max-width: 992px) {
     .workflow-timeline {
         flex-wrap: wrap;
@@ -549,61 +620,235 @@
 }
 
 @media (max-width: 768px) {
+    .processos-container {
+        padding: 15px;
+    }
+
     .processos-header {
         flex-direction: column;
         align-items: flex-start;
+        padding: 15px 20px;
+        min-height: 100px;
     }
-    
+
+    .processos-header h1 {
+        font-size: 20px;
+        white-space: normal;
+    }
+
+    .btn-voltar {
+        width: 100%;
+        justify-content: center;
+    }
+
     .processo-card .processo-header {
         flex-direction: column;
         align-items: flex-start;
+        padding: 15px 20px;
     }
-    
+
+    .processo-card .processo-info {
+        width: 100%;
+    }
+
+    .processo-card .processo-nome {
+        font-size: 15px;
+        white-space: normal;
+    }
+
     .processo-card .expand-btn {
         width: 100%;
         justify-content: center;
     }
-    
+
+    .processo-card .processo-descricao {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 20px;
+        gap: 5px;
+    }
+
+    .processo-card .processo-descricao span:first-child {
+        white-space: normal;
+    }
+
     .workflow-detail .step-title {
         font-size: 17px;
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
     }
-    
+
+    .workflow-detail .step-description {
+        font-size: 14px;
+        padding: 15px;
+        max-height: 150px;
+        min-height: 80px;
+    }
+
     .workflow-nav {
         flex-direction: column;
         align-items: stretch;
         gap: 10px;
     }
-    
+
     .workflow-nav .nav-btn {
         justify-content: center;
         width: 100%;
+        min-width: unset;
     }
-    
+
     .workflow-nav .step-counter {
         text-align: center;
         order: -1;
     }
+
+    .workflow-info {
+        grid-template-columns: 1fr;
+    }
+
+    .contatos-box .contato-item {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .contatos-box .contato-item .contato-setor {
+        width: 100%;
+        padding-left: 28px;
+    }
 }
 
 @media (max-width: 480px) {
-    .processo-card .processo-info {
-        flex-wrap: wrap;
+    .processos-container {
+        padding: 10px;
     }
-    
+
+    .processos-header {
+        padding: 12px 15px;
+        min-height: 80px;
+    }
+
+    .processos-header h1 {
+        font-size: 17px;
+    }
+
+    .processos-header .depto-badge {
+        font-size: 12px;
+        padding: 3px 12px;
+    }
+
+    .btn-voltar {
+        font-size: 12px;
+        padding: 8px 16px;
+    }
+
+    .processo-card .processo-header {
+        padding: 12px 15px;
+        min-height: 60px;
+    }
+
+    .processo-card .processo-id {
+        font-size: 10px;
+        padding: 3px 10px;
+    }
+
     .processo-card .processo-nome {
-        font-size: 15px;
-        width: 100%;
-    }
-    
-    .workflow-detail .step-description {
         font-size: 14px;
+    }
+
+    .processo-card .processo-descricao {
+        font-size: 12px;
+        padding: 8px 15px;
+        min-height: 40px;
+    }
+
+    .processo-card .expand-btn {
+        font-size: 12px;
+        padding: 6px 14px;
+    }
+
+    .workflow-container {
+        padding: 0 15px 15px 15px;
+    }
+
+    .workflow-detail {
+        padding: 15px;
+        min-height: 200px;
+    }
+
+    .workflow-detail .step-title {
+        font-size: 15px;
+    }
+
+    .workflow-detail .step-title .step-badge {
+        font-size: 11px;
+        padding: 2px 10px;
+    }
+
+    .workflow-detail .step-description {
+        font-size: 13px;
+        padding: 12px;
+        max-height: 120px;
+        min-height: 60px;
+    }
+
+    .workflow-nav .nav-btn {
+        font-size: 12px;
+        padding: 8px 16px;
+    }
+
+    .workflow-nav .step-counter {
+        font-size: 12px;
+    }
+
+    .workflow-info .info-item .info-value {
+        font-size: 12px;
+    }
+
+    .contatos-box {
         padding: 15px;
     }
-    
-    .workflow-info {
-        grid-template-columns: 1fr;
+
+    .contatos-box h4 {
+        font-size: 14px;
+    }
+
+    .contatos-box .contato-item {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+
+    .contatos-box .contato-item .contato-nome {
+        font-size: 13px;
+    }
+
+    .contatos-box .contato-item .contato-setor {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 360px) {
+    .processos-header h1 {
+        font-size: 15px;
+    }
+
+    .processo-card .processo-nome {
+        font-size: 12px;
+    }
+
+    .workflow-detail .step-description {
+        font-size: 12px;
+        padding: 10px;
+        max-height: 100px;
+    }
+
+    .workflow-step-indicator .step-circle {
+        width: 28px;
+        height: 28px;
+        font-size: 10px;
+    }
+
+    .workflow-step-indicator .step-label {
+        font-size: 9px;
     }
 }
