@@ -1,5 +1,5 @@
 // ============================================
-// PROCESSOS - LÓGICA COMPLETA COM FLUXOGRAMA COMPACTO
+// PROCESSOS - LÓGICA COMPLETA (PASSO A PASSO + FLUXOGRAMA)
 // ============================================
 
 // ============================================
@@ -32,21 +32,36 @@ const DADOS_FALLBACK = {
             descricao: 'Processo completo para gerenciamento de Solicitações de Serviço (SS) emergenciais, desde o recebimento até a baixa de materiais no sistema.',
             status: 'EM_ANDAMENTO',
             expanded: false,
+            // PASSO A PASSO (texto completo)
+            etapas: [
+                { titulo: '1. Verificar E-mails', descricao: 'Verificar e-mails que Maria Clara envia diariamente com os números das SS\'s atendidas. Procurar no Drive pelo número da SS na pasta da Área Técnica.' },
+                { titulo: '2. Verificar Ficha Casada', descricao: 'Conferir se os materiais da ficha batem com os do Drive. Caso não estejam compatíveis, verificar com Rafael ou Maria Clara.' },
+                { titulo: '3. Ficha não está Conosco', descricao: 'Imprimir a ficha e passar os materiais e quantidades para a planilha de controle.' },
+                { titulo: '4. Verificar se SS tem Obra', descricao: 'Consultar planilha da Energisa "Acionamento Control 2024 1". Filtrar pelo número da SS e procurar a coluna "Nº Obra".' },
+                { titulo: '5. Realizar RMA', descricao: 'Acessar SIAGO -> Movimentos -> 4 -> 3 -> 2. Preencher campos com dados da obra.' },
+                { titulo: '6. Realizar DMA', descricao: 'Acessar SIAGO -> Movimentos -> 4 -> 4 -> 1. Preencher campos com dados da obra.' },
+                { titulo: '7. Preencher Planilha Energisa', descricao: 'Preencher coluna "dt RMA/DMA" com a data da baixa. Senha: 784224.' },
+                { titulo: '8. Transformadores', descricao: 'Verificar fotos no Drive. Passar dados do transformador para planilha de controle.' },
+                { titulo: '9. Falta de Saldo', descricao: 'Verificar saldo em outras bases e realizar transferência (SIAGO -> Movimentos -> 4 -> 5 -> 1).' },
+                { titulo: '10. Guardar SS\'s', descricao: 'Guardar SS\'s em ordem numérica na pasta "Solicitação de Serviço Emergencial (SS) 2024".' }
+            ],
+            etapaAtual: 0,
+            // FLUXOGRAMA (visual)
             fluxo: {
                 nodes: [
-                    { id: 'INICIO', tipo: 'start', titulo: '📧 Início', descricao: 'Verificar e-mails de Maria Clara', conexoes: ['VERIFICAR_EMAILS'] },
-                    { id: 'VERIFICAR_EMAILS', tipo: 'acao', titulo: '📧 Verificar', descricao: 'Verificar e-mails e Drive', conexoes: ['SS_ENCONTRADA'] },
-                    { id: 'SS_ENCONTRADA', tipo: 'decisao', titulo: '🔍 SS no Drive?', descricao: 'Procurar SS', conexoes: ['FICHA_CASADA', 'AGUARDAR_OBRA'] },
-                    { id: 'FICHA_CASADA', tipo: 'decisao', titulo: '📋 Ficha Casada?', descricao: 'Verificar ficha', conexoes: ['MATERIAIS_BATEM', 'IMPRIMIR_FICHA'] },
-                    { id: 'MATERIAIS_BATEM', tipo: 'decisao', titulo: '⚠️ Batem?', descricao: 'Conferir materiais', conexoes: ['LANCAR_PLANILHA', 'CONSULTAR_RAFAEL'] },
-                    { id: 'LANCAR_PLANILHA', tipo: 'acao', titulo: '📊 Lançar', descricao: 'Lançar na planilha', conexoes: ['VERIFICAR_OBRA'] },
-                    { id: 'CONSULTAR_RAFAEL', tipo: 'call', titulo: '📞 Consultar', descricao: 'Consultar Rafael', conexoes: ['VERIFICAR_EMAILS'] },
-                    { id: 'IMPRIMIR_FICHA', tipo: 'acao', titulo: '🖨️ Imprimir', descricao: 'Imprimir ficha', conexoes: ['LANCAR_PLANILHA'] },
-                    { id: 'VERIFICAR_OBRA', tipo: 'decisao', titulo: '🔍 Tem obra?', descricao: 'Verificar obra', conexoes: ['RMA', 'AGUARDAR_OBRA'] },
-                    { id: 'AGUARDAR_OBRA', tipo: 'acao', titulo: '⏳ Aguardar', descricao: 'Aguardar obra', conexoes: ['RMA'] },
+                    { id: 'INICIO', tipo: 'start', titulo: '📧 Início', descricao: 'Verificar e-mails', conexoes: ['VERIFICAR'] },
+                    { id: 'VERIFICAR', tipo: 'acao', titulo: '📧 Verificar', descricao: 'Verificar e-mails e Drive', conexoes: ['SS_DRIVE'] },
+                    { id: 'SS_DRIVE', tipo: 'decisao', titulo: '🔍 SS no Drive?', descricao: 'Procurar SS', conexoes: ['FICHA_CASADA', 'AGUARDAR'] },
+                    { id: 'FICHA_CASADA', tipo: 'decisao', titulo: '📋 Ficha Casada?', descricao: 'Verificar ficha', conexoes: ['MATERIAIS_BATEM', 'IMPRIMIR'] },
+                    { id: 'MATERIAIS_BATEM', tipo: 'decisao', titulo: '⚠️ Batem?', descricao: 'Conferir materiais', conexoes: ['LANCAR', 'CONSULTAR'] },
+                    { id: 'LANCAR', tipo: 'acao', titulo: '📊 Lançar', descricao: 'Lançar na planilha', conexoes: ['VERIFICAR_OBRA'] },
+                    { id: 'CONSULTAR', tipo: 'call', titulo: '📞 Consultar', descricao: 'Consultar Rafael', conexoes: ['VERIFICAR'] },
+                    { id: 'IMPRIMIR', tipo: 'acao', titulo: '🖨️ Imprimir', descricao: 'Imprimir ficha', conexoes: ['LANCAR'] },
+                    { id: 'VERIFICAR_OBRA', tipo: 'decisao', titulo: '🔍 Tem obra?', descricao: 'Verificar obra', conexoes: ['RMA', 'AGUARDAR'] },
+                    { id: 'AGUARDAR', tipo: 'acao', titulo: '⏳ Aguardar', descricao: 'Aguardar obra', conexoes: ['RMA'] },
                     { id: 'RMA', tipo: 'rma', titulo: '📦 RMA', descricao: 'Realizar RMA', conexoes: ['DMA'] },
-                    { id: 'DMA', tipo: 'dma', titulo: '📋 DMA', descricao: 'Realizar DMA', conexoes: ['ATUALIZAR_PLANILHA'] },
-                    { id: 'ATUALIZAR_PLANILHA', tipo: 'acao', titulo: '📊 Atualizar', descricao: 'Atualizar planilhas', conexoes: ['TRANSFORMADOR'] },
+                    { id: 'DMA', tipo: 'dma', titulo: '📋 DMA', descricao: 'Realizar DMA', conexoes: ['ATUALIZAR'] },
+                    { id: 'ATUALIZAR', tipo: 'acao', titulo: '📊 Atualizar', descricao: 'Atualizar planilhas', conexoes: ['TRANSFORMADOR'] },
                     { id: 'TRANSFORMADOR', tipo: 'decisao', titulo: '⚡ Transformador?', descricao: 'Verificar transformador', conexoes: ['PROCESSAR_TRANSF', 'CONTINUAR'] },
                     { id: 'PROCESSAR_TRANSF', tipo: 'acao', titulo: '🔄 Processar', descricao: 'Processar transformador', conexoes: ['CONTINUAR'] },
                     { id: 'CONTINUAR', tipo: 'decisao', titulo: '📊 Falta saldo?', descricao: 'Verificar saldo', conexoes: ['TRANSFERIR', 'FINALIZAR'] },
@@ -70,16 +85,13 @@ function redirecionarParaHome() {
             window.location.href = '/SICGM/login.html';
             return;
         }
-        
         const perfil = sessao.perfil || 'GESTAO';
         const homeMap = {
             'OPERACIONAL': '/SICGM/home-operacional.html',
             'GESTAO': '/SICGM/home-gestao.html',
             'VISUALIZACAO': '/SICGM/home-visualizacao.html'
         };
-        
-        const homePage = homeMap[perfil] || '/SICGM/home-gestao.html';
-        window.location.href = homePage;
+        window.location.href = homeMap[perfil] || '/SICGM/home-gestao.html';
     } catch (e) {
         window.location.href = '/SICGM/index.html';
     }
@@ -125,21 +137,20 @@ async function carregarProcessos(depto) {
                     descricao: partes[2] || 'Processo sem descrição',
                     status: 'EM_ANDAMENTO',
                     expanded: false,
+                    etapaAtual: 0,
+                    etapas: [],
                     fluxo: { nodes: [] }
                 };
 
+                // Extrai etapas do passo a passo (formato antigo)
                 if (partes.length > 3) {
-                    const nodesRaw = partes.slice(3).filter(e => e);
-                    nodesRaw.forEach(nodeStr => {
-                        const [id, tipo, titulo, descricao, ...conexoes] = nodeStr.split(':').map(p => p.trim());
-                        if (id && tipo) {
-                            processoAtual.fluxo.nodes.push({
-                                id,
-                                tipo,
-                                titulo: titulo || id,
-                                descricao: descricao || '',
-                                conexoes: conexoes.filter(c => c && c !== 'FIM')
-                            });
+                    const etapasRaw = partes.slice(3).filter(e => e);
+                    etapasRaw.forEach(etapa => {
+                        const parts = etapa.split(':');
+                        const titulo = parts[0].trim();
+                        const descricao = parts.slice(1).join(':').trim();
+                        if (titulo && descricao) {
+                            processoAtual.etapas.push({ titulo, descricao });
                         }
                     });
                 }
@@ -158,23 +169,81 @@ async function carregarProcessos(depto) {
 }
 
 // ============================================
-// RENDERIZA FLUXOGRAMA COMPACTO (SVG)
+// PASSO A PASSO (texto completo)
 // ============================================
 
-function renderizarFluxogramaCompacto(nodes) {
+function renderizarPassoAPasso(processo, index) {
+    const { etapas, etapaAtual } = processo;
+    const totalEtapas = etapas.length;
+    
+    if (totalEtapas === 0) {
+        return `<p style="padding: 20px; color: #A0AEC0;">Este processo não possui etapas detalhadas.</p>`;
+    }
+
+    const etapa = etapas[etapaAtual] || etapas[0];
+
+    let html = `
+        <div class="workflow-timeline" style="display: flex; justify-content: space-between; align-items: flex-start; padding: 20px 0; overflow-x: auto; gap: 5px;">
+    `;
+
+    etapas.forEach((e, idx) => {
+        let stepClass = 'pending';
+        if (idx < etapaAtual) stepClass = 'completed';
+        else if (idx === etapaAtual) stepClass = 'active';
+        
+        html += `
+            <div class="workflow-step-indicator ${stepClass}" onclick="irParaEtapa(${index}, ${idx})" title="Ir para etapa ${idx + 1}" style="cursor: pointer; display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 60px; position: relative; z-index: 1;">
+                <div class="step-circle" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; background: white; border: 3px solid #E2E8F0; color: #A0AEC0; transition: all 0.3s;">${idx + 1}</div>
+                <div class="step-label" style="font-size: 9px; color: #A0AEC0; text-align: center; margin-top: 6px; font-weight: 500; max-width: 70px; line-height: 1.2;">${e.titulo}</div>
+            </div>
+        `;
+    });
+
+    html += `
+        </div>
+        
+        <div class="workflow-detail" style="background: white; border-radius: 10px; padding: 20px; margin-top: 5px; border: 1px solid #E2E8F0; min-height: 150px;">
+            <div style="font-size: 17px; font-weight: 700; color: #2D3748; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span>${etapa.titulo}</span>
+                <span style="background: #ED8936; color: white; padding: 2px 12px; border-radius: 12px; font-size: 12px;">Etapa ${etapaAtual + 1} de ${totalEtapas}</span>
+            </div>
+            <div style="color: #4A5568; line-height: 1.8; font-size: 14px; background: #F7FAFC; padding: 15px; border-radius: 8px; border-left: 4px solid #ED8936;">
+                ${formatarDescricao(etapa.descricao)}
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #E2E8F0; flex-wrap: wrap; gap: 10px;">
+                <button class="nav-btn" onclick="irParaEtapa(${index}, ${etapaAtual - 1})" ${etapaAtual === 0 ? 'disabled' : ''} style="padding: 8px 20px; border: 2px solid #E2E8F0; border-radius: 8px; background: white; color: #4A5568; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                    ← Anterior
+                </button>
+                <span style="color: #718096; font-size: 13px; font-weight: 500;">${etapaAtual + 1} de ${totalEtapas}</span>
+                <button class="nav-btn primary" onclick="irParaEtapa(${index}, ${etapaAtual + 1})" ${etapaAtual === totalEtapas - 1 ? 'disabled' : ''} style="padding: 8px 20px; border: 2px solid #ED8936; border-radius: 8px; background: #ED8936; color: white; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                    Próximo →
+                </button>
+            </div>
+        </div>
+    `;
+
+    return html;
+}
+
+// ============================================
+// FLUXOGRAMA HORIZONTAL (esquerda → direita)
+// ============================================
+
+function renderizarFluxogramaHorizontal(nodes) {
     if (!nodes || nodes.length === 0) {
         return `
-            <div style="padding: 20px; text-align: center; color: #A0AEC0;">
-                <p>📭 Este processo não possui fluxograma.</p>
+            <div style="padding: 15px; text-align: center; color: #A0AEC0; font-size: 13px;">
+                📭 Este processo não possui fluxograma.
             </div>
         `;
     }
 
-    // Layout compacto
-    const larguraNo = 130;
-    const alturaNo = 44;
-    const espacamentoX = 50;
-    const espacamentoY = 60;
+    // Layout horizontal
+    const larguraNo = 120;
+    const alturaNo = 40;
+    const espacamentoX = 40;
+    const espacamentoY = 70;
     const posicoes = {};
     let larguraMax = 0;
     let alturaMax = 0;
@@ -182,37 +251,36 @@ function renderizarFluxogramaCompacto(nodes) {
     const root = nodes.find(n => n.tipo === 'start' || n.tipo === 'inicio');
     if (!root) return '<p style="padding: 20px; color: #A0AEC0;">Nó inicial não encontrado.</p>';
 
-    function posicionar(node, x, y) {
+    function posicionar(node, x, y, nivel) {
         if (posicoes[node.id]) return;
-        posicoes[node.id] = { x, y };
+        posicoes[node.id] = { x, y, nivel: nivel || 0 };
         if (x + larguraNo > larguraMax) larguraMax = x + larguraNo;
         if (y + alturaNo > alturaMax) alturaMax = y + alturaNo;
 
         if (node.conexoes && node.conexoes.length > 0) {
             const numFilhos = node.conexoes.length;
-            const totalLargura = numFilhos * (larguraNo + espacamentoX) - espacamentoX;
-            const inicioX = x + larguraNo / 2 - totalLargura / 2;
+            const inicioY = y - (numFilhos - 1) * (alturaNo + espacamentoY) / 2;
 
             node.conexoes.forEach((destinoId, index) => {
                 const destino = nodes.find(n => n.id === destinoId);
                 if (destino) {
-                    const filhoX = inicioX + index * (larguraNo + espacamentoX);
-                    const filhoY = y + alturaNo + espacamentoY;
-                    posicionar(destino, filhoX, filhoY);
+                    const filhoX = x + larguraNo + espacamentoX;
+                    const filhoY = inicioY + index * (alturaNo + espacamentoY);
+                    posicionar(destino, filhoX, filhoY, (nivel || 0) + 1);
                 }
             });
         }
     }
 
-    posicionar(root, 20, 20);
+    posicionar(root, 20, 20, 0);
 
-    const totalLargura = Math.max(600, larguraMax + 80);
-    const totalAltura = Math.max(300, alturaMax + 80);
+    const totalLargura = Math.max(800, larguraMax + 60);
+    const totalAltura = Math.max(400, alturaMax + 60);
 
     let svg = `
-        <svg class="fluxograma-svg" viewBox="0 0 ${totalLargura} ${totalAltura}" xmlns="http://www.w3.org/2000/svg" style="width: 100%; background: #FAFAFA; border-radius: 8px; max-height: 500px;">
+        <svg class="fluxograma-svg" viewBox="0 0 ${totalLargura} ${totalAltura}" xmlns="http://www.w3.org/2000/svg" style="width: 100%; background: #FAFAFA; border-radius: 8px; max-height: 450px; min-height: 250px;">
             <defs>
-                <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <marker id="arrowhead2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
                     <polygon points="0 0, 8 3, 0 6" fill="#A0AEC0" />
                 </marker>
             </defs>
@@ -228,16 +296,16 @@ function renderizarFluxogramaCompacto(nodes) {
                 const destino = posicoes[destinoId];
                 if (!destino) return;
 
-                const x1 = origem.x + larguraNo / 2;
-                const y1 = origem.y + alturaNo;
-                const x2 = destino.x + larguraNo / 2;
-                const y2 = destino.y;
-                const midY = (y1 + y2) / 2;
+                const x1 = origem.x + larguraNo;
+                const y1 = origem.y + alturaNo / 2;
+                const x2 = destino.x;
+                const y2 = destino.y + alturaNo / 2;
+                const midX = (x1 + x2) / 2;
                 const label = index === 0 ? 'S' : index === 1 ? 'N' : '';
 
                 svg += `
-                    <path d="M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}" stroke="#A0AEC0" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" />
-                    ${label ? `<text x="${(x1 + x2) / 2 - 6}" y="${midY - 6}" fill="#718096" font-size="9" font-weight="700">${label}</text>` : ''}
+                    <path d="M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}" stroke="#A0AEC0" stroke-width="1.5" fill="none" marker-end="url(#arrowhead2)" />
+                    ${label ? `<text x="${midX - 6}" y="${(y1 + y2) / 2 - 6}" fill="#718096" font-size="9" font-weight="700">${label}</text>` : ''}
                 `;
             });
         }
@@ -290,29 +358,44 @@ function renderizarFluxogramaCompacto(nodes) {
 
     // Legenda compacta
     svg += `
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 12px; background: white; border-radius: 6px; margin-top: 8px; border: 1px solid #E2E8F0;">
-            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
-                <span style="display: inline-block; width: 12px; height: 12px; background: #EBF8FF; border: 1.5px solid #4299E1; border-radius: 50%;"></span> Início
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px; background: white; border-radius: 6px; margin-top: 6px; border: 1px solid #E2E8F0;">
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4A5568;">
+                <span style="display: inline-block; width: 10px; height: 10px; background: #EBF8FF; border: 1.5px solid #4299E1; border-radius: 50%;"></span> Início
             </span>
-            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
-                <span style="display: inline-block; width: 12px; height: 12px; background: #F7FAFC; border: 1.5px solid #4A5568; border-radius: 3px;"></span> Ação
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4A5568;">
+                <span style="display: inline-block; width: 10px; height: 10px; background: #F7FAFC; border: 1.5px solid #4A5568; border-radius: 3px;"></span> Ação
             </span>
-            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
-                <span style="display: inline-block; width: 12px; height: 12px; background: #FFFAF0; border: 1.5px solid #ED8936; transform: rotate(45deg);"></span> Decisão
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4A5568;">
+                <span style="display: inline-block; width: 10px; height: 10px; background: #FFFAF0; border: 1.5px solid #ED8936; transform: rotate(45deg);"></span> Decisão
             </span>
-            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
-                <span style="display: inline-block; width: 12px; height: 12px; background: #F0FFF4; border: 1.5px solid #48BB78; border-radius: 50%;"></span> Fim
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4A5568;">
+                <span style="display: inline-block; width: 10px; height: 10px; background: #F0FFF4; border: 1.5px solid #48BB78; border-radius: 50%;"></span> Fim
             </span>
-            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
-                <span style="display: inline-block; width: 12px; height: 12px; background: #EBF8FF; border: 2.5px solid #4299E1; border-radius: 3px;"></span> Call
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4A5568;">
+                <span style="display: inline-block; width: 10px; height: 10px; background: #EBF8FF; border: 2.5px solid #4299E1; border-radius: 3px;"></span> Call
             </span>
-            <span style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4A5568;">
-                <span style="display: inline-block; width: 12px; height: 12px; background: #E6FFFA; border: 1.5px solid #38B2AC; border-radius: 3px;"></span> RMA/DMA
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4A5568;">
+                <span style="display: inline-block; width: 10px; height: 10px; background: #E6FFFA; border: 1.5px solid #38B2AC; border-radius: 3px;"></span> RMA/DMA
             </span>
         </div>
     `;
 
     return svg;
+}
+
+// ============================================
+// FORMATAÇÃO DE DESCRIÇÃO
+// ============================================
+
+function formatarDescricao(texto) {
+    if (!texto) return 'Descrição não disponível.';
+    texto = texto.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    texto = texto.replace(/(?:^|\n)\s*[•\-]\s*(.*?)(?=\n|$)/g, '<li>$1</li>');
+    if (texto.includes('<li>')) {
+        texto = texto.replace(/(<li>.*?<\/li>\s*)+/g, '<ul style="margin: 10px 0; padding-left: 20px;">$&</ul>');
+    }
+    texto = texto.replace(/\n/g, '<br>');
+    return texto;
 }
 
 // ============================================
@@ -358,20 +441,36 @@ function renderizarProcessos(depto, processos) {
                         </button>
                     </div>
                     
-                    <!-- DESCRIÇÃO COMPLETA (mantida como estava) -->
+                    <!-- DESCRIÇÃO -->
                     <div class="processo-descricao">
                         <span>${processo.descricao}</span>
                         <span class="expand-hint ${isExpanded ? 'rotated' : ''}">▼</span>
                     </div>
                     
-                    <!-- FLUXOGRAMA COMPACTO (adição) -->
+                    <!-- WORKFLOW (PASSO A PASSO + FLUXOGRAMA) -->
                     <div class="workflow-container ${isExpanded ? 'open' : ''}" id="workflow-${index}">
-                        ${processo.fluxo && processo.fluxo.nodes.length > 0 ? 
-                            renderizarFluxogramaCompacto(processo.fluxo.nodes) : 
-                            `<p style="padding: 20px; color: #A0AEC0; text-align: center;">📭 Este processo não possui fluxograma.</p>`
-                        }
+                        <!-- PASSO A PASSO (texto completo) -->
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #2D3748; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                📋 Passo a Passo
+                                <span style="font-size: 11px; color: #718096; font-weight: 400;">(clique nos números para navegar)</span>
+                            </h4>
+                            ${renderizarPassoAPasso(processo, index)}
+                        </div>
                         
-                        <!-- Contatos -->
+                        <!-- FLUXOGRAMA (visual horizontal) -->
+                        <div style="margin-top: 10px; padding-top: 15px; border-top: 1px solid #E2E8F0;">
+                            <h4 style="color: #2D3748; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                🗺️ Fluxograma Visual
+                                <span style="font-size: 11px; color: #718096; font-weight: 400;">(visão geral do processo)</span>
+                            </h4>
+                            ${processo.fluxo && processo.fluxo.nodes.length > 0 ? 
+                                renderizarFluxogramaHorizontal(processo.fluxo.nodes) : 
+                                `<p style="padding: 15px; color: #A0AEC0; text-align: center; font-size: 13px;">📭 Este processo não possui fluxograma.</p>`
+                            }
+                        </div>
+                        
+                        <!-- CONTATOS -->
                         ${processo.id === 'P001' ? `
                         <div class="contatos-box">
                             <h4>📞 Contatos para Dúvidas</h4>
@@ -446,12 +545,42 @@ function toggleProcesso(index) {
     if (hint) hint.classList.toggle('rotated');
 }
 
+function irParaEtapa(index, novaEtapa) {
+    if (!window.processos || !window.processos[index]) return;
+    
+    const processo = window.processos[index];
+    const totalEtapas = processo.etapas.length;
+    
+    if (novaEtapa < 0 || novaEtapa >= totalEtapas) return;
+    
+    processo.etapaAtual = novaEtapa;
+    
+    // Re-renderiza apenas o passo a passo
+    const container = document.getElementById(`workflow-${index}`);
+    if (container) {
+        // Atualiza apenas a seção do passo a passo
+        const passoContainer = container.querySelector('.passo-a-passo-container');
+        if (passoContainer) {
+            passoContainer.innerHTML = renderizarPassoAPasso(processo, index);
+        }
+        
+        // Scroll para o detalhe
+        setTimeout(() => {
+            const detail = passoContainer?.querySelector('.workflow-detail');
+            if (detail) {
+                detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 200);
+    }
+}
+
 // ============================================
 // EXPORTA FUNÇÕES
 // ============================================
 
 window.redirecionarParaHome = redirecionarParaHome;
 window.toggleProcesso = toggleProcesso;
+window.irParaEtapa = irParaEtapa;
 window.carregarProcessos = carregarProcessos;
 window.renderizarProcessos = renderizarProcessos;
 
