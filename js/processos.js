@@ -1,5 +1,5 @@
 // ============================================
-// PROCESSOS - LÓGICA COMPLETA (PASSO A PASSO + FLUXOGRAMA)
+// PROCESSOS - PASSO A PASSO
 // ============================================
 
 // ============================================
@@ -15,13 +15,12 @@ const DEPARTAMENTOS_DATA = {
 
 const DEPARTAMENTOS_NOMES = {
     'DCMD': 'DCMD - Construção e Manutenção da Distribuição',
-    'DMPC': 'DMPC - Materiais Próprios Control',
     'DECP': 'DECP - Combate a Perdas',
     'DEOP': 'DEOP - Operacional'
 };
 
 // ============================================
-// DADOS DE FALLBACK - Com etapas BONITAS
+// DADOS DE FALLBACK
 // ============================================
 
 const DADOS_FALLBACK = {
@@ -49,30 +48,7 @@ const DADOS_FALLBACK = {
                 { titulo: '📊 13. Falta de saldo?', descricao: 'Verificar saldo em outras bases. Se não houver, informar na coluna "OBSERVAÇÃO DA RMA" que está sem saldo.' },
                 { titulo: '🔄 14. Realizar Transferência', descricao: 'SIAGO -> Movimentos -> 4 -> 5 -> 1. Permitido pois SS tem prioridade.' },
                 { titulo: '✅ 15. Finalizar e Guardar SS\'s', descricao: 'Guardar SS\'s em ordem numérica na pasta "Solicitação de Serviço Emergencial (SS) 2024". Materiais não baixados devem ser informados na coluna de observação.' }
-            ],
-            fluxo: {
-                nodes: [
-                    { id: 'INICIO', tipo: 'start', titulo: '📧 Início', descricao: 'Verificar e-mails', conexoes: ['VERIFICAR'] },
-                    { id: 'VERIFICAR', tipo: 'acao', titulo: '📧 Verificar', descricao: 'Verificar e-mails e Drive', conexoes: ['SS_DRIVE'] },
-                    { id: 'SS_DRIVE', tipo: 'decisao', titulo: '🔍 SS no Drive?', descricao: 'Procurar SS', conexoes: ['FICHA_CASADA', 'AGUARDAR'] },
-                    { id: 'FICHA_CASADA', tipo: 'decisao', titulo: '📋 Ficha Casada?', descricao: 'Verificar ficha', conexoes: ['MATERIAIS_BATEM', 'IMPRIMIR'] },
-                    { id: 'MATERIAIS_BATEM', tipo: 'decisao', titulo: '⚠️ Batem?', descricao: 'Conferir materiais', conexoes: ['LANCAR', 'CONSULTAR'] },
-                    { id: 'LANCAR', tipo: 'acao', titulo: '📊 Lançar', descricao: 'Lançar na planilha', conexoes: ['VERIFICAR_OBRA'] },
-                    { id: 'CONSULTAR', tipo: 'call', titulo: '📞 Consultar', descricao: 'Consultar Rafael', conexoes: ['VERIFICAR'] },
-                    { id: 'IMPRIMIR', tipo: 'acao', titulo: '🖨️ Imprimir', descricao: 'Imprimir ficha', conexoes: ['LANCAR'] },
-                    { id: 'VERIFICAR_OBRA', tipo: 'decisao', titulo: '🔍 Tem obra?', descricao: 'Verificar obra', conexoes: ['RMA', 'AGUARDAR'] },
-                    { id: 'AGUARDAR', tipo: 'acao', titulo: '⏳ Aguardar', descricao: 'Aguardar obra', conexoes: ['RMA'] },
-                    { id: 'RMA', tipo: 'rma', titulo: '📦 RMA', descricao: 'Realizar RMA', conexoes: ['DMA'] },
-                    { id: 'DMA', tipo: 'dma', titulo: '📋 DMA', descricao: 'Realizar DMA', conexoes: ['ATUALIZAR'] },
-                    { id: 'ATUALIZAR', tipo: 'acao', titulo: '📊 Atualizar', descricao: 'Atualizar planilhas', conexoes: ['TRANSFORMADOR'] },
-                    { id: 'TRANSFORMADOR', tipo: 'decisao', titulo: '⚡ Transformador?', descricao: 'Verificar transformador', conexoes: ['PROCESSAR_TRANSF', 'CONTINUAR'] },
-                    { id: 'PROCESSAR_TRANSF', tipo: 'acao', titulo: '🔄 Processar', descricao: 'Processar transformador', conexoes: ['CONTINUAR'] },
-                    { id: 'CONTINUAR', tipo: 'decisao', titulo: '📊 Falta saldo?', descricao: 'Verificar saldo', conexoes: ['TRANSFERIR', 'FINALIZAR'] },
-                    { id: 'TRANSFERIR', tipo: 'acao', titulo: '🔄 Transferir', descricao: 'Realizar transferência', conexoes: ['FINALIZAR'] },
-                    { id: 'FINALIZAR', tipo: 'acao', titulo: '✅ Finalizar', descricao: 'Guardar SS\'s', conexoes: ['FIM'] },
-                    { id: 'FIM', tipo: 'fim', titulo: '🏁 Fim', descricao: 'Processo concluído', conexoes: [] }
-                ]
-            }
+            ]
         }
     ]
 };
@@ -141,8 +117,7 @@ async function carregarProcessos(depto) {
                     status: 'EM_ANDAMENTO',
                     expanded: false,
                     etapaAtual: 0,
-                    etapas: [],
-                    fluxo: { nodes: [] }
+                    etapas: []
                 };
 
                 // Extrai etapas do passo a passo
@@ -172,7 +147,7 @@ async function carregarProcessos(depto) {
 }
 
 // ============================================
-// PASSO A PASSO (CORRIGIDO)
+// RENDERIZAR PASSO A PASSO
 // ============================================
 
 function renderizarPassoAPasso(processo, index) {
@@ -190,25 +165,19 @@ function renderizarPassoAPasso(processo, index) {
     `;
 
     etapas.forEach((e, idx) => {
-        let stepClass = 'pending';
         let bgColor = '#F7FAFC';
         let borderColor = '#E2E8F0';
         let textColor = '#A0AEC0';
         
         if (idx < etapaAtual) {
-            stepClass = 'completed';
             bgColor = '#48BB78';
             borderColor = '#48BB78';
             textColor = 'white';
         } else if (idx === etapaAtual) {
-            stepClass = 'active';
             bgColor = '#ED8936';
             borderColor = '#ED8936';
             textColor = 'white';
         }
-        
-        // Pega apenas o número e o ícone para exibir no círculo
-        const tituloCurto = e.titulo.replace(/^\d+\.\s*/, '').substring(0, 2);
         
         html += `
             <div onclick="irParaEtapa(${index}, ${idx})" 
@@ -255,162 +224,6 @@ function renderizarPassoAPasso(processo, index) {
 }
 
 // ============================================
-// FLUXOGRAMA HORIZONTAL
-// ============================================
-
-function renderizarFluxogramaHorizontal(nodes) {
-    if (!nodes || nodes.length === 0) {
-        return `
-            <div style="padding: 15px; text-align: center; color: #A0AEC0; font-size: 13px;">
-                📭 Este processo não possui fluxograma.
-            </div>
-        `;
-    }
-
-    const larguraNo = 110;
-    const alturaNo = 38;
-    const espacamentoX = 35;
-    const espacamentoY = 65;
-    const posicoes = {};
-    let larguraMax = 0;
-    let alturaMax = 0;
-
-    const root = nodes.find(n => n.tipo === 'start' || n.tipo === 'inicio');
-    if (!root) return '<p style="padding: 20px; color: #A0AEC0; text-align: center;">Nó inicial não encontrado.</p>';
-
-    function posicionar(node, x, y) {
-        if (posicoes[node.id]) return;
-        posicoes[node.id] = { x, y };
-        if (x + larguraNo > larguraMax) larguraMax = x + larguraNo;
-        if (y + alturaNo > alturaMax) alturaMax = y + alturaNo;
-
-        if (node.conexoes && node.conexoes.length > 0) {
-            const numFilhos = node.conexoes.length;
-            const inicioY = y - (numFilhos - 1) * (alturaNo + espacamentoY) / 2;
-
-            node.conexoes.forEach((destinoId, index) => {
-                const destino = nodes.find(n => n.id === destinoId);
-                if (destino) {
-                    const filhoX = x + larguraNo + espacamentoX;
-                    const filhoY = inicioY + index * (alturaNo + espacamentoY);
-                    posicionar(destino, filhoX, filhoY);
-                }
-            });
-        }
-    }
-
-    posicionar(root, 15, 15);
-
-    const totalLargura = Math.max(700, larguraMax + 40);
-    const totalAltura = Math.max(350, alturaMax + 40);
-
-    let svg = `
-        <svg viewBox="0 0 ${totalLargura} ${totalAltura}" xmlns="http://www.w3.org/2000/svg" style="width: 100%; background: #FAFAFA; border-radius: 8px; max-height: 400px; min-height: 200px;">
-            <defs>
-                <marker id="arrowhead3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill="#A0AEC0" />
-                </marker>
-            </defs>
-    `;
-
-    // Conexões
-    nodes.forEach(node => {
-        if (node.conexoes && node.conexoes.length > 0) {
-            const origem = posicoes[node.id];
-            if (!origem) return;
-
-            node.conexoes.forEach((destinoId, index) => {
-                const destino = posicoes[destinoId];
-                if (!destino) return;
-
-                const x1 = origem.x + larguraNo;
-                const y1 = origem.y + alturaNo / 2;
-                const x2 = destino.x;
-                const y2 = destino.y + alturaNo / 2;
-                const midX = (x1 + x2) / 2;
-                const label = index === 0 ? 'S' : index === 1 ? 'N' : '';
-
-                svg += `
-                    <path d="M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}" stroke="#A0AEC0" stroke-width="1.5" fill="none" marker-end="url(#arrowhead3)" />
-                    ${label ? `<text x="${midX - 6}" y="${(y1 + y2) / 2 - 6}" fill="#718096" font-size="9" font-weight="700">${label}</text>` : ''}
-                `;
-            });
-        }
-    });
-
-    // Nós
-    Object.keys(posicoes).forEach(nodeId => {
-        const pos = posicoes[nodeId];
-        const node = nodes.find(n => n.id === nodeId);
-        if (!node) return;
-
-        const x = pos.x;
-        const y = pos.y;
-        const w = larguraNo;
-        const h = alturaNo;
-
-        const cores = {
-            'start': { fill: '#EBF8FF', stroke: '#4299E1', rx: 18 },
-            'acao': { fill: '#F7FAFC', stroke: '#4A5568', rx: 5 },
-            'decisao': { fill: '#FFFAF0', stroke: '#ED8936', rx: 0, losango: true },
-            'inicio': { fill: '#F0FFF4', stroke: '#48BB78', rx: 18 },
-            'fim': { fill: '#FFF5F5', stroke: '#FC8181', rx: 18 },
-            'call': { fill: '#EBF8FF', stroke: '#4299E1', rx: 5, strokeWidth: 2.5 },
-            'rma': { fill: '#EBF8FF', stroke: '#4299E1', rx: 5 },
-            'dma': { fill: '#E6FFFA', stroke: '#38B2AC', rx: 5 }
-        };
-
-        const cor = cores[node.tipo] || cores['acao'];
-
-        if (cor.losango) {
-            const cx = x + w / 2;
-            const cy = y + h / 2;
-            const metade = Math.min(w, h) / 2 - 4;
-            svg += `
-                <polygon points="${cx - metade},${cy} ${cx},${cy - metade} ${cx + metade},${cy} ${cx},${cy + metade}"
-                         fill="${cor.fill}" stroke="${cor.stroke}" stroke-width="1.5" />
-                <text x="${cx}" y="${cy}" font-size="9" font-weight="600" fill="#2D3748" text-anchor="middle" dominant-baseline="central">${node.titulo}</text>
-            `;
-        } else {
-            const rx = cor.rx || 5;
-            const strokeWidth = cor.strokeWidth || 1.5;
-            svg += `
-                <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${cor.fill}" stroke="${cor.stroke}" stroke-width="${strokeWidth}" />
-                <text x="${x + w / 2}" y="${y + h / 2}" font-size="9" font-weight="600" fill="#2D3748" text-anchor="middle" dominant-baseline="central">${node.titulo}</text>
-            `;
-        }
-    });
-
-    svg += `</svg>`;
-
-    // Legenda
-    svg += `
-        <div style="display: flex; flex-wrap: wrap; gap: 6px; padding: 5px 10px; background: white; border-radius: 6px; margin-top: 6px; border: 1px solid #E2E8F0;">
-            <span style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4A5568;">
-                <span style="display: inline-block; width: 10px; height: 10px; background: #EBF8FF; border: 1.5px solid #4299E1; border-radius: 50%;"></span> Início
-            </span>
-            <span style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4A5568;">
-                <span style="display: inline-block; width: 10px; height: 10px; background: #F7FAFC; border: 1.5px solid #4A5568; border-radius: 3px;"></span> Ação
-            </span>
-            <span style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4A5568;">
-                <span style="display: inline-block; width: 10px; height: 10px; background: #FFFAF0; border: 1.5px solid #ED8936; transform: rotate(45deg);"></span> Decisão
-            </span>
-            <span style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4A5568;">
-                <span style="display: inline-block; width: 10px; height: 10px; background: #F0FFF4; border: 1.5px solid #48BB78; border-radius: 50%;"></span> Fim
-            </span>
-            <span style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4A5568;">
-                <span style="display: inline-block; width: 10px; height: 10px; background: #EBF8FF; border: 2.5px solid #4299E1; border-radius: 3px;"></span> Call
-            </span>
-            <span style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4A5568;">
-                <span style="display: inline-block; width: 10px; height: 10px; background: #E6FFFA; border: 1.5px solid #38B2AC; border-radius: 3px;"></span> RMA/DMA
-            </span>
-        </div>
-    `;
-
-    return svg;
-}
-
-// ============================================
 // FORMATAÇÃO DE DESCRIÇÃO
 // ============================================
 
@@ -429,7 +242,7 @@ function formatarDescricao(texto) {
 // RENDERIZAÇÃO PRINCIPAL
 // ============================================
 
-function renderizarProcessos(depto, processos) {
+function renderizarProcessos(depto, processos, fluxos) {
     const container = document.getElementById('processosContent');
 
     let html = `
@@ -454,6 +267,9 @@ function renderizarProcessos(depto, processos) {
     } else {
         processos.forEach((processo, index) => {
             const isExpanded = processo.expanded || false;
+            
+            // Busca o fluxograma correspondente
+            const fluxo = fluxos ? fluxos.find(f => f.id === processo.id) : null;
             
             html += `
                 <div class="processo-card" data-id="${processo.id}" data-index="${index}">
@@ -483,14 +299,15 @@ function renderizarProcessos(depto, processos) {
                             ${renderizarPassoAPasso(processo, index)}
                         </div>
                         
-                        <!-- FLUXOGRAMA -->
+                        <!-- FLUXOGRAMA (usando o fluxograma.js) -->
                         <div style="margin-top: 10px; padding-top: 12px; border-top: 1px solid #E2E8F0;">
                             <h4 style="color: #2D3748; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
                                 🗺️ Fluxograma Visual
                                 <span style="font-size: 10px; color: #718096; font-weight: 400;">(visão geral do processo)</span>
                             </h4>
-                            ${processo.fluxo && processo.fluxo.nodes.length > 0 ? 
-                                renderizarFluxogramaHorizontal(processo.fluxo.nodes) : 
+                            ${fluxo && fluxo.nodes && fluxo.nodes.length > 0 ? 
+                                window.renderizarFluxograma ? window.renderizarFluxograma(fluxo.nodes) : 
+                                `<p style="padding: 12px; color: #A0AEC0; text-align: center; font-size: 12px;">⚠️ Função de fluxograma não disponível.</p>` :
                                 `<p style="padding: 12px; color: #A0AEC0; text-align: center; font-size: 12px;">📭 Este processo não possui fluxograma.</p>`
                             }
                         </div>
@@ -580,28 +397,19 @@ function irParaEtapa(index, novaEtapa) {
     
     processo.etapaAtual = novaEtapa;
     
-    // Re-renderiza o passo a passo
     const container = document.getElementById(`workflow-${index}`);
     if (container) {
-        // Encontra a seção do passo a passo e substitui
-        const passoContainer = container.querySelector('.passo-a-passo-container');
-        if (passoContainer) {
-            passoContainer.innerHTML = renderizarPassoAPasso(processo, index);
-        } else {
-            // Se não encontrou o container específico, recria a estrutura
-            const passoSection = container.querySelector('div[style*="margin-bottom: 15px;"]');
-            if (passoSection) {
-                passoSection.innerHTML = `
-                    <h4 style="color: #2D3748; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                        📋 Passo a Passo
-                        <span style="font-size: 10px; color: #718096; font-weight: 400;">(clique nos números para navegar)</span>
-                    </h4>
-                    ${renderizarPassoAPasso(processo, index)}
-                `;
-            }
+        const passoSection = container.querySelector('div[style*="margin-bottom: 15px;"]');
+        if (passoSection) {
+            passoSection.innerHTML = `
+                <h4 style="color: #2D3748; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                    📋 Passo a Passo
+                    <span style="font-size: 10px; color: #718096; font-weight: 400;">(clique nos números para navegar)</span>
+                </h4>
+                ${renderizarPassoAPasso(processo, index)}
+            `;
         }
         
-        // Scroll para o detalhe
         setTimeout(() => {
             const detail = container.querySelector('.workflow-detail');
             if (detail) {
@@ -650,10 +458,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     const urlParams = new URLSearchParams(window.location.search);
     const depto = urlParams.get('depto') || 'DCMD';
 
+    // Carrega passo a passo
     const processos = await carregarProcessos(depto);
     window.processos = processos;
     
-    renderizarProcessos(depto, processos);
+    // Carrega fluxograma (usando o fluxograma.js)
+    let fluxos = [];
+    if (typeof window.carregarFluxograma === 'function') {
+        fluxos = await window.carregarFluxograma(depto);
+        console.log(`📊 ${fluxos.length} fluxogramas carregados`);
+    }
+    
+    renderizarProcessos(depto, processos, fluxos);
     
     setTimeout(() => {
         loadingOverlay.style.display = 'none';
