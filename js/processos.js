@@ -21,7 +21,7 @@ const DEPARTAMENTOS_NOMES = {
 };
 
 // ============================================
-// DADOS DE FALLBACK
+// DADOS DE FALLBACK - Com etapas BONITAS
 // ============================================
 
 const DADOS_FALLBACK = {
@@ -32,21 +32,24 @@ const DADOS_FALLBACK = {
             descricao: 'Processo completo para gerenciamento de Solicitações de Serviço (SS) emergenciais, desde o recebimento até a baixa de materiais no sistema.',
             status: 'EM_ANDAMENTO',
             expanded: false,
-            // PASSO A PASSO (texto completo)
-            etapas: [
-                { titulo: '1. Verificar E-mails', descricao: 'Verificar e-mails que Maria Clara envia diariamente com os números das SS\'s atendidas. Procurar no Drive pelo número da SS na pasta da Área Técnica.' },
-                { titulo: '2. Verificar Ficha Casada', descricao: 'Conferir se os materiais da ficha batem com os do Drive. Caso não estejam compatíveis, verificar com Rafael ou Maria Clara.' },
-                { titulo: '3. Ficha não está Conosco', descricao: 'Imprimir a ficha e passar os materiais e quantidades para a planilha de controle.' },
-                { titulo: '4. Verificar se SS tem Obra', descricao: 'Consultar planilha da Energisa "Acionamento Control 2024 1". Filtrar pelo número da SS e procurar a coluna "Nº Obra".' },
-                { titulo: '5. Realizar RMA', descricao: 'Acessar SIAGO -> Movimentos -> 4 -> 3 -> 2. Preencher campos com dados da obra.' },
-                { titulo: '6. Realizar DMA', descricao: 'Acessar SIAGO -> Movimentos -> 4 -> 4 -> 1. Preencher campos com dados da obra.' },
-                { titulo: '7. Preencher Planilha Energisa', descricao: 'Preencher coluna "dt RMA/DMA" com a data da baixa. Senha: 784224.' },
-                { titulo: '8. Transformadores', descricao: 'Verificar fotos no Drive. Passar dados do transformador para planilha de controle.' },
-                { titulo: '9. Falta de Saldo', descricao: 'Verificar saldo em outras bases e realizar transferência (SIAGO -> Movimentos -> 4 -> 5 -> 1).' },
-                { titulo: '10. Guardar SS\'s', descricao: 'Guardar SS\'s em ordem numérica na pasta "Solicitação de Serviço Emergencial (SS) 2024".' }
-            ],
             etapaAtual: 0,
-            // FLUXOGRAMA (visual)
+            etapas: [
+                { titulo: '📧 1. Verificar E-mails', descricao: 'Verificar e-mails que Maria Clara envia diariamente com os números das SS\'s atendidas. Procurar no Drive pelo número da SS na pasta da Área Técnica.' },
+                { titulo: '📧 2. Verificar E-mails e Drive', descricao: 'Verificar e-mails de Maria Clara diariamente. Procurar no Drive pelo número da SS na pasta da Área Técnica.' },
+                { titulo: '🔍 3. SS encontrada no Drive?', descricao: 'Procurar no Drive pelo número da SS. Se encontrada, verificar se a ficha já está com a gente.' },
+                { titulo: '📋 4. Ficha está conosco (casada)?', descricao: 'Se a ficha já está com a gente (casada) -> conferir se os materiais da ficha batem com os do Drive. Caso não estejam compatíveis, verificar com Rafael (Supervisor) ou Maria Clara.' },
+                { titulo: '⚠️ 5. Materiais batem com o Drive?', descricao: 'Conferir se os materiais da ficha batem com os do Drive. Caso não estejam compatíveis verificar com Rafael ou Maria Clara. Documento assinado não pode ser alterado!' },
+                { titulo: '📊 6. Lançar na Planilha', descricao: 'Passar materiais e quantidades para a planilha (Almoxarifado -> 15- Gestão de indicadores -> "06 - CONTROLE DE SS EMERGENCIAL 2024"), preenchendo todos os dados.' },
+                { titulo: '🔍 7. SS já tem obra?', descricao: 'Verificar na planilha da Energisa "Acionamento Control 2024 1", filtrar número da SS e procurar a coluna "Nº Obra".' },
+                { titulo: '📦 8. Realizar RMA dos Materiais', descricao: 'SIAGO -> Movimentos -> 4 -> 3 -> 2. Depósito: 1853, 1854 ou 1855. Verificar se materiais e quantidades disponíveis estão condizentes.' },
+                { titulo: '📋 9. Realizar DMA da Obra', descricao: 'SIAGO -> Movimentos -> 4 -> 4 -> 1. Desativação: depósito 1050. Clicar em SUCATA. Transformadores: marcar REFORMA.' },
+                { titulo: '📊 10. Atualizar Planilhas', descricao: 'Atualizar planilha de SS. Ir para planilha Energisa, preencher coluna "dt RMA/DMA" com data da baixa. Senha: 784224.' },
+                { titulo: '⚡ 11. SS com TRANSFORMADORES?', descricao: 'Verificar fotos no Drive. Imprimir ficha com dados dos transformadores.' },
+                { titulo: '🔄 12. Processar Transformadores', descricao: 'Passar dados do transformador de REFORMA para planilha "19 - Controle de Transformadores de Reforma".' },
+                { titulo: '📊 13. Falta de saldo?', descricao: 'Verificar saldo em outras bases. Se não houver, informar na coluna "OBSERVAÇÃO DA RMA" que está sem saldo.' },
+                { titulo: '🔄 14. Realizar Transferência', descricao: 'SIAGO -> Movimentos -> 4 -> 5 -> 1. Permitido pois SS tem prioridade.' },
+                { titulo: '✅ 15. Finalizar e Guardar SS\'s', descricao: 'Guardar SS\'s em ordem numérica na pasta "Solicitação de Serviço Emergencial (SS) 2024". Materiais não baixados devem ser informados na coluna de observação.' }
+            ],
             fluxo: {
                 nodes: [
                     { id: 'INICIO', tipo: 'start', titulo: '📧 Início', descricao: 'Verificar e-mails', conexoes: ['VERIFICAR'] },
@@ -142,7 +145,7 @@ async function carregarProcessos(depto) {
                     fluxo: { nodes: [] }
                 };
 
-                // Extrai etapas do passo a passo (formato antigo)
+                // Extrai etapas do passo a passo
                 if (partes.length > 3) {
                     const etapasRaw = partes.slice(3).filter(e => e);
                     etapasRaw.forEach(etapa => {
@@ -169,7 +172,7 @@ async function carregarProcessos(depto) {
 }
 
 // ============================================
-// PASSO A PASSO (texto completo)
+// PASSO A PASSO (CORRIGIDO)
 // ============================================
 
 function renderizarPassoAPasso(processo, index) {
@@ -177,24 +180,45 @@ function renderizarPassoAPasso(processo, index) {
     const totalEtapas = etapas.length;
     
     if (totalEtapas === 0) {
-        return `<p style="padding: 20px; color: #A0AEC0;">Este processo não possui etapas detalhadas.</p>`;
+        return `<p style="padding: 20px; color: #A0AEC0; text-align: center;">📭 Este processo não possui etapas detalhadas.</p>`;
     }
 
     const etapa = etapas[etapaAtual] || etapas[0];
 
     let html = `
-        <div class="workflow-timeline" style="display: flex; justify-content: space-between; align-items: flex-start; padding: 20px 0; overflow-x: auto; gap: 5px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 15px 0; overflow-x: auto; gap: 3px; position: relative; width: 100%;">
     `;
 
     etapas.forEach((e, idx) => {
         let stepClass = 'pending';
-        if (idx < etapaAtual) stepClass = 'completed';
-        else if (idx === etapaAtual) stepClass = 'active';
+        let bgColor = '#F7FAFC';
+        let borderColor = '#E2E8F0';
+        let textColor = '#A0AEC0';
+        
+        if (idx < etapaAtual) {
+            stepClass = 'completed';
+            bgColor = '#48BB78';
+            borderColor = '#48BB78';
+            textColor = 'white';
+        } else if (idx === etapaAtual) {
+            stepClass = 'active';
+            bgColor = '#ED8936';
+            borderColor = '#ED8936';
+            textColor = 'white';
+        }
+        
+        // Pega apenas o número e o ícone para exibir no círculo
+        const tituloCurto = e.titulo.replace(/^\d+\.\s*/, '').substring(0, 2);
         
         html += `
-            <div class="workflow-step-indicator ${stepClass}" onclick="irParaEtapa(${index}, ${idx})" title="Ir para etapa ${idx + 1}" style="cursor: pointer; display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 60px; position: relative; z-index: 1;">
-                <div class="step-circle" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; background: white; border: 3px solid #E2E8F0; color: #A0AEC0; transition: all 0.3s;">${idx + 1}</div>
-                <div class="step-label" style="font-size: 9px; color: #A0AEC0; text-align: center; margin-top: 6px; font-weight: 500; max-width: 70px; line-height: 1.2;">${e.titulo}</div>
+            <div onclick="irParaEtapa(${index}, ${idx})" 
+                 style="cursor: pointer; display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 50px; position: relative; z-index: 1;">
+                <div style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; background: ${bgColor}; border: 3px solid ${borderColor}; color: ${textColor}; transition: all 0.3s; box-shadow: ${idx === etapaAtual ? '0 0 0 4px rgba(237, 137, 54, 0.2)' : 'none'};">
+                    ${idx + 1}
+                </div>
+                <div style="font-size: 8px; color: ${idx === etapaAtual ? '#ED8936' : '#A0AEC0'}; text-align: center; margin-top: 4px; font-weight: ${idx === etapaAtual ? '700' : '400'}; max-width: 55px; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${e.titulo.replace(/^\d+\.\s*/, '').substring(0, 12)}
+                </div>
             </div>
         `;
     });
@@ -202,21 +226,25 @@ function renderizarPassoAPasso(processo, index) {
     html += `
         </div>
         
-        <div class="workflow-detail" style="background: white; border-radius: 10px; padding: 20px; margin-top: 5px; border: 1px solid #E2E8F0; min-height: 150px;">
-            <div style="font-size: 17px; font-weight: 700; color: #2D3748; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <div style="background: white; border-radius: 10px; padding: 18px; margin-top: 5px; border: 1px solid #E2E8F0; min-height: 120px;">
+            <div style="font-size: 16px; font-weight: 700; color: #2D3748; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <span>${etapa.titulo}</span>
-                <span style="background: #ED8936; color: white; padding: 2px 12px; border-radius: 12px; font-size: 12px;">Etapa ${etapaAtual + 1} de ${totalEtapas}</span>
+                <span style="background: #ED8936; color: white; padding: 2px 12px; border-radius: 12px; font-size: 11px;">${etapaAtual + 1} de ${totalEtapas}</span>
             </div>
-            <div style="color: #4A5568; line-height: 1.8; font-size: 14px; background: #F7FAFC; padding: 15px; border-radius: 8px; border-left: 4px solid #ED8936;">
+            <div style="color: #4A5568; line-height: 1.7; font-size: 14px; background: #F7FAFC; padding: 14px; border-radius: 8px; border-left: 4px solid #ED8936; max-height: 150px; overflow-y: auto;">
                 ${formatarDescricao(etapa.descricao)}
             </div>
             
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #E2E8F0; flex-wrap: wrap; gap: 10px;">
-                <button class="nav-btn" onclick="irParaEtapa(${index}, ${etapaAtual - 1})" ${etapaAtual === 0 ? 'disabled' : ''} style="padding: 8px 20px; border: 2px solid #E2E8F0; border-radius: 8px; background: white; color: #4A5568; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid #E2E8F0; flex-wrap: wrap; gap: 8px;">
+                <button onclick="irParaEtapa(${index}, ${etapaAtual - 1})" 
+                        ${etapaAtual === 0 ? 'disabled' : ''}
+                        style="padding: 6px 16px; border: 2px solid #E2E8F0; border-radius: 6px; background: white; color: #4A5568; font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 12px; ${etapaAtual === 0 ? 'opacity: 0.4; cursor: not-allowed;' : ''}">
                     ← Anterior
                 </button>
-                <span style="color: #718096; font-size: 13px; font-weight: 500;">${etapaAtual + 1} de ${totalEtapas}</span>
-                <button class="nav-btn primary" onclick="irParaEtapa(${index}, ${etapaAtual + 1})" ${etapaAtual === totalEtapas - 1 ? 'disabled' : ''} style="padding: 8px 20px; border: 2px solid #ED8936; border-radius: 8px; background: #ED8936; color: white; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                <span style="color: #718096; font-size: 12px; font-weight: 500;">${etapaAtual + 1} de ${totalEtapas}</span>
+                <button onclick="irParaEtapa(${index}, ${etapaAtual + 1})" 
+                        ${etapaAtual === totalEtapas - 1 ? 'disabled' : ''}
+                        style="padding: 6px 16px; border: 2px solid #ED8936; border-radius: 6px; background: #ED8936; color: white; font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 12px; ${etapaAtual === totalEtapas - 1 ? 'opacity: 0.4; cursor: not-allowed;' : ''}">
                     Próximo →
                 </button>
             </div>
@@ -227,7 +255,7 @@ function renderizarPassoAPasso(processo, index) {
 }
 
 // ============================================
-// FLUXOGRAMA HORIZONTAL (esquerda → direita)
+// FLUXOGRAMA HORIZONTAL
 // ============================================
 
 function renderizarFluxogramaHorizontal(nodes) {
@@ -239,21 +267,20 @@ function renderizarFluxogramaHorizontal(nodes) {
         `;
     }
 
-    // Layout horizontal
-    const larguraNo = 120;
-    const alturaNo = 40;
-    const espacamentoX = 40;
-    const espacamentoY = 70;
+    const larguraNo = 110;
+    const alturaNo = 38;
+    const espacamentoX = 35;
+    const espacamentoY = 65;
     const posicoes = {};
     let larguraMax = 0;
     let alturaMax = 0;
 
     const root = nodes.find(n => n.tipo === 'start' || n.tipo === 'inicio');
-    if (!root) return '<p style="padding: 20px; color: #A0AEC0;">Nó inicial não encontrado.</p>';
+    if (!root) return '<p style="padding: 20px; color: #A0AEC0; text-align: center;">Nó inicial não encontrado.</p>';
 
-    function posicionar(node, x, y, nivel) {
+    function posicionar(node, x, y) {
         if (posicoes[node.id]) return;
-        posicoes[node.id] = { x, y, nivel: nivel || 0 };
+        posicoes[node.id] = { x, y };
         if (x + larguraNo > larguraMax) larguraMax = x + larguraNo;
         if (y + alturaNo > alturaMax) alturaMax = y + alturaNo;
 
@@ -266,27 +293,27 @@ function renderizarFluxogramaHorizontal(nodes) {
                 if (destino) {
                     const filhoX = x + larguraNo + espacamentoX;
                     const filhoY = inicioY + index * (alturaNo + espacamentoY);
-                    posicionar(destino, filhoX, filhoY, (nivel || 0) + 1);
+                    posicionar(destino, filhoX, filhoY);
                 }
             });
         }
     }
 
-    posicionar(root, 20, 20, 0);
+    posicionar(root, 15, 15);
 
-    const totalLargura = Math.max(800, larguraMax + 60);
-    const totalAltura = Math.max(400, alturaMax + 60);
+    const totalLargura = Math.max(700, larguraMax + 40);
+    const totalAltura = Math.max(350, alturaMax + 40);
 
     let svg = `
-        <svg class="fluxograma-svg" viewBox="0 0 ${totalLargura} ${totalAltura}" xmlns="http://www.w3.org/2000/svg" style="width: 100%; background: #FAFAFA; border-radius: 8px; max-height: 450px; min-height: 250px;">
+        <svg viewBox="0 0 ${totalLargura} ${totalAltura}" xmlns="http://www.w3.org/2000/svg" style="width: 100%; background: #FAFAFA; border-radius: 8px; max-height: 400px; min-height: 200px;">
             <defs>
-                <marker id="arrowhead2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <marker id="arrowhead3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
                     <polygon points="0 0, 8 3, 0 6" fill="#A0AEC0" />
                 </marker>
             </defs>
     `;
 
-    // Desenha conexões
+    // Conexões
     nodes.forEach(node => {
         if (node.conexoes && node.conexoes.length > 0) {
             const origem = posicoes[node.id];
@@ -304,14 +331,14 @@ function renderizarFluxogramaHorizontal(nodes) {
                 const label = index === 0 ? 'S' : index === 1 ? 'N' : '';
 
                 svg += `
-                    <path d="M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}" stroke="#A0AEC0" stroke-width="1.5" fill="none" marker-end="url(#arrowhead2)" />
+                    <path d="M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}" stroke="#A0AEC0" stroke-width="1.5" fill="none" marker-end="url(#arrowhead3)" />
                     ${label ? `<text x="${midX - 6}" y="${(y1 + y2) / 2 - 6}" fill="#718096" font-size="9" font-weight="700">${label}</text>` : ''}
                 `;
             });
         }
     });
 
-    // Desenha nós
+    // Nós
     Object.keys(posicoes).forEach(nodeId => {
         const pos = posicoes[nodeId];
         const node = nodes.find(n => n.id === nodeId);
@@ -323,14 +350,14 @@ function renderizarFluxogramaHorizontal(nodes) {
         const h = alturaNo;
 
         const cores = {
-            'start': { fill: '#EBF8FF', stroke: '#4299E1', rx: 20 },
-            'acao': { fill: '#F7FAFC', stroke: '#4A5568', rx: 6 },
+            'start': { fill: '#EBF8FF', stroke: '#4299E1', rx: 18 },
+            'acao': { fill: '#F7FAFC', stroke: '#4A5568', rx: 5 },
             'decisao': { fill: '#FFFAF0', stroke: '#ED8936', rx: 0, losango: true },
-            'inicio': { fill: '#F0FFF4', stroke: '#48BB78', rx: 20 },
-            'fim': { fill: '#FFF5F5', stroke: '#FC8181', rx: 20 },
-            'call': { fill: '#EBF8FF', stroke: '#4299E1', rx: 6, strokeWidth: 2.5 },
-            'rma': { fill: '#EBF8FF', stroke: '#4299E1', rx: 6 },
-            'dma': { fill: '#E6FFFA', stroke: '#38B2AC', rx: 6 }
+            'inicio': { fill: '#F0FFF4', stroke: '#48BB78', rx: 18 },
+            'fim': { fill: '#FFF5F5', stroke: '#FC8181', rx: 18 },
+            'call': { fill: '#EBF8FF', stroke: '#4299E1', rx: 5, strokeWidth: 2.5 },
+            'rma': { fill: '#EBF8FF', stroke: '#4299E1', rx: 5 },
+            'dma': { fill: '#E6FFFA', stroke: '#38B2AC', rx: 5 }
         };
 
         const cor = cores[node.tipo] || cores['acao'];
@@ -342,23 +369,23 @@ function renderizarFluxogramaHorizontal(nodes) {
             svg += `
                 <polygon points="${cx - metade},${cy} ${cx},${cy - metade} ${cx + metade},${cy} ${cx},${cy + metade}"
                          fill="${cor.fill}" stroke="${cor.stroke}" stroke-width="1.5" />
-                <text x="${cx}" y="${cy}" font-size="10" font-weight="600" fill="#2D3748" text-anchor="middle" dominant-baseline="central">${node.titulo}</text>
+                <text x="${cx}" y="${cy}" font-size="9" font-weight="600" fill="#2D3748" text-anchor="middle" dominant-baseline="central">${node.titulo}</text>
             `;
         } else {
-            const rx = cor.rx || 6;
+            const rx = cor.rx || 5;
             const strokeWidth = cor.strokeWidth || 1.5;
             svg += `
                 <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${cor.fill}" stroke="${cor.stroke}" stroke-width="${strokeWidth}" />
-                <text x="${x + w / 2}" y="${y + h / 2}" font-size="10" font-weight="600" fill="#2D3748" text-anchor="middle" dominant-baseline="central">${node.titulo}</text>
+                <text x="${x + w / 2}" y="${y + h / 2}" font-size="9" font-weight="600" fill="#2D3748" text-anchor="middle" dominant-baseline="central">${node.titulo}</text>
             `;
         }
     });
 
     svg += `</svg>`;
 
-    // Legenda compacta
+    // Legenda
     svg += `
-        <div style="display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px; background: white; border-radius: 6px; margin-top: 6px; border: 1px solid #E2E8F0;">
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; padding: 5px 10px; background: white; border-radius: 6px; margin-top: 6px; border: 1px solid #E2E8F0;">
             <span style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #4A5568;">
                 <span style="display: inline-block; width: 10px; height: 10px; background: #EBF8FF; border: 1.5px solid #4299E1; border-radius: 50%;"></span> Início
             </span>
@@ -392,7 +419,7 @@ function formatarDescricao(texto) {
     texto = texto.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     texto = texto.replace(/(?:^|\n)\s*[•\-]\s*(.*?)(?=\n|$)/g, '<li>$1</li>');
     if (texto.includes('<li>')) {
-        texto = texto.replace(/(<li>.*?<\/li>\s*)+/g, '<ul style="margin: 10px 0; padding-left: 20px;">$&</ul>');
+        texto = texto.replace(/(<li>.*?<\/li>\s*)+/g, '<ul style="margin: 8px 0; padding-left: 18px;">$&</ul>');
     }
     texto = texto.replace(/\n/g, '<br>');
     return texto;
@@ -441,32 +468,30 @@ function renderizarProcessos(depto, processos) {
                         </button>
                     </div>
                     
-                    <!-- DESCRIÇÃO -->
                     <div class="processo-descricao">
                         <span>${processo.descricao}</span>
                         <span class="expand-hint ${isExpanded ? 'rotated' : ''}">▼</span>
                     </div>
                     
-                    <!-- WORKFLOW (PASSO A PASSO + FLUXOGRAMA) -->
                     <div class="workflow-container ${isExpanded ? 'open' : ''}" id="workflow-${index}">
-                        <!-- PASSO A PASSO (texto completo) -->
-                        <div style="margin-bottom: 20px;">
-                            <h4 style="color: #2D3748; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                        <!-- PASSO A PASSO -->
+                        <div style="margin-bottom: 15px;">
+                            <h4 style="color: #2D3748; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
                                 📋 Passo a Passo
-                                <span style="font-size: 11px; color: #718096; font-weight: 400;">(clique nos números para navegar)</span>
+                                <span style="font-size: 10px; color: #718096; font-weight: 400;">(clique nos números para navegar)</span>
                             </h4>
                             ${renderizarPassoAPasso(processo, index)}
                         </div>
                         
-                        <!-- FLUXOGRAMA (visual horizontal) -->
-                        <div style="margin-top: 10px; padding-top: 15px; border-top: 1px solid #E2E8F0;">
-                            <h4 style="color: #2D3748; font-size: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                        <!-- FLUXOGRAMA -->
+                        <div style="margin-top: 10px; padding-top: 12px; border-top: 1px solid #E2E8F0;">
+                            <h4 style="color: #2D3748; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
                                 🗺️ Fluxograma Visual
-                                <span style="font-size: 11px; color: #718096; font-weight: 400;">(visão geral do processo)</span>
+                                <span style="font-size: 10px; color: #718096; font-weight: 400;">(visão geral do processo)</span>
                             </h4>
                             ${processo.fluxo && processo.fluxo.nodes.length > 0 ? 
                                 renderizarFluxogramaHorizontal(processo.fluxo.nodes) : 
-                                `<p style="padding: 15px; color: #A0AEC0; text-align: center; font-size: 13px;">📭 Este processo não possui fluxograma.</p>`
+                                `<p style="padding: 12px; color: #A0AEC0; text-align: center; font-size: 12px;">📭 Este processo não possui fluxograma.</p>`
                             }
                         </div>
                         
@@ -555,18 +580,30 @@ function irParaEtapa(index, novaEtapa) {
     
     processo.etapaAtual = novaEtapa;
     
-    // Re-renderiza apenas o passo a passo
+    // Re-renderiza o passo a passo
     const container = document.getElementById(`workflow-${index}`);
     if (container) {
-        // Atualiza apenas a seção do passo a passo
+        // Encontra a seção do passo a passo e substitui
         const passoContainer = container.querySelector('.passo-a-passo-container');
         if (passoContainer) {
             passoContainer.innerHTML = renderizarPassoAPasso(processo, index);
+        } else {
+            // Se não encontrou o container específico, recria a estrutura
+            const passoSection = container.querySelector('div[style*="margin-bottom: 15px;"]');
+            if (passoSection) {
+                passoSection.innerHTML = `
+                    <h4 style="color: #2D3748; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                        📋 Passo a Passo
+                        <span style="font-size: 10px; color: #718096; font-weight: 400;">(clique nos números para navegar)</span>
+                    </h4>
+                    ${renderizarPassoAPasso(processo, index)}
+                `;
+            }
         }
         
         // Scroll para o detalhe
         setTimeout(() => {
-            const detail = passoContainer?.querySelector('.workflow-detail');
+            const detail = container.querySelector('.workflow-detail');
             if (detail) {
                 detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
