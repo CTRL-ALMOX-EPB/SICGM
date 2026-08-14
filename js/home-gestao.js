@@ -12,6 +12,14 @@ const DEPARTAMENTOS = {
         descricao: 'Gerencie contagens diárias, lista MGM, Painel de Controles e relatórios do departamento.',
         funcoes: [
             {
+                id: 'processos-dcmd',
+                nome: 'Processos',
+                icone: '📚',
+                link: 'processos/index.html?depto=DCMD',
+                status: 'disponivel',
+                descricao: 'Passo a passo detalhado dos processos do departamento'
+            },
+            {
                 id: 'contagem-diaria-dcmd',
                 nome: 'Contagem Diária',
                 icone: '📊',
@@ -65,6 +73,14 @@ const DEPARTAMENTOS = {
         descricao: 'Gerencie contagem semanal de EPIs/materiais próprios, S.A. emergencial e relatórios do departamento.',
         funcoes: [
             {
+                id: 'processos-dmpc',
+                nome: 'Processos',
+                icone: '📚',
+                link: 'processos/index.html?depto=DMPC',
+                status: 'disponivel',
+                descricao: 'Passo a passo detalhado dos processos do departamento'
+            },
+            {
                 id: 'contagem-dmpc',
                 nome: 'Contagem DMPC',
                 icone: '📦',
@@ -95,6 +111,14 @@ const DEPARTAMENTOS = {
         titulo: 'Departamento de Combate a Perdas',
         descricao: 'Gerencie contagens diárias, solicitação de kits e medidores em reforma.',
         funcoes: [
+            {
+                id: 'processos-decp',
+                nome: 'Processos',
+                icone: '📚',
+                link: 'processos/index.html?depto=DECP',
+                status: 'disponivel',
+                descricao: 'Passo a passo detalhado dos processos do departamento'
+            },
             {
                 id: 'contagem-diaria-decp',
                 nome: 'Contagem Diária',
@@ -134,6 +158,14 @@ const DEPARTAMENTOS = {
         titulo: 'Departamento Operacional',
         descricao: 'Gerencie contagens diárias, solicitação de kits, medidores em reforma e relatórios.',
         funcoes: [
+            {
+                id: 'processos-deop',
+                nome: 'Processos',
+                icone: '📚',
+                link: 'processos/index.html?depto=DEOP',
+                status: 'disponivel',
+                descricao: 'Passo a passo detalhado dos processos do departamento'
+            },
             {
                 id: 'contagem-diaria-deop',
                 nome: 'Contagem Diária',
