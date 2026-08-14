@@ -20,15 +20,8 @@ const DEPARTAMENTOS_NOMES = {
     'DEOP': 'DEOP - Operacional'
 };
 
-// Mapeamento de perfil para página inicial
-const HOME_PAGES = {
-    'OPERACIONAL': '../home-operacional.html',
-    'GESTAO': '../home-gestao.html',
-    'VISUALIZACAO': '../home-visualizacao.html'
-};
-
 // ============================================
-// DADOS DE FALLBACK
+// DADOS DE FALLBACK (usados se o arquivo não for encontrado)
 // ============================================
 
 const DADOS_FALLBACK = {
@@ -55,28 +48,6 @@ const DADOS_FALLBACK = {
         }
     ]
 };
-
-// ============================================
-// FUNÇÃO DE NAVEGAÇÃO CORRIGIDA
-// ============================================
-
-function redirecionarParaHome() {
-    try {
-        const sessao = sessionStorage.getItem('sessaoSICGM');
-        if (sessao) {
-            const dados = JSON.parse(sessao);
-            const perfil = dados.perfil || 'GESTAO';
-            const homePage = HOME_PAGES[perfil] || '../home-gestao.html';
-            console.log(`🏠 Redirecionando para: ${homePage}`);
-            window.location.href = homePage;
-        } else {
-            window.location.href = '../index.html';
-        }
-    } catch (e) {
-        console.error('Erro ao redirecionar:', e);
-        window.location.href = '../index.html';
-    }
-}
 
 // ============================================
 // CARREGAMENTO DE DADOS
@@ -138,12 +109,11 @@ async function carregarProcessos(depto) {
 }
 
 // ============================================
-// RENDERIZAÇÃO
+// RENDERIZAÇÃO PRINCIPAL
 // ============================================
 
 function renderizarProcessos(depto, processos) {
     const container = document.getElementById('processosContent');
-    const deptoNome = DEPARTAMENTOS_NOMES[depto] || depto;
 
     let html = `
         <!-- Cabeçalho -->
@@ -152,7 +122,7 @@ function renderizarProcessos(depto, processos) {
                 📚 Passo a Passo dos Processos
                 <span class="depto-badge">${depto}</span>
             </h1>
-            <button class="btn-voltar" onclick="redirecionarParaHome()">← Voltar</button>
+            <button class="btn-voltar" onclick="window.redirecionarParaHome()">← Voltar</button>
         </div>
 
         <!-- Lista de Processos -->
@@ -215,7 +185,7 @@ function renderizarProcessos(depto, processos) {
 }
 
 // ============================================
-// RENDERIZA WORKFLOW
+// RENDERIZA WORKFLOW (DETALHES DO PROCESSO)
 // ============================================
 
 function renderizarWorkflow(processo, index) {
@@ -249,7 +219,7 @@ function renderizarWorkflow(processo, index) {
     html += `
         </div>
         
-        <!-- Detalhe da Etapa - com altura fixa -->
+        <!-- Detalhe da Etapa -->
         <div class="workflow-detail" id="workflow-detail-${index}">
             <div class="step-title">
                 <span>${etapa.titulo}</span>
@@ -293,7 +263,7 @@ function renderizarWorkflow(processo, index) {
         </div>
     `;
 
-    // Adiciona contatos se for o processo específico
+    // Adiciona contatos se for o processo específico do DCMD
     if (id === 'P001') {
         html += `
             <div class="contatos-box">
@@ -348,7 +318,7 @@ function formatarDescricao(texto) {
 }
 
 // ============================================
-// INTERAÇÃO
+// INTERAÇÃO DO USUÁRIO
 // ============================================
 
 function toggleProcesso(index) {
@@ -446,16 +416,29 @@ function adicionarImagemEtapa(index, imagemUrl) {
     const img = document.getElementById(`step-image-${index}`);
     if (img) {
         img.src = imagemUrl;
-        img.alt = `Imagem da etapa ${index + 1}`;
+        img.alt = `Imagem da etapa`;
         img.classList.add('show');
     }
 }
+
+// ============================================
+// EXPORTA FUNÇÕES PARA USO GLOBAL
+// ============================================
+
+window.toggleProcesso = toggleProcesso;
+window.irParaEtapa = irParaEtapa;
+window.atualizarWorkflow = atualizarWorkflow;
+window.adicionarImagemEtapa = adicionarImagemEtapa;
+window.carregarProcessos = carregarProcessos;
+window.renderizarProcessos = renderizarProcessos;
 
 // ============================================
 // INICIALIZAÇÃO
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🚀 Inicializando página de processos...');
+    
     // Loading
     const loadingOverlay = document.getElementById('loadingOverlay');
     const content = document.getElementById('processosContent');
@@ -463,27 +446,33 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadingOverlay.classList.add('active');
     content.style.display = 'none';
     
-    // Verifica sessão
-    const sessao = verificarSessao();
+    // Verifica sessão (usando a função do script.js)
+    const sessao = window.verificarSessao();
     if (!sessao) {
-        window.location.href = '../index.html';
+        console.log('🔒 Sessão inválida - Redirecionando para login');
+        window.location.href = '../login.html';
         return;
     }
 
-    // Verifica permissão
+    // Verifica permissão (apenas gestão)
     if (sessao.perfil !== 'GESTAO') {
+        console.log(`🔒 Perfil ${sessao.perfil} não autorizado`);
         alert('Acesso restrito a usuários de gestão.');
-        redirecionarParaHome();
+        window.redirecionarParaHome();
         return;
     }
+
+    console.log(`✅ Usuário autenticado: ${sessao.nome} (${sessao.perfil})`);
 
     // Pega o departamento da URL
     const urlParams = new URLSearchParams(window.location.search);
     const depto = urlParams.get('depto') || 'DCMD';
+    console.log(`📂 Departamento selecionado: ${depto}`);
 
     // Carrega e renderiza os processos
     const processos = await carregarProcessos(depto);
     window.processos = processos;
+    console.log(`📋 ${processos.length} processos carregados`);
     
     renderizarProcessos(depto, processos);
     
@@ -491,5 +480,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     setTimeout(() => {
         loadingOverlay.classList.remove('active');
         content.style.display = 'block';
+        console.log('✅ Página de processos carregada com sucesso!');
     }, 500);
 });
