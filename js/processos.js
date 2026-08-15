@@ -48,25 +48,46 @@ const DADOS_FALLBACK = {
 };
 
 // ============================================
-// FUNÇÃO DE NAVEGAÇÃO
+// FUNÇÃO DE VOLTAR PARA HOME - CORRIGIDA DEFINITIVAMENTE
 // ============================================
 
 function redirecionarParaHome() {
+    console.log('🏠 Redirecionando para home...');
+    
     try {
-        const sessao = window.verificarSessao();
-        if (!sessao) {
-            window.location.href = '/SICGM/login.html';
-            return;
+        // Obtém o perfil da sessão diretamente
+        let perfil = 'GESTAO';
+        try {
+            const sessaoStr = sessionStorage.getItem('sessaoSICGM');
+            if (sessaoStr) {
+                const sessao = JSON.parse(sessaoStr);
+                perfil = sessao.perfil || 'GESTAO';
+                console.log(`📝 Perfil detectado: ${perfil}`);
+            }
+        } catch (e) {
+            console.warn('⚠️ Erro ao ler sessão:', e);
         }
-        const perfil = sessao.perfil || 'GESTAO';
+        
+        // Mapeamento de perfis
         const homeMap = {
-            'OPERACIONAL': '/SICGM/home-operacional.html',
-            'GESTAO': '/SICGM/home-gestao.html',
-            'VISUALIZACAO': '/SICGM/home-visualizacao.html'
+            'OPERACIONAL': 'home-operacional.html',
+            'GESTAO': 'home-gestao.html',
+            'VISUALIZACAO': 'home-visualizacao.html'
         };
-        window.location.href = homeMap[perfil] || '/SICGM/home-gestao.html';
-    } catch (e) {
-        window.location.href = '/SICGM/index.html';
+        
+        const homePage = homeMap[perfil] || 'home-gestao.html';
+        
+        // CONSTRÓI O CAMINHO CORRETO
+        // Estamos em /processos/, então precisamos voltar uma pasta
+        const url = `../${homePage}`;
+        
+        console.log(`🔀 Navegando para: ${url}`);
+        window.location.href = url;
+        
+    } catch (error) {
+        console.error('❌ Erro ao redirecionar:', error);
+        // Fallback direto
+        window.location.href = '../home-gestao.html';
     }
 }
 
@@ -394,7 +415,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     const sessao = window.verificarSessao();
     if (!sessao) {
-        window.location.href = '/SICGM/login.html';
+        window.location.href = '../login.html';
         return;
     }
 

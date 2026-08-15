@@ -1551,3 +1551,22 @@
         display: none;
     }
 }
+/* Aumentar fonte da data baixa */
+.item-data-baixa {
+    font-size: 12px !important;
+    padding: 6px 10px !important;
+    min-width: 110px !important;
+}
+
+/* Para a data no formulário também */
+input[type="date"] {
+    font-size: 12px !important;
+    padding: 6px 10px !important;
+}
+
+/* Data baixa na tabela */
+.col-data-baixa input {
+    font-size: 12px !important;
+    padding: 4px 8px !important;
+    min-width: 110px !important;
+}

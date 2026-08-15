@@ -10,10 +10,21 @@ let databaseColaboradores = [];
  */
 async function carregarColaboradores() {
     try {
-        const response = await fetch('/SICGM/data/colaboradores.txt');
+        // Usa CONFIG se disponível para obter o caminho correto
+        let url;
+        if (typeof CONFIG !== 'undefined' && CONFIG && typeof CONFIG.getDataUrl === 'function') {
+            url = CONFIG.getDataUrl('colaboradores.txt');
+        } else {
+            // Fallback para caso o CONFIG não esteja disponível
+            url = 'data/colaboradores.txt';
+        }
+        
+        console.log('📂 Carregando colaboradores de:', url);
+        
+        const response = await fetch(url);
         
         if (!response.ok) {
-            throw new Error('Arquivo de colaboradores não encontrado');
+            throw new Error(`Arquivo não encontrado: ${url} (Status: ${response.status})`);
         }
         
         const texto = await response.text();
@@ -78,10 +89,15 @@ async function carregarColaboradores() {
             { matricula: "122904", nome: "BRUNO MOREIRA DA SILVA", cpf: "07915412159", senha: "0791", perfil: "OPERACIONAL" },
             { matricula: "170342", nome: "VALMIR SEVERINO DE LIMA SANTOS", cpf: "08796594403", senha: "0879", perfil: "OPERACIONAL" },
             { matricula: "170419", nome: "ARLINDO RODRIGUES DE ARAUJO", cpf: "09949433428", senha: "0994", perfil: "OPERACIONAL" },
-            { matricula: "999999", nome: "USUARIO TESTE GESTAO", cpf: "12345678901", senha: "1234", perfil: "GESTAO" }
+            { matricula: "999999", nome: "USUARIO TESTE GESTAO", cpf: "12345678901", senha: "1234", perfil: "GESTAO" },
+            { matricula: "888888", nome: "USUARIO TESTE VISUALIZACAO", cpf: "98765432101", senha: "9876", perfil: "VISUALIZACAO" }
         ];
         
         console.log('⚠️ Usando dados de fallback para testes');
+        console.log('📊 Usuários de teste disponíveis:');
+        databaseColaboradores.forEach(u => {
+            console.log(`   - ${u.matricula} | ${u.nome} | Senha: ${u.senha} | Perfil: ${u.perfil}`);
+        });
         return databaseColaboradores;
     }
 }
@@ -107,6 +123,14 @@ function validarLogin(matricula, senha, colaboradores) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Iniciando sistema de login...');
     
+    // Verifica se CONFIG está disponível
+    if (typeof CONFIG !== 'undefined' && CONFIG) {
+        console.log(`✅ CONFIG carregado - Ambiente: ${CONFIG.isDevelopment ? 'Desenvolvimento' : 'Produção'}`);
+        console.log(`📋 CONFIG métodos:`, Object.keys(CONFIG).filter(key => typeof CONFIG[key] === 'function'));
+    } else {
+        console.warn('⚠️ CONFIG não encontrado - Usando caminhos relativos padrão');
+    }
+    
     // Carregar colaboradores
     carregarColaboradores().then(() => {
         console.log('✅ Sistema pronto para login');
@@ -130,12 +154,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Validação básica
             if (!matricula || !senha) {
                 mensagemErro.textContent = '⚠️ Por favor, preencha todos os campos.';
+                mensagemErro.className = 'mensagem-erro';
                 return;
             }
             
             // Validar senha (deve ter 4 dígitos)
             if (!/^\d{4}$/.test(senha)) {
                 mensagemErro.textContent = '⚠️ A senha deve ter 4 dígitos (primeiros 4 dígitos do CPF).';
+                mensagemErro.className = 'mensagem-erro';
                 return;
             }
             
@@ -171,6 +197,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('senha').focus();
                 
                 console.log('❌ Tentativa de login falhou - Matrícula:', matricula);
+            }
+        });
+    }
+});
+
+// Adiciona suporte para tecla Enter nos campos
+document.addEventListener('DOMContentLoaded', function() {
+    const matriculaInput = document.getElementById('matricula');
+    const senhaInput = document.getElementById('senha');
+    
+    if (matriculaInput) {
+        matriculaInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('senha').focus();
+            }
+        });
+    }
+    
+    if (senhaInput) {
+        senhaInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
             }
         });
     }

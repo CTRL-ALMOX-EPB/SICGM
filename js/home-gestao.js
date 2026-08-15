@@ -275,8 +275,11 @@ function renderizarDepartamento(deptoId) {
                         </a>
                     `;
                 } else {
+                    // Usa CONFIG para obter o caminho correto do link
+                    const link = (typeof CONFIG !== 'undefined' && CONFIG) ? 
+                        CONFIG.getPageUrl(item.link) : item.link;
                     html += `
-                        <a href="${item.link}" class="dropdown-item">
+                        <a href="${link}" class="dropdown-item">
                             <span class="item-icon">📄</span>
                             <span class="item-label">${item.nome}</span>
                             <span class="item-badge">${item.badge}</span>
@@ -292,7 +295,11 @@ function renderizarDepartamento(deptoId) {
             `;
         } else {
             // Função normal
-            const link = isDisabled ? '#' : func.link;
+            let link = isDisabled ? '#' : func.link;
+            // Se não estiver desabilitado, aplica CONFIG
+            if (!isDisabled && typeof CONFIG !== 'undefined' && CONFIG) {
+                link = CONFIG.getPageUrl(func.link);
+            }
             const onclick = isDisabled ? `onclick="event.preventDefault(); mostrarEmDesenvolvimento(event)"` : '';
             
             html += `
@@ -372,7 +379,9 @@ function atualizarTimestampSessao() {
  */
 function sair() {
     sessionStorage.removeItem('sessaoSICGM');
-    window.location.href = 'index.html';
+    const loginUrl = (typeof CONFIG !== 'undefined' && CONFIG) ? 
+        CONFIG.getPageUrl('login.html') : 'login.html';
+    window.location.href = loginUrl;
 }
 
 // ============================================
@@ -383,34 +392,44 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingOverlay = document.getElementById('loadingOverlay');
     const homeContent = document.getElementById('homeContent');
     
-    loadingOverlay.classList.add('active');
+    if (loadingOverlay) loadingOverlay.classList.add('active');
 
     // Verifica sessão (função verificarSessao deve estar no script.js)
     const sessao = verificarSessao();
     
     if (!sessao) {
         console.log('🔒 Sessão inválida - Redirecionando para login');
-        window.location.href = 'index.html';
+        const loginUrl = (typeof CONFIG !== 'undefined' && CONFIG) ? 
+            CONFIG.getPageUrl('login.html') : 'login.html';
+        window.location.href = loginUrl;
         return;
     }
 
     if (sessao.perfil !== 'GESTAO') {
         console.log(`🔒 Perfil ${sessao.perfil} não autorizado para esta página`);
-        window.location.href = 'index.html';
+        const loginUrl = (typeof CONFIG !== 'undefined' && CONFIG) ? 
+            CONFIG.getPageUrl('login.html') : 'login.html';
+        window.location.href = loginUrl;
         return;
     }
 
     console.log('✅ Sessão válida para:', sessao.nome, '(GESTÃO)');
     
     try {
-        document.getElementById('nomeUsuario').textContent = sessao.nome;
-        document.getElementById('matriculaUsuario').textContent = `Matrícula: ${sessao.matricula}`;
-        document.getElementById('perfilUsuario').textContent = sessao.perfil || 'GESTÃO';
-        document.getElementById('mensagemBoasVindas').textContent = 
-            `👋 Olá, ${sessao.nome}! Bem-vindo ao SICGM.`;
+        const nomeUsuario = document.getElementById('nomeUsuario');
+        const matriculaUsuario = document.getElementById('matriculaUsuario');
+        const perfilUsuario = document.getElementById('perfilUsuario');
+        const mensagemBoasVindas = document.getElementById('mensagemBoasVindas');
+        
+        if (nomeUsuario) nomeUsuario.textContent = sessao.nome;
+        if (matriculaUsuario) matriculaUsuario.textContent = `Matrícula: ${sessao.matricula}`;
+        if (perfilUsuario) perfilUsuario.textContent = sessao.perfil || 'GESTÃO';
+        if (mensagemBoasVindas) mensagemBoasVindas.textContent = `👋 Olá, ${sessao.nome}! Bem-vindo ao SICGM.`;
     } catch (e) {
         console.error('Erro ao carregar dados do usuário:', e);
-        window.location.href = 'index.html';
+        const loginUrl = (typeof CONFIG !== 'undefined' && CONFIG) ? 
+            CONFIG.getPageUrl('login.html') : 'login.html';
+        window.location.href = loginUrl;
         return;
     }
 
@@ -418,8 +437,8 @@ document.addEventListener('DOMContentLoaded', function() {
     renderizarDepartamento('DCMD');
 
     setTimeout(() => {
-        loadingOverlay.classList.remove('active');
-        homeContent.style.display = 'block';
+        if (loadingOverlay) loadingOverlay.classList.remove('active');
+        if (homeContent) homeContent.style.display = 'block';
     }, 500);
 
     atualizarTimestampSessao();
@@ -453,9 +472,13 @@ setInterval(function() {
     const sessao = verificarSessao();
     if (!sessao) {
         console.log('🔒 Sessão expirada - Redirecionando para login');
-        window.location.href = 'index.html';
+        const loginUrl = (typeof CONFIG !== 'undefined' && CONFIG) ? 
+            CONFIG.getPageUrl('login.html') : 'login.html';
+        window.location.href = loginUrl;
     } else if (sessao.perfil !== 'GESTAO') {
         console.log('🔒 Perfil alterado - Redirecionando');
-        window.location.href = 'index.html';
+        const loginUrl = (typeof CONFIG !== 'undefined' && CONFIG) ? 
+            CONFIG.getPageUrl('login.html') : 'login.html';
+        window.location.href = loginUrl;
     }
 }, 5 * 60 * 1000);

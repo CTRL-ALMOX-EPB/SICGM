@@ -192,7 +192,6 @@ function selecionarTipo(tipo) {
     
     tipoAtual = tipo;
     
-    // Atualiza a URL sem recarregar a página
     const url = new URL(window.location);
     url.searchParams.set('tipo', tipo);
     window.history.pushState({}, '', url);
@@ -243,7 +242,7 @@ function aplicarOrdenacao() {
 window.aplicarOrdenacao = aplicarOrdenacao;
 
 // ============================================
-// CRIAR NOVO CONTROLE
+// CRIAR NOVO CONTROLE (COM FOCAR OBRA)
 // ============================================
 
 async function criarNovoControle() {
@@ -312,9 +311,9 @@ async function criarNovoControle() {
         
         mostrarToast(`✅ ${tipoInfo.icon} #${String(numero).padStart(4, '0')} criado com sucesso!`, 'sucesso');
         
-        // Redireciona para o formulário criado
+        // Redireciona para o formulário criado com um parâmetro para focar no campo obra
         setTimeout(() => {
-            window.location.href = `formulario.html?numero=${numero}&tipo=${tipoAtual}`;
+            window.location.href = `formulario.html?numero=${numero}&tipo=${tipoAtual}&focarObra=true`;
         }, 500);
         
     } catch (error) {

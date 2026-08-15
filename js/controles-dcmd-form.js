@@ -283,6 +283,11 @@ function buscarMaterialArquivo(codigo) {
 function verificarCodigoDuplicado(codigo, linhaAtual) {
     if (!codigo || codigo.trim() === '') return false;
     
+    // Se for aditivo sistêmico, NÃO bloqueia duplicados
+    if (tipoAtual === 'aditivo') {
+        return false;
+    }
+    
     const codigoUpper = codigo.trim().toUpperCase();
     const todasLinhas = document.querySelectorAll('#itemsBody tr');
     let duplicado = false;
@@ -303,11 +308,16 @@ function verificarCodigoDuplicado(codigo, linhaAtual) {
 }
 
 function marcarCampoDuplicado(input, isDuplicado) {
-    if (isDuplicado) {
+    // Se for aditivo sistêmico, mostra apenas um aviso visual leve
+    const isAditivoSistemico = tipoAtual === 'aditivo';
+    
+    if (isDuplicado && !isAditivoSistemico) {
         input.style.borderColor = '#FC8181';
         input.style.backgroundColor = '#FFF5F5';
         input.style.boxShadow = '0 0 0 3px rgba(252, 129, 129, 0.2)';
-        input.title = '⚠️ Código duplicado!';
+        
+        const codigo = input.value.trim().toUpperCase();
+        input.title = `⚠️ Código "${codigo}" duplicado!`;
         
         let aviso = input.parentNode.querySelector('.duplicado-aviso');
         if (!aviso) {
@@ -323,6 +333,31 @@ function marcarCampoDuplicado(input, isDuplicado) {
                 cursor: help;
                 color: #FC8181;
             `;
+            aviso.title = `Código "${codigo}" duplicado!`;
+            input.parentNode.style.position = 'relative';
+            input.parentNode.appendChild(aviso);
+        }
+    } else if (isDuplicado && isAditivoSistemico) {
+        input.style.borderColor = '#F6AD55';
+        input.style.backgroundColor = '#FFFAF0';
+        input.style.boxShadow = '0 0 0 3px rgba(246, 173, 85, 0.15)';
+        input.title = `ℹ️ Código "${input.value.trim().toUpperCase()}" duplicado (permitido em Aditivo Sistêmico)`;
+        
+        let aviso = input.parentNode.querySelector('.duplicado-aviso');
+        if (!aviso) {
+            aviso = document.createElement('span');
+            aviso.className = 'duplicado-aviso';
+            aviso.textContent = 'ℹ️';
+            aviso.style.cssText = `
+                position: absolute;
+                right: 4px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 14px;
+                cursor: help;
+                color: #F6AD55;
+            `;
+            aviso.title = `Código "${input.value.trim().toUpperCase()}" duplicado (permitido)`;
             input.parentNode.style.position = 'relative';
             input.parentNode.appendChild(aviso);
         }
@@ -338,7 +373,7 @@ function marcarCampoDuplicado(input, isDuplicado) {
 }
 
 function validarTodosCodigos() {
-    const codigos = [];
+    const codigosMap = new Map();
     const linhas = document.querySelectorAll('#itemsBody tr');
     let todosValidos = true;
     
@@ -349,12 +384,22 @@ function validarTodosCodigos() {
         const codigo = codigoInput.value.trim().toUpperCase();
         if (codigo === '') return;
         
-        if (codigos.includes(codigo)) {
-            marcarCampoDuplicado(codigoInput, true);
+        if (!codigosMap.has(codigo)) {
+            codigosMap.set(codigo, []);
+        }
+        codigosMap.get(codigo).push(codigoInput);
+    });
+    
+    codigosMap.forEach((inputs) => {
+        if (inputs.length > 1) {
             todosValidos = false;
+            inputs.forEach(input => {
+                marcarCampoDuplicado(input, true);
+            });
         } else {
-            codigos.push(codigo);
-            marcarCampoDuplicado(codigoInput, false);
+            inputs.forEach(input => {
+                marcarCampoDuplicado(input, false);
+            });
         }
     });
     
@@ -362,10 +407,11 @@ function validarTodosCodigos() {
 }
 
 function verificarECorrigirDuplicados() {
-    const codigos = [];
+    const codigosMap = new Map();
     const linhas = document.querySelectorAll('#itemsBody tr');
     let temDuplicado = false;
     
+    // Primeiro, mapeia todos os códigos e suas linhas
     linhas.forEach(linha => {
         const codigoInput = linha.querySelector('.item-codigo');
         if (!codigoInput) return;
@@ -376,12 +422,23 @@ function verificarECorrigirDuplicados() {
             return;
         }
         
-        if (codigos.includes(codigo)) {
-            marcarCampoDuplicado(codigoInput, true);
+        if (!codigosMap.has(codigo)) {
+            codigosMap.set(codigo, []);
+        }
+        codigosMap.get(codigo).push(codigoInput);
+    });
+    
+    // Depois, marca TODOS os duplicados
+    codigosMap.forEach((inputs) => {
+        if (inputs.length > 1) {
             temDuplicado = true;
+            inputs.forEach(input => {
+                marcarCampoDuplicado(input, true);
+            });
         } else {
-            codigos.push(codigo);
-            marcarCampoDuplicado(codigoInput, false);
+            inputs.forEach(input => {
+                marcarCampoDuplicado(input, false);
+            });
         }
     });
     
@@ -389,9 +446,48 @@ function verificarECorrigirDuplicados() {
 }
 
 function validarDuplicadosAntesDeSalvar() {
-    const codigos = [];
+    // Se for aditivo sistêmico, NÃO bloqueia duplicados
+    if (tipoAtual === 'aditivo') {
+        const codigosMap = new Map();
+        const linhas = document.querySelectorAll('#itemsBody tr');
+        
+        linhas.forEach(linha => {
+            const codigoInput = linha.querySelector('.item-codigo');
+            if (!codigoInput) return;
+            
+            const codigo = codigoInput.value.trim().toUpperCase();
+            if (codigo === '') {
+                marcarCampoDuplicado(codigoInput, false);
+                return;
+            }
+            
+            if (!codigosMap.has(codigo)) {
+                codigosMap.set(codigo, []);
+            }
+            codigosMap.get(codigo).push(codigoInput);
+        });
+        
+        // Marca duplicados visualmente mas não bloqueia
+        codigosMap.forEach((inputs) => {
+            if (inputs.length > 1) {
+                inputs.forEach(input => {
+                    marcarCampoDuplicado(input, true);
+                });
+            } else {
+                inputs.forEach(input => {
+                    marcarCampoDuplicado(input, false);
+                });
+            }
+        });
+        
+        return false;
+    }
+    
+    // Para outros tipos, bloqueia duplicados
+    const codigosMap = new Map();
     const linhas = document.querySelectorAll('#itemsBody tr');
     let duplicadoEncontrado = false;
+    let duplicadosLista = [];
     
     linhas.forEach(linha => {
         const codigoInput = linha.querySelector('.item-codigo');
@@ -400,25 +496,40 @@ function validarDuplicadosAntesDeSalvar() {
         const codigo = codigoInput.value.trim().toUpperCase();
         if (codigo === '') return;
         
-        if (codigos.includes(codigo)) {
-            marcarCampoDuplicado(codigoInput, true);
+        if (!codigosMap.has(codigo)) {
+            codigosMap.set(codigo, []);
+        }
+        codigosMap.get(codigo).push(codigoInput);
+    });
+    
+    // Marca todos os duplicados
+    codigosMap.forEach((inputs, codigo) => {
+        if (inputs.length > 1) {
             duplicadoEncontrado = true;
+            duplicadosLista.push(codigo);
+            inputs.forEach(input => {
+                marcarCampoDuplicado(input, true);
+            });
         } else {
-            codigos.push(codigo);
-            marcarCampoDuplicado(codigoInput, false);
+            inputs.forEach(input => {
+                marcarCampoDuplicado(input, false);
+            });
         }
     });
+    
+    if (duplicadoEncontrado) {
+        mostrarToast(`⚠️ Códigos duplicados: ${duplicadosLista.join(', ')}`, 'erro');
+    }
     
     return duplicadoEncontrado;
 }
 
 function validarDuplicadosNoPaste(linhas, elementoAlvo) {
+    // Pega todos os códigos existentes (incluindo os que já estão na tabela)
     const codigosExistentes = [];
     const linhasExistentes = document.querySelectorAll('#itemsBody tr');
     
-    const linhaAlvo = elementoAlvo.closest('tr');
     linhasExistentes.forEach(linha => {
-        if (linha === linhaAlvo) return;
         const codigoInput = linha.querySelector('.item-codigo');
         if (codigoInput) {
             const codigo = codigoInput.value.trim().toUpperCase();
@@ -426,6 +537,7 @@ function validarDuplicadosNoPaste(linhas, elementoAlvo) {
         }
     });
     
+    // Verifica duplicados entre os novos códigos e os existentes
     const duplicados = [];
     const novosCodigos = [];
     
@@ -433,12 +545,33 @@ function validarDuplicadosNoPaste(linhas, elementoAlvo) {
         const codigo = linha.trim().toUpperCase();
         if (!codigo) return;
         
+        // Verifica se já existe ou se já foi adicionado na mesma colagem
         if (codigosExistentes.includes(codigo) || novosCodigos.includes(codigo)) {
-            duplicados.push(codigo);
+            if (!duplicados.includes(codigo)) {
+                duplicados.push(codigo);
+            }
         } else {
             novosCodigos.push(codigo);
         }
     });
+    
+    // Se encontrou duplicados, marca TODOS os campos duplicados
+    if (duplicados.length > 0) {
+        // Marca os campos existentes que estão duplicados
+        linhasExistentes.forEach(linha => {
+            const codigoInput = linha.querySelector('.item-codigo');
+            if (!codigoInput) return;
+            const codigo = codigoInput.value.trim().toUpperCase();
+            if (duplicados.includes(codigo)) {
+                marcarCampoDuplicado(codigoInput, true);
+            }
+        });
+        
+        // Marca os campos que serão colados (se já existirem na tabela)
+        setTimeout(() => {
+            verificarECorrigirDuplicados();
+        }, 100);
+    }
     
     return duplicados;
 }
@@ -461,12 +594,12 @@ function handleValidacaoDuplicado(e) {
     
     if (codigo === '') {
         marcarCampoDuplicado(input, false);
+        verificarECorrigirDuplicados();
         return;
     }
     
-    const row = input.closest('tr');
-    const isDuplicado = verificarCodigoDuplicado(codigo, row);
-    marcarCampoDuplicado(input, isDuplicado);
+    // Atualiza a validação de todos os campos
+    verificarECorrigirDuplicados();
 }
 
 function handleValidacaoDuplicadoInput(e) {
@@ -475,12 +608,12 @@ function handleValidacaoDuplicadoInput(e) {
     
     if (codigo === '') {
         marcarCampoDuplicado(input, false);
+        verificarECorrigirDuplicados();
         return;
     }
     
-    const row = input.closest('tr');
-    const isDuplicado = verificarCodigoDuplicado(codigo, row);
-    marcarCampoDuplicado(input, isDuplicado);
+    // Atualiza a validação de todos os campos
+    verificarECorrigirDuplicados();
 }
 
 // ============================================
@@ -500,29 +633,43 @@ async function buscarMaterial(input) {
     
     input.value = codigo.toUpperCase();
     
-    if (verificarCodigoDuplicado(input.value, row)) {
-        marcarCampoDuplicado(input, true);
-        mostrarToast('⚠️ Código já adicionado neste controle!', 'aviso');
-        descInput.value = '';
-        undInput.value = '';
-        return;
-    }
+    const isAditivoSistemico = tipoAtual === 'aditivo';
     
+    // Primeiro, verifica se o código existe no arquivo de materiais
     const material = buscarMaterialArquivo(input.value);
     
-    if (material) {
-        descInput.value = material.descricao || '';
-        undInput.value = material.unidade || 'UN';
-        marcarCampoDuplicado(input, false);
-        mostrarToast(`✅ ${material.descricao}`, 'sucesso');
-    } else {
+    if (!material) {
         mostrarToast('⚠️ Código não encontrado', 'aviso');
         descInput.value = '';
         undInput.value = '';
         marcarCampoDuplicado(input, false);
+        verificarECorrigirDuplicados();
+        return;
     }
     
+    descInput.value = material.descricao || '';
+    undInput.value = material.unidade || 'UN';
+    
+    // Verifica duplicados (apenas para não-aditivo sistêmico)
+    const isDuplicado = verificarCodigoDuplicado(input.value, row);
+    
+    if (isDuplicado && !isAditivoSistemico) {
+        verificarECorrigirDuplicados();
+        mostrarToast(`⚠️ Código "${input.value}" já adicionado neste controle!`, 'aviso');
+        return;
+    }
+    
+    if (isDuplicado && isAditivoSistemico) {
+        verificarECorrigirDuplicados();
+        mostrarToast(`ℹ️ Código "${input.value}" duplicado (permitido em Aditivo Sistêmico)`, 'info');
+        return;
+    }
+    
+    // Se chegou aqui, não é duplicado
+    marcarCampoDuplicado(input, false);
     verificarECorrigirDuplicados();
+    
+    mostrarToast(`✅ ${material.descricao}`, 'sucesso');
 }
 
 window.buscarMaterial = buscarMaterial;
@@ -565,6 +712,129 @@ function getNomeUsuarioLogado() {
 
 function getMatriculaUsuarioLogado() {
     return dadosSessao?.matricula || '---';
+}
+
+// ============================================
+// FUNÇÃO AUXILIAR PARA FORMATAR NÚMERO
+// ============================================
+
+function formatarNumero(valor) {
+    if (valor === undefined || valor === null || valor === '') return '';
+    
+    let valorStr = String(valor).trim();
+    
+    if (typeof valor === 'number' && !isNaN(valor)) {
+        return valor;
+    }
+    
+    valorStr = valorStr.replace(',', '.');
+    valorStr = valorStr.replace(/[^0-9.-]/g, '');
+    
+    const numero = parseFloat(valorStr);
+    return isNaN(numero) ? valor : numero;
+}
+
+// ============================================
+// FOCAR NO CAMPO OBRA AO CARREGAR O FORMULÁRIO
+// ============================================
+
+function focarCampoObra() {
+    const params = new URLSearchParams(window.location.search);
+    const focarObra = params.get('focarObra') === 'true';
+    
+    if (!focarObra) {
+        const isNovo = !controleAtual || Object.keys(controleAtual).length === 0 || 
+                       (controleAtual.obra === '' && controleAtual.itens?.length === 0);
+        if (!isNovo) return;
+    }
+    
+    console.log('🎯 Focando no campo "Nº Obra"...');
+    
+    const tentarFocar = function(tentativa = 0) {
+        const campoObra = document.getElementById('formObra');
+        if (campoObra && isCampoEditavel(campoObra)) {
+            campoObra.focus();
+            campoObra.select();
+            console.log('✅ Campo "Nº Obra" focado com sucesso!');
+            
+            const url = new URL(window.location);
+            url.searchParams.delete('focarObra');
+            window.history.replaceState({}, '', url);
+            return true;
+        }
+        
+        if (tentativa < 10) {
+            setTimeout(() => tentarFocar(tentativa + 1), 100);
+            return false;
+        }
+        
+        console.warn('⚠️ Campo "Nº Obra" não encontrado após várias tentativas');
+        return false;
+    };
+    
+    setTimeout(() => tentarFocar(), 200);
+}
+
+// ============================================
+// NAVEGAÇÃO POR TECLADO EM SELECTS (NÚMEROS)
+// ============================================
+
+function configurarNavegacaoSelectPorNumero() {
+    const selects = document.querySelectorAll('#itemsBody select:not([disabled])');
+    
+    selects.forEach(select => {
+        if (select._navNumeroConfigurado) return;
+        select._navNumeroConfigurado = true;
+        
+        select.removeEventListener('keydown', handleSelectNumeroTeclado);
+        select.addEventListener('keydown', handleSelectNumeroTeclado);
+    });
+}
+
+function handleSelectNumeroTeclado(e) {
+    const select = e.target;
+    
+    if (select.tagName !== 'SELECT' || select.disabled) return;
+    
+    const key = e.key;
+    
+    if (/^[1-9]$/.test(key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const numero = parseInt(key);
+        const options = Array.from(select.options);
+        const targetIndex = numero - 1;
+        
+        if (targetIndex < options.length) {
+            select.selectedIndex = targetIndex;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            const optionText = options[targetIndex].text;
+            console.log(`🔢 Select navegado: ${numero} → "${optionText}"`);
+            
+            select.style.borderColor = '#48BB78';
+            select.style.boxShadow = '0 0 0 3px rgba(72, 187, 120, 0.2)';
+            setTimeout(() => {
+                select.style.borderColor = '';
+                select.style.boxShadow = '';
+            }, 300);
+        } else {
+            select.style.borderColor = '#FC8181';
+            select.style.boxShadow = '0 0 0 3px rgba(252, 129, 129, 0.2)';
+            setTimeout(() => {
+                select.style.borderColor = '';
+                select.style.boxShadow = '';
+            }, 500);
+            console.log(`⚠️ Apenas ${options.length} opções disponíveis`);
+        }
+    }
+}
+
+function atualizarNavegacaoSelects() {
+    setTimeout(() => {
+        configurarNavegacaoSelectPorNumero();
+    }, 100);
 }
 
 // ============================================
@@ -637,7 +907,6 @@ async function carregarControleFormulario() {
         }
     }
     
-    // Colunas do Aditivo Sistêmico
     document.querySelectorAll('.col-status-aditivo').forEach(el => {
         if (el) el.style.display = isAditivo ? '' : 'none';
     });
@@ -661,7 +930,6 @@ async function carregarControleFormulario() {
     if (thUsuario) thUsuario.style.display = isAditivo ? '' : 'none';
     if (thObservacao) thObservacao.style.display = isAditivo ? '' : 'none';
     
-    // Colunas do Aditivo Físico
     document.querySelectorAll('.col-aplicado').forEach(el => {
         if (el) el.style.display = isAditivoFisico ? '' : 'none';
     });
@@ -680,7 +948,6 @@ async function carregarControleFormulario() {
     if (thColaborador) thColaborador.style.display = isAditivoFisico ? '' : 'none';
     if (thEncarregado) thEncarregado.style.display = isAditivoFisico ? '' : 'none';
     
-    // Colunas da Pendência de Baixa
     document.querySelectorAll('.col-pendente-aditivo').forEach(el => {
         if (el) el.style.display = isPendencia ? '' : 'none';
     });
@@ -864,6 +1131,43 @@ function handleTeclado(e) {
     if (!isCampoEditavel(target)) return;
     
     const isInTable = target.closest('table');
+    const isSelect = target.tagName === 'SELECT';
+    
+    // ============================================
+    // NAVEGAÇÃO POR NÚMEROS EM SELECTS (1-9)
+    // ============================================
+    if (isSelect && /^[1-9]$/.test(key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const numero = parseInt(key);
+        const options = Array.from(target.options);
+        const targetIndex = numero - 1;
+        
+        if (targetIndex < options.length) {
+            target.selectedIndex = targetIndex;
+            target.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            const optionText = options[targetIndex].text;
+            console.log(`🔢 Select navegado: ${numero} → "${optionText}"`);
+            
+            target.style.borderColor = '#48BB78';
+            target.style.boxShadow = '0 0 0 3px rgba(72, 187, 120, 0.2)';
+            setTimeout(() => {
+                target.style.borderColor = '';
+                target.style.boxShadow = '';
+            }, 300);
+        } else {
+            target.style.borderColor = '#FC8181';
+            target.style.boxShadow = '0 0 0 3px rgba(252, 129, 129, 0.2)';
+            setTimeout(() => {
+                target.style.borderColor = '';
+                target.style.boxShadow = '';
+            }, 500);
+            console.log(`⚠️ Apenas ${options.length} opções disponíveis`);
+        }
+        return;
+    }
     
     // ============================================
     // ENTER - Vai para o campo abaixo ou adiciona novo item
@@ -871,20 +1175,16 @@ function handleTeclado(e) {
     if (key === 'Enter') {
         e.preventDefault();
         
-        // Se estiver em um textarea, permite quebra de linha com Shift+Enter
         if (target.tagName === 'TEXTAREA') {
             if (e.shiftKey) {
-                return; // Comportamento padrão (quebra de linha)
+                return;
             }
         }
         
-        // Se estiver na tabela, navega verticalmente
         if (isInTable) {
             const proximo = navegarParaProximoCampoAbaixo(target);
             if (!proximo) {
-                // Não há campo abaixo - adiciona novo item
                 adicionarLinhaItem();
-                // Foca no primeiro campo da nova linha
                 setTimeout(() => {
                     const novasLinhas = document.querySelectorAll('#itemsBody tr');
                     const ultimaLinha = novasLinhas[novasLinhas.length - 1];
@@ -900,7 +1200,6 @@ function handleTeclado(e) {
             return;
         }
         
-        // Fora da tabela, navega verticalmente no formulário
         navegarVerticalFormulario(target, 1);
         return;
     }
@@ -946,7 +1245,6 @@ function navegarParaProximoCampoAbaixo(element) {
     const currentRowIndex = rows.indexOf(row);
     if (currentRowIndex === -1) return null;
     
-    // Encontra a coluna do elemento atual
     const cells = Array.from(row.querySelectorAll('td'));
     let targetCellIndex = -1;
     
@@ -961,7 +1259,6 @@ function navegarParaProximoCampoAbaixo(element) {
     
     if (targetCellIndex === -1) return null;
     
-    // Verifica se há uma próxima linha
     const nextRowIndex = currentRowIndex + 1;
     if (nextRowIndex >= rows.length) return null;
     
@@ -970,7 +1267,6 @@ function navegarParaProximoCampoAbaixo(element) {
     
     if (targetCellIndex >= nextCells.length) return null;
     
-    // Busca o campo na mesma coluna na linha abaixo
     const targetCell = nextCells[targetCellIndex];
     const targetInput = targetCell.querySelector('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
     
@@ -982,7 +1278,6 @@ function navegarParaProximoCampoAbaixo(element) {
         return targetInput;
     }
     
-    // Se o campo na mesma coluna não é editável, busca o próximo editável na linha
     const allInputs = nextRow.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
     if (allInputs.length > 0) {
         const firstEditable = allInputs[0];
@@ -1211,15 +1506,21 @@ function handlePasteEmMassa(e) {
 function processarPasteEmMassa(linhas, elementoAlvo) {
     console.log(`📋 Processando ${linhas.length} linhas coladas na coluna:`, elementoAlvo);
     
-    // Verifica se está colando na coluna de código
     const isCodigoColumn = elementoAlvo.classList.contains('item-codigo');
+    const isAditivoSistemico = tipoAtual === 'aditivo';
     
-    // Se for coluna de código, valida duplicados
-    if (isCodigoColumn) {
+    if (isCodigoColumn && !isAditivoSistemico) {
         const duplicados = validarDuplicadosNoPaste(linhas, elementoAlvo);
         if (duplicados.length > 0) {
             mostrarToast(`⚠️ Códigos duplicados encontrados: ${duplicados.join(', ')}`, 'erro');
             return;
+        }
+    }
+    
+    if (isCodigoColumn && isAditivoSistemico) {
+        const duplicados = validarDuplicadosNoPaste(linhas, elementoAlvo);
+        if (duplicados.length > 0) {
+            mostrarToast(`ℹ️ Códigos duplicados: ${duplicados.join(', ')} (permitido em Aditivo Sistêmico)`, 'info');
         }
     }
     
@@ -1287,7 +1588,7 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
     let linhaAtualIndex = primeiroIndice;
     
     for (let i = 0; i < linhas.length; i++) {
-        const valor = linhas[i].trim();
+        let valor = linhas[i].trim();
         if (valor === '') continue;
         
         const linhasAtuais = tbody.querySelectorAll('tr');
@@ -1316,7 +1617,14 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
                 }
             } else {
                 if (campo.type === 'number') {
-                    campo.value = parseFloat(valor) || '';
+                    let valorNumerico = valor.replace(',', '.');
+                    valorNumerico = valorNumerico.replace(/[^0-9.-]/g, '');
+                    const numero = parseFloat(valorNumerico);
+                    if (!isNaN(numero)) {
+                        campo.value = numero;
+                    } else {
+                        campo.value = valor;
+                    }
                 } else if (campo.type === 'date') {
                     const dataFormatada = formatarData(valor);
                     campo.value = dataFormatada;
@@ -1355,6 +1663,7 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
     setTimeout(adicionarBotoesAcoesMassa, 100);
     setTimeout(configurarValidacaoDuplicados, 150);
     setTimeout(verificarECorrigirDuplicados, 200);
+    setTimeout(atualizarNavegacaoSelects, 150);
     
     setTimeout(() => {
         elementoAlvo.focus();
@@ -1571,6 +1880,26 @@ function adicionarBotoesAcoesMassa() {
         
         container.appendChild(criarSeparadorPequeno());
         
+        const grupoNumDoc = document.createElement('span');
+        grupoNumDoc.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        `;
+        const numDocContainer = criarCampoMassa(
+            '📄 Nº Documento:',
+            'item-num-doc',
+            'text',
+            'Digite o número...',
+            function(valor) {
+                aplicarEmMassa('item-num-doc', valor);
+            }
+        );
+        grupoNumDoc.appendChild(numDocContainer);
+        container.appendChild(grupoNumDoc);
+        
+        container.appendChild(criarSeparadorPequeno());
+        
         const grupoObs = document.createElement('span');
         grupoObs.style.cssText = `
             display: flex;
@@ -1689,6 +2018,8 @@ function adicionarBotoesAcoesMassa() {
     if (table) {
         table.parentNode.insertBefore(container, table);
     }
+    
+    setTimeout(atualizarNavegacaoSelects, 150);
 }
 
 function criarSeparadorPequeno() {
@@ -1769,6 +2100,13 @@ function criarCampoMassa(label, classe, tipo, placeholder, acao) {
         height: 30px;
         box-sizing: border-box;
     `;
+    
+    if (classe === 'item-quantidade') {
+        input.step = 'any';
+        input.inputMode = 'decimal';
+        input.placeholder = 'Ex: 1,25 ou 0,75';
+    }
+    
     input.onfocus = function() {
         this.style.borderColor = '#4299E1';
         this.style.boxShadow = '0 0 0 3px rgba(66,153,225,0.1)';
@@ -1803,8 +2141,11 @@ function criarCampoMassa(label, classe, tipo, placeholder, acao) {
     btn.onclick = function(e) {
         e.preventDefault();
         e.stopPropagation();
-        const valor = input.value.trim();
+        let valor = input.value.trim();
         if (valor !== '') {
+            if (classe === 'item-quantidade') {
+                valor = valor.replace(',', '.');
+            }
             acao(valor);
             input.value = '';
             mostrarToast(`✅ Aplicado "${valor}" para todos`, 'sucesso');
@@ -1926,7 +2267,14 @@ function aplicarEmMassa(classe, valor) {
     elementos.forEach(el => {
         if (isCampoEditavel(el)) {
             if (el.type === 'number') {
-                el.value = valor !== '' ? parseFloat(valor) : '';
+                let valorNumerico = valor.replace(',', '.');
+                valorNumerico = valorNumerico.replace(/[^0-9.-]/g, '');
+                const numero = parseFloat(valorNumerico);
+                if (!isNaN(numero)) {
+                    el.value = numero;
+                } else {
+                    el.value = valor !== '' ? parseFloat(valor) : '';
+                }
             } else if (el.type === 'date') {
                 const dataFormatada = formatarData(valor);
                 el.value = dataFormatada;
@@ -1988,7 +2336,7 @@ function adicionarLinhaItem() {
         <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código"></td>
         <td><input type="text" class="item-descricao input-descricao" readonly placeholder="Descrição"></td>
         <td><input type="text" class="item-unidade" readonly placeholder="Unid."></td>
-        <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0"></td>
+        <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" step="any"></td>
     `;
     
     if (isPendencia) {
@@ -2105,7 +2453,6 @@ function adicionarLinhaItem() {
         `;
     }
     
-    // BOTÃO DE EXCLUSÃO - SEMPRE NO FINAL
     html += `
         <td><button class="remove-item" onclick="removerItem(this)" title="Remover item">✕</button></td>
     `;
@@ -2123,6 +2470,7 @@ function adicionarLinhaItem() {
     setTimeout(configurarPasteEmMassa, 100);
     setTimeout(adicionarBotoesAcoesMassa, 100);
     setTimeout(configurarValidacaoDuplicados, 150);
+    setTimeout(atualizarNavegacaoSelects, 150);
 }
 
 window.adicionarLinhaItem = adicionarLinhaItem;
@@ -2146,6 +2494,7 @@ function removerItem(btn) {
     setTimeout(adicionarBotoesAcoesMassa, 50);
     setTimeout(configurarValidacaoDuplicados, 100);
     setTimeout(verificarECorrigirDuplicados, 150);
+    setTimeout(atualizarNavegacaoSelects, 150);
 }
 
 window.removerItem = removerItem;
@@ -2177,7 +2526,7 @@ function carregarItens(itens) {
             <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" value="${item.codigo || ''}" placeholder="Código" ${isFinalizado ? 'disabled' : ''}></td>
             <td><input type="text" class="item-descricao input-descricao" readonly value="${item.descricao || ''}" placeholder="Descrição"></td>
             <td><input type="text" class="item-unidade" readonly value="${item.unidade || ''}" placeholder="Unid."></td>
-            <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" value="${item.quantidade || ''}" ${isFinalizado ? 'disabled' : ''}></td>
+            <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" step="any" value="${item.quantidade || ''}" ${isFinalizado ? 'disabled' : ''}></td>
         `;
         
         if (isPendencia) {
@@ -2299,7 +2648,6 @@ function carregarItens(itens) {
             `;
         }
         
-        // BOTÃO DE EXCLUSÃO - SEMPRE NO FINAL
         html += `
             <td><button class="remove-item" onclick="removerItem(this)" ${isFinalizado ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''} title="Remover item">✕</button></td>
         `;
@@ -2314,6 +2662,7 @@ function carregarItens(itens) {
     setTimeout(adicionarBotoesAcoesMassa, 100);
     setTimeout(configurarValidacaoDuplicados, 150);
     setTimeout(verificarECorrigirDuplicados, 200);
+    setTimeout(atualizarNavegacaoSelects, 150);
 }
 
 // ============================================
@@ -2443,7 +2792,6 @@ async function salvarControle() {
     if (temItens) {
         const temDuplicado = validarDuplicadosAntesDeSalvar();
         if (temDuplicado) {
-            mostrarToast('⚠️ Existem códigos duplicados! Corrija antes de salvar.', 'erro');
             const tabela = document.querySelector('.table-responsive');
             if (tabela) {
                 tabela.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2547,6 +2895,14 @@ async function salvarControle() {
         
         mostrarToast('✅ Salvo com sucesso!', 'sucesso');
         await carregarControleFormulario();
+        
+        setTimeout(() => {
+            const campoObra = document.getElementById('formObra');
+            if (campoObra && isCampoEditavel(campoObra)) {
+                campoObra.focus();
+                campoObra.select();
+            }
+        }, 300);
         
     } catch (error) {
         console.error('❌ Erro ao salvar:', error);
@@ -2755,6 +3111,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     await carregarMateriais();
     await carregarControleFormulario();
     
+    focarCampoObra();
+    
     window.addEventListener('scroll', controlarBotoesNavegacao);
     window.addEventListener('load', function() {
         setTimeout(controlarBotoesNavegacao, 500);
@@ -2763,6 +3121,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         setTimeout(adicionarBotoesAcoesMassa, 300);
         setTimeout(configurarValidacaoDuplicados, 400);
         setTimeout(verificarECorrigirDuplicados, 450);
+        setTimeout(configurarNavegacaoSelectPorNumero, 300);
     });
     window.addEventListener('resize', controlarBotoesNavegacao);
     
@@ -2793,6 +3152,7 @@ window.aplicarEmMassaSelect = aplicarEmMassaSelect;
 window.isCampoEditavel = isCampoEditavel;
 window.getElementosEditaveis = getElementosEditaveis;
 window.formatarData = formatarData;
+window.formatarNumero = formatarNumero;
 window.getNomeUsuarioLogado = getNomeUsuarioLogado;
 window.getMatriculaUsuarioLogado = getMatriculaUsuarioLogado;
 window.verificarCodigoDuplicado = verificarCodigoDuplicado;
@@ -2802,3 +3162,6 @@ window.verificarECorrigirDuplicados = verificarECorrigirDuplicados;
 window.validarDuplicadosAntesDeSalvar = validarDuplicadosAntesDeSalvar;
 window.configurarValidacaoDuplicados = configurarValidacaoDuplicados;
 window.validarDuplicadosNoPaste = validarDuplicadosNoPaste;
+window.focarCampoObra = focarCampoObra;
+window.configurarNavegacaoSelectPorNumero = configurarNavegacaoSelectPorNumero;
+window.atualizarNavegacaoSelects = atualizarNavegacaoSelects;
