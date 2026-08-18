@@ -18,44 +18,20 @@ const HOME_PAGES = {
 
 /**
  * Navega para uma página usando o caminho correto
- * @param {string} page - Nome da página (ex: 'home-gestao.html')
+ * @param {string} page - Nome da página (ex: 'gestao/index.html')
  * @param {Object} params - Parâmetros da URL (opcional)
  */
 function navigateTo(page, params = null) {
     // Remove qualquer "../" do início
     let cleanPath = page.replace(/^(\.\.\/)+/g, '');
     
-    // Remove barras duplicadas
-    cleanPath = cleanPath.replace(/\/\//g, '/');
-    
-    // Se CONFIG estiver disponível, usa a função dele
-    if (typeof CONFIG !== 'undefined' && CONFIG && typeof CONFIG.getPageUrl === 'function') {
-        const url = CONFIG.getPageUrl(cleanPath);
-        
-        // Adiciona parâmetros
-        let finalUrl = url;
-        if (params) {
-            const queryString = new URLSearchParams(params).toString();
-            finalUrl += url.includes('?') ? `&${queryString}` : `?${queryString}`;
-        }
-        
-        console.log(`🔀 Navegando para: ${finalUrl}`);
-        window.location.href = finalUrl;
-        return;
+    // Garante que o caminho comece com / (absoluto a partir da raiz)
+    if (!cleanPath.startsWith('/')) {
+        cleanPath = '/' + cleanPath;
     }
     
-    // Fallback: navegação manual
-    // Se estiver em produção (GitHub Pages), adiciona /SICGM/
-    const isProduction = window.location.hostname !== '127.0.0.1' && 
-                        window.location.hostname !== 'localhost' &&
-                        window.location.hostname !== '0.0.0.0';
-    
-    // Se a página já começa com /, remove
-    if (cleanPath.startsWith('/')) {
-        cleanPath = cleanPath.substring(1);
-    }
-    
-    let url = isProduction ? `/SICGM/${cleanPath}` : cleanPath;
+    // Remove a barra inicial para montar a URL final (sem duplicar)
+    let url = cleanPath.substring(1);
     
     // Adiciona parâmetros
     if (params) {

@@ -6,6 +6,45 @@
 // CONFIGURAÇÃO DOS DEPARTAMENTOS E FUNÇÕES
 // ============================================
 const DEPARTAMENTOS = {
+    // NOVO DEPARTAMENTO GESTÃO
+    'GESTAO': {
+        nome: 'GESTÃO',
+        titulo: 'Gestão Estratégica do Setor',
+        descricao: 'Acompanhamento de indicadores, planejamento e estrutura organizacional.',
+        funcoes: [
+            {
+                id: 'estrutura-setor',
+                nome: 'Estrutura do Setor',
+                icone: '🏗️',
+                link: 'gestao/estrutura-setor.html',
+                status: 'disponivel',
+                descricao: 'Organograma e alocação de colaboradores'
+            },
+            {
+                id: 'indicadores',
+                nome: 'Indicadores',
+                icone: '📊',
+                link: '#',
+                status: 'disponivel',
+                descricao: 'Acesse os BI\'s gerenciais',
+                temDropdown: true,
+                dropdownItems: [
+                    { nome: 'Pendência de Requisição', link: 'gestao/indicadores.html', badge: 'Ativo' },
+                    { nome: 'Aditivos (Físicos e Sistêmicos)', link: '#', badge: 'Em breve', disabled: true },
+                    { nome: 'Pendência Devolução Física', link: '#', badge: 'Em breve', disabled: true },
+                    { nome: 'Farol de Obras', link: '#', badge: 'Em breve', disabled: true }
+                ]
+            },
+            {
+                id: 'planejamento',
+                nome: 'Planejamento',
+                icone: '📅',
+                link: 'gestao/planejamento.html',
+                status: 'disponivel',
+                descricao: 'Metas, orçamento e cronogramas'
+            }
+        ]
+    },
     'DCMD': {
         nome: 'DCMD',
         titulo: 'Departamento de Construção e Manutenção da Distribuição',
@@ -207,26 +246,16 @@ const DEPARTAMENTOS = {
 // ============================================
 let departamentoAtual = 'DCMD';
 
-/**
- * Seleciona um departamento e atualiza a interface
- * @param {string} deptoId - ID do departamento (DCMD, DMPC, DECP, DEOP)
- */
 function selecionarDepartamento(deptoId) {
     departamentoAtual = deptoId;
     
-    // Atualiza botões
     document.querySelectorAll('.departamento-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.depto === deptoId);
     });
     
-    // Renderiza conteúdo
     renderizarDepartamento(deptoId);
 }
 
-/**
- * Renderiza o conteúdo do departamento selecionado
- * @param {string} deptoId - ID do departamento
- */
 function renderizarDepartamento(deptoId) {
     const container = document.getElementById('deptoContent');
     const depto = DEPARTAMENTOS[deptoId];
@@ -252,7 +281,6 @@ function renderizarDepartamento(deptoId) {
         const isDisabled = func.status !== 'disponivel';
 
         if (func.temDropdown) {
-            // Função com dropdown
             html += `
                 <div class="func-card" onclick="toggleDropdownDepto(event, '${func.id}')" style="cursor: pointer;" data-func="${func.id}">
                     <div class="func-icon">${func.icone}</div>
@@ -275,7 +303,6 @@ function renderizarDepartamento(deptoId) {
                         </a>
                     `;
                 } else {
-                    // Usa CONFIG para obter o caminho correto do link
                     const link = (typeof CONFIG !== 'undefined' && CONFIG) ? 
                         CONFIG.getPageUrl(item.link) : item.link;
                     html += `
@@ -294,9 +321,7 @@ function renderizarDepartamento(deptoId) {
                 </div>
             `;
         } else {
-            // Função normal
             let link = isDisabled ? '#' : func.link;
-            // Se não estiver desabilitado, aplica CONFIG
             if (!isDisabled && typeof CONFIG !== 'undefined' && CONFIG) {
                 link = CONFIG.getPageUrl(func.link);
             }
@@ -319,15 +344,6 @@ function renderizarDepartamento(deptoId) {
     container.innerHTML = html;
 }
 
-// ============================================
-// DROPDOWN DOS DEPARTAMENTOS
-// ============================================
-
-/**
- * Alterna a visibilidade do dropdown de uma função
- * @param {Event} event - Evento do clique
- * @param {string} funcId - ID da função
- */
 function toggleDropdownDepto(event, funcId) {
     event.stopPropagation();
     const dropdown = document.getElementById(`dropdownDepto_${funcId}`);
@@ -335,7 +351,6 @@ function toggleDropdownDepto(event, funcId) {
     
     const isOpen = dropdown.classList.contains('show');
     
-    // Fecha todos os outros dropdowns abertos
     document.querySelectorAll('.dropdown-menu.show').forEach(el => {
         if (el !== dropdown) el.classList.remove('show');
     });
@@ -347,22 +362,11 @@ function toggleDropdownDepto(event, funcId) {
     }
 }
 
-// ============================================
-// FUNÇÕES DE UTILIDADE
-// ============================================
-
-/**
- * Exibe mensagem de funcionalidade em desenvolvimento
- * @param {Event} event - Evento do clique
- */
 function mostrarEmDesenvolvimento(event) {
     if (event) event.preventDefault();
     alert('📜 Funcionalidade em desenvolvimento. Em breve disponível!');
 }
 
-/**
- * Atualiza o timestamp da sessão
- */
 function atualizarTimestampSessao() {
     const sessao = sessionStorage.getItem('sessaoSICGM');
     if (sessao) {
@@ -374,9 +378,6 @@ function atualizarTimestampSessao() {
     }
 }
 
-/**
- * Função de logout
- */
 function sair() {
     sessionStorage.removeItem('sessaoSICGM');
     const loginUrl = (typeof CONFIG !== 'undefined' && CONFIG) ? 
@@ -384,17 +385,12 @@ function sair() {
     window.location.href = loginUrl;
 }
 
-// ============================================
-// INICIALIZAÇÃO
-// ============================================
-
 document.addEventListener('DOMContentLoaded', function() {
     const loadingOverlay = document.getElementById('loadingOverlay');
     const homeContent = document.getElementById('homeContent');
     
     if (loadingOverlay) loadingOverlay.classList.add('active');
 
-    // Verifica sessão (função verificarSessao deve estar no script.js)
     const sessao = verificarSessao();
     
     if (!sessao) {
@@ -433,7 +429,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    // Renderiza o departamento inicial (DCMD)
     renderizarDepartamento('DCMD');
 
     setTimeout(() => {
@@ -444,7 +439,6 @@ document.addEventListener('DOMContentLoaded', function() {
     atualizarTimestampSessao();
 });
 
-// Fecha dropdowns ao clicar fora
 document.addEventListener('click', function(event) {
     document.querySelectorAll('.dropdown-menu.show').forEach(el => {
         const card = event.target.closest('.func-card');
@@ -454,7 +448,6 @@ document.addEventListener('click', function(event) {
     });
 });
 
-// Fecha dropdowns ao pressionar ESC
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         document.querySelectorAll('.dropdown-menu.show').forEach(el => {
@@ -463,11 +456,9 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-// Atualiza timestamp da sessão em eventos
 document.addEventListener('click', atualizarTimestampSessao);
 document.addEventListener('keydown', atualizarTimestampSessao);
 
-// Verifica sessão a cada 5 minutos
 setInterval(function() {
     const sessao = verificarSessao();
     if (!sessao) {

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indicadores - Gestão</title>
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/gestao.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        function voltarParaHome() {
+            window.location.href = '/home-gestao.html';
+        }
+    </script>
+</head>
+<body>
+    <div class="gestao-container">
+        <div class="gestao-header">
+            <h1>📊 Indicadores Gerenciais (RMA x DMA)</h1>
+            <button class="btn-voltar" onclick="voltarParaHome()">🏠 Voltar ao Início</button>
+        </div>
+
+        <div class="filtros-box">
+            <div class="filtro-item">
+                <label>Login (Sigla):</label>
+                <select id="filtroLogin">
+                    <option value="Todos">Todos</option>
+                </select>
+            </div>
+            <div class="filtro-item">
+                <label>Mês (AAAA-MM):</label>
+                <select id="filtroMes">
+                    <option value="Todos">Todos</option>
+                </select>
+            </div>
+            <button class="btn-aplicar" onclick="aplicarFiltros()">Aplicar Filtros</button>
+        </div>
+
+        <div class="indicadores-grid">
+            <div class="card-indicador">
+                <h3>RMA Total (Requisições)</h3>
+                <div class="valor-big" id="totalRMA" style="color: #3B82F6;">R$ 0,00</div>
+            </div>
+            <div class="card-indicador">
+                <h3>DMA Total (Devoluções)</h3>
+                <div class="valor-big" id="totalDMA" style="color: #10B981;">R$ 0,00</div>
+            </div>
+            <div class="card-indicador">
+                <h3>Saldo (RMA - DMA)</h3>
+                <div class="valor-big" id="totalSaldo">R$ 0,00</div>
+            </div>
+        </div>
+
+        <div class="graficos-grid">
+            <div class="card-grafico">
+                <h3>Valor por Login (RMA x DMA)</h3>
+                <div class="grafico-container">
+                    <canvas id="graficoLogin"></canvas>
+                </div>
+            </div>
+            <div class="card-grafico">
+                <h3>Valor Mensal (RMA x DMA)</h3>
+                <div class="grafico-container">
+                    <canvas id="graficoMes"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/config.js"></script>
+    <script src="/js/script.js"></script>
+    <script type="module" src="/js/gestao-indicadores.js"></script>
+</body>
+</html>
