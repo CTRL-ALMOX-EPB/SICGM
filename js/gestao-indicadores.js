@@ -1,5 +1,5 @@
 // ============================================
-// GESTÃO INDICADORES - RMA x DMA (APENAS R2)
+// GESTÃO INDICADORES - RMA x DMA
 // ============================================
 
 const WORKER_URL = 'https://gestao-xd-almox.alefe-gomes-72f.workers.dev';
@@ -14,14 +14,19 @@ let graficoMes = null;
 async function buscarDadosConsolidados(deposito = '1050') {
     try {
         const response = await fetch(`${WORKER_URL}/api/dados-consolidados?deposito=${deposito}`);
-        if (!response.ok) {
-            console.warn(`⚠️ Worker retornou status ${response.status}`);
-            return [];
+        
+        if (response.status === 503) {
+            throw new Error('Worker indisponível (503). Verifique se está online.');
         }
+        
+        if (!response.ok) {
+            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        }
+        
         return await response.json();
     } catch (error) {
         console.error('❌ Erro ao buscar dados:', error);
-        return [];
+        throw error;
     }
 }
 
@@ -29,13 +34,7 @@ async function buscarDadosConsolidados(deposito = '1050') {
 // 2. Processar dados (separar RMA e DMA)
 // ============================================
 function processarDados(movimentos) {
-    // Mapeia cada movimento
     return movimentos.map(item => {
-        // RMA = Requisição (orgmov = DMA) -> valor positivo
-        // DMA = Devolução (orgmov = DMD?) -> valor negativo?
-        // Pela sua planilha, orgmov = DMA é requisição.
-        // Vamos considerar: se orgmov === 'DMA' -> RMA, senão -> DMA
-        // Mas para garantir, usei a lógica: qtdmov positiva = RMA, negativa = DMA
         const qtd = item.qtdmov || 0;
         const valor = item.valor_total || 0;
         
@@ -68,7 +67,7 @@ async function carregarDados() {
     } catch (erro) {
         console.error('Erro:', erro);
         document.querySelector('.graficos-grid').innerHTML = 
-            `<div class="erro-msg">❌ Erro ao carregar dados.</div>`;
+            `<div class="erro-msg">❌ Erro ao carregar dados: ${erro.message}</div>`;
     }
 }
 
@@ -81,7 +80,7 @@ function popularFiltros() {
         if (!d.datamov) return null;
         const parts = d.datamov.split('/');
         if (parts.length !== 3) return null;
-        return `${parts[2]}-${parts[1]}`; // AAAA-MM
+        return `${parts[2]}-${parts[1]}`;
     }).filter(Boolean))].sort();
     
     const selectLogin = document.getElementById('filtroLogin');
@@ -256,7 +255,7 @@ function gerarGraficoMes(dados) {
 // Inicialização
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    const sessao = verificarSessao();
+    const sessao = typeof verificarSessao !== 'undefined' ? verificarSessao() : null;
     if (!sessao || sessao.perfil !== 'GESTAO') {
         alert('Acesso restrito ao perfil GESTÃO.');
         window.location.href = '/home-gestao.html';
