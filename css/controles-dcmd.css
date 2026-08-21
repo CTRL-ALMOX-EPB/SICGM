@@ -554,7 +554,7 @@
 }
 
 /* ============================================ */
-/* TABELA DE ITENS - AJUSTES PARA PENDÊNCIA    */
+/* TABELA DE ITENS - REFATORADA                */
 /* ============================================ */
 
 .table-responsive {
@@ -563,51 +563,58 @@
     margin: 15px 0;
     border-radius: 8px;
     border: 1px solid #E2E8F0;
+    max-width: 100%;
 }
 
 .table-responsive::-webkit-scrollbar {
-    height: 8px;
+    height: 6px;
 }
 
 .table-responsive::-webkit-scrollbar-track {
     background: #F7FAFC;
-    border-radius: 4px;
+    border-radius: 3px;
 }
 
 .table-responsive::-webkit-scrollbar-thumb {
     background: #CBD5E0;
-    border-radius: 4px;
+    border-radius: 3px;
 }
 
 .table-responsive::-webkit-scrollbar-thumb:hover {
     background: #A0AEC0;
 }
 
+.table-responsive {
+    scrollbar-width: thin;
+    scrollbar-color: #CBD5E0 #F7FAFC;
+}
+
 .items-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 900px;
+    min-width: 700px;
     font-size: 0.82em;
 }
 
 .items-table th {
     background: #F7FAFC;
-    padding: 8px 8px;
+    padding: 8px 6px;
     text-align: left;
     font-weight: 600;
     color: #4A5568;
     border-bottom: 2px solid #E2E8F0;
     white-space: nowrap;
-    font-size: 0.78em;
+    font-size: 0.72em;
     position: sticky;
     top: 0;
     z-index: 10;
 }
 
 .items-table td {
-    padding: 4px 6px;
+    padding: 4px 4px;
     border-bottom: 1px solid #EDF2F7;
     vertical-align: middle;
+    min-height: 32px;
 }
 
 .items-table input,
@@ -616,7 +623,7 @@
     padding: 4px 6px;
     border: 2px solid #E2E8F0;
     border-radius: 6px;
-    font-size: 0.82em;
+    font-size: 0.8em;
     box-sizing: border-box;
     transition: all 0.3s ease;
     background-color: #FFFFFF;
@@ -645,9 +652,9 @@
 
 .items-table select.item-colaborador,
 .items-table select.item-encarregado {
-    font-size: 0.8em;
-    padding: 4px 6px;
-    min-height: 32px;
+    font-size: 0.72em;
+    padding: 2px 4px;
+    min-height: 28px;
 }
 
 .remove-item {
@@ -663,6 +670,7 @@
     width: 100%;
     min-height: 28px;
     min-width: 32px;
+    max-width: 40px;
 }
 
 .remove-item:hover:not(:disabled) {
@@ -699,107 +707,216 @@
 }
 
 /* ============================================ */
-/* COLUNAS ESPECÍFICAS DA TABELA               */
+/* COLUNAS - LARGURAS FIXAS MAS FLEXÍVEIS      */
 /* ============================================ */
 
-/* Coluna de código - menor */
-.items-table td:first-child,
-.items-table th:first-child {
-    min-width: 70px;
-    max-width: 90px;
-}
-
-/* Coluna de descrição - maior */
-.items-table td:nth-child(2),
-.items-table th:nth-child(2) {
-    min-width: 180px;
-    max-width: 250px;
-}
-
-/* Coluna UND */
-.items-table td:nth-child(3),
-.items-table th:nth-child(3) {
-    min-width: 50px;
-    max-width: 70px;
-}
-
-/* Coluna QTD */
-.items-table td:nth-child(4),
-.items-table th:nth-child(4) {
+/* Código - menor */
+.items-table td:nth-child(1),
+.items-table th:nth-child(1) {
+    width: 7%;
     min-width: 60px;
     max-width: 80px;
 }
 
-/* Colunas específicas da Pendência */
-.col-pendente-aditivo {
-    min-width: 80px;
-    max-width: 100px;
+/* Descrição - maior, com ellipsis */
+.items-table td:nth-child(2),
+.items-table th:nth-child(2) {
+    width: 18%;
+    min-width: 140px;
+    max-width: 220px;
 }
 
-.col-pendente-aditivo select {
-    font-size: 0.75em;
-    padding: 3px 4px;
-    min-height: 28px;
+.items-table td:nth-child(2) .item-descricao {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
 }
 
+/* UND - pequena */
+.items-table td:nth-child(3),
+.items-table th:nth-child(3) {
+    width: 5%;
+    min-width: 45px;
+    max-width: 60px;
+}
+
+/* QTD - com espaço para 3 dígitos */
+.items-table td:nth-child(4),
+.items-table th:nth-child(4) {
+    width: 7%;
+    min-width: 70px;
+    max-width: 90px;
+}
+
+/* ============================================ */
+/* PENDÊNCIA DE BAIXA - COLUNAS                */
+/* ============================================ */
+
+/* Data Baixa */
 .col-data-baixa {
+    width: 9%;
     min-width: 100px;
     max-width: 120px;
 }
 
 .col-data-baixa input {
-    font-size: 0.75em;
-    padding: 3px 4px;
-    min-height: 28px;
+    font-size: 0.72em;
+    padding: 2px 5px;
+    min-height: 26px;
 }
 
+/* Baixado? */
 .col-baixado {
+    width: 6%;
+    min-width: 65px;
+    max-width: 80px;
+}
+
+.col-baixado select {
+    font-size: 0.72em;
+    padding: 2px 3px;
+    min-height: 26px;
+}
+
+/* Motivo */
+.col-motivo {
+    width: 10%;
+    min-width: 85px;
+    max-width: 130px;
+}
+
+.col-motivo input {
+    font-size: 0.72em;
+    padding: 2px 4px;
+    min-height: 26px;
+}
+
+/* Colaborador */
+.col-colaborador-item {
+    width: 8%;
+    min-width: 75px;
+    max-width: 100px;
+}
+
+.col-colaborador-item input {
+    font-size: 0.72em;
+    padding: 2px 4px;
+    min-height: 26px;
+}
+
+/* Observação do Item */
+.col-observacao-item {
+    width: 10%;
+    min-width: 80px;
+    max-width: 130px;
+}
+
+.col-observacao-item input {
+    font-size: 0.72em;
+    padding: 2px 4px;
+    min-height: 26px;
+}
+
+/* ============================================ */
+/* ADITIVO SISTÊMICO - COLUNAS                 */
+/* ============================================ */
+
+.col-status-aditivo {
+    width: 8%;
+    min-width: 80px;
+    max-width: 100px;
+}
+
+.col-status-aditivo select {
+    font-size: 0.68em;
+    padding: 2px 3px;
+    min-height: 26px;
+}
+
+.col-num-doc {
+    width: 8%;
+    min-width: 80px;
+    max-width: 100px;
+}
+
+.col-num-doc input {
+    font-size: 0.68em;
+    padding: 2px 4px;
+    min-height: 26px;
+}
+
+.col-usuario {
+    width: 7%;
     min-width: 70px;
     max-width: 90px;
 }
 
-.col-baixado select {
-    font-size: 0.75em;
-    padding: 3px 4px;
-    min-height: 28px;
+.col-usuario input {
+    font-size: 0.68em;
+    padding: 2px 4px;
+    min-height: 26px;
 }
 
-.col-motivo {
-    min-width: 100px;
-    max-width: 150px;
+.col-observacao {
+    width: 8%;
+    min-width: 70px;
+    max-width: 100px;
 }
 
-.col-motivo input {
-    font-size: 0.75em;
-    padding: 3px 4px;
-    min-height: 28px;
+.col-observacao input {
+    font-size: 0.68em;
+    padding: 2px 4px;
+    min-height: 26px;
 }
 
-.col-colaborador-item {
+/* ============================================ */
+/* ADITIVO FÍSICO - COLUNAS                    */
+/* ============================================ */
+
+.col-aplicado {
+    width: 7%;
+    min-width: 70px;
+    max-width: 85px;
+}
+
+.col-aplicado select {
+    font-size: 0.68em;
+    padding: 2px 3px;
+    min-height: 26px;
+}
+
+.col-colaborador {
+    width: 9%;
     min-width: 90px;
-    max-width: 120px;
+    max-width: 125px;
 }
 
-.col-colaborador-item input {
-    font-size: 0.75em;
-    padding: 3px 4px;
-    min-height: 28px;
+.col-colaborador select {
+    font-size: 0.65em;
+    padding: 2px 3px;
+    min-height: 26px;
 }
 
-.col-observacao-item {
-    min-width: 120px;
-    max-width: 180px;
+.col-encarregado {
+    width: 9%;
+    min-width: 90px;
+    max-width: 125px;
 }
 
-.col-observacao-item input {
-    font-size: 0.75em;
-    padding: 3px 4px;
-    min-height: 28px;
+.col-encarregado select {
+    font-size: 0.65em;
+    padding: 2px 3px;
+    min-height: 26px;
 }
 
-/* Ações */
+/* ============================================ */
+/* AÇÕES - ÚLTIMA COLUNA                       */
+/* ============================================ */
+
 .items-table td:last-child,
 .items-table th:last-child {
+    width: 5%;
     min-width: 40px;
     max-width: 50px;
 }
@@ -1065,383 +1182,24 @@
 }
 
 /* ============================================ */
-/* RESPONSIVIDADE DA TABELA                    */
+/* DATA BAIXA - AUMENTAR FONTE                 */
 /* ============================================ */
 
-@media (max-width: 992px) {
-    .tipo-selector {
-        grid-template-columns: repeat(3, 1fr);
-    }
-
-    .items-table {
-        min-width: 800px;
-        font-size: 0.78em;
-    }
-    
-    .items-table th {
-        font-size: 0.72em;
-        padding: 6px 6px;
-    }
-    
-    .items-table td {
-        padding: 3px 4px;
-    }
-    
-    .items-table input,
-    .items-table select {
-        font-size: 0.72em;
-        padding: 3px 4px;
-        min-height: 26px;
-    }
-    
-    .col-observacao-item {
-        min-width: 80px;
-        max-width: 120px;
-    }
-    
-    .col-motivo {
-        min-width: 80px;
-        max-width: 120px;
-    }
-    
-    .col-data-baixa {
-        min-width: 80px;
-        max-width: 100px;
-    }
+.item-data-baixa {
+    font-size: 12px !important;
+    padding: 4px 6px !important;
+    min-width: 90px !important;
 }
 
-@media (max-width: 768px) {
-    .user-header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 15px;
-        padding: 20px;
-    }
-    
-    .user-info {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .user-actions {
-        justify-content: center;
-    }
-    
-    .user-actions button {
-        flex: 1;
-        min-width: 120px;
-        justify-content: center;
-    }
-    
-    .form-row {
-        grid-template-columns: 1fr;
-        gap: 15px;
-    }
-    
-    .filtros-container {
-        grid-template-columns: 1fr 1fr;
-    }
-    
-    .filtro-acoes,
-    .filtro-contador {
-        grid-column: span 2;
-    }
-    
-    .controle-card-body {
-        grid-template-columns: 1fr 1fr;
-    }
-    
-    .tipo-selector {
-        grid-template-columns: 1fr 1fr 1fr;
-    }
-    
-    .tipo-btn {
-        font-size: 11px;
-        padding: 10px 6px;
-    }
-    
-    .items-table {
-        min-width: 700px;
-        font-size: 0.72em;
-    }
-    
-    .items-table th {
-        font-size: 0.65em;
-        padding: 4px 4px;
-    }
-    
-    .items-table td {
-        padding: 2px 3px;
-    }
-    
-    .items-table input,
-    .items-table select {
-        font-size: 0.68em;
-        padding: 2px 4px;
-        min-height: 24px;
-        border-width: 1.5px;
-    }
-    
-    .remove-item {
-        font-size: 11px;
-        padding: 1px 4px;
-        min-height: 24px;
-        min-width: 28px;
-    }
-    
-    .items-table td:first-child,
-    .items-table th:first-child {
-        min-width: 50px;
-        max-width: 60px;
-    }
-    
-    .items-table td:nth-child(2),
-    .items-table th:nth-child(2) {
-        min-width: 100px;
-        max-width: 150px;
-    }
-    
-    .col-observacao-item {
-        min-width: 60px;
-        max-width: 80px;
-    }
-    
-    .col-observacao-item input {
-        font-size: 0.6em;
-        padding: 2px 3px;
-        min-height: 20px;
-    }
-    
-    .col-motivo {
-        min-width: 60px;
-        max-width: 80px;
-    }
-    
-    .col-motivo input {
-        font-size: 0.6em;
-        padding: 2px 3px;
-        min-height: 20px;
-    }
-    
-    .col-data-baixa {
-        min-width: 70px;
-        max-width: 90px;
-    }
-    
-    .col-data-baixa input {
-        font-size: 0.6em;
-        padding: 2px 3px;
-        min-height: 20px;
-    }
-    
-    .col-pendente-aditivo {
-        min-width: 60px;
-        max-width: 70px;
-    }
-    
-    .col-pendente-aditivo select {
-        font-size: 0.6em;
-        padding: 2px 3px;
-        min-height: 20px;
-    }
-    
-    .col-baixado {
-        min-width: 55px;
-        max-width: 65px;
-    }
-    
-    .col-baixado select {
-        font-size: 0.6em;
-        padding: 2px 3px;
-        min-height: 20px;
-    }
-    
-    .col-colaborador-item {
-        min-width: 60px;
-        max-width: 80px;
-    }
-    
-    .col-colaborador-item input {
-        font-size: 0.6em;
-        padding: 2px 3px;
-        min-height: 20px;
-    }
-    
-    .btn-navegacao {
-        width: 38px;
-        height: 38px;
-        right: 10px;
-        font-size: 11px;
-    }
-    
-    .btn-topo {
-        bottom: 55px;
-    }
-    
-    .btn-fim {
-        bottom: 10px;
-    }
-    
-    .controle-form-body {
-        padding: 20px 15px;
-    }
+input[type="date"] {
+    font-size: 12px !important;
+    padding: 4px 6px !important;
 }
 
-@media (max-width: 600px) {
-    .tipo-selector {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .tipo-btn {
-        font-size: 10px;
-        padding: 8px 4px;
-    }
-}
-
-@media (max-width: 480px) {
-    .filtros-container {
-        grid-template-columns: 1fr;
-    }
-    
-    .filtro-acoes,
-    .filtro-contador {
-        grid-column: span 1;
-    }
-    
-    .controle-card-body {
-        grid-template-columns: 1fr;
-    }
-    
-    .controle-card-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .tipo-selector {
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
-    }
-    
-    .tipo-btn {
-        font-size: 9px;
-        padding: 8px 4px;
-        white-space: normal;
-    }
-    
-    .user-info .avatar {
-        width: 45px;
-        height: 45px;
-        font-size: 20px;
-    }
-    
-    .user-details h3 {
-        font-size: 16px;
-    }
-    
-    .items-table {
-        min-width: 550px;
-        font-size: 0.65em;
-    }
-    
-    .items-table th {
-        font-size: 0.58em;
-        padding: 3px 3px;
-    }
-    
-    .items-table td {
-        padding: 2px 2px;
-    }
-    
-    .items-table input,
-    .items-table select {
-        font-size: 0.6em;
-        padding: 1px 3px;
-        min-height: 20px;
-        border-radius: 4px;
-        border-width: 1px;
-    }
-    
-    .remove-item {
-        font-size: 10px;
-        padding: 1px 3px;
-        min-height: 20px;
-        min-width: 24px;
-        border-radius: 4px;
-    }
-    
-    .items-table td:first-child,
-    .items-table th:first-child {
-        min-width: 40px;
-        max-width: 50px;
-    }
-    
-    .items-table td:nth-child(2),
-    .items-table th:nth-child(2) {
-        min-width: 80px;
-        max-width: 100px;
-    }
-    
-    .col-observacao-item {
-        min-width: 50px;
-        max-width: 60px;
-    }
-    
-    .col-motivo {
-        min-width: 50px;
-        max-width: 60px;
-    }
-    
-    .col-data-baixa {
-        min-width: 60px;
-        max-width: 70px;
-    }
-    
-    .col-pendente-aditivo {
-        min-width: 50px;
-        max-width: 55px;
-    }
-    
-    .col-baixado {
-        min-width: 45px;
-        max-width: 55px;
-    }
-    
-    .col-colaborador-item {
-        min-width: 50px;
-        max-width: 60px;
-    }
-    
-    .btn-navegacao {
-        width: 32px;
-        height: 32px;
-        right: 8px;
-        font-size: 9px;
-    }
-    
-    .btn-topo {
-        bottom: 45px;
-    }
-    
-    .btn-fim {
-        bottom: 8px;
-    }
-    
-    .modal-actions {
-        flex-direction: column;
-    }
-    
-    .modal-actions button {
-        width: 100%;
-        justify-content: center;
-        padding: 12px 20px;
-        font-size: 14px;
-    }
-}
-
-@media (max-width: 400px) {
-    .tipo-selector {
-        grid-template-columns: 1fr;
-    }
+.col-data-baixa input {
+    font-size: 12px !important;
+    padding: 3px 5px !important;
+    min-width: 90px !important;
 }
 
 /* ============================================ */
@@ -1515,58 +1273,383 @@
     color: #A0AEC0;
 }
 
-/* Responsividade da paginação */
-@media (max-width: 768px) {
-    .paginacao-container {
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 15px;
+/* ============================================ */
+/* RESPONSIVIDADE                              */
+/* ============================================ */
+
+@media (max-width: 1200px) {
+    .items-table td:nth-child(2),
+    .items-table th:nth-child(2) {
+        min-width: 120px;
+        max-width: 180px;
     }
     
-    .paginacao-buttons {
+    .col-motivo,
+    .col-observacao-item {
+        min-width: 70px;
+        max-width: 110px;
+    }
+}
+
+@media (max-width: 992px) {
+    .tipo-selector {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .items-table {
+        font-size: 0.72em;
+        min-width: 650px;
+    }
+    
+    .items-table th {
+        font-size: 0.65em;
+        padding: 5px 4px;
+    }
+    
+    .items-table td {
+        padding: 3px 3px;
+    }
+    
+    .items-table input,
+    .items-table select {
+        font-size: 0.65em;
+        padding: 2px 4px;
+        min-height: 24px;
+    }
+    
+    .items-table td:nth-child(1),
+    .items-table th:nth-child(1) {
+        min-width: 50px;
+        max-width: 65px;
+    }
+    
+    .items-table td:nth-child(2),
+    .items-table th:nth-child(2) {
+        min-width: 100px;
+        max-width: 150px;
+    }
+    
+    .items-table td:nth-child(4),
+    .items-table th:nth-child(4) {
+        min-width: 60px;
+        max-width: 80px;
+    }
+    
+    .col-data-baixa {
+        min-width: 85px;
+        max-width: 100px;
+    }
+    
+    .col-motivo {
+        min-width: 65px;
+        max-width: 95px;
+    }
+    
+    .col-observacao-item {
+        min-width: 65px;
+        max-width: 95px;
+    }
+    
+    .col-colaborador,
+    .col-encarregado {
+        min-width: 75px;
+        max-width: 100px;
+    }
+}
+
+@media (max-width: 768px) {
+    .user-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+        padding: 20px;
+    }
+    
+    .user-info {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .user-actions {
         justify-content: center;
     }
     
-    .btn-paginacao {
-        padding: 4px 10px;
-        font-size: 12px;
-        min-width: 32px;
+    .user-actions button {
+        flex: 1;
+        min-width: 120px;
+        justify-content: center;
     }
     
-    .paginacao-info {
-        font-size: 12px;
-        text-align: center;
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .filtros-container {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .filtro-acoes,
+    .filtro-contador {
+        grid-column: span 2;
+    }
+    
+    .controle-card-body {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .tipo-selector {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+    
+    .tipo-btn {
+        font-size: 11px;
+        padding: 10px 6px;
+    }
+    
+    .items-table {
+        font-size: 0.65em;
+        min-width: 600px;
+    }
+    
+    .items-table th {
+        font-size: 0.58em;
+        padding: 4px 3px;
+    }
+    
+    .items-table td {
+        padding: 2px 2px;
+    }
+    
+    .items-table input,
+    .items-table select {
+        font-size: 0.58em;
+        padding: 2px 3px;
+        min-height: 22px;
+        border-width: 1.5px;
+    }
+    
+    .remove-item {
+        font-size: 10px;
+        padding: 1px 3px;
+        min-height: 22px;
+        min-width: 24px;
+    }
+    
+    .items-table td:nth-child(1),
+    .items-table th:nth-child(1) {
+        min-width: 40px;
+        max-width: 50px;
+    }
+    
+    .items-table td:nth-child(2),
+    .items-table th:nth-child(2) {
+        min-width: 80px;
+        max-width: 110px;
+    }
+    
+    .items-table td:nth-child(4),
+    .items-table th:nth-child(4) {
+        min-width: 55px;
+        max-width: 70px;
+    }
+    
+    .col-data-baixa {
+        min-width: 75px;
+        max-width: 90px;
+    }
+    
+    .col-motivo {
+        min-width: 60px;
+        max-width: 80px;
+    }
+    
+    .col-observacao-item {
+        min-width: 60px;
+        max-width: 80px;
+    }
+    
+    .col-colaborador,
+    .col-encarregado {
+        min-width: 65px;
+        max-width: 85px;
+    }
+    
+    .btn-navegacao {
+        width: 38px;
+        height: 38px;
+        right: 10px;
+        font-size: 11px;
+    }
+    
+    .btn-topo {
+        bottom: 55px;
+    }
+    
+    .btn-fim {
+        bottom: 10px;
+    }
+    
+    .controle-form-body {
+        padding: 20px 15px;
+    }
+}
+
+@media (max-width: 600px) {
+    .tipo-selector {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .tipo-btn {
+        font-size: 10px;
+        padding: 8px 4px;
+    }
+    
+    .items-table td:nth-child(2),
+    .items-table th:nth-child(2) {
+        min-width: 65px;
+        max-width: 85px;
     }
 }
 
 @media (max-width: 480px) {
-    .btn-paginacao {
-        padding: 3px 7px;
-        font-size: 11px;
-        min-width: 28px;
+    .filtros-container {
+        grid-template-columns: 1fr;
     }
     
-    .paginacao-buttons .btn-paginacao:nth-child(n+6):nth-child(-n+8) {
-        display: none;
+    .filtro-acoes,
+    .filtro-contador {
+        grid-column: span 1;
+    }
+    
+    .controle-card-body {
+        grid-template-columns: 1fr;
+    }
+    
+    .controle-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .tipo-selector {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+    
+    .tipo-btn {
+        font-size: 9px;
+        padding: 8px 4px;
+        white-space: normal;
+    }
+    
+    .user-info .avatar {
+        width: 45px;
+        height: 45px;
+        font-size: 20px;
+    }
+    
+    .user-details h3 {
+        font-size: 16px;
+    }
+    
+    .items-table {
+        font-size: 0.58em;
+        min-width: 500px;
+    }
+    
+    .items-table th {
+        font-size: 0.52em;
+        padding: 3px 2px;
+    }
+    
+    .items-table td {
+        padding: 2px 2px;
+    }
+    
+    .items-table input,
+    .items-table select {
+        font-size: 0.52em;
+        padding: 1px 3px;
+        min-height: 18px;
+        border-radius: 4px;
+        border-width: 1px;
+    }
+    
+    .remove-item {
+        font-size: 9px;
+        padding: 1px 2px;
+        min-height: 18px;
+        min-width: 20px;
+    }
+    
+    .items-table td:nth-child(1),
+    .items-table th:nth-child(1) {
+        min-width: 35px;
+        max-width: 42px;
+    }
+    
+    .items-table td:nth-child(2),
+    .items-table th:nth-child(2) {
+        min-width: 55px;
+        max-width: 70px;
+    }
+    
+    .items-table td:nth-child(4),
+    .items-table th:nth-child(4) {
+        min-width: 45px;
+        max-width: 60px;
+    }
+    
+    .col-data-baixa {
+        min-width: 60px;
+        max-width: 75px;
+    }
+    
+    .col-motivo {
+        min-width: 50px;
+        max-width: 65px;
+    }
+    
+    .col-observacao-item {
+        min-width: 50px;
+        max-width: 65px;
+    }
+    
+    .col-colaborador,
+    .col-encarregado {
+        min-width: 55px;
+        max-width: 70px;
+    }
+    
+    .btn-navegacao {
+        width: 32px;
+        height: 32px;
+        right: 8px;
+        font-size: 9px;
+    }
+    
+    .btn-topo {
+        bottom: 45px;
+    }
+    
+    .btn-fim {
+        bottom: 8px;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+    }
+    
+    .modal-actions button {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 20px;
+        font-size: 14px;
     }
 }
-/* Aumentar fonte da data baixa */
-.item-data-baixa {
-    font-size: 12px !important;
-    padding: 6px 10px !important;
-    min-width: 110px !important;
-}
 
-/* Para a data no formulário também */
-input[type="date"] {
-    font-size: 12px !important;
-    padding: 6px 10px !important;
-}
-
-/* Data baixa na tabela */
-.col-data-baixa input {
-    font-size: 12px !important;
-    padding: 4px 8px !important;
-    min-width: 110px !important;
+@media (max-width: 400px) {
+    .tipo-selector {
+        grid-template-columns: 1fr;
+    }
 }

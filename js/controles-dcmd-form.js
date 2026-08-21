@@ -679,8 +679,10 @@ window.buscarMaterial = buscarMaterial;
 // ============================================
 
 function voltarParaPainel() {
+    // Use a variável global 'tipoAtual' que já está definida no seu código
+    // Se ela estiver vazia, use o parâmetro da URL como fallback
     const params = new URLSearchParams(window.location.search);
-    const tipo = params.get('tipo') || 'pendencia';
+    const tipo = tipoAtual || params.get('tipo') || 'pendencia';
     window.location.href = `index.html?tipo=${tipo}`;
 }
 
@@ -948,9 +950,6 @@ async function carregarControleFormulario() {
     if (thColaborador) thColaborador.style.display = isAditivoFisico ? '' : 'none';
     if (thEncarregado) thEncarregado.style.display = isAditivoFisico ? '' : 'none';
     
-    document.querySelectorAll('.col-pendente-aditivo').forEach(el => {
-        if (el) el.style.display = isPendencia ? '' : 'none';
-    });
     document.querySelectorAll('.col-data-baixa').forEach(el => {
         if (el) el.style.display = isPendencia ? '' : 'none';
     });
@@ -967,14 +966,12 @@ async function carregarControleFormulario() {
         if (el) el.style.display = isPendencia ? '' : 'none';
     });
     
-    const thPendenteAditivo = document.getElementById('thPendenteAditivo');
     const thDataBaixa = document.getElementById('thDataBaixa');
     const thBaixado = document.getElementById('thBaixado');
     const thMotivo = document.getElementById('thMotivo');
     const thColaboradorItem = document.getElementById('thColaboradorItem');
     const thObservacaoItem = document.getElementById('thObservacaoItem');
     
-    if (thPendenteAditivo) thPendenteAditivo.style.display = isPendencia ? '' : 'none';
     if (thDataBaixa) thDataBaixa.style.display = isPendencia ? '' : 'none';
     if (thBaixado) thBaixado.style.display = isPendencia ? '' : 'none';
     if (thMotivo) thMotivo.style.display = isPendencia ? '' : 'none';
@@ -1532,7 +1529,6 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
         'item-quantidade': 'quantidade',
         'item-motivo': 'motivo',
         'item-observacao-item': 'observacao_item',
-        'item-pendente-aditivo': 'pendente_aditivo',
         'item-baixado': 'baixado',
         'item-data-baixa': 'data_baixa',
         'item-status-aditivo': 'status_aditivo',
@@ -1813,25 +1809,6 @@ function adicionarBotoesAcoesMassa() {
         );
         grupoMotivo.appendChild(motivoContainer);
         container.appendChild(grupoMotivo);
-        
-        container.appendChild(criarSeparadorPequeno());
-        
-        const grupoPendente = document.createElement('span');
-        grupoPendente.style.cssText = `
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        `;
-        const pendenteContainer = criarSelectMassa(
-            '📌 Pend. Aditivo:',
-            'item-pendente-aditivo',
-            ['', 'SIM', 'NÃO'],
-            function(valor) {
-                aplicarEmMassaSelect('item-pendente-aditivo', valor);
-            }
-        );
-        grupoPendente.appendChild(pendenteContainer);
-        container.appendChild(grupoPendente);
         
         container.appendChild(criarSeparadorPequeno());
         
@@ -2341,13 +2318,6 @@ function adicionarLinhaItem() {
     
     if (isPendencia) {
         html += `
-            <td class="col-pendente-aditivo">
-                <select class="item-pendente-aditivo">
-                    <option value="">-</option>
-                    <option value="SIM">SIM</option>
-                    <option value="NÃO">NÃO</option>
-                </select>
-            </td>
             <td class="col-data-baixa">
                 <input type="date" class="item-data-baixa">
             </td>
@@ -2533,13 +2503,6 @@ function carregarItens(itens) {
             const colaboradorValue = item.colaborador || nomeUsuario;
             
             html += `
-                <td class="col-pendente-aditivo">
-                    <select class="item-pendente-aditivo" ${isFinalizado ? 'disabled' : ''}>
-                        <option value="" ${item.pendente_aditivo === '' ? 'selected' : ''}>-</option>
-                        <option value="SIM" ${item.pendente_aditivo === 'SIM' ? 'selected' : ''}>SIM</option>
-                        <option value="NÃO" ${item.pendente_aditivo === 'NÃO' ? 'selected' : ''}>NÃO</option>
-                    </select>
-                </td>
                 <td class="col-data-baixa">
                     <input type="date" class="item-data-baixa" value="${item.data_baixa || ''}" ${isFinalizado ? 'disabled' : ''}>
                 </td>
@@ -2727,14 +2690,12 @@ function getItensFormulario() {
             }
             
             if (isPendencia) {
-                const pendenteAditivo = row.querySelector('.item-pendente-aditivo');
                 const dataBaixa = row.querySelector('.item-data-baixa');
                 const baixado = row.querySelector('.item-baixado');
                 const motivo = row.querySelector('.item-motivo');
                 const colaboradorItem = row.querySelector('.item-colaborador-item');
                 const observacaoItem = row.querySelector('.item-observacao-item');
                 
-                item.pendente_aditivo = pendenteAditivo?.value || '';
                 item.data_baixa = dataBaixa?.value || '';
                 item.baixado = baixado?.value || 'NÃO';
                 item.motivo = motivo?.value || '';
@@ -2948,8 +2909,9 @@ async function finalizarControle() {
         mostrarToast('✅ Finalizado com sucesso!', 'sucesso');
         await carregarControleFormulario();
         
+        // Redireciona para o painel após 2 segundos, mantendo a aba correta
         setTimeout(() => {
-            window.location.href = 'index.html';
+            voltarParaPainel();
         }, 2000);
         
     } catch (error) {
