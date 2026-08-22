@@ -7,6 +7,115 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/controles-dcmd.css">
+    <style>
+        /* Estilos específicos para os radio buttons menores */
+        .radio-mgm-group {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            padding: 6px 0;
+            flex-wrap: wrap;
+        }
+        .radio-mgm-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.85em;
+            color: #2D3748;
+        }
+        .radio-mgm-group input[type="radio"] {
+            width: 14px;
+            height: 14px;
+            min-width: 14px;
+            min-height: 14px;
+            accent-color: #4299E1;
+            cursor: pointer;
+            margin: 0;
+        }
+        .radio-mgm-group .radio-label-small {
+            font-size: 0.7em;
+            color: #718096;
+            font-weight: 400;
+        }
+        
+        /* Estilos para a tabela de documentos múltiplos */
+        .documentos-table-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 50px;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 6px 0;
+            font-weight: 600;
+            font-size: 0.75em;
+            color: #4A5568;
+            border-bottom: 2px solid #E2E8F0;
+        }
+        .linha-documento-multiplo {
+            display: grid;
+            grid-template-columns: 1fr 1fr 50px;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 6px;
+            background: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #E2E8F0;
+        }
+        .linha-documento-multiplo input {
+            padding: 5px 8px;
+            border: 2px solid #E2E8F0;
+            border-radius: 6px;
+            font-size: 0.85em;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 30px;
+        }
+        .linha-documento-multiplo input:focus {
+            border-color: #4299E1;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        .btn-remover-doc {
+            background: #FFF5F5;
+            color: #FC8181;
+            border: 1px solid #FED7D7;
+            border-radius: 6px;
+            padding: 3px 8px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            width: 100%;
+            min-height: 28px;
+            text-align: center;
+        }
+        .btn-remover-doc:hover {
+            background: #FC8181;
+            color: white;
+            border-color: #FC8181;
+        }
+        .btn-add-doc {
+            background: #48BB78;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-add-doc:hover {
+            background: #38A169;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+        }
+    </style>
 </head>
 <body>
     <!-- Botões de navegação -->
@@ -27,7 +136,7 @@
                 <h1 class="title">📋 Formulário Controle DCMD</h1>
             </div>
             
-            <!-- Botão Voltar - Corrigido para voltar com a aba correta -->
+            <!-- Botão Voltar -->
             <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
                 <button onclick="voltarParaPainel()" class="btn-voltar-home">⬅ Voltar ao Painel</button>
             </div>
@@ -75,8 +184,12 @@
                                 <input type="text" id="formObra" placeholder="Digite o número da obra" required>
                             </div>
                             <div class="form-group">
-                                <label for="formData">📅 Data de Programação *</label>
-                                <input type="date" id="formData" required>
+                                <label for="formTipoMovimento">📋 Tipo de Movimento *</label>
+                                <select id="formTipoMovimento" required>
+                                    <option value="RMA">RMA - Controle de Movimentações</option>
+                                    <option value="DMA">DMA - Controle de Movimentações DMA</option>
+                                    <option value="DMA_SUCATA">DMA SUCATA - Controle de Movimentações Sucata</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -275,23 +388,66 @@
                     </div>
 
                     <!-- ============================================ -->
-                    <!-- CAMPOS ESPECÍFICOS: MOVIMENTO               -->
+                    <!-- CAMPOS ESPECÍFICOS: MOVIMENTO (CORRIGIDO)    -->
                     <!-- ============================================ -->
                     <div id="camposMovimento" style="display:none;">
                         <hr>
                         <h3>📄 Dados da Movimentação</h3>
+                        
+                        <!-- Tipo de MGM - Radio buttons menores -->
                         <div class="form-row">
-                            <div class="form-group">
-                                <label for="formTipoMovimento">📋 Tipo de Movimento *</label>
-                                <select id="formTipoMovimento" required>
-                                    <option value="RMA">RMA - Controle de Movimentações</option>
-                                    <option value="DMA">DMA - Controle de Movimentações DMA</option>
-                                    <option value="DMA_SUCATA">DMA SUCATA - Controle de Movimentações Sucata</option>
-                                </select>
+                            <div class="form-group" style="grid-column: 1 / -1; padding: 10px 18px;">
+                                <label style="font-size: 0.85em; margin-bottom: 4px;">🔄 Tipo de MGM</label>
+                                <div class="radio-mgm-group">
+                                    <label>
+                                        <input type="radio" name="tipoMgm" value="UNICO" checked onchange="toggleTipoMgm()">
+                                        📌 MGM Única
+                                        <span class="radio-label-small">(1 documento = 1 data)</span>
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="tipoMgm" value="MULTIPLO" onchange="toggleTipoMgm()">
+                                        📌 Múltiplas MGM
+                                        <span class="radio-label-small">(vários documentos/datas)</span>
+                                    </label>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="formCodMovimentacao">🔢 Cód. Movimentação</label>
-                                <input type="text" id="formCodMovimentacao" placeholder="Digite o código da movimentação">
+                        </div>
+
+                        <!-- Modo Único - campo de data simples -->
+                        <div id="campoDataUnica">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="formCodMovimentacao">🔢 Cód. Movimentação *</label>
+                                    <input type="text" id="formCodMovimentacao" placeholder="Digite o código da movimentação" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="formData">📅 Data de Programação *</label>
+                                    <input type="date" id="formData" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Seção de Documentos para Múltiplas MGM -->
+                        <div id="secaoDocumentosMultiplos" style="display:none; margin-top: 10px;">
+                            <div class="form-group" style="background: #F0FFF4; border-color: #9AE6B4; padding: 12px 16px;">
+                                <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #276749; font-size: 0.9em;">
+                                    📄 Documentos e Datas (Múltiplas MGM)
+                                    <span style="font-size: 0.7em; font-weight: 400; color: #48BB78;">Cada linha será um movimento</span>
+                                </label>
+                                
+                                <div class="documentos-table-header">
+                                    <span>📄 Nº Documento</span>
+                                    <span>📅 Data de Programação</span>
+                                    <span style="text-align: center;">Ações</span>
+                                </div>
+                                
+                                <div id="containerDocumentosMultiplos">
+                                    <!-- Linhas serão adicionadas via JavaScript -->
+                                </div>
+                                
+                                <button type="button" class="btn-add-doc" onclick="adicionarLinhaDocumentoMultiplo()">
+                                    ➕ Adicionar Documento
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -311,6 +467,7 @@
                                         <th style="width:4%;">UND</th>
                                         <th style="width:6%;">QTD</th>
                                         <!-- Pendência de Baixa -->
+                                        <th style="width:7%;" id="thPendenteAditivo" style="display:none;">Pend. Aditivo</th>
                                         <th style="width:9%;" id="thDataBaixa" style="display:none;">Data Baixa</th>
                                         <th style="width:7%;" id="thBaixado" style="display:none;">Baixado?</th>
                                         <th style="width:10%;" id="thMotivo" style="display:none;">Motivo</th>
@@ -334,6 +491,14 @@
                                         <td><input type="text" class="item-descricao input-descricao" readonly placeholder="Descrição"></td>
                                         <td><input type="text" class="item-unidade" readonly placeholder="Unid."></td>
                                         <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0"></td>
+                                        <!-- Pendência de Baixa -->
+                                        <td class="col-pendente-aditivo" style="display:none;">
+                                            <select class="item-pendente-aditivo">
+                                                <option value="">-</option>
+                                                <option value="SIM">SIM</option>
+                                                <option value="NÃO">NÃO</option>
+                                            </select>
+                                        </td>
                                         <td class="col-data-baixa" style="display:none;">
                                             <input type="date" class="item-data-baixa">
                                         </td>

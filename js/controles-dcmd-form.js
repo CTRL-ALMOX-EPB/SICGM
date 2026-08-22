@@ -81,6 +81,8 @@ let tipoAtual = 'pendencia';
 let materiaisCache = {};
 let popupElement = null;
 let overlayElement = null;
+let linhasDocumentosMultiplos = [];
+let tipoMgmSelecionado = 'UNICO';
 
 // ============================================
 // FUNÇÕES DE UTILIDADE
@@ -283,7 +285,6 @@ function buscarMaterialArquivo(codigo) {
 function verificarCodigoDuplicado(codigo, linhaAtual) {
     if (!codigo || codigo.trim() === '') return false;
     
-    // Se for aditivo sistêmico, NÃO bloqueia duplicados
     if (tipoAtual === 'aditivo') {
         return false;
     }
@@ -308,7 +309,6 @@ function verificarCodigoDuplicado(codigo, linhaAtual) {
 }
 
 function marcarCampoDuplicado(input, isDuplicado) {
-    // Se for aditivo sistêmico, mostra apenas um aviso visual leve
     const isAditivoSistemico = tipoAtual === 'aditivo';
     
     if (isDuplicado && !isAditivoSistemico) {
@@ -411,7 +411,6 @@ function verificarECorrigirDuplicados() {
     const linhas = document.querySelectorAll('#itemsBody tr');
     let temDuplicado = false;
     
-    // Primeiro, mapeia todos os códigos e suas linhas
     linhas.forEach(linha => {
         const codigoInput = linha.querySelector('.item-codigo');
         if (!codigoInput) return;
@@ -428,7 +427,6 @@ function verificarECorrigirDuplicados() {
         codigosMap.get(codigo).push(codigoInput);
     });
     
-    // Depois, marca TODOS os duplicados
     codigosMap.forEach((inputs) => {
         if (inputs.length > 1) {
             temDuplicado = true;
@@ -446,7 +444,6 @@ function verificarECorrigirDuplicados() {
 }
 
 function validarDuplicadosAntesDeSalvar() {
-    // Se for aditivo sistêmico, NÃO bloqueia duplicados
     if (tipoAtual === 'aditivo') {
         const codigosMap = new Map();
         const linhas = document.querySelectorAll('#itemsBody tr');
@@ -467,7 +464,6 @@ function validarDuplicadosAntesDeSalvar() {
             codigosMap.get(codigo).push(codigoInput);
         });
         
-        // Marca duplicados visualmente mas não bloqueia
         codigosMap.forEach((inputs) => {
             if (inputs.length > 1) {
                 inputs.forEach(input => {
@@ -483,7 +479,6 @@ function validarDuplicadosAntesDeSalvar() {
         return false;
     }
     
-    // Para outros tipos, bloqueia duplicados
     const codigosMap = new Map();
     const linhas = document.querySelectorAll('#itemsBody tr');
     let duplicadoEncontrado = false;
@@ -502,7 +497,6 @@ function validarDuplicadosAntesDeSalvar() {
         codigosMap.get(codigo).push(codigoInput);
     });
     
-    // Marca todos os duplicados
     codigosMap.forEach((inputs, codigo) => {
         if (inputs.length > 1) {
             duplicadoEncontrado = true;
@@ -525,7 +519,6 @@ function validarDuplicadosAntesDeSalvar() {
 }
 
 function validarDuplicadosNoPaste(linhas, elementoAlvo) {
-    // Pega todos os códigos existentes (incluindo os que já estão na tabela)
     const codigosExistentes = [];
     const linhasExistentes = document.querySelectorAll('#itemsBody tr');
     
@@ -537,7 +530,6 @@ function validarDuplicadosNoPaste(linhas, elementoAlvo) {
         }
     });
     
-    // Verifica duplicados entre os novos códigos e os existentes
     const duplicados = [];
     const novosCodigos = [];
     
@@ -545,7 +537,6 @@ function validarDuplicadosNoPaste(linhas, elementoAlvo) {
         const codigo = linha.trim().toUpperCase();
         if (!codigo) return;
         
-        // Verifica se já existe ou se já foi adicionado na mesma colagem
         if (codigosExistentes.includes(codigo) || novosCodigos.includes(codigo)) {
             if (!duplicados.includes(codigo)) {
                 duplicados.push(codigo);
@@ -555,9 +546,7 @@ function validarDuplicadosNoPaste(linhas, elementoAlvo) {
         }
     });
     
-    // Se encontrou duplicados, marca TODOS os campos duplicados
     if (duplicados.length > 0) {
-        // Marca os campos existentes que estão duplicados
         linhasExistentes.forEach(linha => {
             const codigoInput = linha.querySelector('.item-codigo');
             if (!codigoInput) return;
@@ -567,7 +556,6 @@ function validarDuplicadosNoPaste(linhas, elementoAlvo) {
             }
         });
         
-        // Marca os campos que serão colados (se já existirem na tabela)
         setTimeout(() => {
             verificarECorrigirDuplicados();
         }, 100);
@@ -598,7 +586,6 @@ function handleValidacaoDuplicado(e) {
         return;
     }
     
-    // Atualiza a validação de todos os campos
     verificarECorrigirDuplicados();
 }
 
@@ -612,7 +599,6 @@ function handleValidacaoDuplicadoInput(e) {
         return;
     }
     
-    // Atualiza a validação de todos os campos
     verificarECorrigirDuplicados();
 }
 
@@ -635,7 +621,6 @@ async function buscarMaterial(input) {
     
     const isAditivoSistemico = tipoAtual === 'aditivo';
     
-    // Primeiro, verifica se o código existe no arquivo de materiais
     const material = buscarMaterialArquivo(input.value);
     
     if (!material) {
@@ -650,7 +635,6 @@ async function buscarMaterial(input) {
     descInput.value = material.descricao || '';
     undInput.value = material.unidade || 'UN';
     
-    // Verifica duplicados (apenas para não-aditivo sistêmico)
     const isDuplicado = verificarCodigoDuplicado(input.value, row);
     
     if (isDuplicado && !isAditivoSistemico) {
@@ -665,7 +649,6 @@ async function buscarMaterial(input) {
         return;
     }
     
-    // Se chegou aqui, não é duplicado
     marcarCampoDuplicado(input, false);
     verificarECorrigirDuplicados();
     
@@ -679,10 +662,8 @@ window.buscarMaterial = buscarMaterial;
 // ============================================
 
 function voltarParaPainel() {
-    // Use a variável global 'tipoAtual' que já está definida no seu código
-    // Se ela estiver vazia, use o parâmetro da URL como fallback
     const params = new URLSearchParams(window.location.search);
-    const tipo = tipoAtual || params.get('tipo') || 'pendencia';
+    const tipo = params.get('tipo') || 'pendencia';
     window.location.href = `index.html?tipo=${tipo}`;
 }
 
@@ -837,6 +818,650 @@ function atualizarNavegacaoSelects() {
     setTimeout(() => {
         configurarNavegacaoSelectPorNumero();
     }, 100);
+}
+
+// ============================================
+// FUNÇÕES PARA MÚLTIPLOS DOCUMENTOS
+// ============================================
+
+function toggleTipoMgm() {
+    const radios = document.querySelectorAll('input[name="tipoMgm"]');
+    let selecionado = 'UNICO';
+    radios.forEach(r => {
+        if (r.checked) selecionado = r.value;
+    });
+    
+    tipoMgmSelecionado = selecionado;
+    
+    const campoDataUnica = document.getElementById('campoDataUnica');
+    const secaoDocumentosMultiplos = document.getElementById('secaoDocumentosMultiplos');
+    
+    if (selecionado === 'UNICO') {
+        if (campoDataUnica) campoDataUnica.style.display = 'block';
+        if (secaoDocumentosMultiplos) secaoDocumentosMultiplos.style.display = 'none';
+        
+        linhasDocumentosMultiplos = [];
+        const container = document.getElementById('containerDocumentosMultiplos');
+        if (container) container.innerHTML = '';
+        
+    } else {
+        if (campoDataUnica) campoDataUnica.style.display = 'none';
+        if (secaoDocumentosMultiplos) secaoDocumentosMultiplos.style.display = 'block';
+        
+        const container = document.getElementById('containerDocumentosMultiplos');
+        const linhasExistentes = container ? container.querySelectorAll('.linha-documento-multiplo') : [];
+        
+        if (linhasExistentes.length === 0) {
+            adicionarLinhaDocumentoMultiplo();
+        }
+        
+        setTimeout(() => {
+            configurarNavegacaoDocumentosMultiplos();
+            configurarPasteDocumentosMultiplos();
+        }, 100);
+    }
+}
+
+window.toggleTipoMgm = toggleTipoMgm;
+
+function adicionarLinhaDocumentoMultiplo(codigo = '', data = '') {
+    const container = document.getElementById('containerDocumentosMultiplos');
+    if (!container) return;
+    
+    const id = Date.now() + Math.random();
+    const linha = {
+        id: id,
+        codigo: codigo,
+        data: data
+    };
+    linhasDocumentosMultiplos.push(linha);
+    
+    const div = document.createElement('div');
+    div.className = 'linha-documento-multiplo';
+    div.dataset.id = id;
+    
+    div.innerHTML = `
+        <input type="text" class="input-doc-codigo" 
+               placeholder="Ex: 2601509345"
+               value="${codigo}"
+               data-id="${id}">
+        <input type="date" class="input-doc-data" 
+               value="${data}"
+               data-id="${id}">
+        <button type="button" class="btn-remover-doc" onclick="removerLinhaDocumentoMultiplo(${id})" title="Remover linha">
+            ✕
+        </button>
+    `;
+    
+    container.appendChild(div);
+    
+    setTimeout(() => {
+        configurarNavegacaoDocumentosMultiplos();
+        configurarPasteDocumentosMultiplos();
+        
+        const primeiroInput = div.querySelector('.input-doc-codigo');
+        if (primeiroInput && !codigo) {
+            setTimeout(() => primeiroInput.focus(), 100);
+        }
+    }, 50);
+}
+
+window.adicionarLinhaDocumentoMultiplo = adicionarLinhaDocumentoMultiplo;
+
+function atualizarDocumentoMultiplo(id, campo, valor) {
+    const linha = linhasDocumentosMultiplos.find(l => l.id === id);
+    if (linha) {
+        linha[campo] = valor;
+    }
+}
+
+window.atualizarDocumentoMultiplo = atualizarDocumentoMultiplo;
+
+function removerLinhaDocumentoMultiplo(id) {
+    if (linhasDocumentosMultiplos.length <= 1) {
+        mostrarToast('⚠️ É necessário ter pelo menos um documento', 'aviso');
+        return;
+    }
+    
+    linhasDocumentosMultiplos = linhasDocumentosMultiplos.filter(l => l.id !== id);
+    
+    const container = document.getElementById('containerDocumentosMultiplos');
+    if (container) {
+        const div = container.querySelector(`.linha-documento-multiplo[data-id="${id}"]`);
+        if (div) div.remove();
+    }
+    
+    setTimeout(() => {
+        configurarNavegacaoDocumentosMultiplos();
+        configurarPasteDocumentosMultiplos();
+    }, 50);
+}
+
+window.removerLinhaDocumentoMultiplo = removerLinhaDocumentoMultiplo;
+
+function obterDocumentosMultiplos() {
+    const linhas = document.querySelectorAll('#containerDocumentosMultiplos .linha-documento-multiplo');
+    const documentos = [];
+    
+    linhas.forEach(linha => {
+        const codigoInput = linha.querySelector('.input-doc-codigo');
+        const dataInput = linha.querySelector('.input-doc-data');
+        
+        const codigo = codigoInput ? codigoInput.value.trim() : '';
+        const data = dataInput ? dataInput.value.trim() : '';
+        
+        if (codigo && data) {
+            documentos.push({ codigo, data });
+        }
+    });
+    
+    return documentos;
+}
+
+window.obterDocumentosMultiplos = obterDocumentosMultiplos;
+
+function carregarDocumentosMultiplos(dados) {
+    linhasDocumentosMultiplos = [];
+    const container = document.getElementById('containerDocumentosMultiplos');
+    if (container) container.innerHTML = '';
+    
+    if (dados.tipo_mgm === 'MULTIPLO' && dados.documentos) {
+        dados.documentos.forEach(doc => {
+            if (doc.codigo || doc.data) {
+                const id = Date.now() + Math.random();
+                linhasDocumentosMultiplos.push({ 
+                    id, 
+                    codigo: doc.codigo || '', 
+                    data: doc.data || '' 
+                });
+                
+                const div = document.createElement('div');
+                div.className = 'linha-documento-multiplo';
+                div.dataset.id = id;
+                div.innerHTML = `
+                    <input type="text" class="input-doc-codigo" 
+                           placeholder="Ex: 2601509345"
+                           value="${doc.codigo || ''}"
+                           data-id="${id}">
+                    <input type="date" class="input-doc-data" 
+                           value="${doc.data || ''}"
+                           data-id="${id}">
+                    <button type="button" class="btn-remover-doc" onclick="removerLinhaDocumentoMultiplo(${id})" title="Remover linha">
+                        ✕
+                    </button>
+                `;
+                container.appendChild(div);
+            }
+        });
+    }
+    
+    if (linhasDocumentosMultiplos.length === 0) {
+        adicionarLinhaDocumentoMultiplo();
+    }
+    
+    setTimeout(() => {
+        configurarNavegacaoDocumentosMultiplos();
+        configurarPasteDocumentosMultiplos();
+    }, 100);
+}
+
+// ============================================
+// NAVEGAÇÃO PARA DOCUMENTOS MÚLTIPLOS
+// ============================================
+
+function configurarNavegacaoDocumentosMultiplos() {
+    const inputs = document.querySelectorAll('#containerDocumentosMultiplos input:not([readonly]):not([disabled])');
+    const botoes = document.querySelectorAll('.btn-remover-doc');
+    
+    inputs.forEach(input => {
+        input.removeEventListener('keydown', handleDocumentoTecladoGlobal);
+        input.addEventListener('keydown', handleDocumentoTecladoGlobal);
+    });
+    
+    botoes.forEach(btn => {
+        btn.removeEventListener('keydown', handleDocumentoTecladoGlobal);
+        btn.addEventListener('keydown', handleDocumentoTecladoGlobal);
+    });
+}
+
+function handleDocumentoTecladoGlobal(e) {
+    const target = e.target;
+    const key = e.key;
+    
+    const container = document.getElementById('containerDocumentosMultiplos');
+    if (!container || !container.contains(target)) return;
+    
+    if (key === 'Enter' || key === 'ArrowDown' || key === 'ArrowUp' || key === 'Tab') {
+        const isDocInput = target.classList.contains('input-doc-codigo') || 
+                          target.classList.contains('input-doc-data');
+        if (!isDocInput) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const isCodigo = target.classList.contains('input-doc-codigo');
+        const isData = target.classList.contains('input-doc-data');
+        const row = target.closest('.linha-documento-multiplo');
+        if (!row) return;
+        
+        const rows = container.querySelectorAll('.linha-documento-multiplo');
+        const currentIndex = Array.from(rows).indexOf(row);
+        
+        if (key === 'Enter') {
+            if (isCodigo) {
+                const dataInput = row.querySelector('.input-doc-data');
+                if (dataInput) {
+                    dataInput.focus();
+                    dataInput.select();
+                    return;
+                }
+            }
+            
+            if (isData) {
+                const nextRow = rows[currentIndex + 1];
+                if (nextRow) {
+                    const nextCodigo = nextRow.querySelector('.input-doc-codigo');
+                    if (nextCodigo) {
+                        nextCodigo.focus();
+                        nextCodigo.select();
+                        return;
+                    }
+                } else {
+                    const codigoAtual = row.querySelector('.input-doc-codigo')?.value || '';
+                    const dataAtual = row.querySelector('.input-doc-data')?.value || '';
+                    if (codigoAtual && dataAtual) {
+                        adicionarLinhaDocumentoMultiplo();
+                        setTimeout(() => {
+                            const novasRows = container.querySelectorAll('.linha-documento-multiplo');
+                            const ultimaRow = novasRows[novasRows.length - 1];
+                            if (ultimaRow) {
+                                const novoCodigo = ultimaRow.querySelector('.input-doc-codigo');
+                                if (novoCodigo) {
+                                    novoCodigo.focus();
+                                    novoCodigo.select();
+                                }
+                            }
+                        }, 100);
+                    }
+                }
+            }
+            return;
+        }
+        
+        if (key === 'ArrowDown' || key === 'ArrowUp') {
+            const direction = key === 'ArrowDown' ? 1 : -1;
+            const targetIndex = currentIndex + direction;
+            
+            if (targetIndex < 0 || targetIndex >= rows.length) return;
+            
+            const targetRow = rows[targetIndex];
+            let targetInput = null;
+            
+            if (isCodigo) {
+                targetInput = targetRow.querySelector('.input-doc-codigo');
+            } else if (isData) {
+                targetInput = targetRow.querySelector('.input-doc-data');
+            }
+            
+            if (!targetInput) {
+                targetInput = targetRow.querySelector('input:not([readonly]):not([disabled])');
+            }
+            
+            if (targetInput) {
+                targetInput.focus();
+                if (targetInput.type === 'text' || targetInput.type === 'date') {
+                    targetInput.select();
+                }
+            }
+            return;
+        }
+        
+        if (key === 'Tab') {
+            if (isCodigo && !e.shiftKey) {
+                const dataInput = row.querySelector('.input-doc-data');
+                if (dataInput) {
+                    dataInput.focus();
+                    dataInput.select();
+                }
+                return;
+            }
+            
+            if (isData && !e.shiftKey) {
+                const nextRow = rows[currentIndex + 1];
+                if (nextRow) {
+                    const nextCodigo = nextRow.querySelector('.input-doc-codigo');
+                    if (nextCodigo) {
+                        nextCodigo.focus();
+                        nextCodigo.select();
+                    }
+                } else {
+                    const codigoAtual = row.querySelector('.input-doc-codigo')?.value || '';
+                    const dataAtual = row.querySelector('.input-doc-data')?.value || '';
+                    if (codigoAtual && dataAtual) {
+                        adicionarLinhaDocumentoMultiplo();
+                        setTimeout(() => {
+                            const novasRows = container.querySelectorAll('.linha-documento-multiplo');
+                            const ultimaRow = novasRows[novasRows.length - 1];
+                            if (ultimaRow) {
+                                const novoCodigo = ultimaRow.querySelector('.input-doc-codigo');
+                                if (novoCodigo) {
+                                    novoCodigo.focus();
+                                    novoCodigo.select();
+                                }
+                            }
+                        }, 100);
+                    }
+                }
+                return;
+            }
+            
+            if (isCodigo && e.shiftKey) {
+                const btnRemover = row.querySelector('.btn-remover-doc');
+                if (btnRemover) {
+                    btnRemover.focus();
+                }
+                return;
+            }
+            
+            if (isData && e.shiftKey) {
+                const codigoInput = row.querySelector('.input-doc-codigo');
+                if (codigoInput) {
+                    codigoInput.focus();
+                    codigoInput.select();
+                }
+                return;
+            }
+            
+            return;
+        }
+    }
+}
+
+// ============================================
+// BULK PASTE PARA DOCUMENTOS MÚLTIPLOS
+// ============================================
+
+function configurarPasteDocumentosMultiplos() {
+    const codigos = document.querySelectorAll('.input-doc-codigo');
+    
+    codigos.forEach(el => {
+        if (el._pasteConfigurado) return;
+        el._pasteConfigurado = true;
+        
+        el.removeEventListener('paste', handleDocumentoPasteGlobal);
+        el.addEventListener('paste', handleDocumentoPasteGlobal);
+    });
+}
+
+function handleDocumentoPasteGlobal(e) {
+    const target = e.target;
+    if (!target.classList.contains('input-doc-codigo')) return;
+    
+    const dados = e.clipboardData || window.clipboardData;
+    if (!dados) return;
+    
+    const texto = dados.getData('text/plain');
+    if (!texto || texto.trim() === '') return;
+    
+    const linhas = texto.split('\n').filter(line => line.trim() !== '');
+    
+    if (linhas.length <= 1) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    processarPasteDocumentosMultiplos(linhas, target);
+}
+
+function processarPasteDocumentosMultiplos(linhas, elementoAlvo) {
+    const container = document.getElementById('containerDocumentosMultiplos');
+    if (!container) return;
+    
+    const rowAtual = elementoAlvo.closest('.linha-documento-multiplo');
+    const rows = container.querySelectorAll('.linha-documento-multiplo');
+    let currentIndex = Array.from(rows).indexOf(rowAtual);
+    
+    const codigoAtual = rowAtual.querySelector('.input-doc-codigo')?.value || '';
+    const dataAtual = rowAtual.querySelector('.input-doc-data')?.value || '';
+    const linhaVazia = !codigoAtual && !dataAtual;
+    
+    let startIndex = linhaVazia ? currentIndex : currentIndex + 1;
+    
+    if (!linhaVazia) {
+        adicionarLinhaDocumentoMultiplo();
+        setTimeout(() => {
+            processarPasteDocumentosLinhas(linhas, startIndex);
+        }, 50);
+    } else {
+        processarPasteDocumentosLinhas(linhas, startIndex);
+    }
+}
+
+function processarPasteDocumentosLinhas(linhas, startIndex) {
+    const container = document.getElementById('containerDocumentosMultiplos');
+    let rows = container.querySelectorAll('.linha-documento-multiplo');
+    let index = startIndex;
+    let linhasProcessadas = 0;
+    
+    const hoje = new Date();
+    const dataAtual = hoje.toISOString().split('T')[0];
+    
+    const mesesAbreviados = {
+        'jan': '01', 'fev': '02', 'mar': '03', 'abr': '04',
+        'mai': '05', 'jun': '06', 'jul': '07', 'ago': '08',
+        'set': '09', 'out': '10', 'nov': '11', 'dez': '12'
+    };
+    
+    function converterData(dataStr) {
+        if (!dataStr) return null;
+        
+        dataStr = dataStr.trim().toLowerCase();
+        
+        const dataNumMatch = dataStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+        if (dataNumMatch) {
+            const dia = dataNumMatch[1].padStart(2, '0');
+            const mes = dataNumMatch[2].padStart(2, '0');
+            let ano = dataNumMatch[3];
+            if (ano.length === 2) ano = '20' + ano;
+            return `${ano}-${mes}-${dia}`;
+        }
+        
+        const dataAbrevMatch = dataStr.match(/^(\d{1,2})\/([a-z]{3})(?:\/(\d{2,4}))?$/);
+        if (dataAbrevMatch) {
+            const dia = dataAbrevMatch[1].padStart(2, '0');
+            const mesAbrev = dataAbrevMatch[2];
+            const mes = mesesAbreviados[mesAbrev];
+            if (mes) {
+                let ano = dataAbrevMatch[3] || hoje.getFullYear().toString();
+                if (ano.length === 2) ano = '20' + ano;
+                return `${ano}-${mes}-${dia}`;
+            }
+        }
+        
+        const dataAbrevMatch2 = dataStr.match(/^([a-z]{3})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+        if (dataAbrevMatch2) {
+            const mesAbrev = dataAbrevMatch2[1];
+            const dia = dataAbrevMatch2[2].padStart(2, '0');
+            const mes = mesesAbreviados[mesAbrev];
+            if (mes) {
+                let ano = dataAbrevMatch2[3] || hoje.getFullYear().toString();
+                if (ano.length === 2) ano = '20' + ano;
+                return `${ano}-${mes}-${dia}`;
+            }
+        }
+        
+        const dataIsoMatch = dataStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (dataIsoMatch) {
+            return dataStr;
+        }
+        
+        const dataExtensoMatch = dataStr.match(/^(\d{1,2})\s*de\s*([a-z]+)\s*de\s*(\d{2,4})$/i);
+        if (dataExtensoMatch) {
+            const dia = dataExtensoMatch[1].padStart(2, '0');
+            const mesExtenso = dataExtensoMatch[2].toLowerCase();
+            const mesesCompletos = {
+                'janeiro': '01', 'fevereiro': '02', 'março': '03', 'abril': '04',
+                'maio': '05', 'junho': '06', 'julho': '07', 'agosto': '08',
+                'setembro': '09', 'outubro': '10', 'novembro': '11', 'dezembro': '12'
+            };
+            const mes = mesesCompletos[mesExtenso] || mesesAbreviados[mesExtenso.substring(0, 3)];
+            if (mes) {
+                let ano = dataExtensoMatch[3];
+                if (ano.length === 2) ano = '20' + ano;
+                return `${ano}-${mes}-${dia}`;
+            }
+        }
+        
+        const dataGenericaMatch = dataStr.match(/(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})/);
+        if (dataGenericaMatch) {
+            const dia = dataGenericaMatch[1].padStart(2, '0');
+            const mes = dataGenericaMatch[2].padStart(2, '0');
+            let ano = dataGenericaMatch[3];
+            if (ano.length === 2) ano = '20' + ano;
+            return `${ano}-${mes}-${dia}`;
+        }
+        
+        return dataAtual;
+    }
+    
+    for (let i = 0; i < linhas.length; i++) {
+        let valor = linhas[i].trim();
+        if (!valor) continue;
+        
+        let codigo = valor;
+        let data = '';
+        
+        const dataPatterns = [
+            /(\d{1,2}\/\d{1,2}\/\d{2,4})/,
+            /(\d{1,2}\/[a-z]{3}(?:\/\d{2,4})?)/i,
+            /([a-z]{3}\/\d{1,2}(?:\/\d{2,4})?)/i,
+            /(\d{4}-\d{2}-\d{2})/,
+            /(\d{1,2}\s*de\s*[a-z]+\s*de\s*\d{2,4})/i
+        ];
+        
+        let dataEncontrada = null;
+        
+        for (const pattern of dataPatterns) {
+            const match = valor.match(pattern);
+            if (match) {
+                dataEncontrada = match[1];
+                break;
+            }
+        }
+        
+        if (dataEncontrada) {
+            codigo = valor.replace(dataEncontrada, '').trim();
+            data = dataEncontrada;
+        }
+        
+        if (valor.includes('\t')) {
+            const partes = valor.split('\t');
+            codigo = partes[0].trim();
+            data = partes[1]?.trim() || '';
+        }
+        
+        if (!data) {
+            const palavras = codigo.split(' ');
+            for (let p = palavras.length - 1; p >= 0; p--) {
+                const testStr = palavras[p];
+                const testData = converterData(testStr);
+                if (testData && testData !== dataAtual) {
+                    data = testData;
+                    codigo = palavras.slice(0, p).join(' ');
+                    break;
+                }
+            }
+        }
+        
+        let dataConvertida = '';
+        if (data) {
+            const converted = converterData(data);
+            if (converted) {
+                dataConvertida = converted;
+            }
+        }
+        
+        if (!dataConvertida) {
+            dataConvertida = dataAtual;
+        }
+        
+        codigo = codigo.trim();
+        
+        rows = container.querySelectorAll('.linha-documento-multiplo');
+        if (index >= rows.length) {
+            const id = Date.now() + Math.random() + i;
+            linhasDocumentosMultiplos.push({
+                id: id,
+                codigo: codigo,
+                data: dataConvertida
+            });
+            
+            const div = document.createElement('div');
+            div.className = 'linha-documento-multiplo';
+            div.dataset.id = id;
+            div.innerHTML = `
+                <input type="text" class="input-doc-codigo" 
+                       placeholder="Ex: 2601509345"
+                       value="${codigo}"
+                       data-id="${id}">
+                <input type="date" class="input-doc-data" 
+                       value="${dataConvertida}"
+                       data-id="${id}">
+                <button type="button" class="btn-remover-doc" onclick="removerLinhaDocumentoMultiplo(${id})" title="Remover linha">
+                    ✕
+                </button>
+            `;
+            container.appendChild(div);
+        } else {
+            const row = rows[index];
+            const rowId = parseInt(row.dataset.id);
+            
+            const codigoInput = row.querySelector('.input-doc-codigo');
+            const dataInput = row.querySelector('.input-doc-data');
+            
+            if (codigoInput) {
+                codigoInput.value = codigo;
+                const linha = linhasDocumentosMultiplos.find(l => l.id === rowId);
+                if (linha) linha.codigo = codigo;
+            }
+            if (dataInput) {
+                dataInput.value = dataConvertida;
+                const linha = linhasDocumentosMultiplos.find(l => l.id === rowId);
+                if (linha) linha.data = dataConvertida;
+            }
+        }
+        
+        linhasProcessadas++;
+        index++;
+    }
+    
+    rows = container.querySelectorAll('.linha-documento-multiplo');
+    for (let i = rows.length - 1; i >= 0; i--) {
+        const row = rows[i];
+        const codigo = row.querySelector('.input-doc-codigo')?.value || '';
+        const data = row.querySelector('.input-doc-data')?.value || '';
+        if (!codigo && !data && i > 0) {
+            const rowId = parseInt(row.dataset.id);
+            linhasDocumentosMultiplos = linhasDocumentosMultiplos.filter(l => l.id !== rowId);
+            row.remove();
+        }
+    }
+    
+    setTimeout(() => {
+        configurarNavegacaoDocumentosMultiplos();
+        configurarPasteDocumentosMultiplos();
+        
+        const ultimaRow = container.querySelectorAll('.linha-documento-multiplo:last-child');
+        if (ultimaRow.length > 0) {
+            const ultimoCodigo = ultimaRow[0].querySelector('.input-doc-codigo');
+            if (ultimoCodigo) {
+                ultimoCodigo.focus();
+                ultimoCodigo.select();
+            }
+        }
+    }, 100);
+    
+    mostrarToast(`✅ ${linhasProcessadas} documentos colados com sucesso!`, 'sucesso');
 }
 
 // ============================================
@@ -1013,7 +1638,6 @@ async function carregarControleFormulario() {
             const formTipoAditivoFisico = document.getElementById('formTipoAditivoFisico');
             const formDataExecucao = document.getElementById('formDataExecucao');
             
-            // CORREÇÃO: Carrega o tipo do registro principal, não do item
             if (formTipoAditivoFisico) {
                 formTipoAditivoFisico.value = data.tipo || 'SAÍDA';
             }
@@ -1071,11 +1695,123 @@ async function carregarControleFormulario() {
             if (formObservacaoDevolucao) formObservacaoDevolucao.value = data.observacao || '';
         }
         
+        // ============================================
+        // MOVIMENTO - CORRIGIDO
+        // ============================================
         if (isMovimento) {
             const formTipoMovimento = document.getElementById('formTipoMovimento');
             const formCodMovimentacao = document.getElementById('formCodMovimentacao');
+            
             if (formTipoMovimento) formTipoMovimento.value = data.tipo_movimento || 'RMA';
-            if (formCodMovimentacao) formCodMovimentacao.value = data.cod_movimentacao || '';
+            
+            const tipoMgm = data.tipo_mgm || 'UNICO';
+            const radios = document.querySelectorAll('input[name="tipoMgm"]');
+            radios.forEach(r => {
+                r.checked = r.value === tipoMgm;
+            });
+            
+            const container = document.getElementById('containerDocumentosMultiplos');
+            if (container) container.innerHTML = '';
+            linhasDocumentosMultiplos = [];
+            
+            if (tipoMgm === 'MULTIPLO') {
+                let documentos = [];
+                
+                // 1. Propriedade 'documentos'
+                if (data.documentos && Array.isArray(data.documentos) && data.documentos.length > 0) {
+                    documentos = data.documentos;
+                    console.log('📋 documentos:', documentos);
+                }
+                // 2. Propriedade '_linhas'
+                else if (data._linhas && Array.isArray(data._linhas) && data._linhas.length > 0) {
+                    documentos = data._linhas;
+                    console.log('📋 _linhas:', documentos);
+                }
+                // 3. Propriedade 'datas_programacao'
+                else if (data.datas_programacao && Array.isArray(data.datas_programacao) && data.datas_programacao.length > 0) {
+                    const codMov = data.cod_movimentacao || '';
+                    documentos = data.datas_programacao.map(d => ({
+                        cod_movimentacao: codMov,
+                        data_programacao: d
+                    }));
+                    console.log('📋 datas_programacao:', documentos);
+                }
+                // 4. Se tem data_programacao única
+                else if (data.data_programacao) {
+                    const codMov = data.cod_movimentacao || '';
+                    documentos = [{
+                        cod_movimentacao: codMov,
+                        data_programacao: data.data_programacao
+                    }];
+                    console.log('📋 data única:', documentos);
+                }
+                // 5. Se tem cod_movimentacao
+                else if (data.cod_movimentacao) {
+                    const hoje = new Date().toISOString().split('T')[0];
+                    documentos = [{
+                        cod_movimentacao: data.cod_movimentacao,
+                        data_programacao: hoje
+                    }];
+                    console.log('📋 apenas código:', documentos);
+                }
+                
+                if (documentos.length > 0) {
+                    documentos.forEach(doc => {
+                        const codigo = doc.cod_movimentacao || doc.codigo || '';
+                        const dataDoc = doc.data_programacao || doc.data || '';
+                        
+                        if (codigo || dataDoc) {
+                            const id = Date.now() + Math.random();
+                            linhasDocumentosMultiplos.push({ id, codigo, data: dataDoc });
+                            
+                            const div = document.createElement('div');
+                            div.className = 'linha-documento-multiplo';
+                            div.dataset.id = id;
+                            div.innerHTML = `
+                                <input type="text" class="input-doc-codigo" 
+                                       placeholder="Ex: 2601509345"
+                                       value="${codigo}"
+                                       data-id="${id}">
+                                <input type="date" class="input-doc-data" 
+                                       value="${dataDoc}"
+                                       data-id="${id}">
+                                <button type="button" class="btn-remover-doc" onclick="removerLinhaDocumentoMultiplo(${id})" title="Remover linha">
+                                    ✕
+                                </button>
+                            `;
+                            container.appendChild(div);
+                        }
+                    });
+                }
+                
+                if (linhasDocumentosMultiplos.length === 0) {
+                    adicionarLinhaDocumentoMultiplo();
+                }
+                
+                const secao = document.getElementById('secaoDocumentosMultiplos');
+                if (secao) secao.style.display = 'block';
+                const campoDataUnica = document.getElementById('campoDataUnica');
+                if (campoDataUnica) campoDataUnica.style.display = 'none';
+                
+                if (formCodMovimentacao) formCodMovimentacao.value = '';
+                if (formData) formData.value = '';
+                
+            } else {
+                if (formCodMovimentacao) formCodMovimentacao.value = data.cod_movimentacao || '';
+                if (formData) formData.value = data.data_programacao || '';
+                
+                const secao = document.getElementById('secaoDocumentosMultiplos');
+                if (secao) secao.style.display = 'none';
+                const campoDataUnica = document.getElementById('campoDataUnica');
+                if (campoDataUnica) campoDataUnica.style.display = 'block';
+            }
+            
+            toggleTipoMgm();
+            
+            setTimeout(() => {
+                configurarNavegacaoDocumentosMultiplos();
+                configurarPasteDocumentosMultiplos();
+            }, 200);
         }
         
         if (data.status === 'FINALIZADO') {
@@ -1135,9 +1871,6 @@ function handleTeclado(e) {
     const isInTable = target.closest('table');
     const isSelect = target.tagName === 'SELECT';
     
-    // ============================================
-    // NAVEGAÇÃO POR NÚMEROS EM SELECTS (1-9)
-    // ============================================
     if (isSelect && /^[1-9]$/.test(key)) {
         e.preventDefault();
         e.stopPropagation();
@@ -1171,9 +1904,6 @@ function handleTeclado(e) {
         return;
     }
     
-    // ============================================
-    // ENTER - Vai para o campo abaixo ou adiciona novo item
-    // ============================================
     if (key === 'Enter') {
         e.preventDefault();
         
@@ -1205,10 +1935,6 @@ function handleTeclado(e) {
         navegarVerticalFormulario(target, 1);
         return;
     }
-    
-    // ============================================
-    // SETAS - Navegação entre campos
-    // ============================================
     
     if (key === 'ArrowDown' || key === 'ArrowUp') {
         e.preventDefault();
@@ -2716,7 +3442,7 @@ function getItensFormulario() {
 }
 
 // ============================================
-// SALVAR CONTROLE COM VALIDAÇÃO DE DUPLICADOS (CORRIGIDO)
+// SALVAR CONTROLE COM VALIDAÇÃO DE DUPLICADOS
 // ============================================
 
 async function salvarControle() {
@@ -2741,18 +3467,138 @@ async function salvarControle() {
     
     const formObra = document.getElementById('formObra');
     const formData = document.getElementById('formData');
+    const formTipoMovimento = document.getElementById('formTipoMovimento');
+    const formCodMovimentacao = document.getElementById('formCodMovimentacao');
     
     const obra = formObra ? formObra.value.trim() : '';
     const data_programacao = formData ? formData.value : '';
+    const tipoMovimento = formTipoMovimento?.value || 'RMA';
+    const codMovimentacao = formCodMovimentacao?.value || '';
+    
+    const radios = document.querySelectorAll('input[name="tipoMgm"]');
+    let tipoMgm = 'UNICO';
+    radios.forEach(r => {
+        if (r.checked) tipoMgm = r.value;
+    });
+    
+    const data = {
+        obra: obra,
+        data_programacao: data_programacao,
+        criado_por: dadosSessao.matricula || 'Sistema',
+        tipo_mgm: tipoMgm
+    };
     
     if (!obra) {
         mostrarToast('⚠️ Preencha o número da obra', 'aviso');
         return;
     }
     
-    if (!data_programacao) {
-        mostrarToast('⚠️ Preencha a data de programação', 'aviso');
+    // ============================================
+    // SE FOR MOVIMENTO E MÚLTIPLO
+    // ============================================
+    if (isMovimento && tipoMgm === 'MULTIPLO') {
+        const documentosValidos = obterDocumentosMultiplos();
+        
+        console.log('📋 Documentos capturados do DOM:', documentosValidos);
+        
+        if (documentosValidos.length === 0) {
+            mostrarToast('⚠️ Adicione pelo menos um documento com código e data', 'aviso');
+            const secao = document.getElementById('secaoDocumentosMultiplos');
+            if (secao) {
+                secao.style.borderColor = '#FC8181';
+                secao.style.borderWidth = '2px';
+                secao.style.borderStyle = 'solid';
+                setTimeout(() => {
+                    secao.style.borderColor = '#9AE6B4';
+                }, 3000);
+            }
+            return;
+        }
+        
+        const numeroControle = controleAtual.numero;
+        let sucessos = 0;
+        let erros = [];
+        
+        mostrarToast(`⏳ Salvando ${documentosValidos.length} documentos...`, 'info');
+        
+        // Primeiro, atualiza o movimento principal para MULTIPLO com a primeira data
+        const primeiroDoc = documentosValidos[0];
+        const dadosPrincipal = {
+            obra: obra,
+            data_programacao: primeiroDoc.data,
+            tipo_movimento: tipoMovimento,
+            cod_movimentacao: primeiroDoc.codigo,
+            tipo_mgm: 'MULTIPLO',
+            criado_por: dadosSessao.matricula || 'Sistema'
+        };
+        
+        const urlPrincipal = `${API_URL}${tipoInfo.endpoint}/${controleAtual.numero}`;
+        
+        try {
+            await fetch(urlPrincipal, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosPrincipal)
+            });
+        } catch (error) {
+            console.error('❌ Erro ao atualizar movimento principal:', error);
+        }
+        
+        // Agora cria as linhas para cada documento
+        for (const doc of documentosValidos) {
+            try {
+                const dadosLinha = {
+                    numero_controle: numeroControle,
+                    obra: obra,
+                    data_programacao: doc.data,
+                    tipo_movimento: tipoMovimento,
+                    cod_movimentacao: doc.codigo,
+                    tipo_mgm: 'MULTIPLO',
+                    criado_por: dadosSessao.matricula || 'Sistema'
+                };
+                
+                const response = await fetch(`${API_URL}${tipoInfo.endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosLinha)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Erro ao criar linha');
+                }
+                
+                sucessos++;
+                
+            } catch (error) {
+                erros.push({ documento: doc.codigo, error: error.message });
+                console.error(`❌ Erro ao criar linha para ${doc.codigo}:`, error);
+            }
+        }
+        
+        if (erros.length === 0) {
+            mostrarToast(`✅ ${sucessos} documentos salvos com sucesso!`, 'sucesso');
+            await carregarControleFormulario();
+        } else {
+            mostrarToast(`⚠️ ${sucessos} salvos, ${erros.length} falhas`, 'erro');
+        }
+        
         return;
+    }
+    
+    // ============================================
+    // SE FOR MOVIMENTO E ÚNICO
+    // ============================================
+    if (isMovimento && tipoMgm === 'UNICO') {
+        if (!codMovimentacao) {
+            mostrarToast('⚠️ Preencha o código da movimentação', 'aviso');
+            return;
+        }
+        if (!data_programacao) {
+            mostrarToast('⚠️ Preencha a data de programação', 'aviso');
+            return;
+        }
+        data.cod_movimentacao = codMovimentacao;
     }
     
     if (temItens) {
@@ -2773,23 +3619,15 @@ async function salvarControle() {
             mostrarToast('⚠️ Adicione pelo menos um item', 'aviso');
             return;
         }
-    }
-    
-    const data = {
-        obra: obra,
-        data_programacao: data_programacao,
-        criado_por: dadosSessao.matricula || 'Sistema'
-    };
-    
-    if (temItens) {
         data.itens = itens;
     }
     
+    // ============================================
+    // CAMPOS ESPECÍFICOS POR TIPO
+    // ============================================
     if (isAditivoFisico) {
         const formTipoAditivoFisico = document.getElementById('formTipoAditivoFisico');
         const formDataExecucao = document.getElementById('formDataExecucao');
-        
-        // CORREÇÃO: Salva o tipo no nível do registro principal
         data.tipo = formTipoAditivoFisico?.value || 'SAÍDA';
         data.data_execucao = formDataExecucao?.value || '';
     }
@@ -2838,11 +3676,9 @@ async function salvarControle() {
         data.observacao = formObservacaoDevolucao?.value || '';
     }
     
-    if (isMovimento) {
-        const formTipoMovimento = document.getElementById('formTipoMovimento');
-        const formCodMovimentacao = document.getElementById('formCodMovimentacao');
-        data.tipo_movimento = formTipoMovimento?.value || 'RMA';
-        data.cod_movimentacao = formCodMovimentacao?.value || '';
+    if (isMovimento && tipoMgm === 'UNICO') {
+        data.tipo_movimento = tipoMovimento;
+        data.cod_movimentacao = codMovimentacao;
     }
     
     const url = `${API_URL}${tipoInfo.endpoint}/${controleAtual.numero}`;
@@ -2864,8 +3700,6 @@ async function salvarControle() {
         mostrarToast('✅ Salvo com sucesso!', 'sucesso');
         await carregarControleFormulario();
         
-        // CORREÇÃO: Não força o foco para o campo obra - mantém onde o usuário estava
-        
     } catch (error) {
         console.error('❌ Erro ao salvar:', error);
         mostrarToast('❌ ' + error.message, 'erro');
@@ -2875,7 +3709,7 @@ async function salvarControle() {
 window.salvarControle = salvarControle;
 
 // ============================================
-// FINALIZAR CONTROLE
+// FINALIZAR CONTROLE (CORRIGIDO - FINALIZA TODAS AS LINHAS)
 // ============================================
 
 async function finalizarControle() {
@@ -2889,6 +3723,123 @@ async function finalizarControle() {
         return;
     }
     
+    const isMovimento = tipoAtual === 'movimento';
+    const numeroControle = controleAtual.numero;
+    
+    // Verifica se é movimento e se é MULTIPLO
+    let isMultiplo = false;
+    if (isMovimento) {
+        const radios = document.querySelectorAll('input[name="tipoMgm"]');
+        radios.forEach(r => {
+            if (r.checked && r.value === 'MULTIPLO') {
+                isMultiplo = true;
+            }
+        });
+        // Verifica também pelo tipo salvo no controle
+        if (!isMultiplo && controleAtual.tipo_mgm === 'MULTIPLO') {
+            isMultiplo = true;
+        }
+    }
+    
+    // ============================================
+    // SE FOR MÚLTIPLAS MGM
+    // ============================================
+    if (isMovimento && isMultiplo) {
+        // Busca todas as linhas com este número
+        const tipoInfo = TIPOS[tipoAtual];
+        const urlBusca = `${API_URL}${tipoInfo.endpoint}/${numeroControle}`;
+        
+        try {
+            mostrarToast('⏳ Buscando linhas para finalizar...', 'info');
+            
+            const response = await fetch(urlBusca);
+            if (!response.ok) {
+                throw new Error('Erro ao buscar linhas do movimento');
+            }
+            
+            const data = await response.json();
+            
+            // Extrai todas as linhas
+            let linhas = [];
+            if (data._linhas && Array.isArray(data._linhas) && data._linhas.length > 0) {
+                linhas = data._linhas;
+            } else if (data.documentos && Array.isArray(data.documentos) && data.documentos.length > 0) {
+                linhas = data.documentos;
+            } else if (data.datas_programacao && Array.isArray(data.datas_programacao) && data.datas_programacao.length > 0) {
+                linhas = data.datas_programacao.map(d => ({
+                    id: data.id,
+                    data_programacao: d,
+                    cod_movimentacao: data.cod_movimentacao || ''
+                }));
+            } else {
+                linhas = [{
+                    id: data.id,
+                    data_programacao: data.data_programacao,
+                    cod_movimentacao: data.cod_movimentacao || ''
+                }];
+            }
+            
+            if (linhas.length === 0) {
+                mostrarToast('⚠️ Nenhuma linha encontrada para finalizar', 'aviso');
+                return;
+            }
+            
+            // Confirmação
+            if (!confirm(`⚠️ Tem certeza que deseja FINALIZAR todas as ${linhas.length} linhas do movimento #${String(numeroControle).padStart(4, '0')}?`)) {
+                return;
+            }
+            
+            mostrarToast(`⏳ Finalizando ${linhas.length} linhas...`, 'info');
+            
+            let sucessos = 0;
+            let erros = [];
+            
+            // Finaliza cada linha
+            for (const linha of linhas) {
+                try {
+                    const linhaId = linha.id;
+                    const urlFinalizar = `${API_URL}${tipoInfo.endpoint}/${linhaId}/finalizar`;
+                    
+                    const response = await fetch(urlFinalizar, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Erro ao finalizar linha');
+                    }
+                    
+                    sucessos++;
+                    console.log(`✅ Linha ${linhaId} finalizada com sucesso`);
+                    
+                } catch (error) {
+                    erros.push({ id: linha.id, error: error.message });
+                    console.error(`❌ Erro ao finalizar linha ${linha.id}:`, error);
+                }
+            }
+            
+            if (erros.length === 0) {
+                mostrarToast(`✅ ${sucessos} linhas finalizadas com sucesso!`, 'sucesso');
+                await carregarControleFormulario();
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+            } else {
+                mostrarToast(`⚠️ ${sucessos} finalizadas, ${erros.length} falhas`, 'erro');
+            }
+            
+        } catch (error) {
+            console.error('❌ Erro ao finalizar múltiplas MGM:', error);
+            mostrarToast('❌ ' + error.message, 'erro');
+        }
+        
+        return;
+    }
+    
+    // ============================================
+    // SE FOR ÚNICO (MODO NORMAL)
+    // ============================================
     if (!confirm(`⚠️ Tem certeza que deseja FINALIZAR o controle #${String(controleAtual.numero).padStart(4, '0')}?`)) return;
     
     const tipoInfo = TIPOS[tipoAtual];
@@ -2910,9 +3861,8 @@ async function finalizarControle() {
         mostrarToast('✅ Finalizado com sucesso!', 'sucesso');
         await carregarControleFormulario();
         
-        // Redireciona para o painel após 2 segundos, mantendo a aba correta
         setTimeout(() => {
-            voltarParaPainel();
+            window.location.href = 'index.html';
         }, 2000);
         
     } catch (error) {
@@ -3076,6 +4026,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     focarCampoObra();
     
+    setTimeout(() => {
+        configurarNavegacaoDocumentosMultiplos();
+        configurarPasteDocumentosMultiplos();
+    }, 500);
+    
     window.addEventListener('scroll', controlarBotoesNavegacao);
     window.addEventListener('load', function() {
         setTimeout(controlarBotoesNavegacao, 500);
@@ -3085,6 +4040,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         setTimeout(configurarValidacaoDuplicados, 400);
         setTimeout(verificarECorrigirDuplicados, 450);
         setTimeout(configurarNavegacaoSelectPorNumero, 300);
+        setTimeout(() => {
+            configurarNavegacaoDocumentosMultiplos();
+            configurarPasteDocumentosMultiplos();
+        }, 500);
     });
     window.addEventListener('resize', controlarBotoesNavegacao);
     
@@ -3128,3 +4087,11 @@ window.validarDuplicadosNoPaste = validarDuplicadosNoPaste;
 window.focarCampoObra = focarCampoObra;
 window.configurarNavegacaoSelectPorNumero = configurarNavegacaoSelectPorNumero;
 window.atualizarNavegacaoSelects = atualizarNavegacaoSelects;
+window.toggleTipoMgm = toggleTipoMgm;
+window.adicionarLinhaDocumentoMultiplo = adicionarLinhaDocumentoMultiplo;
+window.removerLinhaDocumentoMultiplo = removerLinhaDocumentoMultiplo;
+window.atualizarDocumentoMultiplo = atualizarDocumentoMultiplo;
+window.carregarDocumentosMultiplos = carregarDocumentosMultiplos;
+window.configurarNavegacaoDocumentosMultiplos = configurarNavegacaoDocumentosMultiplos;
+window.configurarPasteDocumentosMultiplos = configurarPasteDocumentosMultiplos;
+window.obterDocumentosMultiplos = obterDocumentosMultiplos;

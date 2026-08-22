@@ -43,6 +43,15 @@ let itemSelecionadoMGM = null;
 let dadosCarregadosMGM = false;
 
 // ============================================
+// NOVA VARIÁVEL: ITENS REPRESADOS
+// ============================================
+
+let itensRepresados = {
+    total: 0,
+    itens: []
+};
+
+// ============================================
 // FUNÇÃO: MOSTRAR TOAST
 // ============================================
 
@@ -231,7 +240,7 @@ function buscarValorItem(codigo) {
 async function buscarMovimentosDoBanco() {
     console.log('📡 Buscando movimentos do banco de dados...');
     try {
-        const response = await fetch(`${API_URL}/movimento?limit=1000`);
+        const response = await fetch(`${API_URL}/movimento?limit=10000`);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -366,7 +375,6 @@ function parsearDevolucaoCompilada(texto) {
         const partes = linha.split('\t');
         if (partes.length < 7) continue;
         
-        // ===== CONVERTER DATA =====
         let dataOriginal = partes[indices.data]?.trim() || '';
         let dataConvertida = dataOriginal;
         
@@ -436,135 +444,63 @@ function parsearDevolucaoCompilada(texto) {
 }
 
 // ============================================
-// FUNÇÃO: CONSOLIDAR PENDÊNCIAS MGM (LINK OBRA+DATA)
+// FUNÇÃO: CONSOLIDAR PENDÊNCIAS MGM (COM VALIDAÇÃO DE TIPO_MGM)
 // ============================================
 
 function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanco) {
-    console.log('🔄 Consolidando pendências MGM (linkando obra+data)...');
+    console.log('🔄 Consolidando pendências MGM com validação de tipo_mgm...');
     
     const pendencias = [];
+    const itensRepresadosTemp = [];
+    let totalRepresados = 0;
     
     // ============================================
-    // PASSO 1: Criar mapa de movimentos do banco por obra + data
+    // PASSO 1: Criar mapa de movimentos do banco por código de movimentação
     // ============================================
-    const movimentosPorObraData = {};
+    const movimentosPorCodigo = {};
+    
     movimentosBanco.forEach(m => {
-        const obraNorm = normalizarObra(m.obra);
-        const chave = `${obraNorm}|${m.data_programacao}`;
-        if (!movimentosPorObraData[chave]) {
-            movimentosPorObraData[chave] = [];
+        if (m.cod_movimentacao) {
+            if (!movimentosPorCodigo[m.cod_movimentacao]) {
+                movimentosPorCodigo[m.cod_movimentacao] = [];
+            }
+            movimentosPorCodigo[m.cod_movimentacao].push(m);
         }
-        movimentosPorObraData[chave].push(m);
     });
     
-    console.log(`📊 ${Object.keys(movimentosPorObraData).length} combinações obra+data no banco`);
+    console.log(`📊 ${Object.keys(movimentosPorCodigo).length} documentos únicos no banco`);
     
     // ============================================
-    // PASSO 2: Para cada item da devolução, encontrar o movimento correspondente
+    // PASSO 2: Agrupar devoluções por documento + obra + código
     // ============================================
-    const gruposPorChave = {};
+    const gruposPorDocumento = {};
     
     devolucaoItens.forEach(item => {
         const obraNorm = normalizarObra(item.obra);
-        const chave = `${obraNorm}|${item.data}|${item.codigo}`;
+        const chaveDoc = `${item.arquivo}|${obraNorm}|${item.codigo}`;
         
-        // Buscar movimentos do banco que correspondem a obra + data
-        const chaveObraData = `${obraNorm}|${item.data}`;
-        const movimentosEncontrados = movimentosPorObraData[chaveObraData] || [];
-        
-        // Para cada movimento encontrado, buscar os itens no SIAGO
-        let qtdEncontrada = 0;
-        let docsEncontrados = [];
-        let tipoMovimento = null;
-        let siglaMovimento = null;
-        let statusBanco = null;
-        let encontrado = false;
-        
-        for (const movBanco of movimentosEncontrados) {
-            const codMov = movBanco.cod_movimentacao;
-            const movimentoSiago = movimentosSiago[codMov];
-            
-            if (movimentoSiago) {
-                // Verifica se o item existe neste movimento
-                const itemMov = movimentoSiago.itens.find(i => 
-                    i.codmat_mov === item.codigo || 
-                    i.dscmat === item.descricao
-                );
-                
-                if (itemMov) {
-                    encontrado = true;
-                    qtdEncontrada += itemMov.qtdmov || 0;
-                    if (!docsEncontrados.includes(codMov)) {
-                        docsEncontrados.push(codMov);
-                    }
-                    if (!tipoMovimento) {
-                        tipoMovimento = movimentoSiago.orgmov || 'DESCONHECIDO';
-                        siglaMovimento = movimentoSiago.sigla_mov_mat || '';
-                        statusBanco = movBanco.status;
-                    }
-                }
-            }
-        }
-        
-        // Se não encontrou movimento pelo link obra+data, tenta buscar apenas por obra (fallback)
-        if (!encontrado) {
-            const movimentosPorObra = movimentosBanco.filter(m => {
-                const obraMov = normalizarObra(m.obra);
-                return obraMov === obraNorm;
-            });
-            
-            for (const movBanco of movimentosPorObra) {
-                const codMov = movBanco.cod_movimentacao;
-                const movimentoSiago = movimentosSiago[codMov];
-                
-                if (movimentoSiago) {
-                    const itemMov = movimentoSiago.itens.find(i => 
-                        i.codmat_mov === item.codigo || 
-                        i.dscmat === item.descricao
-                    );
-                    
-                    if (itemMov) {
-                        encontrado = true;
-                        qtdEncontrada += itemMov.qtdmov || 0;
-                        if (!docsEncontrados.includes(codMov)) {
-                            docsEncontrados.push(codMov);
-                        }
-                        if (!tipoMovimento) {
-                            tipoMovimento = movimentoSiago.orgmov || 'DESCONHECIDO';
-                            siglaMovimento = movimentoSiago.sigla_mov_mat || '';
-                            statusBanco = movBanco.status;
-                        }
-                    }
-                }
-            }
-        }
-        
-        // ============================================
-        // PASSO 3: Agrupar por obra+data+codigo para somar quantidades
-        // ============================================
-        if (!gruposPorChave[chave]) {
-            gruposPorChave[chave] = {
+        if (!gruposPorDocumento[chaveDoc]) {
+            gruposPorDocumento[chaveDoc] = {
+                documento: item.arquivo,
                 obra: obraNorm,
-                data: item.data,
                 codigo: item.codigo,
                 descricao: item.descricao,
                 qtdAplicadaTotal: 0,
                 qtdDmaTotal: 0,
                 qtdEsperadaTotal: 0,
-                documentos: [],
+                datas: [],
                 itensOriginais: [],
                 movimentosEncontrados: [],
-                qtdEncontradaTotal: 0,
+                encontrado: false,
+                tipo_mgm: 'UNICO', // padrão
                 tipoMovimento: null,
                 siglaMovimento: null,
-                statusBanco: null,
-                encontrado: false
+                statusBanco: null
             };
         }
         
-        const grupo = gruposPorChave[chave];
+        const grupo = gruposPorDocumento[chaveDoc];
         
-        // Acumula quantidades
         const qtdAplicada = item.qtdAplicada || 0;
         const qtdDma = item.qtdDma || 0;
         const qtdEsperada = qtdAplicada > 0 ? qtdAplicada : qtdDma;
@@ -573,95 +509,281 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
         grupo.qtdDmaTotal += qtdDma;
         grupo.qtdEsperadaTotal += qtdEsperada;
         grupo.itensOriginais.push(item);
-        grupo.qtdEncontradaTotal += qtdEncontrada;
-        grupo.encontrado = grupo.encontrado || encontrado;
         
-        // Acumula documentos
-        docsEncontrados.forEach(doc => {
-            if (!grupo.documentos.includes(doc)) {
-                grupo.documentos.push(doc);
-            }
-        });
-        
-        if (!grupo.tipoMovimento && tipoMovimento) {
-            grupo.tipoMovimento = tipoMovimento;
-            grupo.siglaMovimento = siglaMovimento;
-            grupo.statusBanco = statusBanco;
+        if (item.data && !grupo.datas.includes(item.data)) {
+            grupo.datas.push(item.data);
         }
     });
     
-    console.log(`📊 ${Object.keys(gruposPorChave).length} grupos de itens encontrados`);
+    console.log(`📊 ${Object.keys(gruposPorDocumento).length} grupos de documentos encontrados`);
     
     // ============================================
-    // PASSO 4: Gerar pendências consolidadas
+    // PASSO 3: Para cada grupo, encontrar movimentos correspondentes
     // ============================================
-    for (const chave in gruposPorChave) {
-        const grupo = gruposPorChave[chave];
-        const { 
-            obra, data, codigo, descricao, qtdEsperadaTotal, qtdEncontradaTotal,
-            documentos, encontrado, tipoMovimento, siglaMovimento, statusBanco
-        } = grupo;
+    for (const chave in gruposPorDocumento) {
+        const grupo = gruposPorDocumento[chave];
+        const { documento, obra, codigo, datas } = grupo;
         
+        // Buscar movimentos que correspondem a este documento
+        let movimentosEncontrados = [];
+        let tipo_mgm = 'UNICO';
+        
+        // Busca por código de movimentação
+        if (documento && movimentosPorCodigo[documento]) {
+            movimentosEncontrados = movimentosPorCodigo[documento];
+            
+            // Verifica o tipo_mgm do primeiro movimento encontrado
+            if (movimentosEncontrados.length > 0 && movimentosEncontrados[0].tipo_mgm) {
+                tipo_mgm = movimentosEncontrados[0].tipo_mgm;
+            }
+        } else {
+            // Fallback: busca por obra + data (apenas se não encontrou por documento)
+            const dataOrdenadas = datas.sort();
+            for (const data of dataOrdenadas) {
+                const movimentosPorObraData = {};
+                movimentosBanco.forEach(m => {
+                    const obraNorm = normalizarObra(m.obra);
+                    const chave = `${obraNorm}|${m.data_programacao}`;
+                    if (!movimentosPorObraData[chave]) {
+                        movimentosPorObraData[chave] = [];
+                    }
+                    movimentosPorObraData[chave].push(m);
+                });
+                
+                const chaveObraData = `${obra}|${data}`;
+                if (movimentosPorObraData[chaveObraData]) {
+                    const movs = movimentosPorObraData[chaveObraData];
+                    movimentosEncontrados = movimentosEncontrados.concat(movs);
+                    if (movs.length > 0 && movs[0].tipo_mgm) {
+                        tipo_mgm = movs[0].tipo_mgm;
+                    }
+                }
+            }
+        }
+        
+        // Remove duplicados
+        movimentosEncontrados = movimentosEncontrados.filter((m, index, self) => 
+            self.findIndex(t => t.id === m.id) === index
+        );
+        
+        console.log(`📋 Documento ${documento}: ${movimentosEncontrados.length} movimentos encontrados, tipo_mgm=${tipo_mgm}`);
+        
+        // Guarda o tipo_mgm no grupo
+        grupo.tipo_mgm = tipo_mgm;
+        
+        // ============================================
+        // PASSO 4: Distribuição de acordo com o tipo_mgm
+        // ============================================
+        let saldo = grupo.qtdEsperadaTotal;
+        let totalEncontrado = 0;
+        let docsEncontrados = [];
+        let tipoMovimento = null;
+        let siglaMovimento = null;
+        let statusBanco = null;
+        let distribuicao = [];
+        let represados = 0;
+        let temMultiplasMGM = false;
+        
+        if (movimentosEncontrados.length > 0) {
+            // Verifica se tem múltiplas MGM (apenas se tipo_mgm for MULTIPLO)
+            temMultiplasMGM = (tipo_mgm === 'MULTIPLO' && movimentosEncontrados.length > 1);
+            
+            if (temMultiplasMGM) {
+                // ============================================
+                // LÓGICA MÚLTIPLAS MGM: Distribui entre as datas
+                // ============================================
+                console.log(`🔀 Aplicando lógica MÚLTIPLAS MGM para documento ${documento}`);
+                
+                // Ordenar movimentos por data (mais antigo primeiro)
+                movimentosEncontrados.sort((a, b) => new Date(a.data_programacao) - new Date(b.data_programacao));
+                
+                for (const movBanco of movimentosEncontrados) {
+                    if (saldo <= 0) break;
+                    
+                    const codMov = movBanco.cod_movimentacao;
+                    const movimentoSiago = movimentosSiago[codMov];
+                    
+                    if (movimentoSiago) {
+                        const itemMov = movimentoSiago.itens.find(i => 
+                            i.codmat_mov === codigo || 
+                            i.dscmat === grupo.descricao
+                        );
+                        
+                        if (itemMov && itemMov.qtdmov > 0) {
+                            const qtdDisponivel = itemMov.qtdmov;
+                            const qtdUsada = Math.min(saldo, qtdDisponivel);
+                            
+                            distribuicao.push({
+                                data: movBanco.data_programacao,
+                                movimento: codMov,
+                                quantidade: qtdUsada,
+                                saldoRestante: saldo - qtdUsada
+                            });
+                            
+                            totalEncontrado += qtdUsada;
+                            saldo -= qtdUsada;
+                            
+                            if (!docsEncontrados.includes(codMov)) {
+                                docsEncontrados.push(codMov);
+                            }
+                            
+                            if (!tipoMovimento) {
+                                tipoMovimento = movimentoSiago.orgmov || 'DESCONHECIDO';
+                                siglaMovimento = movimentoSiago.sigla_mov_mat || '';
+                                statusBanco = movBanco.status;
+                            }
+                        }
+                    }
+                }
+                
+                // Se sobrou saldo, vai para represados
+                if (saldo > 0) {
+                    represados = saldo;
+                    itensRepresadosTemp.push({
+                        documento: documento,
+                        obra: obra,
+                        codigo: codigo,
+                        descricao: grupo.descricao,
+                        quantidade: saldo,
+                        motivo: 'Excedente após distribuição em múltiplas MGM'
+                    });
+                    totalRepresados += saldo;
+                }
+                
+            } else {
+                // ============================================
+                // LÓGICA ÚNICA: 1 documento = 1 data (comportamento original)
+                // ============================================
+                console.log(`📌 Aplicando lógica ÚNICA para documento ${documento}`);
+                
+                // Pega o primeiro movimento (ou o que tiver o item)
+                let movimentoEncontrado = null;
+                let itemEncontrado = null;
+                
+                for (const movBanco of movimentosEncontrados) {
+                    const codMov = movBanco.cod_movimentacao;
+                    const movimentoSiago = movimentosSiago[codMov];
+                    
+                    if (movimentoSiago) {
+                        const itemMov = movimentoSiago.itens.find(i => 
+                            i.codmat_mov === codigo || 
+                            i.dscmat === grupo.descricao
+                        );
+                        
+                        if (itemMov) {
+                            movimentoEncontrado = movBanco;
+                            itemEncontrado = itemMov;
+                            break;
+                        }
+                    }
+                }
+                
+                if (itemEncontrado) {
+                    totalEncontrado = itemEncontrado.qtdmov || 0;
+                    docsEncontrados.push(movimentoEncontrado.cod_movimentacao);
+                    
+                    if (!tipoMovimento) {
+                        const movimentoSiago = movimentosSiago[movimentoEncontrado.cod_movimentacao];
+                        if (movimentoSiago) {
+                            tipoMovimento = movimentoSiago.orgmov || 'DESCONHECIDO';
+                            siglaMovimento = movimentoSiago.sigla_mov_mat || '';
+                        }
+                        statusBanco = movimentoEncontrado.status;
+                    }
+                }
+            }
+        }
+        
+        // Determinar status da pendência
         let status = 'PENDENTE';
         let motivo = '';
         let sobra = 0;
         let falta = 0;
         
-        if (encontrado) {
-            if (qtdEncontradaTotal === qtdEsperadaTotal) {
+        if (totalEncontrado > 0) {
+            if (totalEncontrado === grupo.qtdEsperadaTotal) {
                 status = 'ATENDIDO';
                 motivo = 'Quantidade exata';
-            } else if (qtdEncontradaTotal > qtdEsperadaTotal) {
+            } else if (totalEncontrado > grupo.qtdEsperadaTotal) {
                 status = 'SOBRA';
-                sobra = qtdEncontradaTotal - qtdEsperadaTotal;
-                motivo = `Excedente de ${sobra.toFixed(2)} unidades (precisa devolver)`;
-            } else if (qtdEncontradaTotal > 0 && qtdEncontradaTotal < qtdEsperadaTotal) {
-                status = 'PARCIAL';
-                falta = qtdEsperadaTotal - qtdEncontradaTotal;
-                motivo = `Faltam ${falta.toFixed(2)} unidades (precisa requisitar)`;
+                sobra = totalEncontrado - grupo.qtdEsperadaTotal;
+                motivo = `Excedente de ${sobra.toFixed(2)} unidades`;
+            } else if (totalEncontrado > 0 && totalEncontrado < grupo.qtdEsperadaTotal) {
+                if (temMultiplasMGM) {
+                    status = 'REPRESADO';
+                    motivo = `Parcialmente atendido (${totalEncontrado.toFixed(2)} de ${grupo.qtdEsperadaTotal.toFixed(2)}) - ${represados.toFixed(2)} represados`;
+                } else {
+                    status = 'PARCIAL';
+                    falta = grupo.qtdEsperadaTotal - totalEncontrado;
+                    motivo = `Faltam ${falta.toFixed(2)} unidades`;
+                }
             } else {
                 status = 'PENDENTE';
                 motivo = 'Quantidade zero no movimento';
             }
         } else {
             status = 'PENDENTE';
-            motivo = 'Nenhum movimento encontrado para esta obra e data';
+            motivo = 'Nenhum movimento encontrado para este documento';
         }
         
-        if (statusBanco === 'FINALIZADO' && status === 'PENDENTE') {
-            motivo = 'Movimento finalizado mas item não encontrado';
+        // Se for MULTIPLO e não encontrou nenhum movimento
+        if (tipo_mgm === 'MULTIPLO' && movimentosEncontrados.length === 0) {
+            status = 'REPRESADO';
+            motivo = `Documento com múltiplas MGM não encontrado - ${grupo.qtdEsperadaTotal.toFixed(2)} represados`;
+            represados = grupo.qtdEsperadaTotal;
+            itensRepresadosTemp.push({
+                documento: documento,
+                obra: obra,
+                codigo: codigo,
+                descricao: grupo.descricao,
+                quantidade: grupo.qtdEsperadaTotal,
+                motivo: 'Documento com múltiplas MGM não encontrado'
+            });
+            totalRepresados += grupo.qtdEsperadaTotal;
         }
         
-        const docsStr = documentos.length > 0 ? documentos.join(', ') : 'Nenhum';
-        const temMultiplosDocs = documentos.length > 1;
+        const docsStr = docsEncontrados.length > 0 ? docsEncontrados.join(', ') : 'Nenhum';
         
         pendencias.push({
             obra: obra,
             obraFormatada: formatarObra(obra),
-            data: data,
+            data: datas.length > 0 ? datas[0] : '',
             codigo: codigo,
-            descricao: descricao,
+            descricao: grupo.descricao,
             qtdAplicada: grupo.qtdAplicadaTotal,
             qtdDma: grupo.qtdDmaTotal,
-            qtdEsperada: qtdEsperadaTotal,
-            qtdEncontrada: qtdEncontradaTotal,
+            qtdEsperada: grupo.qtdEsperadaTotal,
+            qtdEncontrada: totalEncontrado,
             sobra: sobra,
             falta: falta,
+            represados: represados,
             status: status,
             motivo: motivo,
-            movimentoEncontrado: documentos.length > 0 ? documentos.join(', ') : null,
+            movimentoEncontrado: docsStr,
             tipoMovimento: tipoMovimento,
             siglaMovimento: siglaMovimento,
             statusBanco: statusBanco,
-            documentos: documentos,
+            documentos: docsEncontrados,
             documentosStr: docsStr,
-            temMultiplosDocs: temMultiplosDocs,
-            qtdDocumentos: documentos.length,
-            arquivo: grupo.itensOriginais.length > 0 ? grupo.itensOriginais[0].arquivo : ''
+            temMultiplasMGM: temMultiplasMGM,
+            tipo_mgm: tipo_mgm,
+            qtdDocumentos: docsEncontrados.length,
+            arquivo: documento,
+            distribuicao: distribuicao,
+            datas: datas
         });
     }
     
+    // Atualiza variável global de represados
+    itensRepresados = {
+        total: totalRepresados,
+        itens: itensRepresadosTemp
+    };
+    
     console.log(`✅ ${pendencias.length} pendências MGM consolidadas`);
+    console.log(`📊 Total de itens represados: ${totalRepresados.toFixed(2)} unidades`);
+    console.log(`📊 ${itensRepresadosTemp.length} itens represados`);
+    
     return pendencias;
 }
 
@@ -693,6 +815,7 @@ async function carregarDadosMGM() {
         console.log(`   - Itens Devolução: ${dadosDevolucaoCompilada.length}`);
         console.log(`   - Movimentos Banco: ${movimentosDoBanco.length}`);
         console.log(`   - Pendências Consolidadas: ${pendenciasConsolidadas.length}`);
+        console.log(`   - Itens Represados: ${itensRepresados.total.toFixed(2)} unidades`);
         
         const loadingElement = document.getElementById('loadingMGM');
         if (loadingElement) loadingElement.style.display = 'none';
@@ -803,6 +926,7 @@ function renderizarKPIsMGM(pendencias) {
     const parciais = pendencias.filter(p => p.status === 'PARCIAL').length;
     const atendidos = pendencias.filter(p => p.status === 'ATENDIDO').length;
     const sobras = pendencias.filter(p => p.status === 'SOBRA').length;
+    const represados = pendencias.filter(p => p.status === 'REPRESADO').length;
     
     const obrasSet = new Set(pendencias.map(p => p.obra));
     const totalObras = obrasSet.size;
@@ -811,12 +935,14 @@ function renderizarKPIsMGM(pendencias) {
     let totalQuantidadeEncontrada = 0;
     let totalSobra = 0;
     let totalFalta = 0;
+    let totalRepresados = 0;
     
     pendencias.forEach(p => {
         totalQuantidadeEsperada += p.qtdEsperada || 0;
         totalQuantidadeEncontrada += p.qtdEncontrada || 0;
         totalSobra += p.sobra || 0;
         totalFalta += p.falta || 0;
+        totalRepresados += p.represados || 0;
     });
     
     const isActive = (status) => filtroStatusMGMAtivo === status;
@@ -842,6 +968,11 @@ function renderizarKPIsMGM(pendencias) {
             <div class="kpi-value" style="color: #D69E2E;">${sobras}</div>
             <div class="kpi-label">🟠 Devolver (sobras)</div>
         </div>
+        <div class="kpi-card kpi-card-mgm status-represado ${isActive('REPRESADO') ? 'active-filter' : ''}" data-status="REPRESADO" onclick="aplicarFiltroStatusMGM('REPRESADO')" style="cursor: pointer; border-color: ${isActive('REPRESADO') ? '#805AD5' : '#E2E8F0'};">
+            <div class="kpi-icon">📌</div>
+            <div class="kpi-value" style="color: #805AD5;">${represados}</div>
+            <div class="kpi-label">📌 Itens Represados</div>
+        </div>
         <div class="kpi-card kpi-card-mgm" style="cursor: default;">
             <div class="kpi-icon">🏗️</div>
             <div class="kpi-value">${totalObras}</div>
@@ -866,6 +997,11 @@ function renderizarKPIsMGM(pendencias) {
             <div class="kpi-icon">❌</div>
             <div class="kpi-value" style="color: #E53E3E; font-size: 18px;">${totalFalta.toFixed(0)}</div>
             <div class="kpi-label">Total de Faltas</div>
+        </div>
+        <div class="kpi-card kpi-card-mgm status-represado" style="border-color: #805AD5; cursor: default; background: #FAF5FF;">
+            <div class="kpi-icon">📌</div>
+            <div class="kpi-value" style="color: #805AD5; font-size: 18px; font-weight: 700;">${totalRepresados.toFixed(0)}</div>
+            <div class="kpi-label">📌 Itens Represados do Passado</div>
         </div>
     `;
 }
@@ -902,14 +1038,18 @@ function renderizarListaObrasMGM(pendencias) {
                 totalAtendidos: 0,
                 totalParciais: 0,
                 totalSobras: 0,
+                totalRepresados: 0,
                 totalSobraQtd: 0,
                 totalFaltaQtd: 0,
+                totalRepresadosQtd: 0,
                 totalDocumentos: 0,
                 status: 'PENDENTE'
             };
         }
         grupos[obra].itens.push(p);
-        grupos[obra].datas.add(p.data);
+        if (p.datas) {
+            p.datas.forEach(d => grupos[obra].datas.add(d));
+        }
         grupos[obra].totalDocumentos += p.qtdDocumentos || 1;
         
         if (p.status === 'PENDENTE') grupos[obra].totalPendentes++;
@@ -920,9 +1060,12 @@ function renderizarListaObrasMGM(pendencias) {
         else if (p.status === 'SOBRA') {
             grupos[obra].totalSobras++;
             grupos[obra].totalSobraQtd += p.sobra || 0;
+        } else if (p.status === 'REPRESADO') {
+            grupos[obra].totalRepresados++;
+            grupos[obra].totalRepresadosQtd += p.represados || 0;
         }
         
-        if (grupos[obra].totalPendentes > 0 || grupos[obra].totalParciais > 0 || grupos[obra].totalSobras > 0) {
+        if (grupos[obra].totalPendentes > 0 || grupos[obra].totalParciais > 0 || grupos[obra].totalSobras > 0 || grupos[obra].totalRepresados > 0) {
             grupos[obra].status = 'PENDENTE';
         } else {
             grupos[obra].status = 'ATENDIDO';
@@ -930,12 +1073,13 @@ function renderizarListaObrasMGM(pendencias) {
     });
     
     let html = `
-        <div class="list-header" style="display: grid; grid-template-columns: 100px 1fr 50px 60px 60px 70px; gap: 6px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 11px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+        <div class="list-header" style="display: grid; grid-template-columns: 100px 1fr 50px 60px 60px 70px 70px; gap: 6px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 11px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
             <span>Descrição</span>
             <span style="text-align: right;">Qtd</span>
             <span style="text-align: center; color: #D69E2E;">🟠 Devolver</span>
             <span style="text-align: center; color: #E53E3E;">🔴 Faltam</span>
+            <span style="text-align: center; color: #805AD5;">📌 Represados</span>
             <span style="text-align: center;">Status</span>
         </div>
     `;
@@ -945,14 +1089,18 @@ function renderizarListaObrasMGM(pendencias) {
         const isActive = itemSelecionadoMGM && 
             itemSelecionadoMGM.obra === grupo.obra;
         
-        const totalPend = grupo.totalPendentes + grupo.totalParciais + grupo.totalSobras;
+        const totalPend = grupo.totalPendentes + grupo.totalParciais + grupo.totalSobras + grupo.totalRepresados;
         const totalItens = grupo.itens.length;
         const temSobra = grupo.totalSobraQtd > 0;
         const temFalta = grupo.totalFaltaQtd > 0;
+        const temRepresado = grupo.totalRepresadosQtd > 0;
         
         let statusBadge = '';
         let statusClass = '';
-        if (temSobra && temFalta) {
+        if (temRepresado) {
+            statusBadge = `📌 ${grupo.totalRepresadosQtd.toFixed(0)}`;
+            statusClass = 'status-represado';
+        } else if (temSobra && temFalta) {
             statusBadge = `🟠+🔴`;
             statusClass = 'status-misto';
         } else if (temSobra) {
@@ -971,15 +1119,17 @@ function renderizarListaObrasMGM(pendencias) {
         
         const totalSobraExibicao = temSobra ? `🟠 ${grupo.totalSobraQtd.toFixed(0)}` : '-';
         const totalFaltaExibicao = temFalta ? `🔴 ${grupo.totalFaltaQtd.toFixed(0)}` : '-';
+        const totalRepresadoExibicao = temRepresado ? `📌 ${grupo.totalRepresadosQtd.toFixed(0)}` : '-';
         const docsInfo = grupo.totalDocumentos > 1 ? `📄${grupo.totalDocumentos}` : '';
         
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''} ${statusClass}" onclick="selecionarObraMGM('${grupo.obra}')" style="display: grid; grid-template-columns: 100px 1fr 50px 60px 60px 70px; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s; ${temSobra ? 'border-left: 4px solid #D69E2E;' : ''} ${temFalta ? 'border-right: 4px solid #E53E3E;' : ''}">
+            <div class="item-group-item ${isActive ? 'active' : ''} ${statusClass}" onclick="selecionarObraMGM('${grupo.obra}')" style="display: grid; grid-template-columns: 100px 1fr 50px 60px 60px 70px 70px; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s; ${temRepresado ? 'border-left: 4px solid #805AD5;' : ''} ${temSobra ? 'border-left: 4px solid #D69E2E;' : ''} ${temFalta ? 'border-right: 4px solid #E53E3E;' : ''}">
                 <span class="item-code" style="font-size: 12px;">${grupo.obraFormatada}</span>
                 <span class="item-desc" style="font-size: 12px;">${totalItens} itens (${grupo.datas.size} datas) ${docsInfo}</span>
                 <span style="text-align: right; font-weight: 700; color: #2B6CB0; font-size: 12px;">${totalItens}</span>
                 <span style="text-align: center; font-weight: 600; color: ${temSobra ? '#D69E2E' : '#A0AEC0'}; font-size: 12px;">${totalSobraExibicao}</span>
                 <span style="text-align: center; font-weight: 600; color: ${temFalta ? '#E53E3E' : '#A0AEC0'}; font-size: 12px;">${totalFaltaExibicao}</span>
+                <span style="text-align: center; font-weight: 600; color: ${temRepresado ? '#805AD5' : '#A0AEC0'}; font-size: 12px;">${totalRepresadoExibicao}</span>
                 <span style="text-align: center;"><span class="badge-status ${statusClass}">${statusBadge}</span></span>
             </div>
         `;
@@ -993,7 +1143,8 @@ function renderizarGraficosMGM(pendencias) {
         'PENDENTE': 0,
         'PARCIAL': 0,
         'ATENDIDO': 0,
-        'SOBRA': 0
+        'SOBRA': 0,
+        'REPRESADO': 0
     };
     
     pendencias.forEach(p => {
@@ -1008,14 +1159,16 @@ function renderizarGraficosMGM(pendencias) {
         'PENDENTE': '🔴 Pendentes',
         'PARCIAL': '🔴 Parciais',
         'ATENDIDO': '✅ Atendidos',
-        'SOBRA': '🟠 Sobras'
+        'SOBRA': '🟠 Sobras',
+        'REPRESADO': '📌 Represados'
     };
     
     const statusColors = {
         'PENDENTE': 'bar-pendente',
         'PARCIAL': 'bar-parcial',
         'ATENDIDO': 'bar-baixado',
-        'SOBRA': 'bar-sobra'
+        'SOBRA': 'bar-sobra',
+        'REPRESADO': 'bar-represado'
     };
     
     let htmlStatus = '';
@@ -1055,10 +1208,16 @@ function renderizarGraficosMGM(pendencias) {
             .map(p => p.obra)
     );
     
+    const obrasRepresadas = new Set(
+        pendencias.filter(p => p.status === 'REPRESADO')
+            .map(p => p.obra)
+    );
+    
     const totalObras = obrasSet.size || 1;
     const obrasFalta = obrasComFalta.size;
     const obrasAtendidasCount = obrasAtendidas.size;
     const obrasSobra = obrasComSobra.size;
+    const obrasRepresadasCount = obrasRepresadas.size;
     
     let htmlObras = `
         <div class="chart-bar-indicator">
@@ -1087,6 +1246,15 @@ function renderizarGraficosMGM(pendencias) {
                 </div>
             </div>
             <span class="percent">${((obrasAtendidasCount / totalObras) * 100).toFixed(0)}%</span>
+        </div>
+        <div class="chart-bar-indicator">
+            <span class="label">📌 Com Represados</span>
+            <div class="bar-track">
+                <div class="bar-fill bar-represado" style="width: ${(obrasRepresadasCount / totalObras) * 100}%;">
+                    <span class="value">${obrasRepresadasCount}</span>
+                </div>
+            </div>
+            <span class="percent">${((obrasRepresadasCount / totalObras) * 100).toFixed(0)}%</span>
         </div>
     `;
     
@@ -1173,7 +1341,6 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         return;
     }
     
-    // Calcular total de documentos únicos
     const todosDocumentos = new Set();
     todosItens.forEach(p => {
         if (p.documentos && p.documentos.length > 0) {
@@ -1184,28 +1351,34 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
     
     const datasMap = {};
     todosItens.forEach(p => {
-        if (!datasMap[p.data]) {
-            datasMap[p.data] = {
-                data: p.data,
-                dataFormatada: formatarData(p.data),
+        const dataKey = p.data || 'sem_data';
+        if (!datasMap[dataKey]) {
+            datasMap[dataKey] = {
+                data: dataKey,
+                dataFormatada: p.data ? formatarData(p.data) : 'Sem data',
                 itens: [],
                 totalPendentes: 0,
                 totalAtendidos: 0,
                 totalParciais: 0,
                 totalSobras: 0,
+                totalRepresados: 0,
                 totalSobraQtd: 0,
-                totalFaltaQtd: 0
+                totalFaltaQtd: 0,
+                totalRepresadosQtd: 0
             };
         }
-        datasMap[p.data].itens.push(p);
-        if (p.status === 'PENDENTE') datasMap[p.data].totalPendentes++;
+        datasMap[dataKey].itens.push(p);
+        if (p.status === 'PENDENTE') datasMap[dataKey].totalPendentes++;
         else if (p.status === 'PARCIAL') {
-            datasMap[p.data].totalParciais++;
-            datasMap[p.data].totalFaltaQtd += p.falta || 0;
-        } else if (p.status === 'ATENDIDO') datasMap[p.data].totalAtendidos++;
+            datasMap[dataKey].totalParciais++;
+            datasMap[dataKey].totalFaltaQtd += p.falta || 0;
+        } else if (p.status === 'ATENDIDO') datasMap[dataKey].totalAtendidos++;
         else if (p.status === 'SOBRA') {
-            datasMap[p.data].totalSobras++;
-            datasMap[p.data].totalSobraQtd += p.sobra || 0;
+            datasMap[dataKey].totalSobras++;
+            datasMap[dataKey].totalSobraQtd += p.sobra || 0;
+        } else if (p.status === 'REPRESADO') {
+            datasMap[dataKey].totalRepresados++;
+            datasMap[dataKey].totalRepresadosQtd += p.represados || 0;
         }
     });
     
@@ -1224,8 +1397,8 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         dataAtiva = null;
     }
     
-    let totalPendentes = 0, totalAtendidos = 0, totalParciais = 0, totalSobras = 0;
-    let totalSobraQtd = 0, totalFaltaQtd = 0, valorTotal = 0;
+    let totalPendentes = 0, totalAtendidos = 0, totalParciais = 0, totalSobras = 0, totalRepresados = 0;
+    let totalSobraQtd = 0, totalFaltaQtd = 0, totalRepresadosQtd = 0, valorTotal = 0;
     
     todosItens.forEach(p => {
         if (p.status === 'PENDENTE') totalPendentes++;
@@ -1236,6 +1409,9 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         else if (p.status === 'SOBRA') {
             totalSobras++;
             totalSobraQtd += p.sobra || 0;
+        } else if (p.status === 'REPRESADO') {
+            totalRepresados++;
+            totalRepresadosQtd += p.represados || 0;
         }
         valorTotal += p.qtdEsperada * buscarValorItem(p.codigo);
     });
@@ -1264,6 +1440,10 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
                 <span class="stat-value" style="color: #D69E2E;">${totalSobras}</span>
             </div>
             <div class="detail-stat">
+                <span class="stat-label">📌 Represados</span>
+                <span class="stat-value" style="color: #805AD5;">${totalRepresados}</span>
+            </div>
+            <div class="detail-stat">
                 <span class="stat-label">✅ Atendidos</span>
                 <span class="stat-value" style="color: #48BB78;">${totalAtendidos}</span>
             </div>
@@ -1282,6 +1462,10 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
                 <span class="summary-label">🔴 Faltas (Pendentes)</span>
                 <span class="summary-value" style="color: #E53E3E; font-weight: 700;">${totalFaltaQtd.toFixed(0)} unidades</span>
             </div>
+            <div class="summary-item" style="background: #FAF5FF; border-left: 4px solid #805AD5;">
+                <span class="summary-label">📌 Represados do Passado</span>
+                <span class="summary-value" style="color: #805AD5; font-weight: 700;">${totalRepresadosQtd.toFixed(0)} unidades</span>
+            </div>
         </div>
         
         <div class="detail-section-title">📅 Datas de Programação</div>
@@ -1291,11 +1475,14 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
     datasOrdenadas.forEach(data => {
         const info = datasMap[data];
         const isActive = dataAtiva === data;
-        const totalPend = info.totalPendentes + info.totalParciais + info.totalSobras;
+        const totalPend = info.totalPendentes + info.totalParciais + info.totalSobras + info.totalRepresados;
         
         let statusBadge = '';
         let badgeClass = '';
-        if (info.totalSobraQtd > 0 && info.totalFaltaQtd > 0) {
+        if (info.totalRepresadosQtd > 0) {
+            statusBadge = `📌 ${info.totalRepresadosQtd.toFixed(0)}`;
+            badgeClass = 'status-represado';
+        } else if (info.totalSobraQtd > 0 && info.totalFaltaQtd > 0) {
             statusBadge = `🟠+🔴`;
             badgeClass = 'status-misto';
         } else if (info.totalSobraQtd > 0) {
@@ -1340,14 +1527,18 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         } else if (item.status === 'PARCIAL') {
             statusBadge = `🔴 -${item.falta.toFixed(0)}`;
             statusClass = 'status-falta';
+        } else if (item.status === 'REPRESADO') {
+            statusBadge = `📌 ${item.represados.toFixed(0)} represados`;
+            statusClass = 'status-represado';
         } else {
             statusBadge = '🔴 Pendente';
             statusClass = 'status-pendente';
         }
         
         const qtdInfo = `${item.qtdEncontrada.toFixed(2)} / ${item.qtdEsperada.toFixed(2)}`;
+        const temMultiplas = item.temMultiplasMGM ? '🔀 Múltiplas MGM' : '';
+        const tipoMgmLabel = item.tipo_mgm === 'MULTIPLO' ? '🔀' : '📌';
         
-        // Mostra os documentos relacionados
         let docsInfo = '';
         if (item.documentos && item.documentos.length > 0) {
             const docsExibicao = item.documentos.slice(0, 3).join(', ');
@@ -1358,13 +1549,22 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
             docsInfo = '📄 Nenhum';
         }
         
+        let distribuicaoInfo = '';
+        if (item.distribuicao && item.distribuicao.length > 0) {
+            distribuicaoInfo = item.distribuicao.map(d => 
+                `${formatarData(d.data)}: ${d.quantidade.toFixed(2)}`
+            ).join(' | ');
+        }
+        
         html += `
             <div class="detail-item ${statusClass}">
                 <div class="item-code-detail">${item.codigo}</div>
                 <div class="item-desc-detail">${item.descricao}</div>
                 <div class="item-qtd-detail">${qtdInfo}</div>
                 <div class="item-status-detail ${statusClass}">${statusBadge}</div>
-                <div class="item-mov-detail" style="font-size: 10px; color: #718096;">${docsInfo}</div>
+                <div class="item-mov-detail" style="font-size: 10px; color: #718096;">${docsInfo} ${tipoMgmLabel}</div>
+                ${temMultiplas ? `<div class="item-multi-detail" style="font-size: 10px; color: #805AD5;">${temMultiplas}</div>` : ''}
+                ${distribuicaoInfo ? `<div class="item-distribuicao-detail" style="font-size: 9px; color: #4A5568; grid-column: 1 / -1; background: #F7FAFC; padding: 4px 8px; border-radius: 4px; margin-top: 2px;">📊 Distribuição: ${distribuicaoInfo}</div>` : ''}
             </div>
         `;
     });
