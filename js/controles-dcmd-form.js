@@ -1012,7 +1012,12 @@ async function carregarControleFormulario() {
         if (isAditivoFisico) {
             const formTipoAditivoFisico = document.getElementById('formTipoAditivoFisico');
             const formDataExecucao = document.getElementById('formDataExecucao');
-            if (formTipoAditivoFisico) formTipoAditivoFisico.value = data.tipo || 'SAÍDA';
+            
+            // CORREÇÃO: Carrega o tipo do registro principal, não do item
+            if (formTipoAditivoFisico) {
+                formTipoAditivoFisico.value = data.tipo || 'SAÍDA';
+            }
+            
             if (formDataExecucao) {
                 let dataExecucao = '';
                 if (data.itens && data.itens.length > 0 && data.itens[0].data_execucao) {
@@ -2711,7 +2716,7 @@ function getItensFormulario() {
 }
 
 // ============================================
-// SALVAR CONTROLE COM VALIDAÇÃO DE DUPLICADOS
+// SALVAR CONTROLE COM VALIDAÇÃO DE DUPLICADOS (CORRIGIDO)
 // ============================================
 
 async function salvarControle() {
@@ -2783,6 +2788,8 @@ async function salvarControle() {
     if (isAditivoFisico) {
         const formTipoAditivoFisico = document.getElementById('formTipoAditivoFisico');
         const formDataExecucao = document.getElementById('formDataExecucao');
+        
+        // CORREÇÃO: Salva o tipo no nível do registro principal
         data.tipo = formTipoAditivoFisico?.value || 'SAÍDA';
         data.data_execucao = formDataExecucao?.value || '';
     }
@@ -2857,13 +2864,7 @@ async function salvarControle() {
         mostrarToast('✅ Salvo com sucesso!', 'sucesso');
         await carregarControleFormulario();
         
-        setTimeout(() => {
-            const campoObra = document.getElementById('formObra');
-            if (campoObra && isCampoEditavel(campoObra)) {
-                campoObra.focus();
-                campoObra.select();
-            }
-        }, 300);
+        // CORREÇÃO: Não força o foco para o campo obra - mantém onde o usuário estava
         
     } catch (error) {
         console.error('❌ Erro ao salvar:', error);
