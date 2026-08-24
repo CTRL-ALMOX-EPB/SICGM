@@ -3442,7 +3442,7 @@ function getItensFormulario() {
 }
 
 // ============================================
-// SALVAR CONTROLE COM VALIDAÇÃO DE DUPLICADOS
+// SALVAR CONTROLE COM VALIDAÇÃO DE DUPLICADOS (CORRIGIDO)
 // ============================================
 
 async function salvarControle() {
@@ -3481,126 +3481,157 @@ async function salvarControle() {
         if (r.checked) tipoMgm = r.value;
     });
     
-    const data = {
-        obra: obra,
-        data_programacao: data_programacao,
-        criado_por: dadosSessao.matricula || 'Sistema',
-        tipo_mgm: tipoMgm
-    };
-    
     if (!obra) {
         mostrarToast('⚠️ Preencha o número da obra', 'aviso');
         return;
     }
     
     // ============================================
-    // SE FOR MOVIMENTO E MÚLTIPLO
+    // SE FOR MOVIMENTO
     // ============================================
-    if (isMovimento && tipoMgm === 'MULTIPLO') {
-        const documentosValidos = obterDocumentosMultiplos();
-        
-        console.log('📋 Documentos capturados do DOM:', documentosValidos);
-        
-        if (documentosValidos.length === 0) {
-            mostrarToast('⚠️ Adicione pelo menos um documento com código e data', 'aviso');
-            const secao = document.getElementById('secaoDocumentosMultiplos');
-            if (secao) {
-                secao.style.borderColor = '#FC8181';
-                secao.style.borderWidth = '2px';
-                secao.style.borderStyle = 'solid';
-                setTimeout(() => {
-                    secao.style.borderColor = '#9AE6B4';
-                }, 3000);
-            }
-            return;
-        }
-        
+    if (isMovimento) {
         const numeroControle = controleAtual.numero;
-        let sucessos = 0;
-        let erros = [];
         
-        mostrarToast(`⏳ Salvando ${documentosValidos.length} documentos...`, 'info');
-        
-        // Primeiro, atualiza o movimento principal para MULTIPLO com a primeira data
-        const primeiroDoc = documentosValidos[0];
-        const dadosPrincipal = {
-            obra: obra,
-            data_programacao: primeiroDoc.data,
-            tipo_movimento: tipoMovimento,
-            cod_movimentacao: primeiroDoc.codigo,
-            tipo_mgm: 'MULTIPLO',
-            criado_por: dadosSessao.matricula || 'Sistema'
-        };
-        
-        const urlPrincipal = `${API_URL}${tipoInfo.endpoint}/${controleAtual.numero}`;
-        
-        try {
-            await fetch(urlPrincipal, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dadosPrincipal)
-            });
-        } catch (error) {
-            console.error('❌ Erro ao atualizar movimento principal:', error);
-        }
-        
-        // Agora cria as linhas para cada documento
-        for (const doc of documentosValidos) {
+        if (tipoMgm === 'MULTIPLO') {
+            // ============================================
+            // MODO MÚLTIPLO: Sincroniza as linhas
+            // ============================================
+            const documentosValidos = obterDocumentosMultiplos();
+            
+            console.log('📋 Documentos capturados do DOM:', documentosValidos);
+            
+            if (documentosValidos.length === 0) {
+                mostrarToast('⚠️ Adicione pelo menos um documento com código e data', 'aviso');
+                const secao = document.getElementById('secaoDocumentosMultiplos');
+                if (secao) {
+                    secao.style.borderColor = '#FC8181';
+                    secao.style.borderWidth = '2px';
+                    secao.style.borderStyle = 'solid';
+                    setTimeout(() => {
+                        secao.style.borderColor = '#9AE6B4';
+                    }, 3000);
+                }
+                return;
+            }
+            
+            // Primeiro, atualiza o movimento principal
+            const dadosPrincipal = {
+                obra: obra,
+                data_programacao: documentosValidos[0].data || '',
+                tipo_movimento: tipoMovimento,
+                cod_movimentacao: documentosValidos[0].codigo || '',
+                tipo_mgm: 'MULTIPLO',
+                criado_por: dadosSessao.matricula || 'Sistema'
+            };
+            
+            const urlPrincipal = `${API_URL}${tipoInfo.endpoint}/${numeroControle}`;
+            
             try {
-                const dadosLinha = {
-                    numero_controle: numeroControle,
-                    obra: obra,
-                    data_programacao: doc.data,
-                    tipo_movimento: tipoMovimento,
-                    cod_movimentacao: doc.codigo,
-                    tipo_mgm: 'MULTIPLO',
-                    criado_por: dadosSessao.matricula || 'Sistema'
-                };
-                
-                const response = await fetch(`${API_URL}${tipoInfo.endpoint}`, {
-                    method: 'POST',
+                await fetch(urlPrincipal, {
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dadosLinha)
+                    body: JSON.stringify(dadosPrincipal)
+                });
+            } catch (error) {
+                console.error('❌ Erro ao atualizar movimento principal:', error);
+            }
+            
+            // Agora sincroniza as linhas usando a nova rota
+            try {
+                mostrarToast(`⏳ Sincronizando ${documentosValidos.length} documentos...`, 'info');
+                
+                const urlLinhas = `${API_URL}/movimento-linhas`;
+                const response = await fetch(urlLinhas, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        numero: numeroControle,
+                        linhas: documentosValidos,
+                        tipo_mgm: 'MULTIPLO'
+                    })
                 });
                 
                 if (!response.ok) {
                     const error = await response.json();
-                    throw new Error(error.error || 'Erro ao criar linha');
+                    throw new Error(error.error || 'Erro ao sincronizar linhas');
                 }
                 
-                sucessos++;
+                const resultado = await response.json();
+                mostrarToast(`✅ ${resultado.adicionadas || 0} adicionadas, ${resultado.removidas || 0} removidas`, 'sucesso');
+                await carregarControleFormulario();
                 
             } catch (error) {
-                erros.push({ documento: doc.codigo, error: error.message });
-                console.error(`❌ Erro ao criar linha para ${doc.codigo}:`, error);
+                console.error('❌ Erro ao sincronizar linhas:', error);
+                mostrarToast('❌ ' + error.message, 'erro');
             }
-        }
-        
-        if (erros.length === 0) {
-            mostrarToast(`✅ ${sucessos} documentos salvos com sucesso!`, 'sucesso');
-            await carregarControleFormulario();
+            
+            return;
+            
         } else {
-            mostrarToast(`⚠️ ${sucessos} salvos, ${erros.length} falhas`, 'erro');
+            // ============================================
+            // MODO ÚNICO: Converte para UNICO
+            // ============================================
+            if (!codMovimentacao) {
+                mostrarToast('⚠️ Preencha o código da movimentação', 'aviso');
+                return;
+            }
+            if (!data_programacao) {
+                mostrarToast('⚠️ Preencha a data de programação', 'aviso');
+                return;
+            }
+            
+            // 1. Atualiza o movimento principal
+            const dadosUnico = {
+                obra: obra,
+                data_programacao: data_programacao,
+                tipo_movimento: tipoMovimento,
+                cod_movimentacao: codMovimentacao,
+                tipo_mgm: 'UNICO',
+                criado_por: dadosSessao.matricula || 'Sistema'
+            };
+            
+            const urlPrincipal = `${API_URL}${tipoInfo.endpoint}/${numeroControle}`;
+            
+            try {
+                // 2. Sincroniza as linhas (remove extras e mantém apenas uma)
+                const urlLinhas = `${API_URL}/movimento-linhas`;
+                const responseLinhas = await fetch(urlLinhas, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        numero: numeroControle,
+                        linhas: [{ codigo: codMovimentacao, data: data_programacao }],
+                        tipo_mgm: 'UNICO'
+                    })
+                });
+                
+                if (!responseLinhas.ok) {
+                    const error = await responseLinhas.json();
+                    throw new Error(error.error || 'Erro ao converter para UNICO');
+                }
+                
+                // 3. Atualiza o movimento principal
+                await fetch(urlPrincipal, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosUnico)
+                });
+                
+                mostrarToast('✅ Convertido para MGM Única com sucesso!', 'sucesso');
+                await carregarControleFormulario();
+                
+            } catch (error) {
+                console.error('❌ Erro ao converter para UNICO:', error);
+                mostrarToast('❌ ' + error.message, 'erro');
+            }
+            
+            return;
         }
-        
-        return;
     }
     
     // ============================================
-    // SE FOR MOVIMENTO E ÚNICO
+    // PARA OUTROS TIPOS (PENDÊNCIA, ADITIVO, ETC)
     // ============================================
-    if (isMovimento && tipoMgm === 'UNICO') {
-        if (!codMovimentacao) {
-            mostrarToast('⚠️ Preencha o código da movimentação', 'aviso');
-            return;
-        }
-        if (!data_programacao) {
-            mostrarToast('⚠️ Preencha a data de programação', 'aviso');
-            return;
-        }
-        data.cod_movimentacao = codMovimentacao;
-    }
-    
     if (temItens) {
         const temDuplicado = validarDuplicadosAntesDeSalvar();
         if (temDuplicado) {
@@ -3619,12 +3650,19 @@ async function salvarControle() {
             mostrarToast('⚠️ Adicione pelo menos um item', 'aviso');
             return;
         }
+    }
+    
+    const data = {
+        obra: obra,
+        data_programacao: data_programacao,
+        criado_por: dadosSessao.matricula || 'Sistema',
+        tipo_mgm: tipoMgm
+    };
+    
+    if (temItens) {
         data.itens = itens;
     }
     
-    // ============================================
-    // CAMPOS ESPECÍFICOS POR TIPO
-    // ============================================
     if (isAditivoFisico) {
         const formTipoAditivoFisico = document.getElementById('formTipoAditivoFisico');
         const formDataExecucao = document.getElementById('formDataExecucao');
