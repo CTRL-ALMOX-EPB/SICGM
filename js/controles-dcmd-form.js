@@ -3799,7 +3799,7 @@ async function salvarControle() {
 window.salvarControle = salvarControle;
 
 // ============================================
-// FINALIZAR CONTROLE (CORRIGIDO - FINALIZA TODAS AS LINHAS E MANTÉM ABA)
+// FINALIZAR CONTROLE (CORRIGIDO - FINALIZA TODAS AS LINHAS)
 // ============================================
 
 async function finalizarControle() {
@@ -3816,6 +3816,7 @@ async function finalizarControle() {
     const isMovimento = tipoAtual === 'movimento';
     const numeroControle = controleAtual.numero;
     
+    // Verifica se é movimento e se é MULTIPLO
     let isMultiplo = false;
     if (isMovimento) {
         const radios = document.querySelectorAll('input[name="tipoMgm"]');
@@ -3824,6 +3825,7 @@ async function finalizarControle() {
                 isMultiplo = true;
             }
         });
+        // Verifica também pelo tipo salvo no controle
         if (!isMultiplo && controleAtual.tipo_mgm === 'MULTIPLO') {
             isMultiplo = true;
         }
@@ -3833,8 +3835,9 @@ async function finalizarControle() {
     // SE FOR MÚLTIPLAS MGM
     // ============================================
     if (isMovimento && isMultiplo) {
+        // Busca todas as linhas com este número
         const tipoInfo = TIPOS[tipoAtual];
-        const urlBusca = `${API_URL}${tipoInfo.endpoint}/${numeroControle}`;
+        const urlBusca = `${API_URL}${tipoInfo.endpoint}?numero=${numeroControle}`;
         
         try {
             mostrarToast('⏳ Buscando linhas para finalizar...', 'info');
@@ -3846,30 +3849,32 @@ async function finalizarControle() {
             
             const data = await response.json();
             
+            // Extrai todas as linhas
             let linhas = [];
-            if (data._linhas && Array.isArray(data._linhas) && data._linhas.length > 0) {
+            if (Array.isArray(data)) {
+                linhas = data;
+            } else if (data.data && Array.isArray(data.data)) {
+                linhas = data.data;
+            } else if (data._linhas && Array.isArray(data._linhas)) {
                 linhas = data._linhas;
-            } else if (data.documentos && Array.isArray(data.documentos) && data.documentos.length > 0) {
+            } else if (data.documentos && Array.isArray(data.documentos)) {
                 linhas = data.documentos;
-            } else if (data.datas_programacao && Array.isArray(data.datas_programacao) && data.datas_programacao.length > 0) {
-                linhas = data.datas_programacao.map(d => ({
-                    id: data.id,
-                    data_programacao: d,
-                    cod_movimentacao: data.cod_movimentacao || ''
-                }));
             } else {
-                linhas = [{
-                    id: data.id,
-                    data_programacao: data.data_programacao,
-                    cod_movimentacao: data.cod_movimentacao || ''
-                }];
+                // Se for um único objeto, coloca em um array
+                if (data.id) {
+                    linhas = [data];
+                }
             }
+            
+            // Filtrar apenas as linhas com o número correto
+            linhas = linhas.filter(item => item.numero === numeroControle || item.numero_controle === numeroControle);
             
             if (linhas.length === 0) {
                 mostrarToast('⚠️ Nenhuma linha encontrada para finalizar', 'aviso');
                 return;
             }
             
+            // Confirmação
             if (!confirm(`⚠️ Tem certeza que deseja FINALIZAR todas as ${linhas.length} linhas do movimento #${String(numeroControle).padStart(4, '0')}?`)) {
                 return;
             }
@@ -3879,10 +3884,11 @@ async function finalizarControle() {
             let sucessos = 0;
             let erros = [];
             
+            // CORREÇÃO: Usar o numero do controle (numeroControle) em vez do id da linha
             for (const linha of linhas) {
                 try {
-                    const linhaId = linha.id;
-                    const urlFinalizar = `${API_URL}${tipoInfo.endpoint}/${linhaId}/finalizar`;
+                    // CORREÇÃO: Usar numeroControle, não o id da linha
+                    const urlFinalizar = `${API_URL}${tipoInfo.endpoint}/${numeroControle}/finalizar`;
                     
                     const response = await fetch(urlFinalizar, {
                         method: 'POST',
@@ -3895,7 +3901,7 @@ async function finalizarControle() {
                     }
                     
                     sucessos++;
-                    console.log(`✅ Linha ${linhaId} finalizada com sucesso`);
+                    console.log(`✅ Linha ${linha.id} finalizada com sucesso usando numero ${numeroControle}`);
                     
                 } catch (error) {
                     erros.push({ id: linha.id, error: error.message });
