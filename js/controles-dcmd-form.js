@@ -1696,11 +1696,12 @@ async function carregarControleFormulario() {
         }
         
         // ============================================
-        // MOVIMENTO - CORRIGIDO
+        // MOVIMENTO - CORRIGIDO (SEM DUPLICAÇÃO)
         // ============================================
         if (isMovimento) {
             const formTipoMovimento = document.getElementById('formTipoMovimento');
             const formCodMovimentacao = document.getElementById('formCodMovimentacao');
+            const formDataUnica = document.getElementById('formDataUnica');
             
             if (formTipoMovimento) formTipoMovimento.value = data.tipo_movimento || 'RMA';
             
@@ -1717,48 +1718,84 @@ async function carregarControleFormulario() {
             if (tipoMgm === 'MULTIPLO') {
                 let documentos = [];
                 
+                // Usar um Set para evitar duplicatas
+                const documentosSet = new Set();
+                
                 // 1. Propriedade 'documentos'
                 if (data.documentos && Array.isArray(data.documentos) && data.documentos.length > 0) {
-                    documentos = data.documentos;
-                    console.log('📋 documentos:', documentos);
+                    data.documentos.forEach(doc => {
+                        const chave = `${doc.cod_movimentacao || doc.codigo || ''}|${doc.data_programacao || doc.data || ''}`;
+                        if (!documentosSet.has(chave)) {
+                            documentosSet.add(chave);
+                            documentos.push({
+                                cod_movimentacao: doc.cod_movimentacao || doc.codigo || '',
+                                data_programacao: doc.data_programacao || doc.data || ''
+                            });
+                        }
+                    });
+                    console.log('📋 documentos (deduplicados):', documentos);
                 }
                 // 2. Propriedade '_linhas'
                 else if (data._linhas && Array.isArray(data._linhas) && data._linhas.length > 0) {
-                    documentos = data._linhas;
-                    console.log('📋 _linhas:', documentos);
+                    data._linhas.forEach(doc => {
+                        const chave = `${doc.cod_movimentacao || doc.codigo || ''}|${doc.data_programacao || doc.data || ''}`;
+                        if (!documentosSet.has(chave)) {
+                            documentosSet.add(chave);
+                            documentos.push({
+                                cod_movimentacao: doc.cod_movimentacao || doc.codigo || '',
+                                data_programacao: doc.data_programacao || doc.data || ''
+                            });
+                        }
+                    });
+                    console.log('📋 _linhas (deduplicados):', documentos);
                 }
                 // 3. Propriedade 'datas_programacao'
                 else if (data.datas_programacao && Array.isArray(data.datas_programacao) && data.datas_programacao.length > 0) {
                     const codMov = data.cod_movimentacao || '';
-                    documentos = data.datas_programacao.map(d => ({
-                        cod_movimentacao: codMov,
-                        data_programacao: d
-                    }));
-                    console.log('📋 datas_programacao:', documentos);
+                    data.datas_programacao.forEach(d => {
+                        const chave = `${codMov}|${d}`;
+                        if (!documentosSet.has(chave)) {
+                            documentosSet.add(chave);
+                            documentos.push({
+                                cod_movimentacao: codMov,
+                                data_programacao: d
+                            });
+                        }
+                    });
+                    console.log('📋 datas_programacao (deduplicados):', documentos);
                 }
                 // 4. Se tem data_programacao única
                 else if (data.data_programacao) {
                     const codMov = data.cod_movimentacao || '';
-                    documentos = [{
-                        cod_movimentacao: codMov,
-                        data_programacao: data.data_programacao
-                    }];
+                    const chave = `${codMov}|${data.data_programacao}`;
+                    if (!documentosSet.has(chave)) {
+                        documentosSet.add(chave);
+                        documentos.push({
+                            cod_movimentacao: codMov,
+                            data_programacao: data.data_programacao
+                        });
+                    }
                     console.log('📋 data única:', documentos);
                 }
                 // 5. Se tem cod_movimentacao
                 else if (data.cod_movimentacao) {
                     const hoje = new Date().toISOString().split('T')[0];
-                    documentos = [{
-                        cod_movimentacao: data.cod_movimentacao,
-                        data_programacao: hoje
-                    }];
+                    const chave = `${data.cod_movimentacao}|${hoje}`;
+                    if (!documentosSet.has(chave)) {
+                        documentosSet.add(chave);
+                        documentos.push({
+                            cod_movimentacao: data.cod_movimentacao,
+                            data_programacao: hoje
+                        });
+                    }
                     console.log('📋 apenas código:', documentos);
                 }
                 
+                // Agora cria as linhas apenas com os documentos únicos
                 if (documentos.length > 0) {
                     documentos.forEach(doc => {
-                        const codigo = doc.cod_movimentacao || doc.codigo || '';
-                        const dataDoc = doc.data_programacao || doc.data || '';
+                        const codigo = doc.cod_movimentacao || '';
+                        const dataDoc = doc.data_programacao || '';
                         
                         if (codigo || dataDoc) {
                             const id = Date.now() + Math.random();
@@ -1784,6 +1821,7 @@ async function carregarControleFormulario() {
                     });
                 }
                 
+                // Se não houver documentos, adiciona uma linha vazia
                 if (linhasDocumentosMultiplos.length === 0) {
                     adicionarLinhaDocumentoMultiplo();
                 }
@@ -1794,11 +1832,11 @@ async function carregarControleFormulario() {
                 if (campoDataUnica) campoDataUnica.style.display = 'none';
                 
                 if (formCodMovimentacao) formCodMovimentacao.value = '';
-                if (formData) formData.value = '';
+                if (formDataUnica) formDataUnica.value = '';
                 
             } else {
                 if (formCodMovimentacao) formCodMovimentacao.value = data.cod_movimentacao || '';
-                if (formData) formData.value = data.data_programacao || '';
+                if (formDataUnica) formDataUnica.value = data.data_programacao || '';
                 
                 const secao = document.getElementById('secaoDocumentosMultiplos');
                 if (secao) secao.style.display = 'none';
@@ -3467,13 +3505,34 @@ async function salvarControle() {
     
     const formObra = document.getElementById('formObra');
     const formData = document.getElementById('formData');
-    const formTipoMovimento = document.getElementById('formTipoMovimento');
-    const formCodMovimentacao = document.getElementById('formCodMovimentacao');
+    const formDataUnica = document.getElementById('formDataUnica');
+    
+    let formTipoMovimento = null;
+    let formCodMovimentacao = null;
+    
+    if (isMovimento) {
+        formTipoMovimento = document.getElementById('formTipoMovimento');
+        formCodMovimentacao = document.getElementById('formCodMovimentacao');
+    }
     
     const obra = formObra ? formObra.value.trim() : '';
-    const data_programacao = formData ? formData.value : '';
-    const tipoMovimento = formTipoMovimento?.value || 'RMA';
-    const codMovimentacao = formCodMovimentacao?.value || '';
+    
+    let data_programacao = '';
+    if (isMovimento) {
+        const radios = document.querySelectorAll('input[name="tipoMgm"]');
+        let tipoMgmTemp = 'UNICO';
+        radios.forEach(r => {
+            if (r.checked) tipoMgmTemp = r.value;
+        });
+        if (tipoMgmTemp === 'UNICO') {
+            data_programacao = formDataUnica ? formDataUnica.value : '';
+        }
+    } else {
+        data_programacao = formData ? formData.value : '';
+    }
+    
+    const tipoMovimento = (isMovimento && formTipoMovimento) ? formTipoMovimento.value : 'RMA';
+    const codMovimentacao = (isMovimento && formCodMovimentacao) ? formCodMovimentacao.value : '';
     
     const radios = document.querySelectorAll('input[name="tipoMgm"]');
     let tipoMgm = 'UNICO';
@@ -3492,10 +3551,11 @@ async function salvarControle() {
     if (isMovimento) {
         const numeroControle = controleAtual.numero;
         
+        if (tipoMgm === 'UNICO') {
+            data_programacao = formDataUnica ? formDataUnica.value : '';
+        }
+        
         if (tipoMgm === 'MULTIPLO') {
-            // ============================================
-            // MODO MÚLTIPLO: Sincroniza as linhas
-            // ============================================
             const documentosValidos = obterDocumentosMultiplos();
             
             console.log('📋 Documentos capturados do DOM:', documentosValidos);
@@ -3514,7 +3574,6 @@ async function salvarControle() {
                 return;
             }
             
-            // Primeiro, atualiza o movimento principal
             const dadosPrincipal = {
                 obra: obra,
                 data_programacao: documentosValidos[0].data || '',
@@ -3536,7 +3595,6 @@ async function salvarControle() {
                 console.error('❌ Erro ao atualizar movimento principal:', error);
             }
             
-            // Agora sincroniza as linhas usando a nova rota
             try {
                 mostrarToast(`⏳ Sincronizando ${documentosValidos.length} documentos...`, 'info');
                 
@@ -3568,9 +3626,6 @@ async function salvarControle() {
             return;
             
         } else {
-            // ============================================
-            // MODO ÚNICO: Converte para UNICO
-            // ============================================
             if (!codMovimentacao) {
                 mostrarToast('⚠️ Preencha o código da movimentação', 'aviso');
                 return;
@@ -3580,7 +3635,6 @@ async function salvarControle() {
                 return;
             }
             
-            // 1. Atualiza o movimento principal
             const dadosUnico = {
                 obra: obra,
                 data_programacao: data_programacao,
@@ -3593,7 +3647,6 @@ async function salvarControle() {
             const urlPrincipal = `${API_URL}${tipoInfo.endpoint}/${numeroControle}`;
             
             try {
-                // 2. Sincroniza as linhas (remove extras e mantém apenas uma)
                 const urlLinhas = `${API_URL}/movimento-linhas`;
                 const responseLinhas = await fetch(urlLinhas, {
                     method: 'PUT',
@@ -3610,7 +3663,6 @@ async function salvarControle() {
                     throw new Error(error.error || 'Erro ao converter para UNICO');
                 }
                 
-                // 3. Atualiza o movimento principal
                 await fetch(urlPrincipal, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -3747,7 +3799,7 @@ async function salvarControle() {
 window.salvarControle = salvarControle;
 
 // ============================================
-// FINALIZAR CONTROLE (CORRIGIDO - FINALIZA TODAS AS LINHAS)
+// FINALIZAR CONTROLE (CORRIGIDO - FINALIZA TODAS AS LINHAS E MANTÉM ABA)
 // ============================================
 
 async function finalizarControle() {
@@ -3764,7 +3816,6 @@ async function finalizarControle() {
     const isMovimento = tipoAtual === 'movimento';
     const numeroControle = controleAtual.numero;
     
-    // Verifica se é movimento e se é MULTIPLO
     let isMultiplo = false;
     if (isMovimento) {
         const radios = document.querySelectorAll('input[name="tipoMgm"]');
@@ -3773,7 +3824,6 @@ async function finalizarControle() {
                 isMultiplo = true;
             }
         });
-        // Verifica também pelo tipo salvo no controle
         if (!isMultiplo && controleAtual.tipo_mgm === 'MULTIPLO') {
             isMultiplo = true;
         }
@@ -3783,7 +3833,6 @@ async function finalizarControle() {
     // SE FOR MÚLTIPLAS MGM
     // ============================================
     if (isMovimento && isMultiplo) {
-        // Busca todas as linhas com este número
         const tipoInfo = TIPOS[tipoAtual];
         const urlBusca = `${API_URL}${tipoInfo.endpoint}/${numeroControle}`;
         
@@ -3797,7 +3846,6 @@ async function finalizarControle() {
             
             const data = await response.json();
             
-            // Extrai todas as linhas
             let linhas = [];
             if (data._linhas && Array.isArray(data._linhas) && data._linhas.length > 0) {
                 linhas = data._linhas;
@@ -3822,7 +3870,6 @@ async function finalizarControle() {
                 return;
             }
             
-            // Confirmação
             if (!confirm(`⚠️ Tem certeza que deseja FINALIZAR todas as ${linhas.length} linhas do movimento #${String(numeroControle).padStart(4, '0')}?`)) {
                 return;
             }
@@ -3832,7 +3879,6 @@ async function finalizarControle() {
             let sucessos = 0;
             let erros = [];
             
-            // Finaliza cada linha
             for (const linha of linhas) {
                 try {
                     const linhaId = linha.id;
@@ -3861,7 +3907,7 @@ async function finalizarControle() {
                 mostrarToast(`✅ ${sucessos} linhas finalizadas com sucesso!`, 'sucesso');
                 await carregarControleFormulario();
                 setTimeout(() => {
-                    window.location.href = 'index.html';
+                    window.location.href = `index.html?tipo=${tipoAtual}`;
                 }, 1500);
             } else {
                 mostrarToast(`⚠️ ${sucessos} finalizadas, ${erros.length} falhas`, 'erro');
@@ -3900,7 +3946,7 @@ async function finalizarControle() {
         await carregarControleFormulario();
         
         setTimeout(() => {
-            window.location.href = 'index.html';
+            window.location.href = `index.html?tipo=${tipoAtual}`;
         }, 2000);
         
     } catch (error) {
