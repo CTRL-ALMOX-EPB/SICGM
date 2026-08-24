@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/controles-dcmd.css">
     <style>
-        /* Estilos específicos para os radio buttons menores */
         .radio-mgm-group {
             display: flex;
             gap: 20px;
@@ -39,8 +38,6 @@
             color: #718096;
             font-weight: 400;
         }
-        
-        /* Estilos para a tabela de documentos múltiplos */
         .documentos-table-header {
             display: grid;
             grid-template-columns: 1fr 1fr 50px;
@@ -118,7 +115,6 @@
     </style>
 </head>
 <body>
-    <!-- Botões de navegação -->
     <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
         <span class="btn-navegacao-icone">⬆</span>
         <span class="btn-navegacao-texto">Topo</span>
@@ -130,18 +126,15 @@
 
     <div class="container">
         <div class="form-card">
-            <!-- Logo e Título -->
             <div class="header-container">
                 <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
                 <h1 class="title">📋 Formulário Controle DCMD</h1>
             </div>
             
-            <!-- Botão Voltar -->
             <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
                 <button onclick="voltarParaPainel()" class="btn-voltar-home">⬅ Voltar ao Painel</button>
             </div>
 
-            <!-- Header do Usuário -->
             <div class="user-header" id="userHeader">
                 <div class="user-info">
                     <div class="avatar" id="userAvatar">U</div>
@@ -153,7 +146,6 @@
                 </div>
             </div>
 
-            <!-- Formulário -->
             <form id="controleForm" class="controle-form">
                 <div class="controle-form-header">
                     <div>
@@ -166,7 +158,6 @@
                 </div>
 
                 <div class="controle-form-body">
-                    <!-- Tipo de Controle (readonly) -->
                     <div class="form-row">
                         <div class="form-group">
                             <label>📋 Tipo de Controle</label>
@@ -174,9 +165,6 @@
                         </div>
                     </div>
 
-                    <!-- ============================================ -->
-                    <!-- CAMPOS COMUNS (todos os tipos)              -->
-                    <!-- ============================================ -->
                     <div id="camposComuns">
                         <div class="form-row">
                             <div class="form-group">
@@ -186,9 +174,6 @@
                         </div>
                     </div>
 
-                    <!-- ============================================ -->
-                    <!-- CAMPOS ESPECÍFICOS: ADITIVO FÍSICO          -->
-                    <!-- ============================================ -->
                     <div id="camposAditivoFisico" style="display:none;">
                         <hr>
                         <h3>🔧 Dados do Aditivo Físico</h3>
@@ -208,9 +193,6 @@
                         </div>
                     </div>
 
-                    <!-- ============================================ -->
-                    <!-- CAMPOS ESPECÍFICOS: FAROL DE OBRAS           -->
-                    <!-- ============================================ -->
                     <div id="camposFarol" style="display:none;">
                         <hr>
                         <h3>🚦 Dados do Farol de Obras</h3>
@@ -305,9 +287,6 @@
                         </div>
                     </div>
 
-                    <!-- ============================================ -->
-                    <!-- CAMPOS ESPECÍFICOS: PENDÊNCIAS DE DEVOLUÇÃO  -->
-                    <!-- ============================================ -->
                     <div id="camposDevolucao" style="display:none;">
                         <hr>
                         <h3>📦 Dados da Pendência de Devolução</h3>
@@ -379,14 +358,10 @@
                         </div>
                     </div>
 
-                    <!-- ============================================ -->
-                    <!-- CAMPOS ESPECÍFICOS: MOVIMENTO (CORRIGIDO)    -->
-                    <!-- ============================================ -->
                     <div id="camposMovimento" style="display:none;">
                         <hr>
                         <h3>📄 Dados da Movimentação</h3>
                         
-                        <!-- CAMPO TIPO DE MOVIMENTO (APENAS ELE) -->
                         <div class="form-row">
                             <div class="form-group" style="grid-column: 1 / -1; max-width: 400px;">
                                 <label for="formTipoMovimento">📋 Tipo de Movimento *</label>
@@ -398,7 +373,6 @@
                             </div>
                         </div>
                         
-                        <!-- Tipo de MGM - Radio buttons menores -->
                         <div class="form-row">
                             <div class="form-group" style="grid-column: 1 / -1; padding: 10px 18px;">
                                 <label style="font-size: 0.85em; margin-bottom: 4px;">🔄 Tipo de MGM</label>
@@ -417,7 +391,6 @@
                             </div>
                         </div>
 
-                        <!-- Modo Único - campo de data simples -->
                         <div id="campoDataUnica">
                             <div class="form-row">
                                 <div class="form-group">
@@ -431,7 +404,6 @@
                             </div>
                         </div>
 
-                        <!-- Seção de Documentos para Múltiplas MGM -->
                         <div id="secaoDocumentosMultiplos" style="display:none; margin-top: 10px;">
                             <div class="form-group" style="background: #F0FFF4; border-color: #9AE6B4; padding: 12px 16px;">
                                 <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #276749; font-size: 0.9em;">
@@ -445,9 +417,7 @@
                                     <span style="text-align: center;">Ações</span>
                                 </div>
                                 
-                                <div id="containerDocumentosMultiplos">
-                                    <!-- Linhas serão adicionadas via JavaScript -->
-                                </div>
+                                <div id="containerDocumentosMultiplos"></div>
                                 
                                 <button type="button" class="btn-add-doc" onclick="adicionarLinhaDocumentoMultiplo()">
                                     ➕ Adicionar Documento
@@ -456,9 +426,6 @@
                         </div>
                     </div>
 
-                    <!-- ============================================ -->
-                    <!-- ITENS (APENAS PARA PENDÊNCIA, ADITIVO SISTÊMICO E ADITIVO FÍSICO) -->
-                    <!-- ============================================ -->
                     <div id="secaoItens">
                         <hr>
                         <h3 id="tituloItens">📦 Itens</h3>
@@ -470,19 +437,16 @@
                                         <th style="width:12%;">Descrição</th>
                                         <th style="width:4%;">UND</th>
                                         <th style="width:6%;">QTD</th>
-                                        <!-- Pendência de Baixa -->
                                         <th style="width:7%;" id="thPendenteAditivo" style="display:none;">Pend. Aditivo</th>
                                         <th style="width:9%;" id="thDataBaixa" style="display:none;">Data Baixa</th>
                                         <th style="width:7%;" id="thBaixado" style="display:none;">Baixado?</th>
                                         <th style="width:10%;" id="thMotivo" style="display:none;">Motivo</th>
                                         <th style="width:9%;" id="thColaboradorItem" style="display:none;">Colaborador</th>
                                         <th style="width:12%;" id="thObservacaoItem" style="display:none;">Observação</th>
-                                        <!-- Aditivo Sistêmico -->
                                         <th style="width:8%;" id="thStatusAditivo" style="display:none;">Status</th>
                                         <th style="width:9%;" id="thNumDoc" style="display:none;">Nº Documento</th>
                                         <th style="width:7%;" id="thUsuario" style="display:none;">Usuário</th>
                                         <th style="width:10%;" id="thObservacao" style="display:none;">Observação</th>
-                                        <!-- Aditivo Físico -->
                                         <th style="width:7%;" id="thAplicado" style="display:none;">Aplicado</th>
                                         <th style="width:9%;" id="thColaborador" style="display:none;">Solicitante</th>
                                         <th style="width:9%;" id="thEncarregado" style="display:none;">Encarregado</th>
@@ -495,7 +459,6 @@
                                         <td><input type="text" class="item-descricao input-descricao" readonly placeholder="Descrição"></td>
                                         <td><input type="text" class="item-unidade" readonly placeholder="Unid."></td>
                                         <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0"></td>
-                                        <!-- Pendência de Baixa -->
                                         <td class="col-pendente-aditivo" style="display:none;">
                                             <select class="item-pendente-aditivo">
                                                 <option value="">-</option>
@@ -521,7 +484,6 @@
                                         <td class="col-observacao-item" style="display:none;">
                                             <input type="text" class="item-observacao-item" placeholder="Observação">
                                         </td>
-                                        <!-- Aditivo Sistêmico -->
                                         <td class="col-status-aditivo" style="display:none;">
                                             <select class="item-status-aditivo">
                                                 <option value="ANALISE">📊 Análise</option>
@@ -539,7 +501,6 @@
                                         <td class="col-observacao" style="display:none;">
                                             <input type="text" class="item-observacao" placeholder="Observação">
                                         </td>
-                                        <!-- Aditivo Físico -->
                                         <td class="col-aplicado" style="display:none;">
                                             <select class="item-aplicado">
                                                 <option value="NÃO">NÃO</option>
@@ -603,9 +564,6 @@
                         <button type="button" class="add-item-btn" onclick="adicionarLinhaItem()">➕ Adicionar Item</button>
                     </div>
 
-                    <!-- ============================================ -->
-                    <!-- OBSERVAÇÃO GERAL (Farol)                    -->
-                    <!-- ============================================ -->
                     <div id="campoObservacaoGeral" style="display:none;">
                         <hr>
                         <div class="form-row">
@@ -618,7 +576,6 @@
 
                     <hr>
 
-                    <!-- Botões de Ação -->
                     <div class="modal-actions">
                         <button type="button" class="btn-salvar" onclick="salvarControle()">💾 Salvar</button>
                         <button type="button" class="btn-finalizar" onclick="finalizarControle()">✅ Finalizar</button>
@@ -629,7 +586,6 @@
         </div>
     </div>
 
-    <!-- Pop-up Material -->
     <div id="descricao-popup" class="descricao-popup"></div>
     <div id="popup-overlay" class="popup-overlay"></div>
 

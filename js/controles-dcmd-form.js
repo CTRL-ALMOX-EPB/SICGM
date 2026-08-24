@@ -3799,7 +3799,7 @@ async function salvarControle() {
 window.salvarControle = salvarControle;
 
 // ============================================
-// FINALIZAR CONTROLE (CORRIGIDO - FINALIZA TODAS AS LINHAS)
+// FINALIZAR CONTROLE (CORRIGIDO - FINALIZA TODAS AS LINHAS E MANTÉM ABA)
 // ============================================
 
 async function finalizarControle() {
@@ -3816,7 +3816,6 @@ async function finalizarControle() {
     const isMovimento = tipoAtual === 'movimento';
     const numeroControle = controleAtual.numero;
     
-    // Verifica se é movimento e se é MULTIPLO
     let isMultiplo = false;
     if (isMovimento) {
         const radios = document.querySelectorAll('input[name="tipoMgm"]');
@@ -3825,7 +3824,6 @@ async function finalizarControle() {
                 isMultiplo = true;
             }
         });
-        // Verifica também pelo tipo salvo no controle
         if (!isMultiplo && controleAtual.tipo_mgm === 'MULTIPLO') {
             isMultiplo = true;
         }
@@ -3835,7 +3833,6 @@ async function finalizarControle() {
     // SE FOR MÚLTIPLAS MGM
     // ============================================
     if (isMovimento && isMultiplo) {
-        // Busca todas as linhas com este número
         const tipoInfo = TIPOS[tipoAtual];
         const urlBusca = `${API_URL}${tipoInfo.endpoint}?numero=${numeroControle}`;
         
@@ -3849,7 +3846,6 @@ async function finalizarControle() {
             
             const data = await response.json();
             
-            // Extrai todas as linhas
             let linhas = [];
             if (Array.isArray(data)) {
                 linhas = data;
@@ -3860,13 +3856,11 @@ async function finalizarControle() {
             } else if (data.documentos && Array.isArray(data.documentos)) {
                 linhas = data.documentos;
             } else {
-                // Se for um único objeto, coloca em um array
                 if (data.id) {
                     linhas = [data];
                 }
             }
             
-            // Filtrar apenas as linhas com o número correto
             linhas = linhas.filter(item => item.numero === numeroControle || item.numero_controle === numeroControle);
             
             if (linhas.length === 0) {
@@ -3874,7 +3868,6 @@ async function finalizarControle() {
                 return;
             }
             
-            // Confirmação
             if (!confirm(`⚠️ Tem certeza que deseja FINALIZAR todas as ${linhas.length} linhas do movimento #${String(numeroControle).padStart(4, '0')}?`)) {
                 return;
             }
@@ -3884,10 +3877,8 @@ async function finalizarControle() {
             let sucessos = 0;
             let erros = [];
             
-            // CORREÇÃO: Usar o numero do controle (numeroControle) em vez do id da linha
             for (const linha of linhas) {
                 try {
-                    // CORREÇÃO: Usar numeroControle, não o id da linha
                     const urlFinalizar = `${API_URL}${tipoInfo.endpoint}/${numeroControle}/finalizar`;
                     
                     const response = await fetch(urlFinalizar, {
