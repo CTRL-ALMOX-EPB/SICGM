@@ -821,6 +821,52 @@ function atualizarNavegacaoSelects() {
 }
 
 // ============================================
+// CONTROLAR VISIBILIDADE DA DATA DE PROGRAMAÇÃO
+// ============================================
+
+function controlarVisibilidadeDataProgramacao() {
+    const isMovimento = tipoAtual === 'movimento';
+    const campoDataProgramacao = document.getElementById('campoDataProgramacao');
+    const campoDataUnica = document.getElementById('campoDataUnica');
+    const secaoDocumentosMultiplos = document.getElementById('secaoDocumentosMultiplos');
+    
+    if (!campoDataProgramacao) return;
+    
+    // Se NÃO for movimento, mostrar o campo normal
+    if (!isMovimento) {
+        campoDataProgramacao.style.display = '';
+        return;
+    }
+    
+    // Se FOR movimento, verificar o tipo MGM
+    const radios = document.querySelectorAll('input[name="tipoMgm"]');
+    let tipoMgm = 'UNICO';
+    radios.forEach(r => {
+        if (r.checked) tipoMgm = r.value;
+    });
+    
+    // MOVIMENTO: Esconder data_programacao quando MGM Múltipla
+    if (tipoMgm === 'MULTIPLO') {
+        campoDataProgramacao.style.display = 'none';
+        if (secaoDocumentosMultiplos) {
+            secaoDocumentosMultiplos.style.display = 'block';
+        }
+        if (campoDataUnica) {
+            campoDataUnica.style.display = 'none';
+        }
+    } else {
+        // MGM Única: esconder data_programacao comum, mostrar a específica
+        campoDataProgramacao.style.display = 'none';
+        if (secaoDocumentosMultiplos) {
+            secaoDocumentosMultiplos.style.display = 'none';
+        }
+        if (campoDataUnica) {
+            campoDataUnica.style.display = 'block';
+        }
+    }
+}
+
+// ============================================
 // FUNÇÕES PARA MÚLTIPLOS DOCUMENTOS
 // ============================================
 
@@ -835,18 +881,32 @@ function toggleTipoMgm() {
     
     const campoDataUnica = document.getElementById('campoDataUnica');
     const secaoDocumentosMultiplos = document.getElementById('secaoDocumentosMultiplos');
+    const campoDataProgramacao = document.getElementById('campoDataProgramacao');
+    const formDataUnica = document.getElementById('formDataUnica');
     
     if (selecionado === 'UNICO') {
+        // MGM Única: mostrar campo único
         if (campoDataUnica) campoDataUnica.style.display = 'block';
         if (secaoDocumentosMultiplos) secaoDocumentosMultiplos.style.display = 'none';
+        
+        // DATA DE PROGRAMAÇÃO COMUM: esconder (pois movimento tem seu próprio campo)
+        if (campoDataProgramacao) campoDataProgramacao.style.display = 'none';
         
         linhasDocumentosMultiplos = [];
         const container = document.getElementById('containerDocumentosMultiplos');
         if (container) container.innerHTML = '';
         
+        if (formDataUnica) formDataUnica.disabled = false;
+        
     } else {
+        // MGM Múltipla: esconder campo único
         if (campoDataUnica) campoDataUnica.style.display = 'none';
         if (secaoDocumentosMultiplos) secaoDocumentosMultiplos.style.display = 'block';
+        
+        // DATA DE PROGRAMAÇÃO COMUM: esconder TAMBÉM (pois cada linha tem sua data)
+        if (campoDataProgramacao) campoDataProgramacao.style.display = 'none';
+        
+        if (formDataUnica) formDataUnica.disabled = true;
         
         const container = document.getElementById('containerDocumentosMultiplos');
         const linhasExistentes = container ? container.querySelectorAll('.linha-documento-multiplo') : [];
@@ -1501,6 +1561,16 @@ async function carregarControleFormulario() {
     const camposComuns = document.getElementById('camposComuns');
     if (camposComuns) camposComuns.style.display = '';
     
+    // Mostrar campo data_programacao para todos, exceto movimento
+    const campoDataProgramacao = document.getElementById('campoDataProgramacao');
+    if (campoDataProgramacao) {
+        if (!isMovimento) {
+            campoDataProgramacao.style.display = '';
+        } else {
+            campoDataProgramacao.style.display = 'none';
+        }
+    }
+    
     const camposAditivoFisico = document.getElementById('camposAditivoFisico');
     if (camposAditivoFisico) camposAditivoFisico.style.display = isAditivoFisico ? '' : 'none';
     
@@ -1630,9 +1700,14 @@ async function carregarControleFormulario() {
         }
         
         const formObra = document.getElementById('formObra');
-        const formData = document.getElementById('formData');
+        const formDataProgramacao = document.getElementById('formDataProgramacao');
+        
         if (formObra) formObra.value = data.obra || '';
-        if (formData) formData.value = data.data_programacao || '';
+        
+        // CARREGAR DATA DE PROGRAMAÇÃO PARA TODOS OS TIPOS (EXCETO MOVIMENTO)
+        if (formDataProgramacao && !isMovimento) {
+            formDataProgramacao.value = data.data_programacao || '';
+        }
         
         if (isAditivoFisico) {
             const formTipoAditivoFisico = document.getElementById('formTipoAditivoFisico');
@@ -1696,7 +1771,7 @@ async function carregarControleFormulario() {
         }
         
         // ============================================
-        // MOVIMENTO - CORRIGIDO (SEM DUPLICAÇÃO)
+        // MOVIMENTO
         // ============================================
         if (isMovimento) {
             const formTipoMovimento = document.getElementById('formTipoMovimento');
@@ -1717,11 +1792,8 @@ async function carregarControleFormulario() {
             
             if (tipoMgm === 'MULTIPLO') {
                 let documentos = [];
-                
-                // Usar um Set para evitar duplicatas
                 const documentosSet = new Set();
                 
-                // 1. Propriedade 'documentos'
                 if (data.documentos && Array.isArray(data.documentos) && data.documentos.length > 0) {
                     data.documentos.forEach(doc => {
                         const chave = `${doc.cod_movimentacao || doc.codigo || ''}|${doc.data_programacao || doc.data || ''}`;
@@ -1733,10 +1805,7 @@ async function carregarControleFormulario() {
                             });
                         }
                     });
-                    console.log('📋 documentos (deduplicados):', documentos);
-                }
-                // 2. Propriedade '_linhas'
-                else if (data._linhas && Array.isArray(data._linhas) && data._linhas.length > 0) {
+                } else if (data._linhas && Array.isArray(data._linhas) && data._linhas.length > 0) {
                     data._linhas.forEach(doc => {
                         const chave = `${doc.cod_movimentacao || doc.codigo || ''}|${doc.data_programacao || doc.data || ''}`;
                         if (!documentosSet.has(chave)) {
@@ -1747,10 +1816,7 @@ async function carregarControleFormulario() {
                             });
                         }
                     });
-                    console.log('📋 _linhas (deduplicados):', documentos);
-                }
-                // 3. Propriedade 'datas_programacao'
-                else if (data.datas_programacao && Array.isArray(data.datas_programacao) && data.datas_programacao.length > 0) {
+                } else if (data.datas_programacao && Array.isArray(data.datas_programacao) && data.datas_programacao.length > 0) {
                     const codMov = data.cod_movimentacao || '';
                     data.datas_programacao.forEach(d => {
                         const chave = `${codMov}|${d}`;
@@ -1762,10 +1828,7 @@ async function carregarControleFormulario() {
                             });
                         }
                     });
-                    console.log('📋 datas_programacao (deduplicados):', documentos);
-                }
-                // 4. Se tem data_programacao única
-                else if (data.data_programacao) {
+                } else if (data.data_programacao) {
                     const codMov = data.cod_movimentacao || '';
                     const chave = `${codMov}|${data.data_programacao}`;
                     if (!documentosSet.has(chave)) {
@@ -1775,10 +1838,7 @@ async function carregarControleFormulario() {
                             data_programacao: data.data_programacao
                         });
                     }
-                    console.log('📋 data única:', documentos);
-                }
-                // 5. Se tem cod_movimentacao
-                else if (data.cod_movimentacao) {
+                } else if (data.cod_movimentacao) {
                     const hoje = new Date().toISOString().split('T')[0];
                     const chave = `${data.cod_movimentacao}|${hoje}`;
                     if (!documentosSet.has(chave)) {
@@ -1788,10 +1848,8 @@ async function carregarControleFormulario() {
                             data_programacao: hoje
                         });
                     }
-                    console.log('📋 apenas código:', documentos);
                 }
                 
-                // Agora cria as linhas apenas com os documentos únicos
                 if (documentos.length > 0) {
                     documentos.forEach(doc => {
                         const codigo = doc.cod_movimentacao || '';
@@ -1821,7 +1879,6 @@ async function carregarControleFormulario() {
                     });
                 }
                 
-                // Se não houver documentos, adiciona uma linha vazia
                 if (linhasDocumentosMultiplos.length === 0) {
                     adicionarLinhaDocumentoMultiplo();
                 }
@@ -1849,6 +1906,7 @@ async function carregarControleFormulario() {
             setTimeout(() => {
                 configurarNavegacaoDocumentosMultiplos();
                 configurarPasteDocumentosMultiplos();
+                controlarVisibilidadeDataProgramacao();
             }, 200);
         }
         
@@ -3480,7 +3538,7 @@ function getItensFormulario() {
 }
 
 // ============================================
-// SALVAR CONTROLE COM VALIDAÇÃO DE DUPLICADOS (CORRIGIDO)
+// SALVAR CONTROLE
 // ============================================
 
 async function salvarControle() {
@@ -3504,7 +3562,7 @@ async function salvarControle() {
     const temItens = tipoInfo.temItens;
     
     const formObra = document.getElementById('formObra');
-    const formData = document.getElementById('formData');
+    const formDataProgramacao = document.getElementById('formDataProgramacao');
     const formDataUnica = document.getElementById('formDataUnica');
     
     let formTipoMovimento = null;
@@ -3517,86 +3575,105 @@ async function salvarControle() {
     
     const obra = formObra ? formObra.value.trim() : '';
     
-    let data_programacao = '';
-    if (isMovimento) {
-        const radios = document.querySelectorAll('input[name="tipoMgm"]');
-        let tipoMgmTemp = 'UNICO';
-        radios.forEach(r => {
-            if (r.checked) tipoMgmTemp = r.value;
-        });
-        if (tipoMgmTemp === 'UNICO') {
-            data_programacao = formDataUnica ? formDataUnica.value : '';
-        }
-    } else {
-        data_programacao = formData ? formData.value : '';
-    }
-    
-    const tipoMovimento = (isMovimento && formTipoMovimento) ? formTipoMovimento.value : 'RMA';
-    const codMovimentacao = (isMovimento && formCodMovimentacao) ? formCodMovimentacao.value : '';
-    
-    const radios = document.querySelectorAll('input[name="tipoMgm"]');
-    let tipoMgm = 'UNICO';
-    radios.forEach(r => {
-        if (r.checked) tipoMgm = r.value;
-    });
-    
     if (!obra) {
         mostrarToast('⚠️ Preencha o número da obra', 'aviso');
         return;
     }
+    
+    let data_programacao = '';
     
     // ============================================
     // SE FOR MOVIMENTO
     // ============================================
     if (isMovimento) {
         const numeroControle = controleAtual.numero;
+        const radios = document.querySelectorAll('input[name="tipoMgm"]');
+        let tipoMgm = 'UNICO';
+        radios.forEach(r => {
+            if (r.checked) tipoMgm = r.value;
+        });
         
         if (tipoMgm === 'UNICO') {
+            const codMovimentacao = formCodMovimentacao ? formCodMovimentacao.value.trim() : '';
             data_programacao = formDataUnica ? formDataUnica.value : '';
-        }
-        
-        if (tipoMgm === 'MULTIPLO') {
-            const documentosValidos = obterDocumentosMultiplos();
             
-            console.log('📋 Documentos capturados do DOM:', documentosValidos);
+            if (!codMovimentacao) {
+                mostrarToast('⚠️ Preencha o código da movimentação', 'aviso');
+                return;
+            }
+            if (!data_programacao) {
+                mostrarToast('⚠️ Preencha a data de programação', 'aviso');
+                return;
+            }
+            
+            const dadosUnico = {
+                obra: obra,
+                data_programacao: data_programacao,
+                tipo_movimento: formTipoMovimento ? formTipoMovimento.value : 'RMA',
+                cod_movimentacao: codMovimentacao,
+                tipo_mgm: 'UNICO',
+                criado_por: dadosSessao.matricula || 'Sistema'
+            };
+            
+            try {
+                const urlLinhas = `${API_URL}/movimento-linhas`;
+                const responseLinhas = await fetch(urlLinhas, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        numero: numeroControle,
+                        linhas: [{ codigo: codMovimentacao, data: data_programacao }],
+                        tipo_mgm: 'UNICO'
+                    })
+                });
+                
+                if (!responseLinhas.ok) {
+                    const error = await responseLinhas.json();
+                    throw new Error(error.error || 'Erro ao converter para UNICO');
+                }
+                
+                const urlPrincipal = `${API_URL}${tipoInfo.endpoint}/${numeroControle}`;
+                await fetch(urlPrincipal, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosUnico)
+                });
+                
+                mostrarToast('✅ Salvo com sucesso!', 'sucesso');
+                await carregarControleFormulario();
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar:', error);
+                mostrarToast('❌ ' + error.message, 'erro');
+            }
+            
+            return;
+            
+        } else {
+            // MGM Múltipla
+            const documentosValidos = obterDocumentosMultiplos();
             
             if (documentosValidos.length === 0) {
                 mostrarToast('⚠️ Adicione pelo menos um documento com código e data', 'aviso');
-                const secao = document.getElementById('secaoDocumentosMultiplos');
-                if (secao) {
-                    secao.style.borderColor = '#FC8181';
-                    secao.style.borderWidth = '2px';
-                    secao.style.borderStyle = 'solid';
-                    setTimeout(() => {
-                        secao.style.borderColor = '#9AE6B4';
-                    }, 3000);
-                }
                 return;
             }
             
             const dadosPrincipal = {
                 obra: obra,
                 data_programacao: documentosValidos[0].data || '',
-                tipo_movimento: tipoMovimento,
+                tipo_movimento: formTipoMovimento ? formTipoMovimento.value : 'RMA',
                 cod_movimentacao: documentosValidos[0].codigo || '',
                 tipo_mgm: 'MULTIPLO',
                 criado_por: dadosSessao.matricula || 'Sistema'
             };
             
-            const urlPrincipal = `${API_URL}${tipoInfo.endpoint}/${numeroControle}`;
-            
             try {
+                const urlPrincipal = `${API_URL}${tipoInfo.endpoint}/${numeroControle}`;
                 await fetch(urlPrincipal, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(dadosPrincipal)
                 });
-            } catch (error) {
-                console.error('❌ Erro ao atualizar movimento principal:', error);
-            }
-            
-            try {
-                mostrarToast(`⏳ Sincronizando ${documentosValidos.length} documentos...`, 'info');
                 
                 const urlLinhas = `${API_URL}/movimento-linhas`;
                 const response = await fetch(urlLinhas, {
@@ -3619,61 +3696,7 @@ async function salvarControle() {
                 await carregarControleFormulario();
                 
             } catch (error) {
-                console.error('❌ Erro ao sincronizar linhas:', error);
-                mostrarToast('❌ ' + error.message, 'erro');
-            }
-            
-            return;
-            
-        } else {
-            if (!codMovimentacao) {
-                mostrarToast('⚠️ Preencha o código da movimentação', 'aviso');
-                return;
-            }
-            if (!data_programacao) {
-                mostrarToast('⚠️ Preencha a data de programação', 'aviso');
-                return;
-            }
-            
-            const dadosUnico = {
-                obra: obra,
-                data_programacao: data_programacao,
-                tipo_movimento: tipoMovimento,
-                cod_movimentacao: codMovimentacao,
-                tipo_mgm: 'UNICO',
-                criado_por: dadosSessao.matricula || 'Sistema'
-            };
-            
-            const urlPrincipal = `${API_URL}${tipoInfo.endpoint}/${numeroControle}`;
-            
-            try {
-                const urlLinhas = `${API_URL}/movimento-linhas`;
-                const responseLinhas = await fetch(urlLinhas, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        numero: numeroControle,
-                        linhas: [{ codigo: codMovimentacao, data: data_programacao }],
-                        tipo_mgm: 'UNICO'
-                    })
-                });
-                
-                if (!responseLinhas.ok) {
-                    const error = await responseLinhas.json();
-                    throw new Error(error.error || 'Erro ao converter para UNICO');
-                }
-                
-                await fetch(urlPrincipal, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(dadosUnico)
-                });
-                
-                mostrarToast('✅ Convertido para MGM Única com sucesso!', 'sucesso');
-                await carregarControleFormulario();
-                
-            } catch (error) {
-                console.error('❌ Erro ao converter para UNICO:', error);
+                console.error('❌ Erro ao salvar:', error);
                 mostrarToast('❌ ' + error.message, 'erro');
             }
             
@@ -3684,6 +3707,21 @@ async function salvarControle() {
     // ============================================
     // PARA OUTROS TIPOS (PENDÊNCIA, ADITIVO, ETC)
     // ============================================
+    data_programacao = formDataProgramacao ? formDataProgramacao.value : '';
+    
+    if (!data_programacao) {
+        mostrarToast('⚠️ Preencha a data de programação', 'aviso');
+        if (formDataProgramacao) {
+            formDataProgramacao.style.borderColor = '#FC8181';
+            formDataProgramacao.style.backgroundColor = '#FFF5F5';
+            setTimeout(() => {
+                formDataProgramacao.style.borderColor = '';
+                formDataProgramacao.style.backgroundColor = '';
+            }, 3000);
+        }
+        return;
+    }
+    
     if (temItens) {
         const temDuplicado = validarDuplicadosAntesDeSalvar();
         if (temDuplicado) {
@@ -3707,8 +3745,7 @@ async function salvarControle() {
     const data = {
         obra: obra,
         data_programacao: data_programacao,
-        criado_por: dadosSessao.matricula || 'Sistema',
-        tipo_mgm: tipoMgm
+        criado_por: dadosSessao.matricula || 'Sistema'
     };
     
     if (temItens) {
@@ -3766,11 +3803,6 @@ async function salvarControle() {
         data.observacao = formObservacaoDevolucao?.value || '';
     }
     
-    if (isMovimento && tipoMgm === 'UNICO') {
-        data.tipo_movimento = tipoMovimento;
-        data.cod_movimentacao = codMovimentacao;
-    }
-    
     const url = `${API_URL}${tipoInfo.endpoint}/${controleAtual.numero}`;
     
     try {
@@ -3799,7 +3831,7 @@ async function salvarControle() {
 window.salvarControle = salvarControle;
 
 // ============================================
-// FINALIZAR CONTROLE (CORRIGIDO - FINALIZA TODAS AS LINHAS E MANTÉM ABA)
+// FINALIZAR CONTROLE
 // ============================================
 
 async function finalizarControle() {
@@ -4176,3 +4208,4 @@ window.carregarDocumentosMultiplos = carregarDocumentosMultiplos;
 window.configurarNavegacaoDocumentosMultiplos = configurarNavegacaoDocumentosMultiplos;
 window.configurarPasteDocumentosMultiplos = configurarPasteDocumentosMultiplos;
 window.obterDocumentosMultiplos = obterDocumentosMultiplos;
+window.controlarVisibilidadeDataProgramacao = controlarVisibilidadeDataProgramacao;

@@ -112,6 +112,13 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
         }
+        /* Campo Data de Programação escondido para movimento */
+        #campoDataProgramacao {
+            display: block;
+        }
+        .tipo-movimento #campoDataProgramacao {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -170,6 +177,11 @@
                             <div class="form-group">
                                 <label for="formObra">🏗️ Obra *</label>
                                 <input type="text" id="formObra" placeholder="Digite o número da obra" required>
+                            </div>
+                            <!-- CAMPO DATA DE PROGRAMAÇÃO - lado a lado com a obra -->
+                            <div class="form-group" id="campoDataProgramacao">
+                                <label for="formDataProgramacao">📅 Data de Programação <span style="color:#FC8181;">*</span></label>
+                                <input type="date" id="formDataProgramacao">
                             </div>
                         </div>
                     </div>
