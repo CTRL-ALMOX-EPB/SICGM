@@ -106,14 +106,17 @@ function formatarObra(obra) {
 }
 
 // ============================================
-// FUNÇÃO: OBTER MÊS DA DATA
+// FUNÇÃO: OBTER MÊS DA DATA (CORRIGIDA - FUSO HORÁRIO)
 // ============================================
 
 function getMesAno(dataString) {
     if (!dataString) return null;
     try {
         const data = new Date(dataString);
-        return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+        // CORREÇÃO: Usa UTC para evitar problemas de fuso horário
+        const ano = data.getUTCFullYear();
+        const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
+        return `${ano}-${mes}`;
     } catch {
         return null;
     }
@@ -140,21 +143,24 @@ function formatarValor(valor) {
 }
 
 // ============================================
-// FUNÇÃO: FORMATAR DATA
+// FUNÇÃO: FORMATAR DATA (CORRIGIDA - FUSO HORÁRIO)
 // ============================================
 
 function formatarData(dataString) {
     if (!dataString) return '-';
     try {
         const data = new Date(dataString);
-        return data.toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
+        if (!isNaN(data)) {
+            // CORREÇÃO: Usa UTC para evitar problemas de fuso horário
+            const dia = String(data.getUTCDate()).padStart(2, '0');
+            const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
+            const ano = data.getUTCFullYear();
+            return `${dia}.${mes}.${ano}`;
+        }
     } catch {
         return dataString;
     }
+    return dataString;
 }
 
 // ============================================
@@ -301,7 +307,7 @@ function parsearMovimentosSiago(texto) {
 }
 
 // ============================================
-// FUNÇÃO: PARSEAR DEVOLUÇÃO COMPILADA
+// FUNÇÃO: PARSEAR DEVOLUÇÃO COMPILADA (CORRIGIDA - DATAS)
 // ============================================
 
 function parsearDevolucaoCompilada(texto) {
@@ -342,39 +348,35 @@ function parsearDevolucaoCompilada(texto) {
         let dataOriginal = partes[indices.data]?.trim() || '';
         let dataConvertida = dataOriginal;
         
+        // CORREÇÃO: Melhor tratamento de datas
         if (dataOriginal) {
-            if (dataOriginal.includes('.')) {
+            // Remove espaços extras
+            dataOriginal = dataOriginal.trim();
+            
+            // Tenta converter DD.MM.YYYY
+            if (dataOriginal.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
                 const partesData = dataOriginal.split('.');
-                if (partesData.length === 3) {
-                    const dia = partesData[0].padStart(2, '0');
-                    const mes = partesData[1].padStart(2, '0');
-                    const ano = partesData[2];
-                    const anoCompleto = ano.length === 2 ? '20' + ano : ano;
-                    dataConvertida = `${anoCompleto}-${mes}-${dia}`;
-                }
+                const dia = partesData[0].padStart(2, '0');
+                const mes = partesData[1].padStart(2, '0');
+                const ano = partesData[2];
+                const anoCompleto = ano.length === 2 ? '20' + ano : ano;
+                dataConvertida = `${anoCompleto}-${mes}-${dia}`;
             }
-            else if (dataOriginal.includes('/')) {
+            // Tenta converter DD/MM/YYYY
+            else if (dataOriginal.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
                 const partesData = dataOriginal.split('/');
-                if (partesData.length === 3) {
-                    const dia = partesData[0].padStart(2, '0');
-                    const mes = partesData[1].padStart(2, '0');
-                    const ano = partesData[2];
-                    const anoCompleto = ano.length === 2 ? '20' + ano : ano;
-                    dataConvertida = `${anoCompleto}-${mes}-${dia}`;
-                }
+                const dia = partesData[0].padStart(2, '0');
+                const mes = partesData[1].padStart(2, '0');
+                const ano = partesData[2];
+                const anoCompleto = ano.length === 2 ? '20' + ano : ano;
+                dataConvertida = `${anoCompleto}-${mes}-${dia}`;
             }
-            else if (dataOriginal.includes('-')) {
-                const partesData = dataOriginal.split('-');
-                if (partesData.length === 3) {
-                    dataConvertida = dataOriginal;
-                }
+            // Tenta converter YYYY-MM-DD (já normalizado)
+            else if (dataOriginal.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                dataConvertida = dataOriginal;
             }
-        }
-        
-        if (!dataConvertida || dataConvertida === dataOriginal) {
-            const testDate = new Date(dataOriginal);
-            if (isNaN(testDate.getTime()) && dataOriginal) {
-                datasInvalidas++;
+            // Tenta extrair data de qualquer formato com regex
+            else {
                 const regexMatch = dataOriginal.match(/(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})/);
                 if (regexMatch) {
                     const dia = regexMatch[1].padStart(2, '0');
@@ -382,6 +384,19 @@ function parsearDevolucaoCompilada(texto) {
                     let ano = regexMatch[3];
                     if (ano.length === 2) ano = '20' + ano;
                     dataConvertida = `${ano}-${mes}-${dia}`;
+                } else {
+                    // Última tentativa: usar Date
+                    try {
+                        const testDate = new Date(dataOriginal);
+                        if (!isNaN(testDate)) {
+                            const dia = String(testDate.getUTCDate()).padStart(2, '0');
+                            const mes = String(testDate.getUTCMonth() + 1).padStart(2, '0');
+                            const ano = testDate.getUTCFullYear();
+                            dataConvertida = `${ano}-${mes}-${dia}`;
+                        }
+                    } catch (e) {
+                        // Mantém original
+                    }
                 }
             }
         }
@@ -408,7 +423,7 @@ function parsearDevolucaoCompilada(texto) {
 }
 
 // ============================================
-// FUNÇÃO: CONSOLIDAR PENDÊNCIAS MGM (VERSÃO FINAL - COM IDENTIFICAÇÃO CORRETA DE MÚLTIPLOS)
+// FUNÇÃO: CONSOLIDAR PENDÊNCIAS MGM (CORRIGIDA - MÚLTIPLOS)
 // ============================================
 
 function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanco, aditivosSistemicos) {
@@ -427,7 +442,7 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
     movimentosBanco.forEach(m => {
         const obraNorm = normalizarObra(m.obra);
         
-        // Identifica documentos MÚLTIPLOS pelo tipo_mgm = 'MULTIPLO'
+        // CORREÇÃO: Identifica documentos MÚLTIPLOS pelo tipo_mgm = 'MULTIPLO'
         const tipoMgm = (m.tipo_mgm || '').toUpperCase();
         if (m.cod_movimentacao && (tipoMgm === 'MULTIPLO' || tipoMgm === 'MULTIPLA')) {
             documentosMultiplos.add(m.cod_movimentacao);
@@ -455,7 +470,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
     movimentosBanco.forEach(m => {
         const obraNorm = normalizarObra(m.obra);
         
-        // Mapa por documento (cod_movimentacao)
         if (m.cod_movimentacao) {
             if (!movimentosPorDocumento[m.cod_movimentacao]) {
                 movimentosPorDocumento[m.cod_movimentacao] = [];
@@ -463,7 +477,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
             movimentosPorDocumento[m.cod_movimentacao].push(m);
         }
         
-        // Mapa por obra + data (para MGM Única)
         const chave = `${obraNorm}|${m.data_programacao}`;
         if (!movimentosPorObraData[chave]) {
             movimentosPorObraData[chave] = [];
@@ -524,7 +537,7 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
         const qtdDma = item.qtdDma || 0;
         const qtdEsperada = qtdAplicada > 0 ? qtdAplicada : qtdDma;
         
-        // Verifica se o documento é MÚLTIPLO (pelo tipo_mgm = 'MULTIPLO')
+        // CORREÇÃO: Verifica se o documento é MÚLTIPLO
         const isMultiplo = documentosMultiplos.has(documento);
         
         if (isMultiplo) {
