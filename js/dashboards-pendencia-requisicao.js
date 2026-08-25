@@ -408,7 +408,7 @@ function parsearDevolucaoCompilada(texto) {
 }
 
 // ============================================
-// FUNÇÃO: CONSOLIDAR PENDÊNCIAS MGM (CORRIGIDA - VERSÃO FINAL)
+// FUNÇÃO: CONSOLIDAR PENDÊNCIAS MGM (VERSÃO FINAL - COM IDENTIFICAÇÃO CORRETA DE MÚLTIPLOS)
 // ============================================
 
 function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanco, aditivosSistemicos) {
@@ -419,35 +419,17 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
     console.log(`📊 Aditivos: ${aditivosSistemicos.length}`);
     
     // ============================================
-    // PASSO 1: MAPEAR MOVIMENTOS DO BANCO
+    // PASSO 1: IDENTIFICAR DOCUMENTOS MÚLTIPLOS
     // ============================================
-    const movimentosPorDocumento = {};
-    const movimentosPorObraData = {};
     const documentosMultiplos = new Set();
     const documentosPorObraDocumento = {};
     
     movimentosBanco.forEach(m => {
         const obraNorm = normalizarObra(m.obra);
         
-        // Mapa por documento (cod_movimentacao)
-        if (m.cod_movimentacao) {
-            if (!movimentosPorDocumento[m.cod_movimentacao]) {
-                movimentosPorDocumento[m.cod_movimentacao] = [];
-            }
-            movimentosPorDocumento[m.cod_movimentacao].push(m);
-        }
-        
-        // Mapa por obra + data
-        const chave = `${obraNorm}|${m.data_programacao}`;
-        if (!movimentosPorObraData[chave]) {
-            movimentosPorObraData[chave] = [];
-        }
-        movimentosPorObraData[chave].push(m);
-        
-        // ============================================
-        // IDENTIFICAR DOCUMENTOS MÚLTIPLOS
-        // ============================================
-        if (m.cod_movimentacao && m.tipo_mgm === 'MULTIPLO') {
+        // Identifica documentos MÚLTIPLOS pelo tipo_mgm = 'MULTIPLO'
+        const tipoMgm = (m.tipo_mgm || '').toUpperCase();
+        if (m.cod_movimentacao && (tipoMgm === 'MULTIPLO' || tipoMgm === 'MULTIPLA')) {
             documentosMultiplos.add(m.cod_movimentacao);
             const chaveDoc = `${obraNorm}|${m.cod_movimentacao}`;
             if (!documentosPorObraDocumento[chaveDoc]) {
@@ -460,10 +442,37 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
     console.log(`📊 ${documentosMultiplos.size} documentos MÚLTIPLOS identificados (tipo_mgm = 'MULTIPLO')`);
     if (documentosMultiplos.size > 0) {
         console.log(`📊 Documentos múltiplos: ${Array.from(documentosMultiplos).join(', ')}`);
+    } else {
+        console.log('⚠️ NENHUM documento múltiplo encontrado! Verifique o campo tipo_mgm no banco.');
     }
     
     // ============================================
-    // PASSO 2: MAPEAR ADITIVOS
+    // PASSO 2: MAPEAR MOVIMENTOS DO BANCO
+    // ============================================
+    const movimentosPorDocumento = {};
+    const movimentosPorObraData = {};
+    
+    movimentosBanco.forEach(m => {
+        const obraNorm = normalizarObra(m.obra);
+        
+        // Mapa por documento (cod_movimentacao)
+        if (m.cod_movimentacao) {
+            if (!movimentosPorDocumento[m.cod_movimentacao]) {
+                movimentosPorDocumento[m.cod_movimentacao] = [];
+            }
+            movimentosPorDocumento[m.cod_movimentacao].push(m);
+        }
+        
+        // Mapa por obra + data (para MGM Única)
+        const chave = `${obraNorm}|${m.data_programacao}`;
+        if (!movimentosPorObraData[chave]) {
+            movimentosPorObraData[chave] = [];
+        }
+        movimentosPorObraData[chave].push(m);
+    });
+    
+    // ============================================
+    // PASSO 3: MAPEAR ADITIVOS
     // ============================================
     const aditivosPorDocumento = {};
     const aditivosPorObraData = {};
@@ -485,7 +494,8 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
                     descricao: item.descricao,
                     obra: obraNorm,
                     data_programacao: aditivo.data_programacao,
-                    numero_documento: numDoc
+                    numero_documento: numDoc,
+                    tipo_movimento: 'RMA'
                 });
                 
                 const chave = `${obraNorm}|${aditivo.data_programacao}`;
@@ -502,7 +512,7 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
     console.log(`📊 ${Object.keys(aditivosPorDocumento).length} documentos com aditivos`);
     
     // ============================================
-    // PASSO 3: AGRUPAR DEVOLUÇÕES
+    // PASSO 4: AGRUPAR DEVOLUÇÕES
     // ============================================
     const gruposMultiplos = {};
     const gruposUnicos = {};
@@ -514,9 +524,7 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
         const qtdDma = item.qtdDma || 0;
         const qtdEsperada = qtdAplicada > 0 ? qtdAplicada : qtdDma;
         
-        // ============================================
-        // VERIFICA SE É MÚLTIPLO
-        // ============================================
+        // Verifica se o documento é MÚLTIPLO (pelo tipo_mgm = 'MULTIPLO')
         const isMultiplo = documentosMultiplos.has(documento);
         
         if (isMultiplo) {
@@ -573,161 +581,16 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
     console.log(`📊 ${Object.keys(gruposUnicos).length} grupos para MGM ÚNICA`);
     
     // ============================================
-    // PASSO 4: PROCESSAR MGM MÚLTIPLA
+    // PASSO 5: PROCESSAR MGM ÚNICA (PRIMEIRO)
     // ============================================
     const pendencias = [];
     const itensRepresadosTemp = [];
     let totalRepresados = 0;
     let gruposProcessados = 0;
-    let gruposMultiplosAtendidos = 0;
     let gruposUnicosAtendidos = 0;
-    let gruposUnicosComMovimento = 0;
-    let gruposUnicosComAditivo = 0;
+    let gruposMultiplosAtendidos = 0;
     
-    for (const chave in gruposMultiplos) {
-        const grupo = gruposMultiplos[chave];
-        const { documento, obra, codigo, descricao, qtdEsperada, datas, movimentos } = grupo;
-        
-        gruposProcessados++;
-        console.log(`🔀 Processando MÚLTIPLA: ${documento} | ${codigo} | ${qtdEsperada} esperada | ${movimentos.length} datas`);
-        
-        // Ordena movimentos por data (mais antigo primeiro)
-        const movimentosOrdenados = [...movimentos].sort((a, b) => 
-            new Date(a.data_programacao) - new Date(b.data_programacao)
-        );
-        
-        // Busca o item no Siago pelo documento
-        const movimentoSiago = movimentosSiago[documento];
-        let qtdTotalDisponivel = 0;
-        let valorUnitario = 0;
-        let siglaMovimento = '';
-        let docsUsados = [];
-        
-        if (movimentoSiago) {
-            const itemSiago = movimentoSiago.itens.find(i => 
-                i.codmat_mov === codigo || 
-                i.codmat_mov === codigo.padStart(5, '0')
-            );
-            
-            if (itemSiago && itemSiago.qtdmov > 0) {
-                qtdTotalDisponivel = itemSiago.qtdmov;
-                valorUnitario = itemSiago.vlrult_cot || 0;
-                siglaMovimento = movimentoSiago.sigla_mov_mat || '';
-                docsUsados.push(documento);
-                console.log(`   📦 Siago: ${qtdTotalDisponivel} unidades disponíveis`);
-            } else {
-                console.log(`   ⚠️ Item ${codigo} não encontrado no Siago para ${documento}`);
-            }
-        } else {
-            console.log(`   ⚠️ Documento ${documento} não encontrado no Siago`);
-        }
-        
-        let saldo = qtdTotalDisponivel;
-        let qtdEncontrada = 0;
-        let distribuicao = [];
-        let sobra = 0;
-        let falta = 0;
-        let represados = 0;
-        let status = 'PENDENTE';
-        let motivo = '';
-        let qtdUsadaTotal = 0;
-        
-        // Distribui a quantidade entre as datas (mais antiga primeiro)
-        for (const mov of movimentosOrdenados) {
-            if (saldo <= 0) break;
-            
-            const qtdUsada = Math.min(saldo, qtdEsperada);
-            if (qtdUsada > 0) {
-                qtdUsadaTotal += qtdUsada;
-                saldo -= qtdUsada;
-                
-                distribuicao.push({
-                    data: mov.data_programacao,
-                    documento: documento,
-                    quantidade: qtdUsada,
-                    saldoRestante: saldo
-                });
-                console.log(`   📅 ${mov.data_programacao}: ${qtdUsada} usada, saldo ${saldo}`);
-            }
-        }
-        
-        qtdEncontrada = qtdUsadaTotal;
-        
-        // Se sobrou saldo, vai para REPRESADOS
-        if (saldo > 0) {
-            represados = saldo;
-            itensRepresadosTemp.push({
-                documento: documento,
-                obra: obra,
-                codigo: codigo,
-                descricao: descricao,
-                quantidade: saldo,
-                motivo: 'Excedente após distribuição em múltiplas MGM'
-            });
-            totalRepresados += saldo;
-            console.log(`   📌 ${saldo} unidades REPRESADAS`);
-        }
-        
-        // Determina status
-        if (qtdEncontrada === 0) {
-            status = 'PENDENTE';
-            motivo = 'Item não localizado no Siago';
-        } else if (qtdEncontrada >= qtdEsperada) {
-            if (qtdEncontrada > qtdEsperada) {
-                sobra = qtdEncontrada - qtdEsperada;
-                status = 'SOBRA';
-                motivo = `Excedente de ${sobra.toFixed(0)} unidades`;
-            } else {
-                status = 'ATENDIDO';
-                motivo = 'Quantidade exata';
-                gruposMultiplosAtendidos++;
-            }
-        } else if (qtdEncontrada < qtdEsperada && saldo === 0 && represados > 0) {
-            status = 'REPRESADO';
-            motivo = `Distribuição parcial - ${represados.toFixed(0)} represados`;
-        } else if (qtdEncontrada < qtdEsperada) {
-            falta = qtdEsperada - qtdEncontrada;
-            status = 'PARCIAL';
-            motivo = `Faltam ${falta.toFixed(0)} unidades`;
-        }
-        
-        const docsStr = docsUsados.length > 0 ? docsUsados.join(', ') : 'Nenhum';
-        const temAditivos = aditivosPorDocumento[documento] ? true : false;
-        
-        pendencias.push({
-            obra: obra,
-            obraFormatada: formatarObra(obra),
-            data: datas.length > 0 ? datas[0] : '',
-            codigo: codigo,
-            descricao: descricao,
-            qtdEsperada: qtdEsperada,
-            qtdEncontrada: qtdEncontrada,
-            sobra: sobra,
-            falta: falta,
-            represados: represados,
-            status: status,
-            motivo: motivo,
-            documento: documento,
-            documentosUsados: docsUsados,
-            documentosStr: docsStr,
-            qtdDocumentos: docsUsados.length,
-            totalDocumentos: 1,
-            temMultiplasMGM: true,
-            tipo_mgm: 'MULTIPLO',
-            distribuicao: distribuicao,
-            temAditivos: temAditivos,
-            temMovimentos: true,
-            valor_unitario: valorUnitario,
-            siglaMovimento: siglaMovimento,
-            datas: datas,
-            qtdDisponivel: qtdTotalDisponivel
-        });
-    }
-    
-    // ============================================
-    // PASSO 5: PROCESSAR MGM ÚNICA
-    // ============================================
-    
+    // PRIMEIRO: Processa MGM Única para gerar as pendências
     for (const chave in gruposUnicos) {
         const grupo = gruposUnicos[chave];
         const { obra, data, codigo, descricao, qtdEsperada, documentos } = grupo;
@@ -739,8 +602,8 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
         
         const chaveObraData = `${obra}|${data}`;
         let movimentosEncontrados = movimentosPorObraData[chaveObraData] || [];
-        let documentosEncontrados = [];
         let fontes = [];
+        let documentosEncontrados = [];
         
         if (movimentosEncontrados.length > 0) {
             movimentosEncontrados.forEach(m => {
@@ -749,11 +612,11 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
                     fontes.push({
                         documento: m.cod_movimentacao,
                         tipo: 'MOVIMENTO',
-                        dados: m
+                        dados: m,
+                        tipo_movimento: m.tipo_movimento || ''
                     });
                 }
             });
-            gruposUnicosComMovimento++;
         }
         
         const aditivosDocs = aditivosPorObraData[chaveObraData] || [];
@@ -764,11 +627,11 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
                     fontes.push({
                         documento: doc,
                         tipo: 'ADITIVO',
-                        dados: null
+                        dados: null,
+                        tipo_movimento: 'RMA'
                     });
                 }
             });
-            gruposUnicosComAditivo++;
         }
         
         let tipo_mgm = 'UNICO';
@@ -782,17 +645,16 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
             tipoMovimento = primeiro.tipo_movimento || null;
         }
         
-        let qtdEncontrada = 0;
+        let qtdRMA = 0;
+        let qtdDMA = 0;
+        let docsRMA = [];
+        let docsDMA = [];
         let docsUsados = [];
         let distribuicao = [];
         let valorUnitario = 0;
-        let sobra = 0;
-        let falta = 0;
-        let represados = 0;
-        let status = 'PENDENTE';
-        let motivo = '';
         let siglaMovimento = '';
         let detalhesDocumentos = [];
+        let qtdTotalDocumentos = 0;
         
         for (const fonte of fontes) {
             const documento = fonte.documento;
@@ -806,9 +668,20 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
                 
                 if (itemSiago && itemSiago.qtdmov > 0) {
                     const qtdItem = itemSiago.qtdmov;
-                    qtdEncontrada += qtdItem;
+                    qtdTotalDocumentos += qtdItem;
                     valorUnitario = itemSiago.vlrult_cot || 0;
                     siglaMovimento = movimentoSiago.sigla_mov_mat || '';
+                    
+                    const tipoMov = fonte.tipo_movimento || movimentoSiago.orgmov || '';
+                    const isRMA = tipoMov.toUpperCase() === 'RMA' || tipoMov.toUpperCase().includes('RMA');
+                    
+                    if (isRMA) {
+                        qtdRMA += qtdItem;
+                        docsRMA.push(documento);
+                    } else {
+                        qtdDMA += qtdItem;
+                        docsDMA.push(documento);
+                    }
                     
                     if (!docsUsados.includes(documento)) {
                         docsUsados.push(documento);
@@ -818,6 +691,7 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
                         documento: documento,
                         fonte: fonte.tipo,
                         quantidade: qtdItem,
+                        tipo: isRMA ? 'RMA' : 'DMA',
                         descricao_item: itemSiago.dscmat || ''
                     });
                     
@@ -825,37 +699,57 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
                         documento: documento,
                         fonte: fonte.tipo,
                         quantidade: qtdItem,
-                        data: data
+                        data: data,
+                        tipo: isRMA ? 'RMA' : 'DMA'
                     });
                 }
             }
         }
         
-        if (qtdEncontrada === 0) {
-            if (documentosEncontrados.length > 0) {
-                status = 'PENDENTE';
-                motivo = 'Item não localizado nos documentos do Siago';
-            } else {
-                status = 'PENDENTE';
-                motivo = 'Nenhum movimento ou aditivo encontrado';
-            }
-        } else {
-            if (qtdEncontrada > qtdEsperada) {
-                sobra = qtdEncontrada - qtdEsperada;
+        // ============================================
+        // MGM ÚNICA: CALCULA A PENDÊNCIA GERADA
+        // ============================================
+        let qtdEfetiva = qtdRMA - qtdDMA;
+        let pendenciaRMA = 0;
+        let pendenciaDMA = 0;
+        let status = 'PENDENTE';
+        let motivo = '';
+        let sobra = 0;
+        let falta = 0;
+        
+        if (qtdEfetiva === 0 && qtdTotalDocumentos === 0) {
+            status = 'PENDENTE';
+            motivo = 'Nenhum movimento ou aditivo encontrado';
+            pendenciaRMA = qtdEsperada;
+        } else if (qtdEfetiva === 0 && qtdTotalDocumentos > 0) {
+            status = 'PENDENTE';
+            motivo = `RMA (${qtdRMA}) e DMA (${qtdDMA}) se cancelam - efetivo 0`;
+            pendenciaRMA = qtdEsperada;
+        } else if (qtdEfetiva < 0) {
+            status = 'PENDENTE';
+            motivo = `DMA (${qtdDMA}) excede RMA (${qtdRMA})`;
+            pendenciaRMA = Math.abs(qtdEfetiva) + qtdEsperada;
+        } else if (qtdEfetiva > 0) {
+            if (qtdEfetiva > qtdEsperada) {
+                pendenciaDMA = qtdEfetiva - qtdEsperada;
                 status = 'SOBRA';
-                motivo = `Excedente de ${sobra.toFixed(0)} unidades (${docsUsados.length} documentos)`;
-            } else if (qtdEncontrada >= qtdEsperada) {
+                motivo = `Excedente de ${pendenciaDMA.toFixed(0)} unidades (precisa de DMA)`;
+                sobra = pendenciaDMA;
+            } else if (qtdEfetiva >= qtdEsperada) {
                 status = 'ATENDIDO';
-                motivo = `Quantidade exata (${docsUsados.length} documentos)`;
+                motivo = `Atendido (RMA: ${qtdRMA}, DMA: ${qtdDMA})`;
                 gruposUnicosAtendidos++;
-            } else if (qtdEncontrada < qtdEsperada) {
-                falta = qtdEsperada - qtdEncontrada;
+            } else if (qtdEfetiva < qtdEsperada) {
+                pendenciaRMA = qtdEsperada - qtdEfetiva;
                 status = 'PARCIAL';
-                motivo = `Faltam ${falta.toFixed(0)} unidades (${docsUsados.length} documentos)`;
+                motivo = `Faltam ${pendenciaRMA.toFixed(0)} unidades (precisa de RMA)`;
+                falta = pendenciaRMA;
             }
         }
         
         const docsStr = docsUsados.length > 0 ? docsUsados.join(', ') : 'Nenhum';
+        const docsRMAStr = docsRMA.length > 0 ? docsRMA.join(', ') : 'Nenhum';
+        const docsDMAStr = docsDMA.length > 0 ? docsDMA.join(', ') : 'Nenhum';
         const temAditivos = fontes.some(f => f.tipo === 'ADITIVO');
         
         pendencias.push({
@@ -865,15 +759,23 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
             codigo: codigo,
             descricao: descricao,
             qtdEsperada: qtdEsperada,
-            qtdEncontrada: qtdEncontrada,
+            qtdRMA: qtdRMA,
+            qtdDMA: qtdDMA,
+            qtdEfetiva: qtdEfetiva,
+            qtdEncontrada: qtdEfetiva > 0 ? qtdEfetiva : 0,
+            pendenciaRMA: pendenciaRMA,
+            pendenciaDMA: pendenciaDMA,
             sobra: sobra,
             falta: falta,
-            represados: represados,
             status: status,
             motivo: motivo,
             documentosEncontrados: documentosEncontrados,
             documentosUsados: docsUsados,
             documentosStr: docsStr,
+            documentosRMA: docsRMA,
+            documentosRMAStr: docsRMAStr,
+            documentosDMA: docsDMA,
+            documentosDMAStr: docsDMAStr,
             qtdDocumentos: docsUsados.length,
             totalDocumentos: documentosEncontrados.length,
             temMultiplasMGM: false,
@@ -886,7 +788,220 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
             tipoMovimento: tipoMovimento,
             siglaMovimento: siglaMovimento,
             statusBanco: statusBanco,
-            fontes: fontes
+            fontes: fontes,
+            isMultipla: false,
+            qtdTotalDocumentos: qtdTotalDocumentos
+        });
+    }
+    
+    // ============================================
+    // PASSO 6: PROCESSAR MGM MÚLTIPLA (CORRIGE PENDÊNCIAS)
+    // ============================================
+    
+    for (const chave in gruposMultiplos) {
+        const grupo = gruposMultiplos[chave];
+        const { documento, obra, codigo, descricao, qtdEsperada, datas, movimentos } = grupo;
+        
+        gruposProcessados++;
+        console.log(`🔀 Processando MÚLTIPLA: ${documento} | ${codigo} | ${qtdEsperada} esperada | ${movimentos.length} datas`);
+        
+        const movimentosOrdenados = [...movimentos].sort((a, b) => 
+            new Date(a.data_programacao) - new Date(b.data_programacao)
+        );
+        
+        // ============================================
+        // MGM MÚLTIPLA: OBTER RMA E DMA DO SIAGO
+        // ============================================
+        const movimentoSiago = movimentosSiago[documento];
+        let qtdRMA = 0;
+        let qtdDMA = 0;
+        let docsRMA = [];
+        let docsDMA = [];
+        let valorUnitario = 0;
+        let siglaMovimento = '';
+        let docsUsados = [];
+        let tipoMovimentoDoc = '';
+        
+        if (movimentoSiago) {
+            const itemSiago = movimentoSiago.itens.find(i => 
+                i.codmat_mov === codigo || 
+                i.codmat_mov === codigo.padStart(5, '0')
+            );
+            
+            if (itemSiago && itemSiago.qtdmov > 0) {
+                tipoMovimentoDoc = movimentoSiago.orgmov || '';
+                const isRMA = tipoMovimentoDoc.toUpperCase() === 'RMA' || tipoMovimentoDoc.toUpperCase().includes('RMA');
+                const qtdItem = itemSiago.qtdmov;
+                valorUnitario = itemSiago.vlrult_cot || 0;
+                siglaMovimento = movimentoSiago.sigla_mov_mat || '';
+                docsUsados.push(documento);
+                
+                if (isRMA) {
+                    qtdRMA = qtdItem;
+                    docsRMA.push(documento);
+                    console.log(`   📦 RMA: ${qtdRMA} unidades`);
+                } else {
+                    qtdDMA = qtdItem;
+                    docsDMA.push(documento);
+                    console.log(`   📦 DMA: ${qtdDMA} unidades`);
+                }
+            } else {
+                console.log(`   ⚠️ Item ${codigo} não encontrado no Siago para ${documento}`);
+            }
+        } else {
+            console.log(`   ⚠️ Documento ${documento} não encontrado no Siago`);
+        }
+        
+        // ============================================
+        // MGM MÚLTIPLA: CORRIGIR PENDÊNCIAS
+        // ============================================
+        // Buscar pendências existentes para esta obra+codigo
+        const pendenciasExistentes = pendencias.filter(p => 
+            p.obra === obra && p.codigo === codigo && p.temMultiplasMGM === false
+        );
+        
+        let pendenciaRMA = 0;
+        let pendenciaDMA = 0;
+        
+        pendenciasExistentes.forEach(p => {
+            pendenciaRMA += p.pendenciaRMA || 0;
+            pendenciaDMA += p.pendenciaDMA || 0;
+        });
+        
+        console.log(`   📊 Pendências existentes: RMA=${pendenciaRMA}, DMA=${pendenciaDMA}`);
+        console.log(`   📊 Saldo Múltipla: RMA=${qtdRMA}, DMA=${qtdDMA}`);
+        
+        // ============================================
+        // USAR SALDO DA MÚLTIPLA PARA CORRIGIR PENDÊNCIAS
+        // ============================================
+        let saldoRMA = qtdRMA;
+        let saldoDMA = qtdDMA;
+        let rmaUsado = 0;
+        let dmaUsado = 0;
+        let represadosRMA = 0;
+        let represadosDMA = 0;
+        let status = 'PENDENTE';
+        let motivo = '';
+        let pendenciaRMAFinal = pendenciaRMA;
+        let pendenciaDMAFinal = pendenciaDMA;
+        
+        // 1. Usar RMA da múltipla para cobrir pendência de RMA (falta de material)
+        if (pendenciaRMA > 0 && saldoRMA > 0) {
+            const usado = Math.min(pendenciaRMA, saldoRMA);
+            rmaUsado = usado;
+            pendenciaRMAFinal = pendenciaRMA - usado;
+            saldoRMA -= usado;
+            console.log(`   🔄 RMA da múltipla usado para cobrir pendência RMA: ${usado}`);
+        }
+        
+        // 2. Usar DMA da múltipla para cobrir pendência de DMA (excesso de material)
+        if (pendenciaDMA > 0 && saldoDMA > 0) {
+            const usado = Math.min(pendenciaDMA, saldoDMA);
+            dmaUsado = usado;
+            pendenciaDMAFinal = pendenciaDMA - usado;
+            saldoDMA -= usado;
+            console.log(`   🔄 DMA da múltipla usado para cobrir pendência DMA: ${usado}`);
+        }
+        
+        // 3. O que sobrou de RMA e DMA vai para REPRESADOS
+        if (saldoRMA > 0) {
+            represadosRMA = saldoRMA;
+            totalRepresados += saldoRMA;
+            itensRepresadosTemp.push({
+                documento: documento,
+                obra: obra,
+                codigo: codigo,
+                descricao: descricao,
+                quantidade: saldoRMA,
+                tipo: 'RMA',
+                motivo: 'Excedente de RMA após corrigir pendências'
+            });
+            console.log(`   📌 ${saldoRMA} unidades de RMA REPRESADAS`);
+        }
+        
+        if (saldoDMA > 0) {
+            represadosDMA = saldoDMA;
+            totalRepresados += saldoDMA;
+            itensRepresadosTemp.push({
+                documento: documento,
+                obra: obra,
+                codigo: codigo,
+                descricao: descricao,
+                quantidade: saldoDMA,
+                tipo: 'DMA',
+                motivo: 'Excedente de DMA após corrigir pendências'
+            });
+            console.log(`   📌 ${saldoDMA} unidades de DMA REPRESADAS`);
+        }
+        
+        // Determina status final
+        if (pendenciaRMAFinal === 0 && pendenciaDMAFinal === 0) {
+            status = 'ATENDIDO';
+            motivo = 'Todas as pendências corrigidas pela MGM Múltipla';
+            gruposMultiplosAtendidos++;
+        } else if (pendenciaRMAFinal > 0 || pendenciaDMAFinal > 0) {
+            status = 'PARCIAL';
+            motivo = `Pendências restantes: RMA=${pendenciaRMAFinal}, DMA=${pendenciaDMAFinal}`;
+        }
+        
+        // Atualiza as pendências existentes com os valores corrigidos
+        pendenciasExistentes.forEach(p => {
+            p.status = status;
+            p.motivo = motivo + ' (corrigido pela MGM Múltipla)';
+            p.pendenciaRMA = pendenciaRMAFinal;
+            p.pendenciaDMA = pendenciaDMAFinal;
+            p.qtdEncontrada = p.qtdEsperada - pendenciaRMAFinal + pendenciaDMAFinal;
+            p.temMultiplasMGM = true;
+        });
+        
+        const docsStr = docsUsados.length > 0 ? docsUsados.join(', ') : 'Nenhum';
+        const docsRMAStr = docsRMA.length > 0 ? docsRMA.join(', ') : 'Nenhum';
+        const docsDMAStr = docsDMA.length > 0 ? docsDMA.join(', ') : 'Nenhum';
+        
+        // Adiciona a MGM Múltipla como pendência
+        pendencias.push({
+            obra: obra,
+            obraFormatada: formatarObra(obra),
+            data: datas.length > 0 ? datas[0] : '',
+            codigo: codigo,
+            descricao: descricao,
+            qtdEsperada: qtdEsperada,
+            qtdRMA: qtdRMA,
+            qtdDMA: qtdDMA,
+            qtdEfetiva: qtdRMA - qtdDMA,
+            qtdEncontrada: qtdRMA - qtdDMA,
+            pendenciaRMA: pendenciaRMAFinal,
+            pendenciaDMA: pendenciaDMAFinal,
+            sobra: 0,
+            falta: pendenciaRMAFinal + pendenciaDMAFinal,
+            represados: represadosRMA + represadosDMA,
+            status: status,
+            motivo: motivo,
+            documento: documento,
+            documentosUsados: docsUsados,
+            documentosStr: docsStr,
+            documentosRMA: docsRMA,
+            documentosRMAStr: docsRMAStr,
+            documentosDMA: docsDMA,
+            documentosDMAStr: docsDMAStr,
+            qtdDocumentos: docsUsados.length,
+            totalDocumentos: 1,
+            temMultiplasMGM: true,
+            tipo_mgm: 'MULTIPLO',
+            distribuicao: [],
+            temAditivos: false,
+            temMovimentos: true,
+            valor_unitario: valorUnitario,
+            siglaMovimento: siglaMovimento,
+            datas: datas,
+            qtdDisponivel: qtdRMA - qtdDMA,
+            tipoMovimentoDoc: tipoMovimentoDoc,
+            isMultipla: true,
+            rmaUsado: rmaUsado,
+            dmaUsado: dmaUsado,
+            represadosRMA: represadosRMA,
+            represadosDMA: represadosDMA,
+            pendenciasCorrigidas: pendenciasExistentes.length
         });
     }
     
@@ -896,10 +1011,8 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
     };
     
     console.log(`✅ ${pendencias.length} pendências MGM consolidadas`);
-    console.log(`📊 ${Object.keys(gruposMultiplos).length} grupos MÚLTIPLOS processados`);
-    console.log(`📊 ${Object.keys(gruposUnicos).length} grupos ÚNICOS processados`);
-    console.log(`📊 ${gruposMultiplosAtendidos} grupos MÚLTIPLOS atendidos`);
-    console.log(`📊 ${gruposUnicosAtendidos} grupos ÚNICOS atendidos`);
+    console.log(`📊 ${gruposUnicosAtendidos} grupos ÚNICOS atendidos (antes da correção)`);
+    console.log(`📊 ${gruposMultiplosAtendidos} grupos MÚLTIPLOS que corrigiram pendências`);
     console.log(`📊 Represados: ${totalRepresados.toFixed(2)} unidades`);
     console.log(`📊 ${itensRepresadosTemp.length} itens represados`);
     
@@ -1749,6 +1862,13 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
             ).join(' | ');
         }
         
+        const docsRMAInfo = item.documentosRMA && item.documentosRMA.length > 0 
+            ? item.documentosRMA.join(', ') 
+            : '';
+        const docsDMAInfo = item.documentosDMA && item.documentosDMA.length > 0 
+            ? item.documentosDMA.join(', ') 
+            : '';
+        
         const infoExtra = [docsInfo, temAditivo, temMultiplas].filter(Boolean).join(' ');
         
         html += `
@@ -1758,6 +1878,8 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
                 <div class="item-qtd-detail">${qtdInfo}</div>
                 <div class="item-status-detail ${statusClass}">${statusBadge}</div>
                 <div class="item-mov-detail" style="font-size: 9px; color: #718096;">${infoExtra} ${tipoMgmLabel}</div>
+                ${docsRMAInfo ? `<div class="item-rma-detail" style="font-size: 9px; color: #48BB78; margin-top: 2px;">🟢 RMA: ${docsRMAInfo}</div>` : ''}
+                ${docsDMAInfo ? `<div class="item-dma-detail" style="font-size: 9px; color: #E53E3E; margin-top: 2px;">🔴 DMA: ${docsDMAInfo}</div>` : ''}
                 ${temMultiplas ? `<div class="item-multi-detail" style="font-size: 9px; color: #805AD5;">${temMultiplas}</div>` : ''}
                 ${distribuicaoInfo ? `<div class="item-distribuicao-detail" style="font-size: 9px; color: #4A5568; grid-column: 1 / -1; background: #F7FAFC; padding: 4px 8px; border-radius: 4px; margin-top: 2px;">📊 Distribuição: ${distribuicaoInfo}</div>` : ''}
             </div>
