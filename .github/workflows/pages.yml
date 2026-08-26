@@ -30,33 +30,36 @@ jobs:
         uses: actions/configure-pages@v4
       
       # ============================================
-      # 🔥 CRIAR FIREBASE-CONFIG.JS COM SECRETS
+      # 🔥 CRIAR firebase-config.js A PARTIR DO MODELO
       # ============================================
       - name: Criar firebase-config.js
         run: |
-          echo "📁 Criando firebase-config.js..."
-          echo "// ============================================" > js/firebase-config.js
-          echo "// FIREBASE CONFIG - GERADO AUTOMATICAMENTE" >> js/firebase-config.js
-          echo "// ============================================" >> js/firebase-config.js
-          echo "" >> js/firebase-config.js
-          echo "const firebaseConfig = {" >> js/firebase-config.js
-          echo "    apiKey: '${{ secrets.FIREBASE_API_KEY }}'," >> js/firebase-config.js
-          echo "    authDomain: '${{ secrets.FIREBASE_AUTH_DOMAIN }}'," >> js/firebase-config.js
-          echo "    projectId: '${{ secrets.FIREBASE_PROJECT_ID }}'," >> js/firebase-config.js
-          echo "    storageBucket: '${{ secrets.FIREBASE_STORAGE_BUCKET }}'," >> js/firebase-config.js
-          echo "    messagingSenderId: '${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}'," >> js/firebase-config.js
-          echo "    appId: '${{ secrets.FIREBASE_APP_ID }}'" >> js/firebase-config.js
-          echo "};" >> js/firebase-config.js
-          echo "" >> js/firebase-config.js
-          echo "// Inicializar Firebase" >> js/firebase-config.js
-          echo "firebase.initializeApp(firebaseConfig);" >> js/firebase-config.js
-          echo "const auth = firebase.auth();" >> js/firebase-config.js
-          echo "auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);" >> js/firebase-config.js
-          echo "console.log('🔥 Firebase inicializado com sucesso!');" >> js/firebase-config.js
-          echo "✅ firebase-config.js criado!"
+          echo "📁 Criando firebase-config.js a partir do modelo..."
+          
+          # 🔥 Copiar o modelo
+          if [ -f "js/firebase-config.example.js" ]; then
+            cp js/firebase-config.example.js js/firebase-config.js
+            echo "✅ Modelo copiado!"
+          else
+            echo "❌ ERRO: firebase-config.example.js não encontrado!"
+            exit 1
+          fi
+          
+          # 🔥 Substituir placeholders pelos Secrets
+          echo "🔧 Substituindo placeholders pelos Secrets..."
+          
+          # Substituir cada placeholder
+          sed -i "s/SUA_API_KEY_AQUI/${{ secrets.FIREBASE_API_KEY }}/g" js/firebase-config.js
+          sed -i "s/SEU_PROJETO.firebaseapp.com/${{ secrets.FIREBASE_AUTH_DOMAIN }}/g" js/firebase-config.js
+          sed -i "s/SEU_PROJETO/${{ secrets.FIREBASE_PROJECT_ID }}/g" js/firebase-config.js
+          sed -i "s/SEU_PROJETO.appspot.com/${{ secrets.FIREBASE_STORAGE_BUCKET }}/g" js/firebase-config.js
+          sed -i "s/SEU_SENDER_ID/${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}/g" js/firebase-config.js
+          sed -i "s/SEU_APP_ID/${{ secrets.FIREBASE_APP_ID }}/g" js/firebase-config.js
+          
+          echo "✅ firebase-config.js criado com sucesso!"
       
       # ============================================
-      # 🔥 VERIFICAR SE O ARQUIVO FOI CRIADO
+      # 🔥 VERIFICAR O ARQUIVO
       # ============================================
       - name: Verificar firebase-config.js
         run: |
@@ -66,14 +69,12 @@ jobs:
           if [ -f "js/firebase-config.js" ]; then
             echo "✅ Arquivo criado com sucesso!"
             echo ""
-            echo "📄 CONTEÚDO DO ARQUIVO:"
+            echo "📄 PRIMEIRAS LINHAS (seguro):"
             echo "-----------------------------------------"
-            cat js/firebase-config.js
+            head -n 15 js/firebase-config.js
             echo "-----------------------------------------"
           else
             echo "❌ ERRO: firebase-config.js não foi criado!"
-            echo "📁 Conteúdo da pasta js/:"
-            ls -la js/
             exit 1
           fi
       
@@ -88,12 +89,6 @@ jobs:
             exit 1
           fi
           echo "✅ index.html encontrado"
-          
-          if [ ! -d "css" ]; then
-            echo "⚠️ Aviso: Pasta 'css' não encontrada"
-          else
-            echo "✅ Pasta 'css' encontrada"
-          fi
           
           if [ ! -d "js" ]; then
             echo "⚠️ Aviso: Pasta 'js' não encontrada"
