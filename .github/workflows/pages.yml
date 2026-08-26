@@ -15,7 +15,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Job de build
   build:
     runs-on: ubuntu-latest
     steps:
@@ -30,9 +29,12 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
       
-      # 🔥 NOVO: Criar firebase-config.js com os Secrets
+      # ============================================
+      # 🔥 CRIAR FIREBASE-CONFIG.JS COM SECRETS
+      # ============================================
       - name: Criar firebase-config.js
         run: |
+          echo "📁 Criando firebase-config.js..."
           echo "// ============================================" > js/firebase-config.js
           echo "// FIREBASE CONFIG - GERADO AUTOMATICAMENTE" >> js/firebase-config.js
           echo "// ============================================" >> js/firebase-config.js
@@ -51,20 +53,33 @@ jobs:
           echo "const auth = firebase.auth();" >> js/firebase-config.js
           echo "auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);" >> js/firebase-config.js
           echo "console.log('🔥 Firebase inicializado com sucesso!');" >> js/firebase-config.js
+          echo "✅ firebase-config.js criado!"
       
-      # 🔥 NOVO: Verificar se o arquivo foi criado
+      # ============================================
+      # 🔥 VERIFICAR SE O ARQUIVO FOI CRIADO
+      # ============================================
       - name: Verificar firebase-config.js
         run: |
-          echo "=== 📁 firebase-config.js criado ==="
+          echo "========================================="
+          echo "📁 VERIFICANDO firebase-config.js"
+          echo "========================================="
           if [ -f "js/firebase-config.js" ]; then
             echo "✅ Arquivo criado com sucesso!"
-            echo "=== Primeiras linhas ==="
-            head -n 10 js/firebase-config.js
+            echo ""
+            echo "📄 CONTEÚDO DO ARQUIVO:"
+            echo "-----------------------------------------"
+            cat js/firebase-config.js
+            echo "-----------------------------------------"
           else
-            echo "❌ ERRO: Arquivo não foi criado!"
+            echo "❌ ERRO: firebase-config.js não foi criado!"
+            echo "📁 Conteúdo da pasta js/:"
+            ls -la js/
             exit 1
           fi
       
+      # ============================================
+      # 🔥 VERIFICAR OUTROS ARQUIVOS
+      # ============================================
       - name: Verify required files
         run: |
           echo "📁 Verificando arquivos necessários..."
@@ -84,18 +99,19 @@ jobs:
             echo "⚠️ Aviso: Pasta 'js' não encontrada"
           else
             echo "✅ Pasta 'js' encontrada"
+            echo "📁 Arquivos em js/:"
+            ls -la js/
           fi
-          
-          echo "📁 Conteúdo do diretório:"
-          ls -la
       
+      # ============================================
+      # 🔥 UPLOAD DO ARTEFATO
+      # ============================================
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
           name: github-pages
 
-  # Job de deploy (depende do build)
   deploy:
     environment:
       name: github-pages
