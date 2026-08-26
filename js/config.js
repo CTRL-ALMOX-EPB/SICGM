@@ -64,39 +64,54 @@ const CONFIG = {
     },
     
     // ============================================
-    // NOVA FUNÇÃO: Navegação universal
+    // NAVEGAÇÃO UNIVERSAL
     // ============================================
     navigateTo: function(page, params = null) {
-        // Obtém a URL completa
         let url = this.getPageUrl(page);
         
-        // Adiciona parâmetros se fornecidos
         if (params) {
             const queryString = new URLSearchParams(params).toString();
             url += url.includes('?') ? `&${queryString}` : `?${queryString}`;
         }
         
         console.log(`🔀 Navegando para: ${url}`);
-        
-        // Navega para a URL
         window.location.href = url;
     },
     
     // ============================================
-    // NOVA FUNÇÃO: Voltar para Home com segurança
+    // VOLTAR PARA HOME (USANDO authService)
     // ============================================
     goHome: function() {
-        // Tenta obter a sessão para saber o perfil
         let perfil = 'GESTAO'; // Perfil padrão
         
         try {
-            const sessao = sessionStorage.getItem('sessaoSICGM');
-            if (sessao) {
-                const dados = JSON.parse(sessao);
-                perfil = dados.perfil || 'GESTAO';
+            // 🔥 USA O authService EM VEZ DA SESSÃO ANTIGA
+            if (typeof authService !== 'undefined' && authService) {
+                const user = authService.getUserData();
+                if (user && user.perfil) {
+                    perfil = user.perfil;
+                } else {
+                    // Se não conseguir pelo authService, tenta o token direto
+                    const token = sessionStorage.getItem('auth_token');
+                    if (token) {
+                        const payload = JSON.parse(atob(token));
+                        if (payload && payload.perfil) {
+                            perfil = payload.perfil;
+                        }
+                    }
+                }
+            } else {
+                // Fallback: tentar ler do token diretamente
+                const token = sessionStorage.getItem('auth_token');
+                if (token) {
+                    const payload = JSON.parse(atob(token));
+                    if (payload && payload.perfil) {
+                        perfil = payload.perfil;
+                    }
+                }
             }
         } catch (e) {
-            console.warn('⚠️ Não foi possível obter o perfil da sessão, usando padrão');
+            console.warn('⚠️ Não foi possível obter o perfil, usando padrão:', e);
         }
         
         // Mapeamento de perfis para páginas
@@ -109,9 +124,61 @@ const CONFIG = {
         const homePage = HOME_PAGES[perfil.toUpperCase()] || 'home-gestao.html';
         
         console.log(`🏠 Voltando para home: ${homePage} (Perfil: ${perfil})`);
-        
-        // Usa a navegação universal
         this.navigateTo(homePage);
+    },
+    
+    // ============================================
+    // VERIFICAR SE ESTÁ LOGADO (USANDO authService)
+    // ============================================
+    isLoggedIn: function() {
+        try {
+            if (typeof authService !== 'undefined' && authService) {
+                return authService.isLoggedIn();
+            }
+            // Fallback: verificar token diretamente
+            const token = sessionStorage.getItem('auth_token');
+            if (!token) return false;
+            
+            const payload = JSON.parse(atob(token));
+            if (!payload || !payload.exp) return false;
+            
+            if (payload.exp < Date.now()) {
+                sessionStorage.removeItem('auth_token');
+                sessionStorage.removeItem('session_expiry');
+                return false;
+            }
+            
+            return true;
+        } catch (e) {
+            return false;
+        }
+    },
+    
+    // ============================================
+    // OBTER DADOS DO USUÁRIO (USANDO authService)
+    // ============================================
+    getUserData: function() {
+        try {
+            if (typeof authService !== 'undefined' && authService) {
+                return authService.getUserData();
+            }
+            // Fallback: ler do token diretamente
+            const token = sessionStorage.getItem('auth_token');
+            if (!token) return null;
+            
+            const payload = JSON.parse(atob(token));
+            if (!payload || !payload.exp) return null;
+            
+            if (payload.exp < Date.now()) {
+                sessionStorage.removeItem('auth_token');
+                sessionStorage.removeItem('session_expiry');
+                return null;
+            }
+            
+            return payload;
+        } catch (e) {
+            return null;
+        }
     }
 };
 

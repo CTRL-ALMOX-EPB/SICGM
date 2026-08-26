@@ -1,5 +1,5 @@
 // ============================================
-// SCRIPT COMPARTILHADO - GERENCIAMENTO DE SESSÃO
+// SCRIPT COMPARTILHADO - FUNÇÕES GLOBAIS
 // ============================================
 
 // ============================================
@@ -13,7 +13,7 @@ const HOME_PAGES = {
 };
 
 // ============================================
-// FUNÇÕES DE NAVEGAÇÃO UNIVERSAL (CORRIGIDAS)
+// FUNÇÕES DE NAVEGAÇÃO UNIVERSAL
 // ============================================
 
 /**
@@ -45,114 +45,85 @@ function navigateTo(page, params = null) {
 
 /**
  * Volta para a página home baseado no perfil do usuário
+ * 🔥 USA O authService EM VEZ DA SESSÃO ANTIGA
  */
 function goHome() {
-    // Tenta obter o perfil da sessão
+    // Tenta obter o perfil do authService
     let perfil = 'GESTAO';
     try {
-        const sessao = sessionStorage.getItem('sessaoSICGM');
-        if (sessao) {
-            const dados = JSON.parse(sessao);
-            perfil = dados.perfil || 'GESTAO';
+        if (typeof authService !== 'undefined' && authService) {
+            const user = authService.getUserData();
+            if (user && user.perfil) {
+                perfil = user.perfil;
+            }
         }
     } catch (e) {
-        console.warn('⚠️ Erro ao ler sessão:', e);
+        console.warn('⚠️ Erro ao ler perfil:', e);
     }
     
     const homePage = HOME_PAGES[perfil.toUpperCase()] || 'home-gestao.html';
     
     console.log(`🏠 Voltando para home: ${homePage} (Perfil: ${perfil})`);
-    
-    // Usa navigateTo com a página limpa
     navigateTo(homePage);
 }
 
 // ============================================
-// FUNÇÕES DE GERENCIAMENTO DE SESSÃO
+// FUNÇÕES DE GERENCIAMENTO DE SESSÃO (DEPRECATED)
+// 🔥 REMOVIDAS PARA EVITAR CONFLITO COM auth-service.js
 // ============================================
 
-/**
- * Cria sessão para o usuário
- */
-function criarSessao(usuario) {
-    const sessao = {
-        matricula: usuario.matricula,
-        nome: usuario.nome,
-        cpf: usuario.cpf,
-        perfil: usuario.perfil || 'OPERACIONAL',
-        timestamp: Date.now()
-    };
-    sessionStorage.setItem('sessaoSICGM', JSON.stringify(sessao));
-    console.log('✅ Sessão criada:', sessao);
-}
+// ⚠️ As funções abaixo foram removidas para evitar conflito
+// com o auth-service.js. Use authService.isLoggedIn() e
+// authService.getUserData() no lugar.
 
-/**
- * Verifica se a sessão atual é válida
- */
-function verificarSessao() {
-    const sessao = sessionStorage.getItem('sessaoSICGM');
-    if (!sessao) return null;
-    
-    try {
-        const dados = JSON.parse(sessao);
-        const tempoDecorrido = Date.now() - dados.timestamp;
-        if (tempoDecorrido > 30 * 60 * 1000) {
-            sessionStorage.removeItem('sessaoSICGM');
-            console.log('⏰ Sessão expirada');
-            return null;
-        }
-        return dados;
-    } catch (e) {
-        console.error('❌ Erro ao verificar sessão:', e);
-        return null;
-    }
-}
-
-/**
- * Faz logout
- */
-function logout() {
-    sessionStorage.removeItem('sessaoSICGM');
-    navigateTo('login.html');
-}
-
-/**
- * Redireciona para a página home conforme o perfil
- */
-function redirecionarPorPerfil(perfil) {
-    const perfilNormalizado = perfil.toUpperCase().trim();
-    const homePage = HOME_PAGES[perfilNormalizado] || 'login.html';
-    navigateTo(homePage);
-}
+// ============================================
+// OUTRAS FUNÇÕES ÚTEIS
+// ============================================
 
 /**
  * Redireciona para a home baseado no perfil atual
+ * 🔥 USA O authService
  */
 function redirecionarParaHome() {
     goHome();
 }
 
-// ============================================
-// OUTRAS FUNÇÕES
-// ============================================
-
+/**
+ * Obtém o perfil do usuário logado
+ * 🔥 USA O authService
+ */
 function getPerfilAtual() {
-    const sessao = verificarSessao();
-    return sessao ? sessao.perfil : null;
+    try {
+        if (typeof authService !== 'undefined' && authService) {
+            const user = authService.getUserData();
+            return user ? user.perfil : null;
+        }
+    } catch (e) {
+        console.warn('⚠️ Erro ao obter perfil:', e);
+    }
+    return null;
 }
 
+/**
+ * Obtém a página home baseada no perfil
+ */
 function getHomePageAtual() {
-    const sessao = verificarSessao();
-    if (!sessao) return 'login.html';
-    const perfilNormalizado = sessao.perfil.toUpperCase().trim();
-    return HOME_PAGES[perfilNormalizado] || 'login.html';
+    const perfil = getPerfilAtual();
+    if (!perfil) return 'login.html';
+    return HOME_PAGES[perfil.toUpperCase()] || 'login.html';
 }
 
+/**
+ * Obtém a página home para um perfil específico
+ */
 function getPaginaHomePorPerfil(perfil) {
     const perfilNormalizado = perfil.toUpperCase().trim();
     return HOME_PAGES[perfilNormalizado] || 'login.html';
 }
 
+/**
+ * Cria botão "Voltar ao Início" estilizado
+ */
 function criarBotaoVoltarHome(estilo = 'padrao') {
     const botao = document.createElement('button');
     botao.innerHTML = '🏠 Voltar ao Início';
@@ -226,57 +197,64 @@ function criarBotaoVoltarHome(estilo = 'padrao') {
     return botao;
 }
 
+/**
+ * Verifica acesso baseado no perfil
+ * 🔥 USA O authService
+ */
 function verificarAcesso(perfilRequerido) {
-    const sessao = verificarSessao();
-    
-    if (!sessao) {
+    try {
+        if (typeof authService === 'undefined' || !authService) {
+            console.log('🔒 authService não disponível');
+            navigateTo('login.html');
+            return null;
+        }
+        
+        if (!authService.isLoggedIn()) {
+            console.log('🔒 Usuário não logado');
+            navigateTo('login.html');
+            return null;
+        }
+        
+        const user = authService.getUserData();
+        if (!user) {
+            console.log('🔒 Dados do usuário não encontrados');
+            navigateTo('login.html');
+            return null;
+        }
+        
+        if (perfilRequerido && user.perfil !== perfilRequerido) {
+            console.log(`🔒 Perfil ${user.perfil} não autorizado (requer ${perfilRequerido})`);
+            navigateTo('login.html');
+            return null;
+        }
+        
+        return user;
+    } catch (e) {
+        console.error('❌ Erro ao verificar acesso:', e);
         navigateTo('login.html');
         return null;
     }
-    
-    if (perfilRequerido && sessao.perfil !== perfilRequerido) {
-        console.log(`🔒 Perfil ${sessao.perfil} não autorizado`);
-        navigateTo('login.html');
-        return null;
-    }
-    
-    return sessao;
 }
 
 // ============================================
 // FUNÇÕES GLOBAIS EXPORTADAS
 // ============================================
 
-window.verificarSessao = verificarSessao;
-window.criarSessao = criarSessao;
-window.logout = logout;
-window.sair = logout;
-window.redirecionarPorPerfil = redirecionarPorPerfil;
-window.redirecionarParaHome = redirecionarParaHome;
-window.goHome = goHome;
+// 🔥 EXPORTA APENAS FUNÇÕES QUE NÃO CONFLITAM COM auth-service
 window.navigateTo = navigateTo;
+window.goHome = goHome;
+window.redirecionarParaHome = redirecionarParaHome;
 window.getPerfilAtual = getPerfilAtual;
 window.getHomePageAtual = getHomePageAtual;
 window.criarBotaoVoltarHome = criarBotaoVoltarHome;
 window.getPaginaHomePorPerfil = getPaginaHomePorPerfil;
 window.verificarAcesso = verificarAcesso;
 
-console.log('📦 script.js carregado com sucesso!');
+// ⚠️ REMOVIDAS: verificarSessao, criarSessao, logout (usar authService)
+
+console.log('📦 script.js carregado com sucesso! (sem conflitos de sessão)');
 
 // ============================================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO - REMOVIDA PARA EVITAR CONFLITO
 // ============================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    const isHomePage = document.getElementById('homeContent') !== null;
-    
-    if (isHomePage) {
-        const sessao = verificarSessao();
-        if (!sessao) {
-            console.log('🔒 Sessão inválida - Redirecionando para login');
-            navigateTo('login.html');
-        } else {
-            console.log('✅ Sessão válida para:', sessao.nome);
-        }
-    }
-});
+// 🔥 A verificação de sessão agora é feita APENAS pelo auth-global.js
