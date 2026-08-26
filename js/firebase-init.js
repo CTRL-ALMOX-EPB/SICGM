@@ -2,14 +2,16 @@
 // FIREBASE-INIT.JS - INICIALIZAÇÃO DO FIREBASE
 // ============================================
 // ⚠️ Este arquivo NÃO contém dados sensíveis!
-// Os dados vêm do firebase-config.js
+// Os dados vêm da variável global FIREBASE_CONFIG
+// injetada pelo workflow no HTML
 // ============================================
 
-// 🔥 Verificar se o Firebase já foi inicializado
-if (typeof firebase !== 'undefined' && firebase.apps.length === 0) {
-    console.warn('⚠️ Firebase não foi inicializado! Verifique se o firebase-config.js foi carregado.');
-} else if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
-    console.log('🔥 Firebase já está inicializado!');
+if (typeof window.FIREBASE_CONFIG !== 'undefined' && window.FIREBASE_CONFIG !== null) {
+    // Inicializar Firebase com a config global
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+    const auth = firebase.auth();
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    console.log('🔥 Firebase inicializado com sucesso!');
 } else {
-    console.error('❌ Firebase SDK não encontrado!');
+    console.error('❌ FIREBASE_CONFIG não encontrado! Verifique se o workflow injetou as variáveis corretamente.');
 }
