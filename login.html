@@ -115,22 +115,6 @@
             </div>
             <h2>SICGM - Sistema de Gestão</h2>
             
-            <!-- ============================================ -->
-            <!-- 🔥 FIREBASE CONFIG - INJETADO PELO WORKFLOW -->
-            <!-- ============================================ -->
-            <script>
-                // 🔥 Estas variáveis serão substituídas pelo workflow
-                window.FIREBASE_CONFIG = {
-                    apiKey: 'SUBSTITUIR_API_KEY',
-                    authDomain: 'SUBSTITUIR_AUTH_DOMAIN',
-                    projectId: 'SUBSTITUIR_PROJECT_ID',
-                    storageBucket: 'SUBSTITUIR_STORAGE_BUCKET',
-                    messagingSenderId: 'SUBSTITUIR_SENDER_ID',
-                    appId: 'SUBSTITUIR_APP_ID'
-                };
-                console.log('✅ FIREBASE_CONFIG carregado');
-            </script>
-            
             <form id="loginForm">
                 <div class="input-group">
                     <label for="emailPrefix">E-mail Corporativo:</label>
@@ -183,12 +167,20 @@
         </div>
     </div>
     
-    <!-- Firebase SDK -->
+    <!-- ============================================ -->
+    <!-- 1. FIREBASE SDK                              -->
+    <!-- ============================================ -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
-    <!-- Configurações -->
-    <script src="js/firebase-init.js"></script>
+    <!-- ============================================ -->
+    <!-- 2. FIREBASE CONFIG (CRIADO PELO WORKFLOW)   -->
+    <!-- ============================================ -->
+    <script src="js/firebase-config.js"></script>
+    
+    <!-- ============================================ -->
+    <!-- 3. SERVIÇOS                                  -->
+    <!-- ============================================ -->
     <script src="js/auth-service.js"></script>
     <script src="js/login.js"></script>
 </body>

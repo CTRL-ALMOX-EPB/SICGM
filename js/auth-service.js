@@ -4,12 +4,25 @@
 
 class AuthService {
     constructor() {
+        // 🔥 Verificar se o Firebase está disponível
+        if (typeof firebase === 'undefined') {
+            console.error('❌ Firebase não encontrado! Verifique se o SDK foi carregado.');
+            return;
+        }
+        
+        if (firebase.apps.length === 0) {
+            console.error('❌ Firebase não foi inicializado! Verifique o firebase-config.js');
+            return;
+        }
+        
         this.auth = firebase.auth();
         this.currentUser = null;
         this.usersCache = new Map();
         
         // 🔥 SUA API URL
         this.WORKER_URL = 'https://polished-salad-1dbe.alefe-gomes-72f.workers.dev/api';
+        
+        console.log('✅ AuthService inicializado com sucesso!');
     }
 
     // ============================================
@@ -38,7 +51,7 @@ class AuthService {
                 throw new Error('Conta desativada. Entre em contato com o administrador.');
             }
 
-            // 4. 🔥 SALVAR SESSÃO (COM VERIFICAÇÃO)
+            // 4. Salvar sessão (COM VERIFICAÇÃO)
             const sessionSaved = this.createSession(userData);
             if (!sessionSaved) {
                 throw new Error('Erro ao salvar sessão');
@@ -156,7 +169,7 @@ class AuthService {
     }
 
     // ============================================
-    // VERIFICAR SESSÃO (COM RETORNO BOOLEANO)
+    // VERIFICAR SESSÃO
     // ============================================
     isLoggedIn() {
         try {
@@ -190,11 +203,10 @@ class AuthService {
     }
 
     // ============================================
-    // PEGAR DADOS DO USUÁRIO (APÓS VERIFICAÇÃO)
+    // PEGAR DADOS DO USUÁRIO
     // ============================================
     getUserData() {
         try {
-            // 🔥 SÓ RETORNA SE ESTIVER LOGADO
             if (!this.isLoggedIn()) {
                 return null;
             }

@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================
     // VERIFICAR SE JÁ ESTÁ LOGADO
     // ============================================
-    if (typeof authService !== 'undefined' && authService.isLoggedIn()) {
+    if (typeof authService !== 'undefined' && authService && authService.isLoggedIn()) {
         const user = authService.getUserData();
         if (user) {
             console.log(`👤 Usuário já logado: ${user.nome}`);
@@ -81,6 +81,13 @@ document.addEventListener('DOMContentLoaded', function() {
             mensagemErro.textContent = '⚠️ Digite sua senha.';
             mensagemErro.className = 'mensagem-erro';
             senhaInput.focus();
+            return;
+        }
+
+        // 🔥 VERIFICAR SE authService ESTÁ DISPONÍVEL
+        if (typeof authService === 'undefined' || !authService) {
+            mensagemErro.textContent = '⚠️ Erro ao carregar o serviço de autenticação. Recarregue a página.';
+            mensagemErro.className = 'mensagem-erro';
             return;
         }
 

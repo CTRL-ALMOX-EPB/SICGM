@@ -79,45 +79,21 @@
     </div>
 
     <!-- ============================================ -->
-    <!-- 1. PRIMEIRO: FIREBASE SDK                  -->
+    <!-- 1. FIREBASE SDK                              -->
     <!-- ============================================ -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-
+    
     <!-- ============================================ -->
-    <!-- 2. SEGUNDO: FIREBASE CONFIG (INJETADO)      -->
+    <!-- 2. FIREBASE CONFIG (CRIADO PELO WORKFLOW)   -->
     <!-- ============================================ -->
-    <script>
-        // 🔥 Estas variáveis serão substituídas pelo workflow
-        window.FIREBASE_CONFIG = {
-            apiKey: 'SUBSTITUIR_API_KEY',
-            authDomain: 'SUBSTITUIR_AUTH_DOMAIN',
-            projectId: 'SUBSTITUIR_PROJECT_ID',
-            storageBucket: 'SUBSTITUIR_STORAGE_BUCKET',
-            messagingSenderId: 'SUBSTITUIR_SENDER_ID',
-            appId: 'SUBSTITUIR_APP_ID'
-        };
-        console.log('✅ FIREBASE_CONFIG carregado');
-    </script>
-
+    <script src="js/firebase-config.js"></script>
+    
     <!-- ============================================ -->
-    <!-- 3. TERCEIRO: FIREBASE INIT                 -->
-    <!-- ============================================ -->
-    <script src="js/firebase-init.js"></script>
-
-    <!-- ============================================ -->
-    <!-- 4. QUARTO: AUTH SERVICE (CRIA authService)  -->
+    <!-- 3. SERVIÇOS                                  -->
     <!-- ============================================ -->
     <script src="js/auth-service.js"></script>
-
-    <!-- ============================================ -->
-    <!-- 5. QUINTO: AUTH GLOBAL (USA authService)   -->
-    <!-- ============================================ -->
     <script src="js/auth-global.js"></script>
-
-    <!-- ============================================ -->
-    <!-- 6. SEXTO: SCRIPTS ESPECÍFICOS              -->
-    <!-- ============================================ -->
     <script src="js/script.js"></script>
     <script src="js/home-gestao.js"></script>
 </body>

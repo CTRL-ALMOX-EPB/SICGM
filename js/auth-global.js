@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('🔐 Iniciando verificação de autenticação...');
     
     // ============================================
-    // FUNÇÃO PRINCIPAL: VERIFICAR E CARREGAR
+    // FUNÇÃO PRINCIPAL: VERIFICAR E ACESSAR
     // ============================================
     function verificarEAcessar() {
         // 🔥 SE JÁ ESTÁ REDIRECIONANDO, PARAR
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // 🔥 VERIFICAR SE O authService EXISTE
-        if (typeof authService === 'undefined') {
+        if (typeof authService === 'undefined' || !authService) {
             console.warn('⏳ Aguardando authService carregar...');
             setTimeout(verificarEAcessar, 300);
             return;
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(() => {
         if (isRedirecting || sessionVerified) return;
         
-        if (typeof authService !== 'undefined') {
+        if (typeof authService !== 'undefined' && authService) {
             if (!authService.isLoggedIn()) {
                 console.log('🔒 Sessão expirada - Redirecionando');
                 isRedirecting = true;
@@ -126,7 +126,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================
     // INICIAR VERIFICAÇÃO
     // ============================================
-    // 🔥 DELAY DE 500ms PARA GARANTIR QUE TUDO CARREGOU
     setTimeout(verificarEAcessar, 500);
     
     console.log('🔐 Sistema de autenticação pronto');
