@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ============================================
-    // RECUPERAR SENHA
+    // RECUPERAR SENHA (COM VALIDAÇÃO DE E-MAIL)
     // ============================================
     btnForgotPassword.addEventListener('click', async function() {
         const emailCompleto = getEmailCompleto();
@@ -133,16 +133,55 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // 🔥 Desabilitar botão durante a verificação
+        btnForgotPassword.disabled = true;
+        btnForgotPassword.textContent = '⏳ Verificando...';
+        
+        // 🔥 Mostrar mensagem de carregamento
+        mensagemSucesso.textContent = '⏳ Verificando e-mail...';
+        mensagemSucesso.style.display = 'block';
+        mensagemErro.textContent = '';
+        mensagemErro.className = 'mensagem-erro';
+        
+        // 🔥 Primeiro: Verificar se o e-mail existe
+        const exists = await authService.emailExists(emailCompleto);
+        
+        if (!exists) {
+            // 🔥 E-mail NÃO existe
+            mensagemSucesso.style.display = 'none';
+            mensagemErro.textContent = '❌ E-mail não encontrado. Verifique se o e-mail está correto.';
+            mensagemErro.className = 'mensagem-erro';
+            
+            // Reabilitar botão
+            btnForgotPassword.disabled = false;
+            btnForgotPassword.textContent = '🔑 Esqueceu a senha?';
+            return;
+        }
+        
+        // 🔥 E-mail existe - Enviar redefinição
+        mensagemSucesso.textContent = '⏳ Enviando e-mail de recuperação...';
+        
         const result = await authService.resetPassword(emailCompleto);
         
         if (result.success) {
             mensagemSucesso.textContent = result.message;
             mensagemSucesso.style.display = 'block';
             mensagemErro.textContent = '';
+            mensagemErro.className = 'mensagem-erro';
+            
+            // Ocultar após 10 segundos
+            setTimeout(() => {
+                mensagemSucesso.style.display = 'none';
+            }, 10000);
         } else {
-            mensagemErro.textContent = result.error || '❌ Erro ao enviar e-mail.';
+            mensagemSucesso.style.display = 'none';
+            mensagemErro.textContent = result.error || '❌ Erro ao enviar e-mail. Tente novamente.';
             mensagemErro.className = 'mensagem-erro';
         }
+        
+        // Reabilitar botão
+        btnForgotPassword.disabled = false;
+        btnForgotPassword.textContent = '🔑 Esqueceu a senha?';
     });
 
     // ============================================

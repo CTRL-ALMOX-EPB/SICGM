@@ -145,6 +145,20 @@ class AuthService {
     }
 
     // ============================================
+    // VERIFICAR SE E-MAIL EXISTE NO SISTEMA
+    // ============================================
+    async emailExists(email) {
+        try {
+            // Buscar dados do usuário
+            const userData = await this.fetchUserData(email);
+            return userData !== null && userData !== undefined;
+        } catch (error) {
+            console.error('❌ Erro ao verificar e-mail:', error);
+            return false;
+        }
+    }
+
+    // ============================================
     // REGISTRAR SESSÃO ATIVA (OPCIONAL)
     // ============================================
     async registerActiveSession(userData) {
@@ -227,29 +241,39 @@ class AuthService {
     clearSession() {
         sessionStorage.removeItem('auth_token');
         sessionStorage.removeItem('session_expiry');
-        console.log('🧹 Sessão limpa');
+        console.log('🧹 Sessão limpa localmente');
     }
 
     // ============================================
-    // SAIR (VERSÃO CORRIGIDA)
+    // SAIR (VERSÃO CORRIGIDA - MAIS ROBUSTA)
     // ============================================
     async logout() {
         try {
+            console.log('👋 Iniciando logout...');
+            
+            // 1. Pegar dados do usuário antes de limpar
             const userData = this.getUserData();
+            
+            // 2. Notificar o Worker sobre o logout (se tiver dados)
             if (userData) {
-                await fetch(`${this.WORKER_URL}/sessions/remove`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ email: userData.email })
-                });
+                try {
+                    await fetch(`${this.WORKER_URL}/sessions/remove`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ email: userData.email })
+                    });
+                    console.log('✅ Sessão removida do Worker');
+                } catch (e) {
+                    console.warn('⚠️ Não foi possível remover sessão do Worker:', e);
+                }
             }
             
-            await this.auth.signOut();
+            // 3. Limpar sessão local (ANTES de deslogar do Firebase)
             this.clearSession();
             
-            // 🔥 RESETAR VARIÁVEIS GLOBAIS DO AUTH-GLOBAL
+            // 4. Resetar variáveis globais
             if (typeof sessionVerified !== 'undefined') {
                 sessionVerified = false;
             }
@@ -257,11 +281,66 @@ class AuthService {
                 isRedirecting = false;
             }
             
-            console.log('👋 Usuário desconectado');
+            // 5. Deslogar do Firebase (signOut)
+            try {
+                await this.auth.signOut();
+                console.log('✅ Firebase signOut realizado');
+            } catch (e) {
+                console.warn('⚠️ Erro no signOut do Firebase:', e);
+            }
+            
+            // 6. Redirecionar para login (com replace para não voltar)
+            console.log('🔀 Redirecionando para login...');
+            window.location.replace('login.html');
+            
             return true;
         } catch (error) {
             console.error('❌ Erro ao sair:', error);
+            // Mesmo com erro, tentar limpar e redirecionar
+            this.clearSession();
+            window.location.replace('login.html');
             return false;
+        }
+    }
+
+    // ============================================
+    // REDEFINIR SENHA (COM VALIDAÇÃO DE E-MAIL)
+    // ============================================
+    async resetPassword(email) {
+        try {
+            // 🔥 PRIMEIRO: VERIFICAR SE O E-MAIL EXISTE NO SISTEMA
+            console.log(`🔍 Verificando se o e-mail existe: ${email}`);
+            const exists = await this.emailExists(email);
+            
+            if (!exists) {
+                console.log(`❌ E-mail não encontrado: ${email}`);
+                return { 
+                    success: false, 
+                    error: '❌ E-mail não encontrado. Verifique se o e-mail está correto.' 
+                };
+            }
+
+            console.log(`✅ E-mail encontrado: ${email}`);
+            
+            // 🔥 SEGUNDO: ENVIAR O E-MAIL DE REDEFINIÇÃO
+            const actionCodeSettings = {
+                url: window.location.origin + '/login.html',
+                handleCodeInApp: false
+            };
+            
+            await this.auth.sendPasswordResetEmail(email, actionCodeSettings);
+            console.log(`✅ E-mail de redefinição enviado para: ${email}`);
+            
+            return { 
+                success: true, 
+                message: '📧 E-mail de recuperação enviado! Verifique sua caixa de entrada (verifique SPAM também).' 
+            };
+        } catch (error) {
+            console.error('❌ Erro ao enviar e-mail de redefinição:', error);
+            return { 
+                success: false, 
+                error: this.handleError(error) 
+            };
         }
     }
 
@@ -406,24 +485,6 @@ class AuthService {
     }
 
     // ============================================
-    // RECUPERAR SENHA
-    // ============================================
-    async resetPassword(email) {
-        try {
-            await this.auth.sendPasswordResetEmail(email);
-            return { 
-                success: true, 
-                message: '📧 E-mail de recuperação enviado! Verifique sua caixa de entrada.' 
-            };
-        } catch (error) {
-            return { 
-                success: false, 
-                error: this.handleError(error) 
-            };
-        }
-    }
-
-    // ============================================
     // TRATAMENTO DE ERROS
     // ============================================
     handleError(error) {
@@ -433,7 +494,9 @@ class AuthService {
             'auth/too-many-requests': '⚠️ Muitas tentativas. Tente em alguns minutos.',
             'auth/invalid-email': '❌ E-mail inválido.',
             'auth/user-disabled': '❌ Conta desativada. Entre em contato com o administrador.',
-            'auth/network-request-failed': '⚠️ Erro de rede. Verifique sua conexão.'
+            'auth/network-request-failed': '⚠️ Erro de rede. Verifique sua conexão.',
+            'auth/email-already-in-use': '❌ E-mail já em uso.',
+            'auth/weak-password': '❌ Senha deve ter pelo menos 6 caracteres.'
         };
 
         if (error.message === 'Conta desativada') {
