@@ -303,29 +303,46 @@ class AuthService {
     }
 
     // ============================================
-    // VERIFICAR SESSÃO
+    // VERIFICAR SESSÃO (VERSÃO MELHORADA)
     // ============================================
     isLoggedIn() {
         try {
             const token = sessionStorage.getItem('auth_token');
-            if (!token) return false;
+            if (!token) {
+                console.log('🔒 Nenhum token encontrado');
+                return false;
+            }
 
             const payload = JSON.parse(atob(token));
             
+            // 🔥 VERIFICAR SE O PAYLOAD É VÁLIDO
+            if (!payload || !payload.email || !payload.exp) {
+                console.log('🔒 Token inválido');
+                sessionStorage.removeItem('auth_token');
+                sessionStorage.removeItem('session_expiry');
+                return false;
+            }
+            
+            // Verificar se expirou
             if (payload.exp < Date.now()) {
+                console.log('⏰ Sessão expirada');
                 sessionStorage.removeItem('auth_token');
                 sessionStorage.removeItem('session_expiry');
                 return false;
             }
 
+            console.log('✅ Sessão válida para:', payload.email);
             return true;
         } catch (e) {
+            console.error('❌ Erro ao verificar sessão:', e);
+            sessionStorage.removeItem('auth_token');
+            sessionStorage.removeItem('session_expiry');
             return false;
         }
     }
 
     // ============================================
-    // PEGAR DADOS DO USUÁRIO LOGADO
+    // PEGAR DADOS DO USUÁRIO LOGADO (VERSÃO MELHORADA)
     // ============================================
     getUserData() {
         try {
@@ -333,6 +350,10 @@ class AuthService {
             if (!token) return null;
 
             const payload = JSON.parse(atob(token));
+            
+            if (!payload || !payload.email || !payload.exp) {
+                return null;
+            }
             
             if (payload.exp < Date.now()) {
                 sessionStorage.removeItem('auth_token');

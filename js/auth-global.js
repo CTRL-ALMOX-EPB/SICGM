@@ -4,25 +4,32 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     
+    console.log('🔐 Iniciando autenticação global...');
+    
     // ============================================
     // 1. VERIFICAR SE ESTÁ LOGADO
     // ============================================
     function verificarSessao() {
-        const token = sessionStorage.getItem('auth_token');
-        if (!token) {
-            console.log('🔒 Sem token - Redirecionando para login');
+        // 🔥 VERIFICAR SE O authService ESTÁ DISPONÍVEL
+        if (typeof authService === 'undefined') {
+            console.warn('⏳ Aguardando authService carregar...');
+            return false;
+        }
+        
+        // 🔥 VERIFICAR SE ESTÁ LOGADO
+        if (!authService.isLoggedIn()) {
+            console.log('🔒 Não autenticado - Redirecionando para login');
             window.location.href = 'login.html';
             return false;
         }
 
         try {
-            const payload = JSON.parse(atob(token));
+            const payload = authService.getUserData();
             
-            if (payload.exp < Date.now()) {
-                console.log('⏰ Sessão expirada - Redirecionando para login');
+            if (!payload) {
+                console.log('🔒 Sessão inválida - Redirecionando para login');
                 sessionStorage.removeItem('auth_token');
                 sessionStorage.removeItem('session_expiry');
-                alert('⏰ Sua sessão expirou. Faça login novamente.');
                 window.location.href = 'login.html';
                 return false;
             }
@@ -41,6 +48,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // 2. CARREGAR DADOS DO USUÁRIO
     // ============================================
     function carregarDadosUsuario() {
+        // 🔥 ESPERAR O authService CARREGAR
+        if (typeof authService === 'undefined') {
+            console.warn('⏳ Aguardando authService carregar...');
+            // Tentar novamente em 500ms
+            setTimeout(carregarDadosUsuario, 500);
+            return;
+        }
+        
         const user = verificarSessao();
         if (!user) return;
 
@@ -50,10 +65,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const perfilUsuario = document.getElementById('perfilUsuario');
         const mensagemBoasVindas = document.getElementById('mensagemBoasVindas');
 
-        if (nomeUsuario) nomeUsuario.textContent = user.nome;
-        if (matriculaUsuario) matriculaUsuario.textContent = `Matrícula: ${user.matricula}`;
-        if (perfilUsuario) perfilUsuario.textContent = user.perfil;
-        if (mensagemBoasVindas) mensagemBoasVindas.textContent = `👋 Olá, ${user.nome}!`;
+        if (nomeUsuario) {
+            nomeUsuario.textContent = user.nome;
+            console.log(`👤 Nome carregado: ${user.nome}`);
+        }
+        if (matriculaUsuario) {
+            matriculaUsuario.textContent = `Matrícula: ${user.matricula}`;
+        }
+        if (perfilUsuario) {
+            perfilUsuario.textContent = user.perfil;
+        }
+        if (mensagemBoasVindas) {
+            mensagemBoasVindas.textContent = `👋 Olá, ${user.nome}!`;
+        }
 
         // Mostrar timer (opcional)
         const timerElement = document.getElementById('sessionTimer');
@@ -85,13 +109,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // 4. VERIFICAR A CADA 30 SEGUNDOS
     // ============================================
     setInterval(() => {
-        verificarSessao();
+        if (typeof authService !== 'undefined') {
+            if (!authService.isLoggedIn()) {
+                console.log('🔒 Sessão expirada - Redirecionando');
+                window.location.href = 'login.html';
+            }
+        }
     }, 30000);
 
     // ============================================
     // 5. CARREGAR TUDO
     // ============================================
-    carregarDadosUsuario();
+    // 🔥 USAR setTimeout PARA GARANTIR QUE O authService CARREGOU
+    setTimeout(function() {
+        carregarDadosUsuario();
+    }, 300);
 
     console.log('🔐 Autenticação global carregada');
 });
