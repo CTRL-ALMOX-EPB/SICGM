@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - SICGM</title>
+    
+    <!-- Caminhos relativos para a raiz -->
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Header -->
+        <div class="admin-header">
+            <h1 class="admin-title">👑 Painel de Administração</h1>
+            <div class="admin-actions-header">
+                <a href="../home-gestao.html" class="btn btn-admin">🏠 Voltar</a>
+                <button class="btn btn-refresh" onclick="carregarDados()">🔄 Atualizar</button>
+                <button class="btn btn-sair" onclick="sair()">🚪 Sair</button>
+            </div>
+        </div>
+        
+        <!-- Loading -->
+        <div id="loading" class="loading">⏳ Carregando dados...</div>
+        
+        <!-- Conteúdo -->
+        <div id="conteudo" style="display: none;">
+            
+            <!-- Estatísticas -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalUsers">0</div>
+                    <div class="stat-label">Total de Usuários</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="activeUsers">0</div>
+                    <div class="stat-label">🟢 Usuários Ativos</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="inactiveUsers">0</div>
+                    <div class="stat-label">🔴 Usuários Inativos</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="onlineUsers">0</div>
+                    <div class="stat-label">🟢 Online Agora</div>
+                </div>
+            </div>
+            
+            <!-- Grid Principal -->
+            <div class="admin-grid">
+                
+                <!-- Card: Todos os Usuários -->
+                <div class="admin-card">
+                    <h2>👥 Todos os Usuários <span class="badge" id="badgeTotal">0</span></h2>
+                    <div class="user-list" id="allUsersList">
+                        <!-- Renderizado via JS -->
+                    </div>
+                </div>
+                
+                <!-- Card: Usuários Online -->
+                <div class="admin-card">
+                    <h2>🟢 Online Agora <span class="badge" id="badgeOnline">0</span></h2>
+                    <div class="user-list" id="onlineUsersList">
+                        <!-- Renderizado via JS -->
+                    </div>
+                </div>
+                
+                <!-- Card: Revogar Acesso -->
+                <div class="admin-card">
+                    <h2>🔒 Revogar Acesso</h2>
+                    <p style="color: #718096; font-size: 13px; margin: 5px 0 10px 0;">
+                        Desativa o acesso do usuário imediatamente.
+                    </p>
+                    <div class="admin-actions">
+                        <input type="email" id="revokeEmail" placeholder="email@dominio.com">
+                        <button class="btn btn-danger" onclick="revogarUsuario()">Revogar</button>
+                    </div>
+                    <div id="mensagemRevogar" class="mensagem"></div>
+                </div>
+                
+                <!-- Card: Reativar Acesso -->
+                <div class="admin-card">
+                    <h2>🔓 Reativar Acesso</h2>
+                    <p style="color: #718096; font-size: 13px; margin: 5px 0 10px 0;">
+                        Reativa o acesso de um usuário previamente desativado.
+                    </p>
+                    <div class="admin-actions">
+                        <input type="email" id="reactivateEmail" placeholder="email@dominio.com">
+                        <button class="btn btn-success" onclick="reativarUsuario()">Reativar</button>
+                    </div>
+                    <div id="mensagemReativar" class="mensagem"></div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <!-- Configurações - caminhos relativos para a raiz -->
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/auth-service.js"></script>
+    <script src="../js/admin.js"></script>
+</body>
+</html>

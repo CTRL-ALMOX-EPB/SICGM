@@ -5,46 +5,161 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - SICGM</title>
     
-    <!-- CSS Base - Usa CONFIG se disponível -->
     <link rel="stylesheet" href="css/base.css">
-    
-    <!-- CSS Login -->
     <link rel="stylesheet" href="css/login.css">
+    
+    <style>
+        .input-group-email {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            transition: border-color 0.3s;
+            overflow: hidden;
+        }
+        
+        .input-group-email:focus-within {
+            border-color: #4299E1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+        }
+        
+        .input-group-email input {
+            flex: 1;
+            border: none !important;
+            padding: 12px 15px;
+            font-size: 16px;
+            outline: none;
+            background: transparent;
+            min-width: 0;
+        }
+        
+        .input-group-email select {
+            padding: 12px 10px;
+            font-size: 16px;
+            border: none;
+            border-left: 2px solid #e2e8f0;
+            background: #f7fafc;
+            cursor: pointer;
+            outline: none;
+            color: #2d3748;
+            font-weight: 500;
+            min-width: 140px;
+        }
+        
+        .input-group-email select:hover {
+            background: #edf2f7;
+        }
+        
+        .input-group-email .at-symbol {
+            padding: 0 0 0 5px;
+            color: #a0aec0;
+            font-weight: 600;
+            font-size: 18px;
+            user-select: none;
+        }
+        
+        .email-preview {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #718096;
+            text-align: center;
+            min-height: 20px;
+            font-weight: 500;
+        }
+        
+        .password-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 5px;
+        }
+        
+        .btn-forgot-password {
+            background: none;
+            border: none;
+            color: #4299E1;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 5px 0;
+        }
+        
+        .btn-forgot-password:hover {
+            color: #2b6cb0;
+        }
+        
+        .mensagem-sucesso {
+            color: #48BB78;
+            background: #f0fff4;
+            border: 1px solid #c6f6d5;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .input-group {
+            position: relative;
+        }
+    </style>
 </head>
 <body>
     <div class="login-container">
         <div class="login-box">
             <div class="logo-container">
-                <img src="assets/img/logo-control.png" alt="Logo da Empresa" class="logo" 
+                <img src="assets/img/logo-control.png" alt="Logo" class="logo"
                      onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%234299E1%22/%3E%3Ctext x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2220%22 font-family=%22Arial%22%3ESICGM%3C/text%3E%3C/svg%3E'">
             </div>
             <h2>SICGM - Sistema de Gestão</h2>
             
-            <!-- Informação do ambiente (apenas em desenvolvimento) -->
-            <div id="envInfo" style="font-size: 11px; color: #718096; margin-bottom: 15px; text-align: center;"></div>
-            
             <form id="loginForm">
                 <div class="input-group">
-                    <label for="matricula">Matrícula:</label>
-                    <input type="text" id="matricula" placeholder="Digite sua matrícula" required autofocus>
+                    <label for="emailPrefix">E-mail Corporativo:</label>
+                    <div class="input-group-email">
+                        <input 
+                            type="text" 
+                            id="emailPrefix" 
+                            placeholder="seu.nome" 
+                            required 
+                            autofocus
+                            autocomplete="username"
+                        >
+                        <span class="at-symbol">@</span>
+                        <select id="emailDomain" required>
+                            <option value="control.eng.br">control.eng.br</option>
+                            <option value="gpssa.com.br">gpssa.com.br</option>
+                            <option value="control.eng.com.br">control.eng.com.br</option>
+                        </select>
+                    </div>
+                    <div class="email-preview" id="emailPreview">📧 E-mail: seu.nome@control.eng.br</div>
                 </div>
+                
                 <div class="input-group">
                     <label for="senha">Senha:</label>
-                    <input type="password" id="senha" placeholder="Digite os 4 primeiros dígitos do CPF" required>
+                    <input 
+                        type="password" 
+                        id="senha" 
+                        placeholder="Digite sua senha" 
+                        required
+                        autocomplete="current-password"
+                    >
+                    <div class="password-actions">
+                        <button type="button" class="btn-forgot-password" id="btnForgotPassword">
+                            🔑 Esqueceu a senha?
+                        </button>
+                    </div>
                 </div>
+                
                 <div id="mensagemErro" class="mensagem-erro"></div>
-                <button type="submit" class="btn-login">Login</button>
+                <div id="mensagemSucesso" class="mensagem-sucesso"></div>
+                
+                <button type="submit" class="btn-login" id="btnLogin">
+                    Entrar
+                </button>
             </form>
-            
-            <!-- Informações de teste (apenas em desenvolvimento) -->
-            <div id="testUsers" style="margin-top: 15px; padding: 10px; background: #f7fafc; border-radius: 8px; font-size: 12px; display: none;">
-                <p style="margin: 0 0 5px 0; font-weight: 600; color: #4a5568;">🔑 Usuários de teste:</p>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 11px; color: #718096;">
-                    <div><strong>Gestão:</strong> 999999 | Senha: 1234</div>
-                    <div><strong>Operacional:</strong> 000172 | Senha: 5319</div>
-                    <div><strong>Visualização:</strong> 888888 | Senha: 9876</div>
-                </div>
-            </div>
             
             <div class="login-footer">
                 <span>Sistema interno - Acesso restrito</span>
@@ -52,32 +167,13 @@
         </div>
     </div>
     
-    <!-- Scripts - Ordem correta -->
-    <script src="js/config.js"></script>
-    <script src="js/script.js"></script>
-    <script src="js/login.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
-    <script>
-        // Mostra informações do ambiente
-        document.addEventListener('DOMContentLoaded', function() {
-            const envInfo = document.getElementById('envInfo');
-            const testUsers = document.getElementById('testUsers');
-            
-            if (typeof CONFIG !== 'undefined' && CONFIG) {
-                if (CONFIG.isDevelopment) {
-                    envInfo.innerHTML = '🛠️ <strong>Ambiente de Desenvolvimento</strong> - Dados locais';
-                    envInfo.style.color = '#48BB78';
-                    testUsers.style.display = 'block';
-                    console.log('🛠️ Modo desenvolvimento ativado - Usuários de teste disponíveis');
-                } else {
-                    envInfo.innerHTML = '🚀 <strong>Ambiente de Produção</strong>';
-                    envInfo.style.color = '#4299E1';
-                }
-            } else {
-                envInfo.innerHTML = '⚠️ Configuração não encontrada - Usando fallback';
-                envInfo.style.color = '#ED8936';
-            }
-        });
-    </script>
+    <!-- Configurações -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/auth-service.js"></script>
+    <script src="js/login.js"></script>
 </body>
 </html>

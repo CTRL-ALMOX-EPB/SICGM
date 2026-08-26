@@ -1,227 +1,209 @@
 // ============================================
-// LOGIN - FUNÇÕES ESPECÍFICAS
-// ============================================
-
-let databaseColaboradores = [];
-
-/**
- * Carrega colaboradores do arquivo de texto
- * @returns {Promise<Array>} Lista de colaboradores
- */
-async function carregarColaboradores() {
-    try {
-        // Usa CONFIG se disponível para obter o caminho correto
-        let url;
-        if (typeof CONFIG !== 'undefined' && CONFIG && typeof CONFIG.getDataUrl === 'function') {
-            url = CONFIG.getDataUrl('colaboradores.txt');
-        } else {
-            // Fallback para caso o CONFIG não esteja disponível
-            url = 'data/colaboradores.txt';
-        }
-        
-        console.log('📂 Carregando colaboradores de:', url);
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`Arquivo não encontrado: ${url} (Status: ${response.status})`);
-        }
-        
-        const texto = await response.text();
-        
-        // Dividir o texto em linhas
-        const linhas = texto.split('\n');
-        
-        // Processar cada linha (separador: TAB)
-        databaseColaboradores = linhas
-            .filter(linha => linha.trim() !== '') // Remove linhas vazias
-            .map(linha => {
-                // Divide por TAB (\t)
-                const partes = linha.split('\t');
-                
-                // Verificar se tem pelo menos 4 partes (incluindo o perfil)
-                if (partes.length >= 4) {
-                    const matricula = partes[0].trim();
-                    const nome = partes[1].trim();
-                    const cpf = partes[2].trim();
-                    const perfil = partes[3].trim().toUpperCase();
-                    
-                    // A senha são os 4 primeiros dígitos do CPF
-                    const senha = cpf.substring(0, 4);
-                    
-                    return {
-                        matricula: matricula,
-                        nome: nome,
-                        cpf: cpf,
-                        senha: senha,
-                        perfil: perfil // OPERACIONAL, GESTAO ou VISUALIZACAO
-                    };
-                } else if (partes.length >= 3) {
-                    // Compatibilidade com versões antigas (sem perfil)
-                    const matricula = partes[0].trim();
-                    const nome = partes[1].trim();
-                    const cpf = partes[2].trim();
-                    const senha = cpf.substring(0, 4);
-                    
-                    return {
-                        matricula: matricula,
-                        nome: nome,
-                        cpf: cpf,
-                        senha: senha,
-                        perfil: 'OPERACIONAL' // Perfil padrão para compatibilidade
-                    };
-                }
-                return null;
-            })
-            .filter(colaborador => colaborador !== null); // Remove linhas inválidas
-        
-        console.log('✅ Colaboradores carregados:', databaseColaboradores.length);
-        console.log('📊 Perfis:', databaseColaboradores.map(c => `${c.nome}: ${c.perfil}`));
-        return databaseColaboradores;
-        
-    } catch (error) {
-        console.error('❌ Erro ao carregar colaboradores:', error);
-        
-        // Dados de fallback (para testes)
-        databaseColaboradores = [
-            { matricula: "000172", nome: "DAMIAO BATISTA", cpf: "53192958472", senha: "5319", perfil: "OPERACIONAL" },
-            { matricula: "016718", nome: "RICARDO VALERIO LINS DE ALBUQUERQUE", cpf: "63936003491", senha: "6393", perfil: "OPERACIONAL" },
-            { matricula: "122904", nome: "BRUNO MOREIRA DA SILVA", cpf: "07915412159", senha: "0791", perfil: "OPERACIONAL" },
-            { matricula: "170342", nome: "VALMIR SEVERINO DE LIMA SANTOS", cpf: "08796594403", senha: "0879", perfil: "OPERACIONAL" },
-            { matricula: "170419", nome: "ARLINDO RODRIGUES DE ARAUJO", cpf: "09949433428", senha: "0994", perfil: "OPERACIONAL" },
-            { matricula: "999999", nome: "USUARIO TESTE GESTAO", cpf: "12345678901", senha: "1234", perfil: "GESTAO" },
-            { matricula: "888888", nome: "USUARIO TESTE VISUALIZACAO", cpf: "98765432101", senha: "9876", perfil: "VISUALIZACAO" }
-        ];
-        
-        console.log('⚠️ Usando dados de fallback para testes');
-        console.log('📊 Usuários de teste disponíveis:');
-        databaseColaboradores.forEach(u => {
-            console.log(`   - ${u.matricula} | ${u.nome} | Senha: ${u.senha} | Perfil: ${u.perfil}`);
-        });
-        return databaseColaboradores;
-    }
-}
-
-/**
- * Valida login do usuário
- * @param {string} matricula - Matrícula do usuário
- * @param {string} senha - Senha do usuário
- * @param {Array} colaboradores - Lista de colaboradores
- * @returns {Object|null} Usuário encontrado ou null
- */
-function validarLogin(matricula, senha, colaboradores) {
-    return colaboradores.find(col => 
-        col.matricula === matricula && 
-        col.senha === senha
-    );
-}
-
-// ============================================
-// INICIALIZAÇÃO DA PÁGINA DE LOGIN
+// LOGIN.JS - PÁGINA DE LOGIN
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Iniciando sistema de login...');
-    
-    // Verifica se CONFIG está disponível
-    if (typeof CONFIG !== 'undefined' && CONFIG) {
-        console.log(`✅ CONFIG carregado - Ambiente: ${CONFIG.isDevelopment ? 'Desenvolvimento' : 'Produção'}`);
-        console.log(`📋 CONFIG métodos:`, Object.keys(CONFIG).filter(key => typeof CONFIG[key] === 'function'));
-    } else {
-        console.warn('⚠️ CONFIG não encontrado - Usando caminhos relativos padrão');
+    console.log('🚀 Sistema de login seguro iniciado');
+
+    // Elementos do DOM
+    const form = document.getElementById('loginForm');
+    const emailPrefix = document.getElementById('emailPrefix');
+    const emailDomain = document.getElementById('emailDomain');
+    const emailPreview = document.getElementById('emailPreview');
+    const senhaInput = document.getElementById('senha');
+    const mensagemErro = document.getElementById('mensagemErro');
+    const mensagemSucesso = document.getElementById('mensagemSucesso');
+    const btnForgotPassword = document.getElementById('btnForgotPassword');
+
+    // ============================================
+    // ATUALIZAR PREVIEW DO E-MAIL
+    // ============================================
+    function updateEmailPreview() {
+        const prefix = emailPrefix.value.trim();
+        const domain = emailDomain.value;
+        
+        if (prefix) {
+            const emailCompleto = `${prefix}@${domain}`;
+            emailPreview.innerHTML = `📧 E-mail: <strong>${emailCompleto}</strong>`;
+            emailPreview.className = 'email-preview';
+        } else {
+            emailPreview.innerHTML = '📧 E-mail: seu.nome@control.eng.br';
+            emailPreview.className = 'email-preview';
+        }
     }
+
+    emailPrefix.addEventListener('input', updateEmailPreview);
+    emailDomain.addEventListener('change', updateEmailPreview);
+    updateEmailPreview();
+
+    // ============================================
+    // OBTER E-MAIL COMPLETO
+    // ============================================
+    function getEmailCompleto() {
+        const prefix = emailPrefix.value.trim();
+        const domain = emailDomain.value;
+        if (!prefix) return null;
+        return `${prefix}@${domain}`;
+    }
+
+    // ============================================
+    // SUBMIT DO FORMULÁRIO
+    // ============================================
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        mensagemErro.textContent = '';
+        mensagemErro.className = 'mensagem-erro';
+        mensagemSucesso.style.display = 'none';
+
+        const emailCompleto = getEmailCompleto();
+        const senha = senhaInput.value.trim();
+
+        if (!emailCompleto) {
+            mensagemErro.textContent = '⚠️ Digite a primeira parte do seu e-mail.';
+            mensagemErro.className = 'mensagem-erro';
+            emailPrefix.focus();
+            return;
+        }
+
+        if (!senha) {
+            mensagemErro.textContent = '⚠️ Digite sua senha.';
+            mensagemErro.className = 'mensagem-erro';
+            senhaInput.focus();
+            return;
+        }
+
+        // Tentar login
+        const result = await authService.login(emailCompleto, senha);
+        
+        if (result.success) {
+            mensagemSucesso.textContent = '✅ Login realizado com sucesso! Redirecionando...';
+            mensagemSucesso.style.display = 'block';
+            
+            console.log('✅ Usuário logado:', result.user.nome);
+            console.log('📝 Perfil:', result.user.perfil);
+            
+            setTimeout(() => {
+                redirectUser(result.user.perfil);
+            }, 800);
+            
+        } else {
+            mensagemErro.textContent = result.error || '❌ Falha no login. Tente novamente.';
+            mensagemErro.className = 'mensagem-erro';
+            senhaInput.value = '';
+            senhaInput.focus();
+        }
+    });
+
+    // ============================================
+    // RECUPERAR SENHA
+    // ============================================
+    btnForgotPassword.addEventListener('click', async function() {
+        const emailCompleto = getEmailCompleto();
+        
+        if (!emailCompleto) {
+            mensagemErro.textContent = '⚠️ Digite a primeira parte do seu e-mail antes de recuperar a senha.';
+            mensagemErro.className = 'mensagem-erro';
+            emailPrefix.focus();
+            return;
+        }
+
+        const result = await authService.resetPassword(emailCompleto);
+        
+        if (result.success) {
+            mensagemSucesso.textContent = result.message;
+            mensagemSucesso.style.display = 'block';
+            mensagemErro.textContent = '';
+            
+            setTimeout(() => {
+                mensagemSucesso.style.display = 'none';
+            }, 10000);
+        } else {
+            mensagemErro.textContent = result.error || '❌ Erro ao enviar e-mail de recuperação.';
+            mensagemErro.className = 'mensagem-erro';
+        }
+    });
+
+    // ============================================
+    // TECLA ENTER
+    // ============================================
+    emailPrefix.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            senhaInput.focus();
+        }
+    });
+
+    senhaInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            form.dispatchEvent(new Event('submit'));
+        }
+    });
+
+    // ============================================
+    // MOSTRAR/OCULTAR SENHA
+    // ============================================
+    const togglePassword = document.createElement('button');
+    togglePassword.type = 'button';
+    togglePassword.textContent = '👁️';
+    togglePassword.style.cssText = `
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 18px;
+        padding: 5px;
+        opacity: 0.6;
+        transition: opacity 0.3s;
+    `;
     
-    // Carregar colaboradores
-    carregarColaboradores().then(() => {
-        console.log('✅ Sistema pronto para login');
+    togglePassword.addEventListener('mouseenter', function() {
+        this.style.opacity = '1';
+    });
+    togglePassword.addEventListener('mouseleave', function() {
+        this.style.opacity = '0.6';
     });
     
-    // Configurar formulário de login
-    const form = document.getElementById('loginForm');
-    const mensagemErro = document.getElementById('mensagemErro');
+    const passwordWrapper = senhaInput.parentElement;
+    passwordWrapper.style.position = 'relative';
+    passwordWrapper.appendChild(togglePassword);
     
-    if (form) {
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const matricula = document.getElementById('matricula').value.trim();
-            const senha = document.getElementById('senha').value.trim();
-            
-            // Limpar mensagens anteriores
-            mensagemErro.textContent = '';
-            mensagemErro.className = 'mensagem-erro';
-            
-            // Validação básica
-            if (!matricula || !senha) {
-                mensagemErro.textContent = '⚠️ Por favor, preencha todos os campos.';
-                mensagemErro.className = 'mensagem-erro';
-                return;
-            }
-            
-            // Validar senha (deve ter 4 dígitos)
-            if (!/^\d{4}$/.test(senha)) {
-                mensagemErro.textContent = '⚠️ A senha deve ter 4 dígitos (primeiros 4 dígitos do CPF).';
-                mensagemErro.className = 'mensagem-erro';
-                return;
-            }
-            
-            // Garantir que os colaboradores foram carregados
-            if (databaseColaboradores.length === 0) {
-                await carregarColaboradores();
-            }
-            
-            // Validar login
-            const usuario = validarLogin(matricula, senha, databaseColaboradores);
-            
-            if (usuario) {
-                // Login bem-sucedido - CRIAR SESSÃO
-                criarSessao(usuario);
-                mensagemErro.textContent = '✅ Login realizado com sucesso!';
-                mensagemErro.className = 'mensagem-sucesso';
-                
-                console.log('✅ Usuário logado:', usuario.nome);
-                console.log('📝 Perfil:', usuario.perfil);
-                console.log('📝 Sessão criada com sucesso');
-                
-                // Redirecionar para a home baseado no perfil
-                setTimeout(() => {
-                    redirecionarPorPerfil(usuario.perfil);
-                }, 800);
-            } else {
-                // Login falhou
-                mensagemErro.textContent = '❌ Matrícula ou senha inválidos. Tente novamente.';
-                mensagemErro.className = 'mensagem-erro';
-                
-                // Limpar campo de senha e focar
-                document.getElementById('senha').value = '';
-                document.getElementById('senha').focus();
-                
-                console.log('❌ Tentativa de login falhou - Matrícula:', matricula);
-            }
-        });
+    togglePassword.addEventListener('click', function() {
+        const type = senhaInput.type === 'password' ? 'text' : 'password';
+        senhaInput.type = type;
+        this.textContent = type === 'password' ? '👁️' : '👁️‍🗨️';
+    });
+
+    // ============================================
+    // VERIFICAR SESSÃO EXISTENTE
+    // ============================================
+    if (authService.isLoggedIn()) {
+        const user = authService.getUserData();
+        console.log('👤 Usuário já logado:', user.nome);
+        
+        setTimeout(() => {
+            redirectUser(user.perfil);
+        }, 1000);
     }
+
+    console.log('✅ Login carregado e pronto!');
 });
 
-// Adiciona suporte para tecla Enter nos campos
-document.addEventListener('DOMContentLoaded', function() {
-    const matriculaInput = document.getElementById('matricula');
-    const senhaInput = document.getElementById('senha');
+// ============================================
+// REDIRECIONAR POR PERFIL
+// ============================================
+function redirectUser(perfil) {
+    const pages = {
+        'GESTAO': 'home-gestao.html',
+        'OPERACIONAL': 'home-operacional.html',
+        'VISUALIZACAO': 'home-visualizacao.html'
+    };
     
-    if (matriculaInput) {
-        matriculaInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('senha').focus();
-            }
-        });
-    }
-    
-    if (senhaInput) {
-        senhaInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('loginForm').dispatchEvent(new Event('submit'));
-            }
-        });
-    }
-});
+    const page = pages[perfil] || 'home-operacional.html';
+    console.log(`🔀 Redirecionando para: ${page}`);
+    window.location.href = page;
+}
