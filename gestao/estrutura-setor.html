@@ -2,22 +2,69 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estrutura do Setor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Estrutura do Setor - Planner</title>
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/gestao.css">
+    <link rel="stylesheet" href="../css/estrutura-setor.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+    </style>
 </head>
 <body>
     <div class="gestao-container">
         <div class="gestao-header">
             <h1>🏗️ Estrutura do Setor</h1>
-            <button class="btn-voltar" onclick="navigateTo('gestao/index.html')">⬅ Voltar</button>
+            <div class="header-actions">
+                <button class="btn-atualizar">
+                    🔄 <span>Atualizar</span>
+                </button>
+                <button class="btn-tela-cheia">
+                    ⛶ <span>Tela Cheia</span>
+                </button>
+                <button class="btn-voltar" id="btnVoltar">
+                    ⬅ <span>Voltar</span>
+                </button>
+            </div>
         </div>
-        <div style="background: #1E293B; padding: 40px; border-radius: 12px; text-align: center;">
-            <p style="font-size: 18px; color: #94A3B8;">Em breve: organograma e alocação detalhada.</p>
+        
+        <div class="planner-container">
+            <div class="planner-wrapper">
+                <iframe 
+                    id="miroPlanner"
+                    src="https://miro.com/app/live-embed/uXjVH4yuVXo=/?embedMode=view_only_without_ui&moveToViewport=-539,-507,1687,749&embedId=757974044080"
+                    frameborder="0"
+                    scrolling="no"
+                    allow="fullscreen; clipboard-read; clipboard-write"
+                    allowfullscreen
+                    loading="lazy"
+                    title="Planner do Setor"
+                    class="planner-iframe"
+                ></iframe>
+                
+                <div id="loadingOverlay" class="loading-overlay">
+                    <div class="spinner"></div>
+                    <p>Carregando planner...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="planner-status">
+            <span class="status-indicator" id="statusIndicator">
+                <span class="status-dot online"></span>
+                Conectado
+            </span>
+            <span class="status-time" id="statusTime"></span>
         </div>
     </div>
+
     <script src="../js/config.js"></script>
     <script src="../js/script.js"></script>
+    <script src="../js/estrutura-setor.js"></script>
 </body>
 </html>
