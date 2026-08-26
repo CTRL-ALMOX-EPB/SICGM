@@ -21,26 +21,33 @@ class AuthService {
             
             console.log(`🔐 Tentando login para: ${email}`);
 
+            // 1. Autenticar no Firebase
             const userCredential = await this.auth.signInWithEmailAndPassword(email, senha);
             this.currentUser = userCredential.user;
-
             console.log('✅ Firebase autenticou');
 
+            // 2. Buscar dados do usuário
             const userData = await this.fetchUserData(email);
-
             if (!userData) {
                 throw new Error('Dados do usuário não encontrados');
             }
 
+            // 3. Verificar se está ativo
             if (userData.ativo === false) {
                 await this.auth.signOut();
                 throw new Error('Conta desativada. Entre em contato com o administrador.');
             }
 
-            this.createSession(userData);
+            // 4. 🔥 SALVAR SESSÃO (COM VERIFICAÇÃO)
+            const sessionSaved = this.createSession(userData);
+            if (!sessionSaved) {
+                throw new Error('Erro ao salvar sessão');
+            }
+
+            // 5. Registrar sessão ativa (opcional)
             await this.registerActiveSession(userData);
 
-            console.log('✅ Sessão criada com sucesso');
+            console.log('✅ Login completo!');
             return { success: true, user: userData };
 
         } catch (error) {
@@ -51,6 +58,38 @@ class AuthService {
             };
         } finally {
             this.showLoading(false);
+        }
+    }
+
+    // ============================================
+    // CRIAR SESSÃO (COM RETORNO DE SUCESSO)
+    // ============================================
+    createSession(userData) {
+        try {
+            const payload = {
+                email: userData.email,
+                nome: userData.nome,
+                matricula: userData.matricula,
+                perfil: userData.perfil,
+                exp: Date.now() + 1800000 // 30 minutos
+            };
+            
+            const token = btoa(JSON.stringify(payload));
+            sessionStorage.setItem('auth_token', token);
+            sessionStorage.setItem('session_expiry', Date.now() + 1800000);
+            
+            // 🔥 VERIFICAR SE FOI SALVO
+            const savedToken = sessionStorage.getItem('auth_token');
+            if (savedToken === token) {
+                console.log('✅ Sessão salva com sucesso!');
+                return true;
+            } else {
+                console.error('❌ Falha ao salvar sessão');
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ Erro ao criar sessão:', error);
+            return false;
         }
     }
 
@@ -84,7 +123,6 @@ class AuthService {
 
             const userData = await response.json();
             this.usersCache.set(email, userData);
-            
             return userData;
 
         } catch (error) {
@@ -94,7 +132,7 @@ class AuthService {
     }
 
     // ============================================
-    // REGISTRAR SESSÃO ATIVA
+    // REGISTRAR SESSÃO ATIVA (OPCIONAL)
     // ============================================
     async registerActiveSession(userData) {
         try {
@@ -110,9 +148,7 @@ class AuthService {
                     exp: Date.now() + 1800000
                 })
             });
-
             return response.ok;
-
         } catch (error) {
             console.warn('⚠️ Não foi possível registrar sessão:', error);
             return false;
@@ -120,30 +156,101 @@ class AuthService {
     }
 
     // ============================================
-    // CRIAR SESSÃO (30 MINUTOS)
+    // VERIFICAR SESSÃO (COM RETORNO BOOLEANO)
     // ============================================
-    createSession(userData) {
-        const payload = {
-            email: userData.email,
-            nome: userData.nome,
-            matricula: userData.matricula,
-            perfil: userData.perfil,
-            exp: Date.now() + 1800000
-        };
-        
-        const token = btoa(JSON.stringify(payload));
-        sessionStorage.setItem('auth_token', token);
-        sessionStorage.setItem('session_expiry', Date.now() + 1800000);
+    isLoggedIn() {
+        try {
+            const token = sessionStorage.getItem('auth_token');
+            if (!token) {
+                console.log('🔒 Nenhum token encontrado');
+                return false;
+            }
+
+            const payload = JSON.parse(atob(token));
+            
+            if (!payload || !payload.email || !payload.exp) {
+                console.log('🔒 Token inválido');
+                this.clearSession();
+                return false;
+            }
+            
+            if (payload.exp < Date.now()) {
+                console.log('⏰ Sessão expirada');
+                this.clearSession();
+                return false;
+            }
+
+            console.log('✅ Sessão válida');
+            return true;
+        } catch (e) {
+            console.error('❌ Erro ao verificar sessão:', e);
+            this.clearSession();
+            return false;
+        }
+    }
+
+    // ============================================
+    // PEGAR DADOS DO USUÁRIO (APÓS VERIFICAÇÃO)
+    // ============================================
+    getUserData() {
+        try {
+            // 🔥 SÓ RETORNA SE ESTIVER LOGADO
+            if (!this.isLoggedIn()) {
+                return null;
+            }
+
+            const token = sessionStorage.getItem('auth_token');
+            if (!token) return null;
+
+            const payload = JSON.parse(atob(token));
+            return payload;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // ============================================
+    // LIMPAR SESSÃO
+    // ============================================
+    clearSession() {
+        sessionStorage.removeItem('auth_token');
+        sessionStorage.removeItem('session_expiry');
+        console.log('🧹 Sessão limpa');
+    }
+
+    // ============================================
+    // SAIR
+    // ============================================
+    async logout() {
+        try {
+            const userData = this.getUserData();
+            if (userData) {
+                await fetch(`${this.WORKER_URL}/sessions/remove`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: userData.email })
+                });
+            }
+            
+            await this.auth.signOut();
+            this.clearSession();
+            
+            console.log('👋 Usuário desconectado');
+            return true;
+        } catch (error) {
+            console.error('❌ Erro ao sair:', error);
+            return false;
+        }
     }
 
     // ============================================
     // LISTAR USUÁRIOS (ADMIN)
-    // ⭐ VALIDAÇÃO VIA PERFIL ⭐
     // ============================================
     async listUsers() {
         try {
             const user = this.getUserData();
-            
             if (!user) {
                 throw new Error('Usuário não autenticado');
             }
@@ -174,12 +281,10 @@ class AuthService {
 
     // ============================================
     // REVOGAR USUÁRIO (ADMIN)
-    // ⭐ VALIDAÇÃO VIA PERFIL ⭐
     // ============================================
     async revokeUser(email) {
         try {
             const user = this.getUserData();
-            
             if (!user) {
                 throw new Error('Usuário não autenticado');
             }
@@ -212,12 +317,10 @@ class AuthService {
 
     // ============================================
     // REATIVAR USUÁRIO (ADMIN)
-    // ⭐ VALIDAÇÃO VIA PERFIL ⭐
     // ============================================
     async reactivateUser(email) {
         try {
             const user = this.getUserData();
-            
             if (!user) {
                 throw new Error('Usuário não autenticado');
             }
@@ -250,12 +353,10 @@ class AuthService {
 
     // ============================================
     // VER SESSÕES ATIVAS (ADMIN)
-    // ⭐ VALIDAÇÃO VIA PERFIL ⭐
     // ============================================
     async getActiveSessions() {
         try {
             const user = this.getUserData();
-            
             if (!user) {
                 throw new Error('Usuário não autenticado');
             }
@@ -303,99 +404,6 @@ class AuthService {
     }
 
     // ============================================
-    // VERIFICAR SESSÃO (VERSÃO MELHORADA)
-    // ============================================
-    isLoggedIn() {
-        try {
-            const token = sessionStorage.getItem('auth_token');
-            if (!token) {
-                console.log('🔒 Nenhum token encontrado');
-                return false;
-            }
-
-            const payload = JSON.parse(atob(token));
-            
-            // 🔥 VERIFICAR SE O PAYLOAD É VÁLIDO
-            if (!payload || !payload.email || !payload.exp) {
-                console.log('🔒 Token inválido');
-                sessionStorage.removeItem('auth_token');
-                sessionStorage.removeItem('session_expiry');
-                return false;
-            }
-            
-            // Verificar se expirou
-            if (payload.exp < Date.now()) {
-                console.log('⏰ Sessão expirada');
-                sessionStorage.removeItem('auth_token');
-                sessionStorage.removeItem('session_expiry');
-                return false;
-            }
-
-            console.log('✅ Sessão válida para:', payload.email);
-            return true;
-        } catch (e) {
-            console.error('❌ Erro ao verificar sessão:', e);
-            sessionStorage.removeItem('auth_token');
-            sessionStorage.removeItem('session_expiry');
-            return false;
-        }
-    }
-
-    // ============================================
-    // PEGAR DADOS DO USUÁRIO LOGADO (VERSÃO MELHORADA)
-    // ============================================
-    getUserData() {
-        try {
-            const token = sessionStorage.getItem('auth_token');
-            if (!token) return null;
-
-            const payload = JSON.parse(atob(token));
-            
-            if (!payload || !payload.email || !payload.exp) {
-                return null;
-            }
-            
-            if (payload.exp < Date.now()) {
-                sessionStorage.removeItem('auth_token');
-                sessionStorage.removeItem('session_expiry');
-                return null;
-            }
-
-            return payload;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    // ============================================
-    // SAIR
-    // ============================================
-    async logout() {
-        try {
-            const userData = this.getUserData();
-            if (userData) {
-                await fetch(`${this.WORKER_URL}/sessions/remove`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ email: userData.email })
-                });
-            }
-            
-            await this.auth.signOut();
-            sessionStorage.removeItem('auth_token');
-            sessionStorage.removeItem('session_expiry');
-            
-            console.log('👋 Usuário desconectado');
-            return true;
-        } catch (error) {
-            console.error('❌ Erro ao sair:', error);
-            return false;
-        }
-    }
-
-    // ============================================
     // TRATAMENTO DE ERROS
     // ============================================
     handleError(error) {
@@ -405,9 +413,7 @@ class AuthService {
             'auth/too-many-requests': '⚠️ Muitas tentativas. Tente em alguns minutos.',
             'auth/invalid-email': '❌ E-mail inválido.',
             'auth/user-disabled': '❌ Conta desativada. Entre em contato com o administrador.',
-            'auth/network-request-failed': '⚠️ Erro de rede. Verifique sua conexão.',
-            'auth/email-already-in-use': '❌ E-mail já em uso.',
-            'auth/weak-password': '❌ Senha deve ter pelo menos 6 caracteres.'
+            'auth/network-request-failed': '⚠️ Erro de rede. Verifique sua conexão.'
         };
 
         if (error.message === 'Conta desativada') {

@@ -3,9 +3,23 @@
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Sistema de login seguro iniciado');
+    console.log('🚀 Página de login carregada');
 
-    // Elementos do DOM
+    // ============================================
+    // VERIFICAR SE JÁ ESTÁ LOGADO
+    // ============================================
+    if (typeof authService !== 'undefined' && authService.isLoggedIn()) {
+        const user = authService.getUserData();
+        if (user) {
+            console.log(`👤 Usuário já logado: ${user.nome}`);
+            redirecionarPorPerfil(user.perfil);
+            return;
+        }
+    }
+
+    // ============================================
+    // ELEMENTOS DO DOM
+    // ============================================
     const form = document.getElementById('loginForm');
     const emailPrefix = document.getElementById('emailPrefix');
     const emailDomain = document.getElementById('emailDomain');
@@ -16,19 +30,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnForgotPassword = document.getElementById('btnForgotPassword');
 
     // ============================================
-    // ATUALIZAR PREVIEW DO E-MAIL
+    // PREVIEW DO E-MAIL
     // ============================================
     function updateEmailPreview() {
         const prefix = emailPrefix.value.trim();
         const domain = emailDomain.value;
         
         if (prefix) {
-            const emailCompleto = `${prefix}@${domain}`;
-            emailPreview.innerHTML = `📧 E-mail: <strong>${emailCompleto}</strong>`;
-            emailPreview.className = 'email-preview';
+            emailPreview.innerHTML = `📧 E-mail: <strong>${prefix}@${domain}</strong>`;
         } else {
             emailPreview.innerHTML = '📧 E-mail: seu.nome@control.eng.br';
-            emailPreview.className = 'email-preview';
         }
     }
 
@@ -73,20 +84,26 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Tentar login
+        // 🔥 TENTAR LOGIN
         const result = await authService.login(emailCompleto, senha);
         
         if (result.success) {
-            mensagemSucesso.textContent = '✅ Login realizado com sucesso! Redirecionando...';
+            mensagemSucesso.textContent = '✅ Login realizado! Redirecionando...';
             mensagemSucesso.style.display = 'block';
             
-            console.log('✅ Usuário logado:', result.user.nome);
-            console.log('📝 Perfil:', result.user.perfil);
+            console.log(`✅ Usuário logado: ${result.user.nome}`);
+            console.log(`📝 Perfil: ${result.user.perfil}`);
             
-            // 🔥 FORÇAR O REDIRECIONAMENTO COM window.location.replace
+            // 🔥 VERIFICAR SE A SESSÃO FOI SALVA
             setTimeout(() => {
-                redirectUser(result.user.perfil);
-            }, 800);
+                if (authService.isLoggedIn()) {
+                    redirecionarPorPerfil(result.user.perfil);
+                } else {
+                    mensagemErro.textContent = '❌ Erro ao salvar sessão. Tente novamente.';
+                    mensagemErro.className = 'mensagem-erro';
+                    mensagemSucesso.style.display = 'none';
+                }
+            }, 1000);
             
         } else {
             mensagemErro.textContent = result.error || '❌ Falha no login. Tente novamente.';
@@ -103,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const emailCompleto = getEmailCompleto();
         
         if (!emailCompleto) {
-            mensagemErro.textContent = '⚠️ Digite a primeira parte do seu e-mail antes de recuperar a senha.';
+            mensagemErro.textContent = '⚠️ Digite seu e-mail antes de recuperar a senha.';
             mensagemErro.className = 'mensagem-erro';
             emailPrefix.focus();
             return;
@@ -115,30 +132,9 @@ document.addEventListener('DOMContentLoaded', function() {
             mensagemSucesso.textContent = result.message;
             mensagemSucesso.style.display = 'block';
             mensagemErro.textContent = '';
-            
-            setTimeout(() => {
-                mensagemSucesso.style.display = 'none';
-            }, 10000);
         } else {
-            mensagemErro.textContent = result.error || '❌ Erro ao enviar e-mail de recuperação.';
+            mensagemErro.textContent = result.error || '❌ Erro ao enviar e-mail.';
             mensagemErro.className = 'mensagem-erro';
-        }
-    });
-
-    // ============================================
-    // TECLA ENTER
-    // ============================================
-    emailPrefix.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            senhaInput.focus();
-        }
-    });
-
-    senhaInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            form.dispatchEvent(new Event('submit'));
         }
     });
 
@@ -162,41 +158,22 @@ document.addEventListener('DOMContentLoaded', function() {
         transition: opacity 0.3s;
     `;
     
-    togglePassword.addEventListener('mouseenter', function() {
-        this.style.opacity = '1';
-    });
-    togglePassword.addEventListener('mouseleave', function() {
-        this.style.opacity = '0.6';
-    });
-    
     const passwordWrapper = senhaInput.parentElement;
     passwordWrapper.style.position = 'relative';
     passwordWrapper.appendChild(togglePassword);
     
     togglePassword.addEventListener('click', function() {
-        const type = senhaInput.type === 'password' ? 'text' : 'password';
-        senhaInput.type = type;
-        this.textContent = type === 'password' ? '👁️' : '👁️‍🗨️';
+        senhaInput.type = senhaInput.type === 'password' ? 'text' : 'password';
+        this.textContent = senhaInput.type === 'password' ? '👁️' : '👁️‍🗨️';
     });
 
-    // ============================================
-    // VERIFICAR SESSÃO EXISTENTE
-    // ============================================
-    if (authService.isLoggedIn()) {
-        const user = authService.getUserData();
-        console.log('👤 Usuário já logado:', user.nome);
-        
-        // 🔥 JÁ ESTÁ LOGADO - REDIRECIONAR IMEDIATAMENTE
-        redirectUser(user.perfil);
-    }
-
-    console.log('✅ Login carregado e pronto!');
+    console.log('✅ Login pronto!');
 });
 
 // ============================================
-// REDIRECIONAR POR PERFIL (VERSÃO MELHORADA)
+// REDIRECIONAR POR PERFIL
 // ============================================
-function redirectUser(perfil) {
+function redirecionarPorPerfil(perfil) {
     const pages = {
         'GESTAO': 'home-gestao.html',
         'OPERACIONAL': 'home-operacional.html',
@@ -205,7 +182,5 @@ function redirectUser(perfil) {
     
     const page = pages[perfil] || 'home-operacional.html';
     console.log(`🔀 Redirecionando para: ${page}`);
-    
-    // 🔥 USAR window.location.replace para evitar loop no histórico
     window.location.replace(page);
 }
