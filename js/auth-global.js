@@ -4,13 +4,14 @@
 
 // 🔥 VARIÁVEL PARA CONTROLAR O REDIRECIONAMENTO
 let isRedirecting = false;
+let verificado = false;
 
 document.addEventListener('DOMContentLoaded', function() {
     
     console.log('🔐 Iniciando autenticação global...');
     
     // ============================================
-    // 1. VERIFICAR SE ESTÁ LOGADO
+    // 1. FUNÇÃO PARA VERIFICAR SESSÃO
     // ============================================
     function verificarSessao() {
         // 🔥 VERIFICAR SE O authService ESTÁ DISPONÍVEL
@@ -21,12 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 🔥 VERIFICAR SE ESTÁ LOGADO
         if (!authService.isLoggedIn()) {
-            console.log('🔒 Não autenticado - Redirecionando para login');
-            // 🔥 EVITAR REDIRECIONAMENTOS MÚLTIPLOS
-            if (!isRedirecting) {
-                isRedirecting = true;
-                window.location.href = 'login.html';
-            }
+            console.log('🔒 Não autenticado');
             return false;
         }
 
@@ -34,13 +30,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const payload = authService.getUserData();
             
             if (!payload) {
-                console.log('🔒 Sessão inválida - Redirecionando para login');
+                console.log('🔒 Sessão inválida');
                 sessionStorage.removeItem('auth_token');
                 sessionStorage.removeItem('session_expiry');
-                if (!isRedirecting) {
-                    isRedirecting = true;
-                    window.location.href = 'login.html';
-                }
                 return false;
             }
 
@@ -49,10 +41,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (e) {
             console.error('❌ Erro ao verificar sessão:', e);
-            if (!isRedirecting) {
-                isRedirecting = true;
-                window.location.href = 'login.html';
-            }
             return false;
         }
     }
@@ -67,6 +55,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // 🔥 SE JÁ VERIFICOU, NÃO VERIFICAR NOVAMENTE
+        if (verificado) {
+            console.log('⏹️ Já verificado, ignorando...');
+            return;
+        }
+        
         // 🔥 ESPERAR O authService CARREGAR
         if (typeof authService === 'undefined') {
             console.warn('⏳ Aguardando authService carregar...');
@@ -75,13 +69,29 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const user = verificarSessao();
-        if (!user) return;
+        
+        // 🔥 SE NÃO TIVER SESSÃO, REDIRECIONAR
+        if (!user) {
+            console.log('🔒 Sessão inválida - Redirecionando para login');
+            if (!isRedirecting) {
+                isRedirecting = true;
+                verificado = true;
+                console.log('🔀 Navegando para: login.html');
+                window.location.href = 'login.html';
+            }
+            return;
+        }
 
+        // 🔥 SE CHEGOU AQUI, SESSÃO VÁLIDA!
+        verificado = true;
+        
         // Preencher elementos da página
         const nomeUsuario = document.getElementById('nomeUsuario');
         const matriculaUsuario = document.getElementById('matriculaUsuario');
         const perfilUsuario = document.getElementById('perfilUsuario');
         const mensagemBoasVindas = document.getElementById('mensagemBoasVindas');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const homeContent = document.getElementById('homeContent');
 
         if (nomeUsuario) {
             nomeUsuario.textContent = user.nome;
@@ -95,6 +105,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (mensagemBoasVindas) {
             mensagemBoasVindas.textContent = `👋 Olá, ${user.nome}!`;
+        }
+
+        // 🔥 REMOVER LOADING E MOSTRAR CONTEÚDO
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('active');
+            loadingOverlay.style.display = 'none';
+        }
+        if (homeContent) {
+            homeContent.style.display = 'block';
         }
 
         // Mostrar timer (opcional)
@@ -127,24 +146,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // 4. VERIFICAR A CADA 30 SEGUNDOS
     // ============================================
     setInterval(() => {
-        // 🔥 NÃO VERIFICAR SE JÁ ESTÁ REDIRECIONANDO
-        if (isRedirecting) return;
+        // 🔥 NÃO VERIFICAR SE JÁ ESTÁ REDIRECIONANDO OU JÁ VERIFICOU
+        if (isRedirecting || verificado) return;
         
         if (typeof authService !== 'undefined') {
             if (!authService.isLoggedIn()) {
                 console.log('🔒 Sessão expirada - Redirecionando');
                 isRedirecting = true;
+                verificado = true;
                 window.location.href = 'login.html';
             }
         }
     }, 30000);
 
     // ============================================
-    // 5. CARREGAR TUDO
+    // 5. CARREGAR TUDO (COM DELAY MAIOR)
     // ============================================
+    // 🔥 ESPERAR 1 SEGUNDO PARA GARANTIR QUE TUDO CARREGOU
     setTimeout(function() {
         carregarDadosUsuario();
-    }, 300);
+    }, 1000);
 
     console.log('🔐 Autenticação global carregada');
 });
@@ -163,8 +184,9 @@ async function sair() {
             sessionStorage.removeItem('session_expiry');
         }
         
-        // 🔥 RESETAR A VARIÁVEL DE REDIRECIONAMENTO
+        // 🔥 RESETAR VARIÁVEIS
         isRedirecting = false;
+        verificado = false;
         window.location.href = 'login.html';
         
     } catch (error) {
