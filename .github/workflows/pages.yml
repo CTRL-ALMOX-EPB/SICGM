@@ -21,85 +21,82 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      
       - name: Setup Pages
         uses: actions/configure-pages@v4
       
       # ============================================
-      # 🔥 CRIAR firebase-config.js A PARTIR DO MODELO
+      # 🔥 INJETAR FIREBASE CONFIG NOS HTMLs
       # ============================================
-      - name: Criar firebase-config.js
+      - name: Injetar Firebase Config nos HTMLs
         run: |
-          echo "📁 Criando firebase-config.js a partir do modelo..."
+          echo "📁 Injetando Firebase Config..."
           
-          # 🔥 Copiar o modelo
-          if [ -f "js/firebase-config.example.js" ]; then
-            cp js/firebase-config.example.js js/firebase-config.js
-            echo "✅ Modelo copiado!"
-          else
-            echo "❌ ERRO: firebase-config.example.js não encontrado!"
-            exit 1
-          fi
+          # Substituir no login.html
+          echo "🔧 Processando login.html..."
+          sed -i "s/SUBSTITUIR_API_KEY/${{ secrets.FIREBASE_API_KEY }}/g" login.html
+          sed -i "s/SUBSTITUIR_AUTH_DOMAIN/${{ secrets.FIREBASE_AUTH_DOMAIN }}/g" login.html
+          sed -i "s/SUBSTITUIR_PROJECT_ID/${{ secrets.FIREBASE_PROJECT_ID }}/g" login.html
+          sed -i "s/SUBSTITUIR_STORAGE_BUCKET/${{ secrets.FIREBASE_STORAGE_BUCKET }}/g" login.html
+          sed -i "s/SUBSTITUIR_SENDER_ID/${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}/g" login.html
+          sed -i "s/SUBSTITUIR_APP_ID/${{ secrets.FIREBASE_APP_ID }}/g" login.html
           
-          # 🔥 Substituir placeholders pelos Secrets
-          echo "🔧 Substituindo placeholders pelos Secrets..."
+          # Substituir no home-gestao.html
+          echo "🔧 Processando home-gestao.html..."
+          sed -i "s/SUBSTITUIR_API_KEY/${{ secrets.FIREBASE_API_KEY }}/g" home-gestao.html
+          sed -i "s/SUBSTITUIR_AUTH_DOMAIN/${{ secrets.FIREBASE_AUTH_DOMAIN }}/g" home-gestao.html
+          sed -i "s/SUBSTITUIR_PROJECT_ID/${{ secrets.FIREBASE_PROJECT_ID }}/g" home-gestao.html
+          sed -i "s/SUBSTITUIR_STORAGE_BUCKET/${{ secrets.FIREBASE_STORAGE_BUCKET }}/g" home-gestao.html
+          sed -i "s/SUBSTITUIR_SENDER_ID/${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}/g" home-gestao.html
+          sed -i "s/SUBSTITUIR_APP_ID/${{ secrets.FIREBASE_APP_ID }}/g" home-gestao.html
           
-          # Substituir cada placeholder
-          sed -i "s/SUA_API_KEY_AQUI/${{ secrets.FIREBASE_API_KEY }}/g" js/firebase-config.js
-          sed -i "s/SEU_PROJETO.firebaseapp.com/${{ secrets.FIREBASE_AUTH_DOMAIN }}/g" js/firebase-config.js
-          sed -i "s/SEU_PROJETO/${{ secrets.FIREBASE_PROJECT_ID }}/g" js/firebase-config.js
-          sed -i "s/SEU_PROJETO.appspot.com/${{ secrets.FIREBASE_STORAGE_BUCKET }}/g" js/firebase-config.js
-          sed -i "s/SEU_SENDER_ID/${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}/g" js/firebase-config.js
-          sed -i "s/SEU_APP_ID/${{ secrets.FIREBASE_APP_ID }}/g" js/firebase-config.js
+          # Substituir no admin.html
+          echo "🔧 Processando gestao/admin.html..."
+          sed -i "s/SUBSTITUIR_API_KEY/${{ secrets.FIREBASE_API_KEY }}/g" gestao/admin.html
+          sed -i "s/SUBSTITUIR_AUTH_DOMAIN/${{ secrets.FIREBASE_AUTH_DOMAIN }}/g" gestao/admin.html
+          sed -i "s/SUBSTITUIR_PROJECT_ID/${{ secrets.FIREBASE_PROJECT_ID }}/g" gestao/admin.html
+          sed -i "s/SUBSTITUIR_STORAGE_BUCKET/${{ secrets.FIREBASE_STORAGE_BUCKET }}/g" gestao/admin.html
+          sed -i "s/SUBSTITUIR_SENDER_ID/${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}/g" gestao/admin.html
+          sed -i "s/SUBSTITUIR_APP_ID/${{ secrets.FIREBASE_APP_ID }}/g" gestao/admin.html
           
-          echo "✅ firebase-config.js criado com sucesso!"
+          echo "✅ Todos os HTMLs processados!"
       
       # ============================================
-      # 🔥 VERIFICAR O ARQUIVO
+      # 🔥 VERIFICAR SE FUNCIONOU
       # ============================================
-      - name: Verificar firebase-config.js
+      - name: Verificar substituição
         run: |
           echo "========================================="
-          echo "📁 VERIFICANDO firebase-config.js"
+          echo "📁 VERIFICANDO substituição"
           echo "========================================="
-          if [ -f "js/firebase-config.js" ]; then
-            echo "✅ Arquivo criado com sucesso!"
-            echo ""
-            echo "📄 PRIMEIRAS LINHAS (seguro):"
-            echo "-----------------------------------------"
-            head -n 15 js/firebase-config.js
-            echo "-----------------------------------------"
-          else
-            echo "❌ ERRO: firebase-config.js não foi criado!"
-            exit 1
-          fi
-      
-      # ============================================
-      # 🔥 VERIFICAR OUTROS ARQUIVOS
-      # ============================================
-      - name: Verify required files
-        run: |
-          echo "📁 Verificando arquivos necessários..."
-          if [ ! -f "index.html" ]; then
-            echo "❌ ERRO: index.html não encontrado!"
-            exit 1
-          fi
-          echo "✅ index.html encontrado"
           
-          if [ ! -d "js" ]; then
-            echo "⚠️ Aviso: Pasta 'js' não encontrada"
+          # Verificar se os placeholders foram substituídos
+          if grep -q "SUBSTITUIR_API_KEY" login.html; then
+            echo "❌ ERRO: Placeholders ainda estão no login.html!"
+            exit 1
           else
-            echo "✅ Pasta 'js' encontrada"
-            echo "📁 Arquivos em js/:"
-            ls -la js/
+            echo "✅ login.html processado com sucesso!"
           fi
+          
+          if grep -q "SUBSTITUIR_API_KEY" home-gestao.html; then
+            echo "❌ ERRO: Placeholders ainda estão no home-gestao.html!"
+            exit 1
+          else
+            echo "✅ home-gestao.html processado com sucesso!"
+          fi
+          
+          if grep -q "SUBSTITUIR_API_KEY" gestao/admin.html; then
+            echo "❌ ERRO: Placeholders ainda estão no admin.html!"
+            exit 1
+          else
+            echo "✅ admin.html processado com sucesso!"
+          fi
+          
+          echo ""
+          echo "📄 Trecho do login.html com FIREBASE_CONFIG:"
+          grep -A 8 "FIREBASE_CONFIG" login.html | head -10
       
       # ============================================
-      # 🔥 UPLOAD DO ARTEFATO
+      # 🔥 UPLOAD
       # ============================================
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

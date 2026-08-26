@@ -1,1 +1,45 @@
+# ============================================
+# .gitignore - ARQUIVOS QUE NÃO SOBEM
+# ============================================
+
+# 🔒 FIREBASE - DADOS SENSÍVEIS (NUNCA SOBEM!)
 js/firebase-config.js
+js/config.local.js
+*.local.js
+*.secret.js
+
+# 🔒 ARQUIVOS DE AMBIENTE
+.env
+*.env
+.env.*
+
+# 🔒 ARQUIVOS DO SISTEMA OPERACIONAL
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.log
+
+# 🔒 ARQUIVOS DA IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.iml
+
+# 🔒 DEPENDÊNCIAS
+node_modules/
+package-lock.json
+yarn.lock
+
+# 🔒 ARQUIVOS DE BUILD
+dist/
+build/
+*.min.js
+*.min.css
+
+# 🔒 ARQUIVOS DE BACKUP
+*.bak
+*.backup
+*.old
