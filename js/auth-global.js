@@ -1,5 +1,5 @@
 // ============================================
-// AUTH-GLOBAL.JS - VERIFICA SESSÃO
+// AUTH-GLOBAL.JS - VERIFICA SESSÃO (ÚNICO RESPONSÁVEL!)
 // ============================================
 
 let isRedirecting = false;

@@ -94,29 +94,13 @@
             </div>
         </div>
     </div>
-
-    <!-- ============================================ -->
-    <!-- 🔥 FIREBASE CONFIG - INJETADO PELO WORKFLOW -->
-    <!-- ============================================ -->
-    <script>
-        // 🔥 Estas variáveis serão substituídas pelo workflow
-        window.FIREBASE_CONFIG = {
-            apiKey: 'SUBSTITUIR_API_KEY',
-            authDomain: 'SUBSTITUIR_AUTH_DOMAIN',
-            projectId: 'SUBSTITUIR_PROJECT_ID',
-            storageBucket: 'SUBSTITUIR_STORAGE_BUCKET',
-            messagingSenderId: 'SUBSTITUIR_SENDER_ID',
-            appId: 'SUBSTITUIR_APP_ID'
-        };
-        console.log('✅ FIREBASE_CONFIG carregado');
-    </script>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
     <!-- Configurações -->
-    <script src="../js/firebase-init.js"></script>
+    <script src="../js/firebase-config.js"></script>
     <script src="../js/auth-service.js"></script>
     <script src="../js/admin.js"></script>
 </body>
