@@ -231,7 +231,7 @@ class AuthService {
     }
 
     // ============================================
-    // SAIR
+    // SAIR (VERSÃO CORRIGIDA)
     // ============================================
     async logout() {
         try {
@@ -248,6 +248,14 @@ class AuthService {
             
             await this.auth.signOut();
             this.clearSession();
+            
+            // 🔥 RESETAR VARIÁVEIS GLOBAIS DO AUTH-GLOBAL
+            if (typeof sessionVerified !== 'undefined') {
+                sessionVerified = false;
+            }
+            if (typeof isRedirecting !== 'undefined') {
+                isRedirecting = false;
+            }
             
             console.log('👋 Usuário desconectado');
             return true;
