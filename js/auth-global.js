@@ -2,6 +2,9 @@
 // AUTH-GLOBAL.JS - VERIFICA SESSÃO EM TODAS AS PÁGINAS
 // ============================================
 
+// 🔥 VARIÁVEL PARA CONTROLAR O REDIRECIONAMENTO
+let isRedirecting = false;
+
 document.addEventListener('DOMContentLoaded', function() {
     
     console.log('🔐 Iniciando autenticação global...');
@@ -19,7 +22,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // 🔥 VERIFICAR SE ESTÁ LOGADO
         if (!authService.isLoggedIn()) {
             console.log('🔒 Não autenticado - Redirecionando para login');
-            window.location.href = 'login.html';
+            // 🔥 EVITAR REDIRECIONAMENTOS MÚLTIPLOS
+            if (!isRedirecting) {
+                isRedirecting = true;
+                window.location.href = 'login.html';
+            }
             return false;
         }
 
@@ -30,7 +37,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('🔒 Sessão inválida - Redirecionando para login');
                 sessionStorage.removeItem('auth_token');
                 sessionStorage.removeItem('session_expiry');
-                window.location.href = 'login.html';
+                if (!isRedirecting) {
+                    isRedirecting = true;
+                    window.location.href = 'login.html';
+                }
                 return false;
             }
 
@@ -39,7 +49,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (e) {
             console.error('❌ Erro ao verificar sessão:', e);
-            window.location.href = 'login.html';
+            if (!isRedirecting) {
+                isRedirecting = true;
+                window.location.href = 'login.html';
+            }
             return false;
         }
     }
@@ -48,10 +61,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // 2. CARREGAR DADOS DO USUÁRIO
     // ============================================
     function carregarDadosUsuario() {
+        // 🔥 SE JÁ ESTÁ REDIRECIONANDO, PARAR
+        if (isRedirecting) {
+            console.log('⏹️ Redirecionamento em andamento, cancelando...');
+            return;
+        }
+        
         // 🔥 ESPERAR O authService CARREGAR
         if (typeof authService === 'undefined') {
             console.warn('⏳ Aguardando authService carregar...');
-            // Tentar novamente em 500ms
             setTimeout(carregarDadosUsuario, 500);
             return;
         }
@@ -109,9 +127,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // 4. VERIFICAR A CADA 30 SEGUNDOS
     // ============================================
     setInterval(() => {
+        // 🔥 NÃO VERIFICAR SE JÁ ESTÁ REDIRECIONANDO
+        if (isRedirecting) return;
+        
         if (typeof authService !== 'undefined') {
             if (!authService.isLoggedIn()) {
                 console.log('🔒 Sessão expirada - Redirecionando');
+                isRedirecting = true;
                 window.location.href = 'login.html';
             }
         }
@@ -120,7 +142,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================
     // 5. CARREGAR TUDO
     // ============================================
-    // 🔥 USAR setTimeout PARA GARANTIR QUE O authService CARREGOU
     setTimeout(function() {
         carregarDadosUsuario();
     }, 300);
@@ -142,6 +163,8 @@ async function sair() {
             sessionStorage.removeItem('session_expiry');
         }
         
+        // 🔥 RESETAR A VARIÁVEL DE REDIRECIONAMENTO
+        isRedirecting = false;
         window.location.href = 'login.html';
         
     } catch (error) {

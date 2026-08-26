@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('✅ Usuário logado:', result.user.nome);
             console.log('📝 Perfil:', result.user.perfil);
             
+            // 🔥 FORÇAR O REDIRECIONAMENTO COM window.location.replace
             setTimeout(() => {
                 redirectUser(result.user.perfil);
             }, 800);
@@ -185,16 +186,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const user = authService.getUserData();
         console.log('👤 Usuário já logado:', user.nome);
         
-        setTimeout(() => {
-            redirectUser(user.perfil);
-        }, 1000);
+        // 🔥 JÁ ESTÁ LOGADO - REDIRECIONAR IMEDIATAMENTE
+        redirectUser(user.perfil);
     }
 
     console.log('✅ Login carregado e pronto!');
 });
 
 // ============================================
-// REDIRECIONAR POR PERFIL
+// REDIRECIONAR POR PERFIL (VERSÃO MELHORADA)
 // ============================================
 function redirectUser(perfil) {
     const pages = {
@@ -205,5 +205,7 @@ function redirectUser(perfil) {
     
     const page = pages[perfil] || 'home-operacional.html';
     console.log(`🔀 Redirecionando para: ${page}`);
-    window.location.href = page;
+    
+    // 🔥 USAR window.location.replace para evitar loop no histórico
+    window.location.replace(page);
 }
