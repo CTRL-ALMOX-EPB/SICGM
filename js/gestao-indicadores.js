@@ -1,5 +1,5 @@
 // ============================================
-// GESTÃO INDICADORES - RMA x DMA (VERSÃO DEFINITIVA)
+// GESTÃO INDICADORES - RMA x DMA (VERSÃO FINAL)
 // ============================================
 
 const WORKER_URL = 'https://gestao-xd-almox.alefe-gomes-72f.workers.dev';
@@ -8,10 +8,8 @@ let dadosCompletos = [];
 let dadosFiltrados = [];
 let graficoLogin = null;
 let graficoMes = null;
+let filtrosAplicados = false; // 🔥 CONTROLA SE FILTROS FORAM APLICADOS
 
-// ============================================
-// ESTADO DOS FILTROS
-// ============================================
 const filtroEstado = {
     mesesSelecionados: [],
     dataInicio: '',
@@ -19,60 +17,26 @@ const filtroEstado = {
     loginSelecionado: 'Todos'
 };
 
-// ============================================
-// MÊS PARA EXIBIÇÃO
-// ============================================
 const MESES = {
-    '01': 'Janeiro',
-    '02': 'Fevereiro',
-    '03': 'Março',
-    '04': 'Abril',
-    '05': 'Maio',
-    '06': 'Junho',
-    '07': 'Julho',
-    '08': 'Agosto',
-    '09': 'Setembro',
-    '10': 'Outubro',
-    '11': 'Novembro',
-    '12': 'Dezembro'
+    '01': 'Janeiro', '02': 'Fevereiro', '03': 'Março',
+    '04': 'Abril', '05': 'Maio', '06': 'Junho',
+    '07': 'Julho', '08': 'Agosto', '09': 'Setembro',
+    '10': 'Outubro', '11': 'Novembro', '12': 'Dezembro'
 };
 
 // ============================================
-// 🔥 FUNÇÃO: FORMATAR VALOR SEM DECIMAIS
+// FORMATAR VALORES
 // ============================================
-function formatarValor(valor) {
-    return Math.round(valor).toLocaleString('pt-BR');
-}
-
 function formatarMoeda(valor) {
     return `R$ ${Math.round(valor).toLocaleString('pt-BR')}`;
 }
 
-// ============================================
-// 🔥 FUNÇÃO: OBTER CANVAS COM RETRY
-// ============================================
-function obterCanvas(id, tentativas = 0) {
-    const canvas = document.getElementById(id);
-    if (canvas) {
-        return canvas;
-    }
-    
-    // Se não encontrou e ainda há tentativas, esperar e tentar novamente
-    if (tentativas < 10) {
-        console.log(`⏳ Aguardando canvas #${id}... (tentativa ${tentativas + 1})`);
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(obterCanvas(id, tentativas + 1));
-            }, 200);
-        });
-    }
-    
-    console.error(`❌ Canvas #${id} não encontrado após várias tentativas`);
-    return null;
+function formatarValor(valor) {
+    return Math.round(valor).toLocaleString('pt-BR');
 }
 
 // ============================================
-// 🔥 VERIFICAR AUTENTICAÇÃO
+// VERIFICAR AUTENTICAÇÃO
 // ============================================
 function verificarAutenticacaoGestao() {
     console.log('🔍 Verificando autenticação...');
@@ -110,7 +74,7 @@ function verificarAutenticacaoGestao() {
 }
 
 // ============================================
-// FUNÇÃO: VOLTAR PARA HOME
+// VOLTAR PARA HOME
 // ============================================
 function voltarParaHome() {
     try {
@@ -140,7 +104,7 @@ function voltarParaHome() {
 window.voltarParaHome = voltarParaHome;
 
 // ============================================
-// 1. BUSCAR POSIÇÃO DE ESTOQUE
+// BUSCAR DADOS
 // ============================================
 async function carregarPosicaoEstoque() {
     try {
@@ -175,9 +139,6 @@ async function carregarPosicaoEstoque() {
     }
 }
 
-// ============================================
-// 2. BUSCAR MOVIMENTOS
-// ============================================
 async function buscarMovimentos() {
     try {
         const url = `${WORKER_URL}/api/movimentos`;
@@ -198,9 +159,6 @@ async function buscarMovimentos() {
     }
 }
 
-// ============================================
-// 3. PARSER DO MOVIMENTOS_SIAGO.TXT
-// ============================================
 function parseMovimentos(texto, posicaoMap) {
     const linhas = texto.trim().split('\n');
     
@@ -317,7 +275,7 @@ function parseMovimentos(texto, posicaoMap) {
 }
 
 // ============================================
-// 4. CARREGAR DADOS
+// CARREGAR DADOS
 // ============================================
 async function carregarDados() {
     try {
@@ -326,11 +284,8 @@ async function carregarDados() {
         const movimentos = parseMovimentos(texto, posicaoEstoque);
         
         if (!movimentos || movimentos.length === 0) {
-            const graficosTop = document.querySelector('.graficos-top');
-            if (graficosTop) {
-                graficosTop.innerHTML = 
-                    `<div class="erro-msg" style="grid-column: 1 / -1;">⚠️ Nenhum movimento encontrado.</div>`;
-            }
+            document.querySelector('.graficos-top').innerHTML = 
+                `<div class="erro-msg">⚠️ Nenhum movimento encontrado.</div>`;
             return;
         }
         
@@ -339,28 +294,21 @@ async function carregarDados() {
         console.log('📋 Primeiros 3:', dadosCompletos.slice(0, 3));
         
         inicializarFiltros();
-        
-        // 🔥 AGUARDAR O DOM ESTAR PRONTO ANTES DE GERAR GRÁFICOS
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
         aplicarFiltros();
         
     } catch (erro) {
         console.error('❌ Erro ao carregar dados:', erro);
-        const graficosTop = document.querySelector('.graficos-top');
-        if (graficosTop) {
-            graficosTop.innerHTML = 
-                `<div class="erro-msg" style="grid-column: 1 / -1;">❌ Erro ao carregar dados: ${erro.message}</div>`;
-        }
+        document.querySelector('.graficos-top').innerHTML = 
+            `<div class="erro-msg">❌ Erro: ${erro.message}</div>`;
     }
 }
 
 // ============================================
-// 5. INICIALIZAR FILTROS
+// INICIALIZAR FILTROS
 // ============================================
 function inicializarFiltros() {
     // ============================================
-    // A) BOTÕES DE MÊS (KPIs)
+    // A) BOTÕES DE MÊS - COMEÇAM DESMARCADOS
     // ============================================
     const mesesContainer = document.getElementById('mesesContainer');
     if (!mesesContainer) {
@@ -382,9 +330,7 @@ function inicializarFiltros() {
         const count = dadosCompletos.filter(d => d.mes === mesNum).length;
         btn.title = `${MESES[mesNum] || mesNum}: ${count} movimentos`;
         
-        if (filtroEstado.mesesSelecionados.includes(mesNum)) {
-            btn.classList.add('active');
-        }
+        btn.classList.remove('active');
         
         btn.addEventListener('click', function() {
             const mes = this.dataset.mes;
@@ -398,21 +344,11 @@ function inicializarFiltros() {
                 this.classList.add('active');
             }
             
-            if (filtroEstado.mesesSelecionados.length === 0) {
-                filtroEstado.mesesSelecionados = [...mesesParaMostrar];
-                document.querySelectorAll('.btn-mes').forEach(b => b.classList.add('active'));
-            }
-            
             aplicarFiltros();
         });
         
         mesesContainer.appendChild(btn);
     });
-    
-    if (filtroEstado.mesesSelecionados.length === 0) {
-        filtroEstado.mesesSelecionados = [...mesesParaMostrar];
-        document.querySelectorAll('.btn-mes').forEach(b => b.classList.add('active'));
-    }
     
     // ============================================
     // B) FILTRO DE LOGIN
@@ -471,7 +407,7 @@ function inicializarFiltros() {
 }
 
 // ============================================
-// 6. APLICAR FILTROS
+// APLICAR FILTROS
 // ============================================
 function aplicarFiltros() {
     if (!dadosCompletos || dadosCompletos.length === 0) {
@@ -486,33 +422,40 @@ function aplicarFiltros() {
     
     let dados = [...dadosCompletos];
     
-    if (filtroEstado.mesesSelecionados.length > 0) {
+    // Verificar se algum filtro foi aplicado
+    const temFiltroMes = filtroEstado.mesesSelecionados.length > 0;
+    const temFiltroLogin = filtroEstado.loginSelecionado && filtroEstado.loginSelecionado !== 'Todos';
+    const temFiltroPeriodo = filtroEstado.dataInicio || filtroEstado.dataFim;
+    
+    filtrosAplicados = temFiltroMes || temFiltroLogin || temFiltroPeriodo;
+    console.log(`📌 Filtros aplicados: ${filtrosAplicados ? 'SIM' : 'NÃO'}`);
+    
+    if (temFiltroMes) {
         dados = dados.filter(d => filtroEstado.mesesSelecionados.includes(d.mes));
+        console.log(`📊 Filtrado por ${filtroEstado.mesesSelecionados.length} meses`);
+    } else {
+        console.log('📊 Nenhum mês selecionado - mostrando todos os dados');
     }
     
-    if (filtroEstado.loginSelecionado && filtroEstado.loginSelecionado !== 'Todos') {
+    if (temFiltroLogin) {
         dados = dados.filter(d => d.sigla_mov_mat === filtroEstado.loginSelecionado);
     }
     
     if (filtroEstado.dataInicio) {
-        const dataInicioObj = new Date(filtroEstado.dataInicio + 'T00:00:00');
+        const inicio = new Date(filtroEstado.dataInicio + 'T00:00:00');
         dados = dados.filter(d => {
-            if (!d.datamov) return false;
-            const partes = d.datamov.split('-');
+            const partes = d.datamov?.split('-') || [];
             if (partes.length !== 3) return false;
-            const dataObj = new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`);
-            return dataObj >= dataInicioObj;
+            return new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`) >= inicio;
         });
     }
     
     if (filtroEstado.dataFim) {
-        const dataFimObj = new Date(filtroEstado.dataFim + 'T23:59:59');
+        const fim = new Date(filtroEstado.dataFim + 'T23:59:59');
         dados = dados.filter(d => {
-            if (!d.datamov) return false;
-            const partes = d.datamov.split('-');
+            const partes = d.datamov?.split('-') || [];
             if (partes.length !== 3) return false;
-            const dataObj = new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`);
-            return dataObj <= dataFimObj;
+            return new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`) <= fim;
         });
     }
     
@@ -521,31 +464,30 @@ function aplicarFiltros() {
     
     atualizarContadores(dadosFiltrados);
     
-    // 🔥 VERIFICAR SE OS CANVAS EXISTEM ANTES DE GERAR
+    // 🔥 GERAR GRÁFICOS
     const canvasLogin = document.getElementById('graficoLogin');
     const canvasMes = document.getElementById('graficoMes');
     
-    if (!canvasLogin) {
-        console.error('❌ Canvas graficoLogin não encontrado no DOM!');
-    } else {
+    if (canvasLogin) {
         gerarGraficoLogin(dadosFiltrados);
+    } else {
+        console.error('❌ Canvas graficoLogin não encontrado!');
     }
     
-    if (!canvasMes) {
-        console.error('❌ Canvas graficoMes não encontrado no DOM!');
-    } else {
+    if (canvasMes) {
         gerarGraficoMes(dadosFiltrados);
+    } else {
+        console.error('❌ Canvas graficoMes não encontrado!');
     }
 }
 
 // ============================================
-// 7. ATUALIZAR CONTADORES (KPIs)
+// ATUALIZAR CONTADORES
 // ============================================
 function atualizarContadores(dados) {
     const totalRMA = dados.filter(d => d.tipo === 'RMA').reduce((acc, d) => acc + d.valor_total, 0);
     const totalDMA = dados.filter(d => d.tipo === 'DMA').reduce((acc, d) => acc + d.valor_total, 0);
     const saldo = totalRMA - totalDMA;
-    const totalRegistros = dados.length;
     const totalRMAQtd = dados.filter(d => d.tipo === 'RMA').length;
     const totalDMAQtd = dados.filter(d => d.tipo === 'DMA').length;
     
@@ -553,52 +495,64 @@ function atualizarContadores(dados) {
     document.getElementById('totalDMA').textContent = formatarMoeda(totalDMA);
     document.getElementById('totalSaldo').textContent = formatarMoeda(saldo);
     document.getElementById('totalSaldo').style.color = saldo >= 0 ? '#3B82F6' : '#EF4444';
-    
-    document.getElementById('totalRegistros').textContent = formatarValor(totalRegistros);
+    document.getElementById('totalRegistros').textContent = formatarValor(dados.length);
     document.getElementById('totalRMAQtd').textContent = `${totalRMAQtd} requisições`;
     document.getElementById('totalDMAQtd').textContent = `${totalDMAQtd} devoluções`;
 }
 
 // ============================================
-// 8. GRÁFICO POR LOGIN
+// GRÁFICO POR LOGIN - TOP 10 INICIAL / TODOS APÓS FILTROS
 // ============================================
 function gerarGraficoLogin(dados) {
     const canvas = document.getElementById('graficoLogin');
     if (!canvas) {
-        console.error('❌ Canvas graficoLogin não encontrado no HTML!');
+        console.error('❌ Canvas graficoLogin não encontrado');
         return;
     }
     
     if (!dados || dados.length === 0) {
-        const container = canvas.parentElement;
-        container.innerHTML = '<div class="sem-dados">Sem dados para exibir</div>';
+        canvas.parentElement.innerHTML = '<div class="sem-dados">Sem dados para exibir</div>';
         return;
     }
     
+    // Agrupar por login
     const agrupado = {};
     dados.forEach(d => {
         const login = d.sigla_mov_mat;
         if (!login) return;
         if (!agrupado[login]) {
-            agrupado[login] = { RMA: 0, DMA: 0 };
+            agrupado[login] = { RMA: 0, DMA: 0, total: 0 };
         }
         if (d.tipo === 'RMA') agrupado[login].RMA += d.valor_total;
         else agrupado[login].DMA += d.valor_total;
+        agrupado[login].total = agrupado[login].RMA + agrupado[login].DMA;
     });
     
-    const labels = Object.keys(agrupado).sort((a, b) => {
-        const totalA = agrupado[a].RMA + agrupado[a].DMA;
-        const totalB = agrupado[b].RMA + agrupado[b].DMA;
-        return totalB - totalA;
-    });
+    // Ordenar por total (maior para menor)
+    const sorted = Object.entries(agrupado)
+        .sort((a, b) => b[1].total - a[1].total);
     
-    const rmaValues = labels.map(l => agrupado[l].RMA);
-    const dmaValues = labels.map(l => agrupado[l].DMA);
+    // 🔥 DECISÃO: TOP 10 ou TODOS?
+    let dadosGrafico = sorted;
+    let labelSufixo = '';
+    
+    if (!filtrosAplicados) {
+        // 🔥 SEM FILTROS: MOSTRAR APENAS TOP 10
+        dadosGrafico = sorted.slice(0, 10);
+        labelSufixo = ' (Top 10)';
+        console.log('📊 Sem filtros - mostrando Top 10 logins');
+    } else {
+        // 🔥 COM FILTROS: MOSTRAR TODOS
+        console.log('📊 Com filtros - mostrando todos os logins');
+    }
+    
+    const labels = dadosGrafico.map(item => item[0]);
+    const rmaValues = dadosGrafico.map(item => item[1].RMA);
+    const dmaValues = dadosGrafico.map(item => item[1].DMA);
     
     if (graficoLogin) graficoLogin.destroy();
     
-    const ctx = canvas.getContext('2d');
-    graficoLogin = new Chart(ctx, {
+    graficoLogin = new Chart(canvas, {
         type: 'bar',
         data: {
             labels: labels,
@@ -633,6 +587,12 @@ function gerarGraficoLogin(dados) {
                         padding: 20
                     }
                 },
+                title: {
+                    display: true,
+                    text: `Valor por Login${labelSufixo}`,
+                    color: '#A0AEC0',
+                    font: { size: 14, weight: 'normal' }
+                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -663,22 +623,21 @@ function gerarGraficoLogin(dados) {
         }
     });
     
-    console.log('✅ Gráfico de Login gerado com sucesso!');
+    console.log(`✅ Gráfico de Login gerado${labelSufixo}`);
 }
 
 // ============================================
-// 9. GRÁFICO MENSAL
+// GRÁFICO MENSAL
 // ============================================
 function gerarGraficoMes(dados) {
     const canvas = document.getElementById('graficoMes');
     if (!canvas) {
-        console.error('❌ Canvas graficoMes não encontrado no HTML!');
+        console.error('❌ Canvas graficoMes não encontrado');
         return;
     }
     
     if (!dados || dados.length === 0) {
-        const container = canvas.parentElement;
-        container.innerHTML = '<div class="sem-dados">Sem dados para exibir</div>';
+        canvas.parentElement.innerHTML = '<div class="sem-dados">Sem dados para exibir</div>';
         return;
     }
     
@@ -706,8 +665,7 @@ function gerarGraficoMes(dados) {
     
     if (graficoMes) graficoMes.destroy();
     
-    const ctx = canvas.getContext('2d');
-    graficoMes = new Chart(ctx, {
+    graficoMes = new Chart(canvas, {
         type: 'bar',
         data: {
             labels: labelsDisplay,
@@ -741,6 +699,12 @@ function gerarGraficoMes(dados) {
                         font: { size: 12, weight: 'bold' },
                         padding: 20
                     }
+                },
+                title: {
+                    display: true,
+                    text: 'Evolução Mensal',
+                    color: '#A0AEC0',
+                    font: { size: 14, weight: 'normal' }
                 },
                 tooltip: {
                     callbacks: {
@@ -778,7 +742,7 @@ function gerarGraficoMes(dados) {
 // INICIALIZAÇÃO
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOM completamente carregado!');
+    console.log('🚀 DOM carregado!');
     if (!verificarAutenticacaoGestao()) return;
     carregarDados();
 });
