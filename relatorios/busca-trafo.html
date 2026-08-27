@@ -208,44 +208,65 @@
     <script src="../js/auth-helper.js"></script>       <!-- 4. 🔥 FUNÇÕES AUXILIARES -->
     <script src="../js/script.js"></script>            <!-- 5. Funções globais -->
     <script src="../js/busca-trafo.js"></script>
+    
+    <!-- ============================================ -->
+    <!-- 🔥 FUNÇÕES DE NAVEGAÇÃO E INICIALIZAÇÃO     -->
+    <!-- ============================================ -->
     <script>
-        // ============================================
-        // REDIRECIONAMENTO BASEADO NO PERFIL
-        // ============================================
+        /**
+         * 🔥 FUNÇÃO PARA VOLTAR PARA HOME (CORRIGIDA)
+         * Usa authService em vez da função antiga verificarSessao()
+         */
         function redirecionarParaHome() {
-            const sessao = verificarSessao();
-            if (!sessao) {
-                window.location.href = '../login.html';
-                return;
+            console.log('🏠 Redirecionando para home...');
+            
+            try {
+                // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
+                let perfil = 'GESTAO';
+                
+                if (typeof authService !== 'undefined' && authService) {
+                    const user = authService.getUserData();
+                    if (user && user.perfil) {
+                        perfil = user.perfil;
+                    }
+                }
+                
+                console.log(`📝 Perfil detectado: ${perfil}`);
+                
+                const homeMap = {
+                    'OPERACIONAL': '../home-operacional.html',
+                    'GESTAO': '../home-gestao.html',
+                    'VISUALIZACAO': '../home-visualizacao.html'
+                };
+                
+                const homePage = homeMap[perfil] || '../home-gestao.html';
+                
+                console.log(`🔀 Navegando para: ${homePage}`);
+                window.location.href = homePage;
+                
+            } catch (error) {
+                console.error('❌ Erro ao redirecionar:', error);
+                window.location.href = '../home-gestao.html';
             }
-
-            const perfil = sessao.perfil || 'GESTAO';
-            const homePages = {
-                'GESTAO': '../home-gestao.html',
-                'OPERACIONAL': '../home-operacional.html',
-                'VISUALIZACAO': '../home-visualizacao.html'
-            };
-
-            window.location.href = homePages[perfil] || '../login.html';
         }
 
-        // ============================================
-        // IR PARA O TOPO
-        // ============================================
+        /**
+         * 🔥 FUNÇÃO PARA IR AO TOPO
+         */
         function irParaTopo() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // ============================================
-        // IR PARA O FIM
-        // ============================================
+        /**
+         * 🔥 FUNÇÃO PARA IR AO FIM
+         */
         function irParaFim() {
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         }
 
-        // ============================================
-        // MOSTRAR/OCULTAR BOTÕES DE NAVEGAÇÃO
-        // ============================================
+        /**
+         * 🔥 CONTROLAR BOTÕES DE NAVEGAÇÃO
+         */
         function controlarBotoesNavegacao() {
             const btnTopo = document.getElementById('btnTopo');
             const btnFim = document.getElementById('btnFim');
@@ -265,69 +286,59 @@
             }
         }
 
-        // ============================================
-        // CARREGAR DADOS DO USUÁRIO
-        // ============================================
+        /**
+         * 🔥 INICIALIZAÇÃO DA PÁGINA
+         */
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('📋 Inicializando página Busca Trafo...');
+            
             const loadingOverlay = document.getElementById('loadingOverlay');
             const mainContent = document.getElementById('mainContent');
             
-            loadingOverlay.classList.add('active');
+            if (loadingOverlay) loadingOverlay.classList.add('active');
 
-            const sessao = verificarSessao();
+            // 🔥 USAR authService EM VEZ DE verificarSessao()
+            let usuario = null;
+            let perfil = 'GESTAO';
             
-            if (!sessao) {
+            if (typeof authService !== 'undefined' && authService) {
+                if (authService.isLoggedIn()) {
+                    const user = authService.getUserData();
+                    if (user) {
+                        usuario = user;
+                        perfil = user.perfil || 'GESTAO';
+                        console.log(`✅ Sessão válida: ${user.nome} (${perfil})`);
+                    }
+                }
+            }
+            
+            if (!usuario) {
                 console.log('🔒 Sessão inválida - Redirecionando para login');
                 window.location.href = '../login.html';
                 return;
             }
 
-            console.log('✅ Sessão válida para:', sessao.nome, '(', sessao.perfil, ')');
-            
+            // Atualizar informações do usuário
             try {
-                document.getElementById('nomeUsuario').textContent = sessao.nome || 'Usuário';
-                document.getElementById('matriculaUsuario').textContent = `Matrícula: ${sessao.matricula || '---'}`;
-                document.getElementById('perfilUsuario').textContent = sessao.perfil || 'GESTÃO';
+                document.getElementById('nomeUsuario').textContent = usuario.nome || 'Usuário';
+                document.getElementById('matriculaUsuario').textContent = `Matrícula: ${usuario.matricula || '---'}`;
+                document.getElementById('perfilUsuario').textContent = usuario.perfil || 'GESTÃO';
             } catch (e) {
                 console.error('Erro ao carregar dados do usuário:', e);
-                window.location.href = '../login.html';
-                return;
             }
 
+            // Configurar eventos de navegação
             window.addEventListener('scroll', controlarBotoesNavegacao);
             window.addEventListener('resize', controlarBotoesNavegacao);
             
             setTimeout(controlarBotoesNavegacao, 100);
 
+            // Mostrar conteúdo
             setTimeout(() => {
-                loadingOverlay.classList.remove('active');
-                mainContent.style.display = 'block';
+                if (loadingOverlay) loadingOverlay.classList.remove('active');
+                if (mainContent) mainContent.style.display = 'block';
             }, 500);
-
-            atualizarTimestampSessao();
         });
-
-        function atualizarTimestampSessao() {
-            const sessao = sessionStorage.getItem('sessaoSICGM');
-            if (sessao) {
-                try {
-                    const dados = JSON.parse(sessao);
-                    dados.timestamp = Date.now();
-                    sessionStorage.setItem('sessaoSICGM', JSON.stringify(dados));
-                } catch (e) {}
-            }
-        }
-
-        document.addEventListener('click', atualizarTimestampSessao);
-        document.addEventListener('keydown', atualizarTimestampSessao);
-
-        setInterval(function() {
-            const sessao = verificarSessao();
-            if (!sessao) {
-                console.log('🔒 Sessão expirada - Redirecionando para login');
-                window.location.href = '../login.html';
-            }
-        }, 5 * 60 * 1000);
     </script>
 
 </body>
