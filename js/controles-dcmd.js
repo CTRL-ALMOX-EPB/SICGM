@@ -50,6 +50,30 @@ const TIPOS = {
 };
 
 // ============================================
+// LISTA DE ENCARREGADOS PARA FILTRO
+// ============================================
+
+const ENCARREGADOS = [
+    'ROMARIO', 'ERIVANIO', 'RIUSTON', 'E. MARCELO', 'BRENO M.',
+    'FRANCINALDO(DEDÉ)', 'WALISSON', 'VALENTIM', 'LUCIANO', 'MEYDSON',
+    'PAULÃO', 'DAMIÃO(MIMA)', 'DEMILSON(PIM)', 'JOSÉ JORDAN', 'ALCIDES',
+    'EDILSON', 'ANTONIO', 'JUNIOR C.', 'MARCOS', 'ANTONIO D.',
+    'ANDERSON', 'LEANDRO', 'ROBSON', 'MANOEL C.', 'GUTEMBERG',
+    'REGINALDO'
+];
+
+// ============================================
+// LISTA DE TIPOS DE MOVIMENTO
+// ============================================
+
+const TIPOS_MOVIMENTO = [
+    { value: '', label: 'Todos' },
+    { value: 'RMA', label: '📄 RMA' },
+    { value: 'DMA', label: '📄 DMA' },
+    { value: 'DMA_SUCATA', label: '📄 DMA SUCATA' }
+];
+
+// ============================================
 // VARIÁVEIS GLOBAIS
 // ============================================
 
@@ -214,6 +238,63 @@ function mostrarToast(mensagem, tipo = 'info') {
 }
 
 // ============================================
+// FUNÇÃO PARA GERAR FILTROS DINÂMICOS
+// ============================================
+
+function gerarFiltrosDinamicos() {
+    const container = document.getElementById('filtrosContainer');
+    if (!container) return;
+    
+    // Remover filtros dinâmicos existentes
+    container.querySelectorAll('.filtro-dinamico').forEach(el => el.remove());
+    
+    // ============================================
+    // FILTRO PARA DEVOLUÇÃO - ENCARREGADO
+    // ============================================
+    if (tipoAtual === 'devolucao') {
+        const div = document.createElement('div');
+        div.className = 'filtro-item filtro-dinamico';
+        div.innerHTML = `
+            <label>👤 Encarregado</label>
+            <select id="filtro-encarregado" onchange="aplicarFiltros()">
+                <option value="">Todos</option>
+                ${ENCARREGADOS.map(e => `<option value="${e}">${e}</option>`).join('')}
+            </select>
+        `;
+        
+        // Inserir após o filtro de status
+        const statusFilter = container.querySelector('.filtro-item:has(#filtro-status)');
+        if (statusFilter) {
+            statusFilter.after(div);
+        } else {
+            container.appendChild(div);
+        }
+    }
+    
+    // ============================================
+    // FILTRO PARA MOVIMENTO - TIPO DE MOVIMENTO
+    // ============================================
+    if (tipoAtual === 'movimento') {
+        const div = document.createElement('div');
+        div.className = 'filtro-item filtro-dinamico';
+        div.innerHTML = `
+            <label>📋 Tipo Movimento</label>
+            <select id="filtro-tipo-movimento" onchange="aplicarFiltros()">
+                ${TIPOS_MOVIMENTO.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
+            </select>
+        `;
+        
+        // Inserir após o filtro de status
+        const statusFilter = container.querySelector('.filtro-item:has(#filtro-status)');
+        if (statusFilter) {
+            statusFilter.after(div);
+        } else {
+            container.appendChild(div);
+        }
+    }
+}
+
+// ============================================
 // SELECIONAR TIPO
 // ============================================
 
@@ -251,12 +332,23 @@ function selecionarTipo(tipo) {
         paginacaoContainer.innerHTML = '';
     }
     
+    // Resetar filtros
     document.getElementById('filtro-numero').value = '';
     document.getElementById('filtro-obra').value = '';
     document.getElementById('filtro-data').value = '';
     document.getElementById('filtro-status').value = '';
     document.getElementById('filtro-ordenacao').value = 'data_desc';
     ordenacaoAtual = 'data_desc';
+    
+    // Resetar filtros dinâmicos
+    const filtroEncarregado = document.getElementById('filtro-encarregado');
+    if (filtroEncarregado) filtroEncarregado.value = '';
+    
+    const filtroTipoMovimento = document.getElementById('filtro-tipo-movimento');
+    if (filtroTipoMovimento) filtroTipoMovimento.value = '';
+    
+    // Gerar filtros dinâmicos
+    gerarFiltrosDinamicos();
     
     carregarControles(1);
 }
@@ -385,11 +477,14 @@ async function carregarControles(pagina = 1) {
         paginacaoContainer.innerHTML = '';
     }
     
+    // Coletar todos os filtros
     filtrosAplicados = {
         numero: document.getElementById('filtro-numero')?.value || '',
         obra: document.getElementById('filtro-obra')?.value || '',
         data: document.getElementById('filtro-data')?.value || '',
-        status: document.getElementById('filtro-status')?.value || ''
+        status: document.getElementById('filtro-status')?.value || '',
+        encarregado: document.getElementById('filtro-encarregado')?.value || '',
+        tipoMovimento: document.getElementById('filtro-tipo-movimento')?.value || ''
     };
     
     const params = new URLSearchParams();
@@ -401,6 +496,10 @@ async function carregarControles(pagina = 1) {
     if (filtrosAplicados.obra) params.append('obra', filtrosAplicados.obra);
     if (filtrosAplicados.data) params.append('data', filtrosAplicados.data);
     if (filtrosAplicados.status) params.append('status', filtrosAplicados.status);
+    
+    // 🔥 FILTROS DINÂMICOS
+    if (filtrosAplicados.encarregado) params.append('encarregado', filtrosAplicados.encarregado);
+    if (filtrosAplicados.tipoMovimento) params.append('tipo_movimento', filtrosAplicados.tipoMovimento);
     
     const url = `${API_URL}${tipoInfo.endpoint}?${params.toString()}`;
     
@@ -586,6 +685,11 @@ function renderizarControles(controles) {
             infoExtra = `<p><strong>📋 Tipo:</strong> ${tipoMap[controle.tipo_movimento] || controle.tipo_movimento}</p>`;
         }
         
+        // Mostrar encarregado para devolução
+        if (tipoAtual === 'devolucao' && controle.encarregado) {
+            infoExtra += `<p><strong>👤 Encarregado:</strong> ${controle.encarregado}</p>`;
+        }
+        
         const isBranco = !controle.obra || controle.obra === '';
         const obraDisplay = isBranco ? '<span style="color: #FC8181;">⚠️ Em branco</span>' : controle.obra;
         
@@ -604,7 +708,8 @@ function renderizarControles(controles) {
                 <div class="controle-card-body">
                     <p><strong>🏗️ Obra:</strong> ${obraDisplay}</p>
                     <p><strong>📅 Data:</strong> ${controle.data_programacao || '-'}</p>
-                    ${tipoAtual === 'movimento' ? infoExtra : `<p><strong>📦 Itens:</strong> ${qtdItens}</p>`}
+                    ${infoExtra}
+                    ${tipoAtual !== 'movimento' && tipoAtual !== 'devolucao' ? `<p><strong>📦 Itens:</strong> ${qtdItens}</p>` : ''}
                 </div>
                 <div class="controle-card-footer">
                     <span class="controle-card-data">${formatarData(controle.criado_em)}</span>
@@ -699,6 +804,14 @@ function limparFiltros() {
     document.getElementById('filtro-obra').value = '';
     document.getElementById('filtro-data').value = '';
     document.getElementById('filtro-status').value = '';
+    
+    // Limpar filtros dinâmicos
+    const filtroEncarregado = document.getElementById('filtro-encarregado');
+    if (filtroEncarregado) filtroEncarregado.value = '';
+    
+    const filtroTipoMovimento = document.getElementById('filtro-tipo-movimento');
+    if (filtroTipoMovimento) filtroTipoMovimento.value = '';
+    
     carregarControles(1);
 }
 
@@ -756,7 +869,6 @@ function controlarBotoesNavegacao() {
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Inicializando Controles DCMD - Painel...');
     
-    // 🔥 CORRIGIDO: usar carregarDadosUsuario (com "Dados") em vez de carregarDatosUsuario
     const sessao = carregarDadosUsuario();
     if (!sessao) return;
     
@@ -769,6 +881,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             btn.classList.toggle('active', btn.dataset.tipo === tipoURL);
         });
     }
+    
+    // Gerar filtros dinâmicos
+    gerarFiltrosDinamicos();
     
     const btnNovo = document.getElementById('btnNovoControle');
     if (btnNovo) {
@@ -801,3 +916,4 @@ window.limparFiltros = limparFiltros;
 window.excluirControle = excluirControle;
 window.abrirControle = abrirControle;
 window.aplicarOrdenacao = aplicarOrdenacao;
+window.gerarFiltrosDinamicos = gerarFiltrosDinamicos;

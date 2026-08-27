@@ -1653,3 +1653,54 @@ input[type="date"] {
         grid-template-columns: 1fr;
     }
 }
+
+/* ============================================ */
+/* FILTROS DINÂMICOS                            */
+/* ============================================ */
+
+.filtro-item.filtro-dinamico {
+    animation: fadeIn 0.3s ease;
+}
+
+.filtro-item.filtro-dinamico select {
+    min-width: 140px;
+    padding: 6px 12px;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+    cursor: pointer;
+}
+
+.filtro-item.filtro-dinamico select:focus {
+    outline: none;
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+}
+
+.filtro-item.filtro-dinamico select option {
+    padding: 4px 8px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsividade para filtros dinâmicos */
+@media (max-width: 768px) {
+    .filtro-item.filtro-dinamico {
+        width: 100%;
+    }
+    
+    .filtro-item.filtro-dinamico select {
+        width: 100%;
+        min-width: unset;
+    }
+}
