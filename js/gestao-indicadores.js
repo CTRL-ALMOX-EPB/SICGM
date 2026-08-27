@@ -2,12 +2,12 @@
 // GESTÃO INDICADORES - RMA x DMA
 // ============================================
 
-// 🔥 WORKER DE GESTÃO
 const WORKER_URL = 'https://gestao-xd-almox.alefe-gomes-72f.workers.dev';
 
 let dadosCompletos = [];
 let graficoLogin = null;
 let graficoMes = null;
+let posicaoEstoque = {}; // Cache da posição de estoque
 
 // ============================================
 // 🔥 VERIFICAR AUTENTICAÇÃO
@@ -49,7 +49,7 @@ function verificarAutenticacaoGestao() {
 }
 
 // ============================================
-// FUNÇÃO: VOLTAR PARA HOME (USANDO CONFIG)
+// FUNÇÃO: VOLTAR PARA HOME
 // ============================================
 
 function voltarParaHome() {
@@ -57,7 +57,6 @@ function voltarParaHome() {
         if (window.CONFIG && typeof CONFIG.goHome === 'function') {
             CONFIG.goHome();
         } else {
-            // Fallback
             let perfil = 'GESTAO';
             if (typeof authService !== 'undefined' && authService) {
                 const user = authService.getUserData();
@@ -81,80 +80,183 @@ function voltarParaHome() {
 window.voltarParaHome = voltarParaHome;
 
 // ============================================
-// 1. Buscar dados consolidados do Worker
+// 1. BUSCAR POSIÇÃO DE ESTOQUE (VALORES)
 // ============================================
-async function buscarDadosConsolidados(deposito = '1050') {
+async function carregarPosicaoEstoque() {
     try {
-        const url = `${WORKER_URL}/api/dados-consolidados?deposito=${deposito}`;
-        console.log(`📡 Buscando dados: ${url}`);
+        console.log('📡 Carregando posição de estoque...');
+        const response = await fetch(`${WORKER_URL}/api/posicao`);
+        
+        if (!response.ok) {
+            console.warn('⚠️ Posição de estoque não encontrada, valores serão 0');
+            return {};
+        }
+        
+        const texto = await response.text();
+        const linhas = texto.trim().split('\n');
+        const mapa = {};
+        
+        for (let i = 1; i < linhas.length; i++) {
+            const partes = linhas[i].trim().split('\t');
+            if (partes.length >= 6) {
+                const codigo = partes[0].trim();
+                const vlrultCot = parseFloat(partes[4]?.trim().replace(',', '.')) || 0;
+                if (codigo && vlrultCot > 0) {
+                    mapa[codigo] = vlrultCot;
+                }
+            }
+        }
+        
+        console.log(`✅ ${Object.keys(mapa).length} materiais com valor carregados`);
+        return mapa;
+    } catch (error) {
+        console.error('❌ Erro ao carregar posição:', error);
+        return {};
+    }
+}
+
+// ============================================
+// 2. BUSCAR MOVIMENTOS (ARQUIVO BRUTO)
+// ============================================
+async function buscarMovimentos() {
+    try {
+        const url = `${WORKER_URL}/api/movimentos`;
+        console.log(`📡 Buscando movimentos: ${url}`);
         
         const response = await fetch(url);
-        
-        if (response.status === 503) {
-            throw new Error('Worker indisponível (503). Verifique se está online.');
-        }
         
         if (!response.ok) {
             throw new Error(`Erro ${response.status}: ${response.statusText}`);
         }
         
-        const dados = await response.json();
-        console.log(`✅ ${dados.length} movimentos carregados`);
-        return dados;
+        const texto = await response.text();
+        console.log(`✅ Arquivo carregado (${texto.split('\n').length} linhas)`);
+        return texto;
     } catch (error) {
-        console.error('❌ Erro ao buscar dados:', error);
+        console.error('❌ Erro ao buscar movimentos:', error);
         throw error;
     }
 }
 
 // ============================================
-// 2. Processar dados (separar RMA e DMA)
+// 3. PARSER DO MOVIMENTOS_SIAGO.TXT
 // ============================================
-function processarDados(movimentos) {
-    return movimentos.map(item => {
-        const qtd = item.qtdmov || 0;
-        const valor = item.vlrmov || 0;
+function parseMovimentos(texto, posicaoMap) {
+    const linhas = texto.trim().split('\n');
+    
+    if (linhas.length < 2) {
+        console.warn('⚠️ Arquivo vazio ou com apenas cabeçalho');
+        return [];
+    }
+    
+    // Cabeçalho
+    const cabecalho = linhas[0].split('\t').map(h => h.trim());
+    
+    const idx = {
+        orgmov: cabecalho.indexOf('orgmov'),
+        numdoc_mov: cabecalho.indexOf('numdoc_mov'),
+        datamov: cabecalho.indexOf('datamov'),
+        codmat_mov: cabecalho.indexOf('codmat_mov'),
+        dscmat: cabecalho.indexOf('dscmat'),
+        qtdmov: cabecalho.indexOf('qtdmov'),
+        vlrmov: cabecalho.indexOf('vlrmov'),
+        nummov: cabecalho.indexOf('nummov'),
+        sigla_mov_mat: cabecalho.indexOf('sigla_mov_mat')
+    };
+    
+    console.log('📌 Índices:', idx);
+    
+    const movimentos = [];
+    let ignorados = 0;
+    
+    for (let i = 1; i < linhas.length; i++) {
+        const linha = linhas[i].trim();
+        if (!linha) continue;
         
-        // RMA = quantidade positiva, DMA = quantidade negativa
-        const isRMA = qtd > 0;
+        const partes = linha.split('\t');
+        if (partes.length < 16) {
+            ignorados++;
+            continue;
+        }
         
-        return {
-            ...item,
+        const qtdmov = parseFloat(partes[idx.qtdmov]?.trim().replace(',', '.')) || 0;
+        
+        // Pular qtd = 0
+        if (qtdmov === 0) {
+            ignorados++;
+            continue;
+        }
+        
+        const codmat = partes[idx.codmat_mov]?.trim() || '';
+        const vlrUnitario = posicaoMap[codmat] || 0;
+        
+        // orgmov define se é RMA ou DMA
+        // RMA = orgmov "S" (Saída) ou "RMA"
+        // DMA = orgmov "E" (Entrada) ou "DMA"
+        const orgmov = partes[idx.orgmov]?.trim() || '';
+        const isRMA = orgmov === 'S' || orgmov === 'RMA' || orgmov.toUpperCase() === 'RMA';
+        
+        movimentos.push({
+            orgmov: orgmov,
+            numdoc_mov: partes[idx.numdoc_mov]?.trim() || '',
+            datamov: partes[idx.datamov]?.trim() || '',
+            codmat: codmat,
+            dscmat: partes[idx.dscmat]?.trim() || '',
+            qtdmov: qtdmov,
+            vlrmov: parseFloat(partes[idx.vlrmov]?.trim().replace(',', '.')) || 0,
+            nummov: partes[idx.nummov]?.trim() || '',
+            sigla_mov_mat: partes[idx.sigla_mov_mat]?.trim() || '',
             tipo: isRMA ? 'RMA' : 'DMA',
-            valor_abs: Math.abs(valor),
-            qtd_abs: Math.abs(qtd)
-        };
-    });
+            vlr_unitario: vlrUnitario,
+            valor_total: vlrUnitario * Math.abs(qtdmov),
+            valor_abs: Math.abs(vlrUnitario * qtdmov),
+            qtd_abs: Math.abs(qtdmov)
+        });
+    }
+    
+    console.log(`✅ ${movimentos.length} movimentos processados (${ignorados} ignorados)`);
+    return movimentos;
 }
 
 // ============================================
-// 3. Carregar e processar
+// 4. CARREGAR TUDO
 // ============================================
 async function carregarDados() {
     try {
-        const deposito = '1050';
-        const movimentos = await buscarDadosConsolidados(deposito);
+        // Carrega posição de estoque primeiro
+        posicaoEstoque = await carregarPosicaoEstoque();
+        
+        // Carrega movimentos
+        const texto = await buscarMovimentos();
+        
+        // Parse
+        const movimentos = parseMovimentos(texto, posicaoEstoque);
         
         if (!movimentos || movimentos.length === 0) {
             document.querySelector('.graficos-grid').innerHTML = 
-                `<div class="erro-msg">⚠️ Nenhum movimento encontrado no R2.</div>`;
+                `<div class="erro-msg">⚠️ Nenhum movimento encontrado.</div>`;
             return;
         }
         
-        dadosCompletos = processarDados(movimentos);
+        dadosCompletos = movimentos;
+        console.log(`📊 ${dadosCompletos.length} movimentos carregados`);
+        console.log('📋 Primeiros 3:', dadosCompletos.slice(0, 3));
+        
         popularFiltros();
         aplicarFiltros();
     } catch (erro) {
-        console.error('Erro:', erro);
+        console.error('❌ Erro ao carregar dados:', erro);
         document.querySelector('.graficos-grid').innerHTML = 
             `<div class="erro-msg">❌ Erro ao carregar dados: ${erro.message}</div>`;
     }
 }
 
 // ============================================
-// 4. Popular filtros
+// 5. POPULAR FILTROS
 // ============================================
 function popularFiltros() {
+    if (!dadosCompletos || dadosCompletos.length === 0) return;
+    
     const logins = [...new Set(dadosCompletos.map(d => d.sigla_mov_mat).filter(Boolean))].sort();
     const meses = [...new Set(dadosCompletos.map(d => {
         if (!d.datamov) return null;
@@ -166,7 +268,8 @@ function popularFiltros() {
     const selectLogin = document.getElementById('filtroLogin');
     const selectMes = document.getElementById('filtroMes');
     
-    // Limpar opções existentes (manter o "Todos")
+    if (!selectLogin || !selectMes) return;
+    
     selectLogin.innerHTML = '<option value="Todos">Todos</option>';
     selectMes.innerHTML = '<option value="Todos">Todos</option>';
     
@@ -186,9 +289,14 @@ function popularFiltros() {
 }
 
 // ============================================
-// 5. Aplicar filtros e atualizar gráficos
+// 6. APLICAR FILTROS
 // ============================================
 function aplicarFiltros() {
+    if (!dadosCompletos || dadosCompletos.length === 0) {
+        console.warn('⚠️ Nenhum dado para filtrar');
+        return;
+    }
+    
     const loginFiltro = document.getElementById('filtroLogin').value;
     const mesFiltro = document.getElementById('filtroMes').value;
     
@@ -206,9 +314,11 @@ function aplicarFiltros() {
         });
     }
     
-    // Calcular totais
-    const totalRMA = dadosFiltrados.filter(d => d.tipo === 'RMA').reduce((acc, d) => acc + d.valor_abs, 0);
-    const totalDMA = dadosFiltrados.filter(d => d.tipo === 'DMA').reduce((acc, d) => acc + d.valor_abs, 0);
+    console.log(`📊 ${dadosFiltrados.length} registros após filtros`);
+    
+    // Calcular totais (usando valor_total)
+    const totalRMA = dadosFiltrados.filter(d => d.tipo === 'RMA').reduce((acc, d) => acc + d.valor_total, 0);
+    const totalDMA = dadosFiltrados.filter(d => d.tipo === 'DMA').reduce((acc, d) => acc + d.valor_total, 0);
     const saldo = totalRMA - totalDMA;
     
     document.getElementById('totalRMA').textContent = `R$ ${totalRMA.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
@@ -221,9 +331,11 @@ function aplicarFiltros() {
 }
 
 // ============================================
-// 6. Gráfico por Login (RMA x DMA)
+// 7. GRÁFICO POR LOGIN
 // ============================================
 function gerarGraficoLogin(dados) {
+    if (!dados || dados.length === 0) return;
+    
     const agrupado = {};
     dados.forEach(d => {
         const login = d.sigla_mov_mat;
@@ -231,8 +343,8 @@ function gerarGraficoLogin(dados) {
         if (!agrupado[login]) {
             agrupado[login] = { RMA: 0, DMA: 0 };
         }
-        if (d.tipo === 'RMA') agrupado[login].RMA += d.valor_abs;
-        else agrupado[login].DMA += d.valor_abs;
+        if (d.tipo === 'RMA') agrupado[login].RMA += d.valor_total;
+        else agrupado[login].DMA += d.valor_total;
     });
     
     const labels = Object.keys(agrupado).sort();
@@ -291,9 +403,11 @@ function gerarGraficoLogin(dados) {
 }
 
 // ============================================
-// 7. Gráfico Mensal (RMA x DMA)
+// 8. GRÁFICO MENSAL
 // ============================================
 function gerarGraficoMes(dados) {
+    if (!dados || dados.length === 0) return;
+    
     const agrupado = {};
     dados.forEach(d => {
         if (!d.datamov) return;
@@ -303,8 +417,8 @@ function gerarGraficoMes(dados) {
         if (!agrupado[mesAno]) {
             agrupado[mesAno] = { RMA: 0, DMA: 0 };
         }
-        if (d.tipo === 'RMA') agrupado[mesAno].RMA += d.valor_abs;
-        else agrupado[mesAno].DMA += d.valor_abs;
+        if (d.tipo === 'RMA') agrupado[mesAno].RMA += d.valor_total;
+        else agrupado[mesAno].DMA += d.valor_total;
     });
     
     const labels = Object.keys(agrupado).sort();
@@ -363,14 +477,12 @@ function gerarGraficoMes(dados) {
 }
 
 // ============================================
-// Inicialização
+// INICIALIZAÇÃO
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    // 🔥 VERIFICAR AUTENTICAÇÃO PRIMEIRO
     if (!verificarAutenticacaoGestao()) return;
     carregarDados();
 });
 
-// EXPOR FUNÇÕES GLOBAIS
 window.aplicarFiltros = aplicarFiltros;
 window.voltarParaHome = voltarParaHome;
