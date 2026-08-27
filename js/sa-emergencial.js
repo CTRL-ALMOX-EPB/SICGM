@@ -27,26 +27,39 @@ let fotoCapturada = null;
 let cameraAtiva = 'environment';
 
 // ============================================
-// FUNÇÃO PARA REDIRECIONAR PARA HOME
+// 🔥 FUNÇÃO PARA VOLTAR PARA HOME (CORRIGIDA)
 // ============================================
 
 function redirecionarParaHome() {
-    const sessao = sessionStorage.getItem('sessaoSICGM');
-    if (sessao) {
-        try {
-            const dados = JSON.parse(sessao);
-            const homeMap = {
-                'OPERACIONAL': '../home-operacional.html',
-                'GESTAO': '../home-gestao.html',
-                'VISUALIZACAO': '../home-visualizacao.html'
-            };
-            const homePage = homeMap[dados.perfil] || '../index.html';
-            window.location.href = homePage;
-        } catch (e) {
-            window.location.href = '../index.html';
+    console.log('🏠 Redirecionando para home...');
+    
+    try {
+        // 🔥 USAR authService EM VEZ DE sessionStorage
+        let perfil = 'GESTAO';
+        
+        if (typeof authService !== 'undefined' && authService) {
+            const user = authService.getUserData();
+            if (user && user.perfil) {
+                perfil = user.perfil;
+            }
         }
-    } else {
-        window.location.href = '../index.html';
+        
+        console.log(`📝 Perfil detectado: ${perfil}`);
+        
+        const homeMap = {
+            'OPERACIONAL': '../home-operacional.html',
+            'GESTAO': '../home-gestao.html',
+            'VISUALIZACAO': '../home-visualizacao.html'
+        };
+        
+        const homePage = homeMap[perfil] || '../home-gestao.html';
+        
+        console.log(`🔀 Navegando para: ${homePage}`);
+        window.location.href = homePage;
+        
+    } catch (error) {
+        console.error('❌ Erro ao redirecionar:', error);
+        window.location.href = '../home-gestao.html';
     }
 }
 
@@ -290,50 +303,58 @@ function formatarDataHora(dataString) {
 }
 
 // ============================================
-// CARREGAR DADOS DO USUÁRIO
+// CARREGAR DADOS DO USUÁRIO (CORRIGIDO - USA authService)
 // ============================================
 
 function carregarDadosUsuario() {
-    const sessao = sessionStorage.getItem('sessaoSICGM');
-    
-    console.log('🔍 Verificando sessão S.A.:', sessao ? 'Sessão encontrada' : 'Sessão NÃO encontrada');
-    
-    if (!sessao) {
-        console.log('❌ Sessão não encontrada, redirecionando para login');
-        window.location.href = '../login.html';
-        return null;
-    }
+    console.log('🔐 Carregando dados do usuário S.A...');
     
     try {
-        dadosSessao = JSON.parse(sessao);
-        perfilUsuario = dadosSessao.perfil || 'OPERACIONAL';
-        
-        const timestamp = dadosSessao.timestamp || 0;
-        const agora = Date.now();
-        const oitoHoras = 8 * 60 * 60 * 1000;
-        
-        if (agora - timestamp > oitoHoras) {
-            console.log('⚠️ Sessão expirada, redirecionando para login');
-            sessionStorage.removeItem('sessaoSICGM');
+        // 🔥 USAR authService EM VEZ DE sessionStorage
+        if (typeof authService === 'undefined' || !authService) {
+            console.error('❌ authService não disponível');
             window.location.href = '../login.html';
             return null;
         }
+
+        if (!authService.isLoggedIn()) {
+            console.error('❌ Usuário não logado');
+            window.location.href = '../login.html';
+            return null;
+        }
+
+        const user = authService.getUserData();
+        if (!user) {
+            console.error('❌ Dados do usuário não encontrados');
+            window.location.href = '../login.html';
+            return null;
+        }
+
+        dadosSessao = {
+            nome: user.nome,
+            matricula: user.matricula,
+            perfil: user.perfil,
+            timestamp: Date.now()
+        };
         
-        console.log('✅ Usuário autenticado S.A.:', dadosSessao.nome, '| Perfil:', perfilUsuario);
-        
+        perfilUsuario = user.perfil || 'OPERACIONAL';
+
+        // Atualizar elementos da UI
         const userNameEl = document.getElementById('userName');
         const userRoleEl = document.getElementById('userRole');
         const userMatriculaEl = document.getElementById('userMatricula');
         const userAvatarEl = document.getElementById('userAvatar');
         
-        if (userNameEl) userNameEl.textContent = dadosSessao.nome || 'Usuário';
-        if (userRoleEl) userRoleEl.textContent = dadosSessao.perfil || 'OPERACIONAL';
-        if (userMatriculaEl) userMatriculaEl.textContent = `Matrícula: ${dadosSessao.matricula || '---'}`;
-        if (userAvatarEl) userAvatarEl.textContent = (dadosSessao.nome || 'U')[0].toUpperCase();
+        if (userNameEl) userNameEl.textContent = user.nome || 'Usuário';
+        if (userRoleEl) userRoleEl.textContent = user.perfil || 'OPERACIONAL';
+        if (userMatriculaEl) userMatriculaEl.textContent = `Matrícula: ${user.matricula || '---'}`;
+        if (userAvatarEl) userAvatarEl.textContent = (user.nome || 'U')[0].toUpperCase();
         
+        console.log(`✅ Usuário autenticado S.A.: ${user.nome} (${user.perfil})`);
         return dadosSessao;
-    } catch (e) {
-        console.error('❌ Erro ao carregar dados do usuário:', e);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar dados do usuário:', error);
         window.location.href = '../login.html';
         return null;
     }
@@ -738,10 +759,11 @@ async function comprimirImagem(dataURL, qualidade = 0.7) {
 }
 
 // ============================================
-// CRIAR NOVA S.A.
+// CRIAR NOVA S.A. (CORRIGIDO)
 // ============================================
 
 async function criarNovaSA() {
+    // 🔥 USA dadosSessao que agora vem do authService
     if (!dadosSessao) {
         mostrarToast('⚠️ Sessão inválida. Faça login novamente.', 'erro');
         return;
@@ -875,21 +897,27 @@ function getItensFormulario() {
 }
 
 // ============================================
-// SALVAR S.A.
+// SALVAR S.A. (CORRIGIDO)
 // ============================================
 
 async function salvarSA() {
+    // 🔥 USA authService em vez de sessionStorage
     if (!dadosSessao) {
-        const sessao = sessionStorage.getItem('sessaoSICGM');
-        if (!sessao) {
+        if (typeof authService !== 'undefined' && authService) {
+            const user = authService.getUserData();
+            if (user) {
+                dadosSessao = {
+                    nome: user.nome,
+                    matricula: user.matricula,
+                    perfil: user.perfil,
+                    timestamp: Date.now()
+                };
+            }
+        }
+        
+        if (!dadosSessao) {
             mostrarToast('⚠️ Sessão expirada. Faça login novamente.', 'erro');
             setTimeout(() => { window.location.href = '../login.html'; }, 1500);
-            return;
-        }
-        try {
-            dadosSessao = JSON.parse(sessao);
-        } catch (e) {
-            window.location.href = '../login.html';
             return;
         }
     }
@@ -971,11 +999,20 @@ async function salvarSA() {
 window.salvarSA = salvarSA;
 
 // ============================================
-// FINALIZAR S.A.
+// FINALIZAR S.A. (CORRIGIDO)
 // ============================================
 
 async function finalizarSA() {
     if (!confirm('⚠️ Tem certeza que deseja FINALIZAR esta S.A.?')) return;
+    
+    // 🔥 USA authService em vez de sessionStorage
+    let matricula = 'sistema';
+    if (typeof authService !== 'undefined' && authService) {
+        const user = authService.getUserData();
+        if (user) {
+            matricula = user.matricula || 'sistema';
+        }
+    }
     
     const numero = document.getElementById('saNumero').textContent.replace('#', '');
     
@@ -984,7 +1021,7 @@ async function finalizarSA() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                finalizado_por: dadosSessao?.matricula || 'sistema',
+                finalizado_por: matricula,
                 finalizado_em: new Date().toISOString()
             })
         });
@@ -1012,13 +1049,22 @@ async function finalizarSA() {
 window.finalizarSA = finalizarSA;
 
 // ============================================
-// MARCAR S.A. COMO ATENDIDA NO PROTHEUS
+// MARCAR S.A. COMO ATENDIDA NO PROTHEUS (CORRIGIDO)
 // ============================================
 
 async function marcarAtendidaProtheus() {
     const numero = document.getElementById('saNumero').textContent.replace('#', '');
     
     if (!confirm(`⚠️ Confirma que a S.A. #${String(numero).padStart(4, '0')} foi ATENDIDA no sistema Protheus?`)) return;
+    
+    // 🔥 USA authService em vez de sessionStorage
+    let matricula = 'sistema';
+    if (typeof authService !== 'undefined' && authService) {
+        const user = authService.getUserData();
+        if (user) {
+            matricula = user.matricula || 'sistema';
+        }
+    }
     
     try {
         mostrarToast('⏳ Atualizando status...', 'info');
@@ -1027,7 +1073,7 @@ async function marcarAtendidaProtheus() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                atendido_por: dadosSessao?.matricula || 'sistema',
+                atendido_por: matricula,
                 atendido_em: new Date().toISOString()
             })
         });
@@ -1051,7 +1097,7 @@ async function marcarAtendidaProtheus() {
 window.marcarAtendidaProtheus = marcarAtendidaProtheus;
 
 // ============================================
-// ABRIR PÁGINA DE ASSINATURA
+// ABRIR PÁGINA DE ASSINATURA (CORRIGIDO)
 // ============================================
 
 function abrirPaginaAssinatura(tipo) {
@@ -1062,6 +1108,7 @@ function abrirPaginaAssinatura(tipo) {
     
     const numero = document.getElementById('saNumero').textContent.replace('#', '');
     
+    // 🔥 USA dadosSessao que agora vem do authService
     let nome = '';
     
     if (tipo === 'entregue') {
@@ -2521,20 +2568,26 @@ async function removerSA(numero) {
 window.removerSA = removerSA;
 
 // ============================================
-// CARREGAR S.A. NO FORMULÁRIO
+// CARREGAR S.A. NO FORMULÁRIO (CORRIGIDO)
 // ============================================
 
 async function carregarSAFormulario() {
+    // 🔥 USA authService em vez de sessionStorage
     if (!dadosSessao) {
-        const sessao = sessionStorage.getItem('sessaoSICGM');
-        if (!sessao) {
-            window.location.href = '../login.html';
-            return;
+        if (typeof authService !== 'undefined' && authService) {
+            const user = authService.getUserData();
+            if (user) {
+                dadosSessao = {
+                    nome: user.nome,
+                    matricula: user.matricula,
+                    perfil: user.perfil,
+                    timestamp: Date.now()
+                };
+                perfilUsuario = user.perfil || 'OPERACIONAL';
+            }
         }
-        try {
-            dadosSessao = JSON.parse(sessao);
-            perfilUsuario = dadosSessao.perfil || 'OPERACIONAL';
-        } catch (e) {
+        
+        if (!dadosSessao) {
             window.location.href = '../login.html';
             return;
         }
@@ -2713,7 +2766,7 @@ function configurarBotoesAssinatura() {
 }
 
 // ============================================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO (CORRIGIDO)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -2725,6 +2778,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         carregarMateriaisSA()
     ]);
     
+    // 🔥 CHAMA carregarDadosUsuario() que agora usa authService
     const sessao = carregarDadosUsuario();
     if (!sessao) {
         console.log('❌ Falha ao carregar sessão, redirecionando...');
