@@ -378,13 +378,6 @@ function atualizarTimestampSessao() {
     }
 }
 
-function sair() {
-    sessionStorage.removeItem('sessaoSICGM');
-    const loginUrl = (typeof CONFIG !== 'undefined' && CONFIG) ? 
-        CONFIG.getPageUrl('login.html') : 'login.html';
-    window.location.href = loginUrl;
-}
-
 document.addEventListener('DOMContentLoaded', function() {
     const loadingOverlay = document.getElementById('loadingOverlay');
     const homeContent = document.getElementById('homeContent');
