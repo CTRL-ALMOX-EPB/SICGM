@@ -165,22 +165,10 @@
                     <label>🏗️ Obra:</label>
                     <input type="text" id="filterObraMGM" placeholder="Número da obra..." style="width: 140px;">
                 </div>
-                <!-- 🔥 NOVO FILTRO DE ETAPAS -->
                 <div class="filter-group">
                     <label>📋 Etapas:</label>
-                    <select id="filtroEtapas" onchange="aplicarFiltroEtapas()">
-                        <option value="0">Todas</option>
-                        <option value="1">1+ etapas</option>
-                        <option value="2">2+ etapas</option>
-                        <option value="3">3+ etapas</option>
-                        <option value="4">4+ etapas</option>
-                        <option value="5">5+ etapas</option>
-                        <option value="6">6+ etapas</option>
-                        <option value="7">7+ etapas</option>
-                        <option value="8">8+ etapas</option>
-                        <option value="9">9+ etapas</option>
-                        <option value="10">10+ etapas</option>
-                    </select>
+                    <input type="number" id="filtroEtapas" placeholder="Ex: 3" min="0" style="width: 80px;" onchange="aplicarFiltroEtapas()" oninput="aplicarFiltroEtapas()">
+                    <span style="font-size: 11px; color: #718096;">(0 = todas)</span>
                 </div>
                 <!-- FIM DO NOVO FILTRO -->
                 <button class="btn-filter primary" onclick="aplicarFiltrosMGM()">🔍 Filtrar</button>

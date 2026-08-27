@@ -1439,7 +1439,7 @@ function renderizarListaObrasMGM(pendencias) {
     }
     
     // ============================================
-    // APLICAR FILTRO POR ETAPAS
+    // APLICAR FILTRO POR ETAPAS (EXATO)
     // ============================================
     let pendenciasFiltradas = pendencias;
     
@@ -1448,7 +1448,8 @@ function renderizarListaObrasMGM(pendencias) {
             const obraNorm = normalizarObra(p.obra);
             const etapasInfo = getEtapasPorObra(obraNorm);
             if (!etapasInfo) return false;
-            return etapasInfo.etapas_validas >= filtroEtapasMinimo;
+            // 🔥 FILTRO EXATO: número de etapas válidas === valor digitado
+            return etapasInfo.etapas_validas === filtroEtapasMinimo;
         });
     }
     
@@ -1456,7 +1457,7 @@ function renderizarListaObrasMGM(pendencias) {
         container.innerHTML = `
             <div class="empty-state-dashboard">
                 <div class="icon">🔍</div>
-                <p>Nenhuma obra encontrada com ${filtroEtapasMinimo}+ etapas válidas</p>
+                <p>Nenhuma obra encontrada com exatamente ${filtroEtapasMinimo} etapa(s) válida(s)</p>
                 <p class="sub">Ajuste o filtro para ver mais resultados</p>
             </div>
         `;
@@ -1628,10 +1629,10 @@ function renderizarListaObrasMGM(pendencias) {
     
     container.innerHTML = html;
     
-    // Atualizar o valor do select
-    const selectEtapas = document.getElementById('filtroEtapas');
-    if (selectEtapas) {
-        selectEtapas.value = filtroEtapasMinimo;
+    // Atualizar o valor do input
+    const inputEtapas = document.getElementById('filtroEtapas');
+    if (inputEtapas) {
+        inputEtapas.value = filtroEtapasMinimo > 0 ? filtroEtapasMinimo : '';
     }
 }
 
@@ -2151,30 +2152,38 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
 }
 
 // ============================================
-// FUNÇÃO: APLICAR FILTRO POR ETAPAS
+// FUNÇÃO: APLICAR FILTRO POR ETAPAS (CORRIGIDA - INPUT NUMÉRICO EXATO)
 // ============================================
 
 function aplicarFiltroEtapas() {
-    const select = document.getElementById('filtroEtapas');
-    if (!select) return;
+    const input = document.getElementById('filtroEtapas');
+    if (!input) return;
     
-    filtroEtapasMinimo = parseInt(select.value) || 0;
-    console.log(`🔍 Filtrando por ${filtroEtapasMinimo}+ etapas válidas`);
+    const valor = parseInt(input.value);
+    // Se for NaN, vazio ou negativo, considerar como 0 (todas)
+    filtroEtapasMinimo = isNaN(valor) || valor < 0 ? 0 : valor;
+    
+    console.log(`🔍 Filtrando obras com exatamente ${filtroEtapasMinimo} etapa(s) (0 = todas)`);
+    
+    // Atualizar a lista com o filtro
+    renderizarListaObrasMGM(dadosFiltradosMGM);
     
     // Atualizar o contador
     const totalRegistros = document.getElementById('totalRegistrosMGM');
     if (totalRegistros) {
-        const dadosFiltrados = dadosFiltradosMGM.filter(p => {
-            if (filtroEtapasMinimo === 0) return true;
-            const obraNorm = normalizarObra(p.obra);
-            const etapasInfo = getEtapasPorObra(obraNorm);
-            if (!etapasInfo) return false;
-            return etapasInfo.etapas_validas >= filtroEtapasMinimo;
-        });
+        let dadosFiltrados = dadosFiltradosMGM;
+        
+        if (filtroEtapasMinimo > 0) {
+            dadosFiltrados = dadosFiltradosMGM.filter(p => {
+                const obraNorm = normalizarObra(p.obra);
+                const etapasInfo = getEtapasPorObra(obraNorm);
+                if (!etapasInfo) return false;
+                return etapasInfo.etapas_validas === filtroEtapasMinimo;
+            });
+        }
+        
         totalRegistros.textContent = `${dadosFiltrados.length} pendências`;
     }
-    
-    renderizarListaObrasMGM(dadosFiltradosMGM);
 }
 
 window.aplicarFiltroEtapas = aplicarFiltroEtapas;
@@ -2218,9 +2227,9 @@ function aplicarFiltrosMGM() {
     }
     
     // Resetar filtro de etapas ao aplicar outros filtros
-    const selectEtapas = document.getElementById('filtroEtapas');
-    if (selectEtapas) {
-        selectEtapas.value = 0;
+    const inputEtapas = document.getElementById('filtroEtapas');
+    if (inputEtapas) {
+        inputEtapas.value = '';
         filtroEtapasMinimo = 0;
     }
     
@@ -2234,9 +2243,9 @@ function limparFiltrosMGM() {
     document.getElementById('filterObraMGM').value = '';
     
     // 🔥 RESETAR FILTRO DE ETAPAS
-    const selectEtapas = document.getElementById('filtroEtapas');
-    if (selectEtapas) {
-        selectEtapas.value = 0;
+    const inputEtapas = document.getElementById('filtroEtapas');
+    if (inputEtapas) {
+        inputEtapas.value = '';
         filtroEtapasMinimo = 0;
     }
     
