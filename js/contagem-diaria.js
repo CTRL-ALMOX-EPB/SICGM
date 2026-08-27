@@ -1341,8 +1341,44 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CONTAGEM-DIARIA.JS - PARTE CORRIGIDA
+    // 🔥 FUNÇÃO DE VOLTAR PARA HOME (NOVA VERSÃO - CORRIGIDA)
     // ============================================
+
+    function redirecionarParaHome() {
+        console.log('🏠 Redirecionando para home...');
+        
+        try {
+            // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
+            let perfil = 'GESTAO';
+            
+            if (typeof authService !== 'undefined' && authService) {
+                const user = authService.getUserData();
+                if (user && user.perfil) {
+                    perfil = user.perfil;
+                }
+            }
+            
+            console.log(`📝 Perfil detectado: ${perfil}`);
+            
+            const homeMap = {
+                'OPERACIONAL': 'home-operacional.html',
+                'GESTAO': 'home-gestao.html',
+                'VISUALIZACAO': 'home-visualizacao.html'
+            };
+            
+            const homePage = homeMap[perfil] || 'home-gestao.html';
+            
+            // Estamos em js/, então sobe dois níveis para a raiz
+            const url = `../${homePage}`;
+            
+            console.log(`🔀 Navegando para: ${url}`);
+            window.location.href = url;
+            
+        } catch (error) {
+            console.error('❌ Erro ao redirecionar:', error);
+            window.location.href = '../home-gestao.html';
+        }
+    }
 
     // ============================================
     // 🔥 FUNÇÃO PARA CARREGAR DADOS DO USUÁRIO (NOVA VERSÃO)
@@ -5135,6 +5171,7 @@ if (document.getElementById('contagemForm')) {
     window.executarBaixa = executarBaixa;
     window.buscarDadosCodigo = buscarDadosCodigo;
     window.buscarProximoTombamentoBobina = buscarProximoTombamentoBobina;
+    window.redirecionarParaHome = redirecionarParaHome;
     
     // ============================================
     // INICIALIZAR
