@@ -1448,7 +1448,6 @@ function renderizarListaObrasMGM(pendencias) {
             const obraNorm = normalizarObra(p.obra);
             const etapasInfo = getEtapasPorObra(obraNorm);
             if (!etapasInfo) return false;
-            // 🔥 FILTRO EXATO: número de etapas válidas === valor digitado
             return etapasInfo.etapas_validas === filtroEtapasMinimo;
         });
     }
@@ -2165,25 +2164,52 @@ function aplicarFiltroEtapas() {
     
     console.log(`🔍 Filtrando obras com exatamente ${filtroEtapasMinimo} etapa(s) (0 = todas)`);
     
-    // Atualizar a lista com o filtro
-    renderizarListaObrasMGM(dadosFiltradosMGM);
+    // Aplicar o filtro sobre os dados já filtrados por status/busca
+    let filtrados = [...pendenciasConsolidadas];
     
-    // Atualizar o contador
+    // Aplicar filtros de status se houver
+    if (filtroStatusMGMAtivo) {
+        filtrados = filtrados.filter(p => p.status === filtroStatusMGMAtivo);
+    }
+    
+    // Aplicar filtro de busca se houver
+    const buscaTexto = document.getElementById('filterBuscaMGM')?.value?.toLowerCase() || '';
+    if (buscaTexto) {
+        filtrados = filtrados.filter(p => 
+            p.codigo.toLowerCase().includes(buscaTexto) || 
+            p.descricao.toLowerCase().includes(buscaTexto)
+        );
+    }
+    
+    // Aplicar filtro de obra se houver
+    const buscaObra = document.getElementById('filterObraMGM')?.value || '';
+    if (buscaObra) {
+        const obraNorm = normalizarObra(buscaObra);
+        filtrados = filtrados.filter(p => 
+            p.obra.includes(obraNorm) || 
+            p.obraFormatada.includes(buscaObra)
+        );
+    }
+    
+    // 🔥 APLICAR FILTRO DE ETAPAS (EXATO)
+    if (filtroEtapasMinimo > 0) {
+        filtrados = filtrados.filter(p => {
+            const obraNorm = normalizarObra(p.obra);
+            const etapasInfo = getEtapasPorObra(obraNorm);
+            if (!etapasInfo) return false;
+            return etapasInfo.etapas_validas === filtroEtapasMinimo;
+        });
+    }
+    
+    dadosFiltradosMGM = filtrados;
+    itemSelecionadoMGM = null;
+    
     const totalRegistros = document.getElementById('totalRegistrosMGM');
     if (totalRegistros) {
-        let dadosFiltrados = dadosFiltradosMGM;
-        
-        if (filtroEtapasMinimo > 0) {
-            dadosFiltrados = dadosFiltradosMGM.filter(p => {
-                const obraNorm = normalizarObra(p.obra);
-                const etapasInfo = getEtapasPorObra(obraNorm);
-                if (!etapasInfo) return false;
-                return etapasInfo.etapas_validas === filtroEtapasMinimo;
-            });
-        }
-        
-        totalRegistros.textContent = `${dadosFiltrados.length} pendências`;
+        totalRegistros.textContent = `${filtrados.length} pendências`;
     }
+    
+    renderizarDashboardMGM();
 }
 
 window.aplicarFiltroEtapas = aplicarFiltroEtapas;
@@ -2193,6 +2219,11 @@ function aplicarFiltrosMGM() {
     const filtroStatus = document.getElementById('filterStatusMGM')?.value || 'todos';
     const buscaTexto = document.getElementById('filterBuscaMGM')?.value?.toLowerCase() || '';
     const buscaObra = document.getElementById('filterObraMGM')?.value || '';
+    
+    // 🔥 PEGAR O VALOR ATUAL DO INPUT DE ETAPAS
+    const inputEtapas = document.getElementById('filtroEtapas');
+    const valorEtapas = inputEtapas ? parseInt(inputEtapas.value) : 0;
+    filtroEtapasMinimo = isNaN(valorEtapas) || valorEtapas < 0 ? 0 : valorEtapas;
     
     let filtrados = [...pendenciasConsolidadas];
     
@@ -2218,19 +2249,22 @@ function aplicarFiltrosMGM() {
         );
     }
     
+    // 🔥 APLICAR FILTRO DE ETAPAS (EXATO)
+    if (filtroEtapasMinimo > 0) {
+        filtrados = filtrados.filter(p => {
+            const obraNorm = normalizarObra(p.obra);
+            const etapasInfo = getEtapasPorObra(obraNorm);
+            if (!etapasInfo) return false;
+            return etapasInfo.etapas_validas === filtroEtapasMinimo;
+        });
+    }
+    
     dadosFiltradosMGM = filtrados;
     itemSelecionadoMGM = null;
     
     const totalRegistros = document.getElementById('totalRegistrosMGM');
     if (totalRegistros) {
         totalRegistros.textContent = `${filtrados.length} pendências`;
-    }
-    
-    // Resetar filtro de etapas ao aplicar outros filtros
-    const inputEtapas = document.getElementById('filtroEtapas');
-    if (inputEtapas) {
-        inputEtapas.value = '';
-        filtroEtapasMinimo = 0;
     }
     
     renderizarDashboardMGM();
