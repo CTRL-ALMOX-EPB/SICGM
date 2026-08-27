@@ -2,6 +2,7 @@
 // GESTÃO INDICADORES - RMA x DMA
 // ============================================
 
+// 🔥 WORKER DE GESTÃO
 const WORKER_URL = 'https://gestao-xd-almox.alefe-gomes-72f.workers.dev';
 
 let dadosCompletos = [];
@@ -48,11 +49,46 @@ function verificarAutenticacaoGestao() {
 }
 
 // ============================================
+// FUNÇÃO: VOLTAR PARA HOME (USANDO CONFIG)
+// ============================================
+
+function voltarParaHome() {
+    try {
+        if (window.CONFIG && typeof CONFIG.goHome === 'function') {
+            CONFIG.goHome();
+        } else {
+            // Fallback
+            let perfil = 'GESTAO';
+            if (typeof authService !== 'undefined' && authService) {
+                const user = authService.getUserData();
+                if (user && user.perfil) {
+                    perfil = user.perfil;
+                }
+            }
+            const homeMap = {
+                'OPERACIONAL': '../home-operacional.html',
+                'GESTAO': '../home-gestao.html',
+                'VISUALIZACAO': '../home-visualizacao.html'
+            };
+            window.location.href = homeMap[perfil] || '../home-gestao.html';
+        }
+    } catch (error) {
+        console.error('❌ Erro ao redirecionar:', error);
+        window.location.href = '../home-gestao.html';
+    }
+}
+
+window.voltarParaHome = voltarParaHome;
+
+// ============================================
 // 1. Buscar dados consolidados do Worker
 // ============================================
 async function buscarDadosConsolidados(deposito = '1050') {
     try {
-        const response = await fetch(`${WORKER_URL}/api/dados-consolidados?deposito=${deposito}`);
+        const url = `${WORKER_URL}/api/dados-consolidados?deposito=${deposito}`;
+        console.log(`📡 Buscando dados: ${url}`);
+        
+        const response = await fetch(url);
         
         if (response.status === 503) {
             throw new Error('Worker indisponível (503). Verifique se está online.');
@@ -62,7 +98,9 @@ async function buscarDadosConsolidados(deposito = '1050') {
             throw new Error(`Erro ${response.status}: ${response.statusText}`);
         }
         
-        return await response.json();
+        const dados = await response.json();
+        console.log(`✅ ${dados.length} movimentos carregados`);
+        return dados;
     } catch (error) {
         console.error('❌ Erro ao buscar dados:', error);
         throw error;
@@ -75,11 +113,14 @@ async function buscarDadosConsolidados(deposito = '1050') {
 function processarDados(movimentos) {
     return movimentos.map(item => {
         const qtd = item.qtdmov || 0;
-        const valor = item.valor_total || 0;
+        const valor = item.vlrmov || 0;
+        
+        // RMA = quantidade positiva, DMA = quantidade negativa
+        const isRMA = qtd > 0;
         
         return {
             ...item,
-            tipo: qtd >= 0 ? 'RMA' : 'DMA',
+            tipo: isRMA ? 'RMA' : 'DMA',
             valor_abs: Math.abs(valor),
             qtd_abs: Math.abs(qtd)
         };
@@ -111,7 +152,7 @@ async function carregarDados() {
 }
 
 // ============================================
-// 4. Filtrar e gerar gráficos
+// 4. Popular filtros
 // ============================================
 function popularFiltros() {
     const logins = [...new Set(dadosCompletos.map(d => d.sigla_mov_mat).filter(Boolean))].sort();
@@ -119,11 +160,15 @@ function popularFiltros() {
         if (!d.datamov) return null;
         const parts = d.datamov.split('/');
         if (parts.length !== 3) return null;
-        return `${parts[2]}-${parts[1]}`;
+        return `${parts[2]}-${parts[1].padStart(2, '0')}`;
     }).filter(Boolean))].sort();
     
     const selectLogin = document.getElementById('filtroLogin');
     const selectMes = document.getElementById('filtroMes');
+    
+    // Limpar opções existentes (manter o "Todos")
+    selectLogin.innerHTML = '<option value="Todos">Todos</option>';
+    selectMes.innerHTML = '<option value="Todos">Todos</option>';
     
     logins.forEach(login => {
         const opt = document.createElement('option');
@@ -140,6 +185,9 @@ function popularFiltros() {
     });
 }
 
+// ============================================
+// 5. Aplicar filtros e atualizar gráficos
+// ============================================
 function aplicarFiltros() {
     const loginFiltro = document.getElementById('filtroLogin').value;
     const mesFiltro = document.getElementById('filtroMes').value;
@@ -153,11 +201,12 @@ function aplicarFiltros() {
             if (!d.datamov) return false;
             const parts = d.datamov.split('/');
             if (parts.length !== 3) return false;
-            const mesAno = `${parts[2]}-${parts[1]}`;
+            const mesAno = `${parts[2]}-${parts[1].padStart(2, '0')}`;
             return mesAno === mesFiltro;
         });
     }
     
+    // Calcular totais
     const totalRMA = dadosFiltrados.filter(d => d.tipo === 'RMA').reduce((acc, d) => acc + d.valor_abs, 0);
     const totalDMA = dadosFiltrados.filter(d => d.tipo === 'DMA').reduce((acc, d) => acc + d.valor_abs, 0);
     const saldo = totalRMA - totalDMA;
@@ -172,7 +221,7 @@ function aplicarFiltros() {
 }
 
 // ============================================
-// 5. Gráfico por Login (RMA x DMA)
+// 6. Gráfico por Login (RMA x DMA)
 // ============================================
 function gerarGraficoLogin(dados) {
     const agrupado = {};
@@ -201,28 +250,40 @@ function gerarGraficoLogin(dados) {
                 {
                     label: 'RMA (Requisições)',
                     data: rmaValues,
-                    backgroundColor: '#3B82F6',
-                    borderColor: '#2563EB',
-                    borderWidth: 1
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: '#3B82F6',
+                    borderWidth: 2
                 },
                 {
                     label: 'DMA (Devoluções)',
                     data: dmaValues,
-                    backgroundColor: '#10B981',
-                    borderColor: '#059669',
-                    borderWidth: 1
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                    borderColor: '#10B981',
+                    borderWidth: 2
                 }
             ]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'top' }
+                legend: { 
+                    position: 'top',
+                    labels: { color: '#94A3B8' }
+                }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { callback: (v) => `R$ ${v.toLocaleString('pt-BR')}` }
+                    ticks: { 
+                        callback: (v) => `R$ ${v.toLocaleString('pt-BR')}`,
+                        color: '#94A3B8'
+                    },
+                    grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                },
+                x: {
+                    ticks: { color: '#94A3B8' },
+                    grid: { color: 'rgba(148, 163, 184, 0.1)' }
                 }
             }
         }
@@ -230,7 +291,7 @@ function gerarGraficoLogin(dados) {
 }
 
 // ============================================
-// 6. Gráfico Mensal (RMA x DMA)
+// 7. Gráfico Mensal (RMA x DMA)
 // ============================================
 function gerarGraficoMes(dados) {
     const agrupado = {};
@@ -238,7 +299,7 @@ function gerarGraficoMes(dados) {
         if (!d.datamov) return;
         const parts = d.datamov.split('/');
         if (parts.length !== 3) return;
-        const mesAno = `${parts[2]}-${parts[1]}`;
+        const mesAno = `${parts[2]}-${parts[1].padStart(2, '0')}`;
         if (!agrupado[mesAno]) {
             agrupado[mesAno] = { RMA: 0, DMA: 0 };
         }
@@ -261,28 +322,40 @@ function gerarGraficoMes(dados) {
                 {
                     label: 'RMA (Requisições)',
                     data: rmaValues,
-                    backgroundColor: '#3B82F6',
-                    borderColor: '#2563EB',
-                    borderWidth: 1
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: '#3B82F6',
+                    borderWidth: 2
                 },
                 {
                     label: 'DMA (Devoluções)',
                     data: dmaValues,
-                    backgroundColor: '#10B981',
-                    borderColor: '#059669',
-                    borderWidth: 1
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                    borderColor: '#10B981',
+                    borderWidth: 2
                 }
             ]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'top' }
+                legend: { 
+                    position: 'top',
+                    labels: { color: '#94A3B8' }
+                }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { callback: (v) => `R$ ${v.toLocaleString('pt-BR')}` }
+                    ticks: { 
+                        callback: (v) => `R$ ${v.toLocaleString('pt-BR')}`,
+                        color: '#94A3B8'
+                    },
+                    grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                },
+                x: {
+                    ticks: { color: '#94A3B8' },
+                    grid: { color: 'rgba(148, 163, 184, 0.1)' }
                 }
             }
         }
@@ -298,4 +371,6 @@ document.addEventListener('DOMContentLoaded', function() {
     carregarDados();
 });
 
+// EXPOR FUNÇÕES GLOBAIS
 window.aplicarFiltros = aplicarFiltros;
+window.voltarParaHome = voltarParaHome;

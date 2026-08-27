@@ -5,16 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indicadores - Gestão</title>
     
-    <script src="/js/config.js"></script>
+    <!-- 🔥 CONFIG PRIMEIRO -->
+    <script src="../js/config.js"></script>
     
-    <link rel="stylesheet" href="/css/base.css">
-    <link rel="stylesheet" href="/css/gestao.css">
+    <!-- 🔥 CSS COM CAMINHOS CORRETOS -->
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/gestao.css">
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script>
         function voltarParaHome() {
-            window.location.href = '/home-gestao.html';
+            // Usar CONFIG se disponível, senão fallback
+            if (window.CONFIG && typeof CONFIG.goHome === 'function') {
+                CONFIG.goHome();
+            } else {
+                window.location.href = '../home-gestao.html';
+            }
         }
     </script>
 </head>
@@ -86,6 +93,6 @@
     <script src="../js/auth-global.js"></script>       <!-- 3. Verifica sessão na página -->
     <script src="../js/auth-helper.js"></script>       <!-- 4. 🔥 FUNÇÕES AUXILIARES -->
     <script src="../js/script.js"></script>            <!-- 5. Funções globais -->
-    <script type="module" src="../js/gestao-indicadores.js"></script>
+    <script src="../js/gestao-indicadores.js"></script>
 </body>
 </html>
