@@ -1,8 +1,7 @@
 // ============================================
-// AUTH-GLOBAL.JS - VERIFICA SESSÃO (ÚNICO RESPONSÁVEL!)
+// AUTH-GLOBAL.JS - VERIFICA SESSÃO
 // ============================================
 
-let isRedirecting = false;
 let sessionVerified = false;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -13,12 +12,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // FUNÇÃO PRINCIPAL: VERIFICAR E ACESSAR
     // ============================================
     function verificarEAcessar() {
-        // 🔥 SE JÁ ESTÁ REDIRECIONANDO, PARAR
-        if (isRedirecting) {
-            console.log('⏹️ Redirecionamento em andamento...');
-            return;
-        }
-        
         // 🔥 SE JÁ VERIFICOU, NÃO REPETIR
         if (sessionVerified) {
             console.log('⏹️ Sessão já verificada anteriormente');
@@ -35,7 +28,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // 🔥 VERIFICAR SE ESTÁ LOGADO
         if (!authService.isLoggedIn()) {
             console.log('🔒 Sessão inválida - Redirecionando para login');
-            isRedirecting = true;
             window.location.replace('login.html');
             return;
         }
@@ -44,7 +36,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const user = authService.getUserData();
         if (!user) {
             console.log('🔒 Dados do usuário não encontrados - Redirecionando');
-            isRedirecting = true;
             window.location.replace('login.html');
             return;
         }
@@ -112,12 +103,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // VERIFICAR PERIODICAMENTE (A CADA 30 SEGUNDOS)
     // ============================================
     setInterval(() => {
-        if (isRedirecting || sessionVerified) return;
+        if (sessionVerified) return;
         
         if (typeof authService !== 'undefined' && authService) {
             if (!authService.isLoggedIn()) {
                 console.log('🔒 Sessão expirada - Redirecionando');
-                isRedirecting = true;
                 window.location.replace('login.html');
             }
         }
@@ -132,26 +122,60 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// FUNÇÃO SAIR
+// 🔥 FUNÇÃO SAIR - SIMPLES E DEFINITIVA
 // ============================================
 async function sair() {
+    // Confirmar
     if (!confirm('Tem certeza que deseja sair?')) return;
     
+    console.log('🚪 Saindo do sistema...');
+    
     try {
-        if (typeof authService !== 'undefined' && authService) {
-            await authService.logout();
-        } else {
-            sessionStorage.removeItem('auth_token');
-            sessionStorage.removeItem('session_expiry');
-        }
+        // 🔥 1. LIMPAR SESSIONSTORAGE DIRETAMENTE
+        sessionStorage.removeItem('auth_token');
+        sessionStorage.removeItem('session_expiry');
+        console.log('✅ sessionStorage limpo');
         
-        // Resetar variáveis
-        isRedirecting = false;
+        // 🔥 2. RESETAR VARIÁVEL
         sessionVerified = false;
         
+        // 🔥 3. NOTIFICAR WORKER (OPCIONAL)
+        if (typeof authService !== 'undefined' && authService) {
+            try {
+                const userData = authService.getUserData();
+                if (userData) {
+                    await fetch(`${authService.WORKER_URL}/sessions/remove`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ email: userData.email })
+                    });
+                    console.log('✅ Sessão removida do Worker');
+                }
+            } catch (e) {
+                console.warn('⚠️ Erro ao notificar Worker:', e);
+            }
+            
+            // 🔥 4. DESLOGAR DO FIREBASE
+            try {
+                await authService.auth.signOut();
+                console.log('✅ Firebase signOut realizado');
+            } catch (e) {
+                console.warn('⚠️ Erro no signOut:', e);
+            }
+        }
+        
+        // 🔥 5. REDIRECIONAR PARA LOGIN
+        console.log('🔀 Redirecionando para login...');
         window.location.replace('login.html');
+        
     } catch (error) {
-        console.error('Erro ao sair:', error);
-        alert('Erro ao sair. Tente novamente.');
+        console.error('❌ Erro ao sair:', error);
+        // 🔥 EM CASO DE ERRO, LIMPAR E REDIRECIONAR MESMO ASSIM
+        sessionStorage.removeItem('auth_token');
+        sessionStorage.removeItem('session_expiry');
+        sessionVerified = false;
+        window.location.replace('login.html');
     }
 }

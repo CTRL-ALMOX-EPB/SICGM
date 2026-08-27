@@ -245,16 +245,16 @@ class AuthService {
     }
 
     // ============================================
-    // SAIR (VERSÃO CORRIGIDA - MAIS ROBUSTA)
+    // LOGOUT - SIMPLES E DIRETO
     // ============================================
     async logout() {
         try {
             console.log('👋 Iniciando logout...');
             
-            // 1. Pegar dados do usuário antes de limpar
+            // 1. Pegar dados do usuário (se existir)
             const userData = this.getUserData();
             
-            // 2. Notificar o Worker sobre o logout (se tiver dados)
+            // 2. Notificar o Worker (se tiver dados)
             if (userData) {
                 try {
                     await fetch(`${this.WORKER_URL}/sessions/remove`, {
@@ -270,18 +270,12 @@ class AuthService {
                 }
             }
             
-            // 3. Limpar sessão local (ANTES de deslogar do Firebase)
-            this.clearSession();
+            // 3. 🔥 LIMPAR SESSIONSTORAGE
+            sessionStorage.removeItem('auth_token');
+            sessionStorage.removeItem('session_expiry');
+            console.log('🧹 sessionStorage limpo');
             
-            // 4. Resetar variáveis globais
-            if (typeof sessionVerified !== 'undefined') {
-                sessionVerified = false;
-            }
-            if (typeof isRedirecting !== 'undefined') {
-                isRedirecting = false;
-            }
-            
-            // 5. Deslogar do Firebase (signOut)
+            // 4. Deslogar do Firebase
             try {
                 await this.auth.signOut();
                 console.log('✅ Firebase signOut realizado');
@@ -289,16 +283,14 @@ class AuthService {
                 console.warn('⚠️ Erro no signOut do Firebase:', e);
             }
             
-            // 6. Redirecionar para login (com replace para não voltar)
-            console.log('🔀 Redirecionando para login...');
-            window.location.replace('login.html');
-            
+            console.log('✅ Logout concluído!');
             return true;
+            
         } catch (error) {
             console.error('❌ Erro ao sair:', error);
-            // Mesmo com erro, tentar limpar e redirecionar
-            this.clearSession();
-            window.location.replace('login.html');
+            // 🔥 EM CASO DE ERRO, LIMPAR MESMO ASSIM
+            sessionStorage.removeItem('auth_token');
+            sessionStorage.removeItem('session_expiry');
             return false;
         }
     }
