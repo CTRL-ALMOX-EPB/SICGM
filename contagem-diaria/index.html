@@ -260,12 +260,13 @@
     <script src="../js/contagem-diaria.js"></script>
     
     <!-- ============================================ -->
-    <!-- REDIRECIONAMENTO LOCAL - CORRIGIDO          -->
+    <!-- 🔥 FUNÇÕES DE NAVEGAÇÃO CORRIGIDAS          -->
     <!-- ============================================ -->
     <script>
         /**
-         * 🔥 FUNÇÕES DE NAVEGAÇÃO CORRIGIDAS
-         * Usam authService em vez da função antiga verificarSessao()
+         * 🔥 FUNÇÃO PARA VOLTAR PARA HOME CORRIGIDA
+         * Usa authService em vez da função antiga verificarSessao()
+         * E sobe um nível (../) porque estamos em contagem-diaria/
          */
         function redirecionarParaHome() {
             console.log('🏠 Redirecionando para home...');
@@ -291,18 +292,23 @@
                 
                 const homePage = homeMap[perfil] || 'home-gestao.html';
                 
-                // Estamos na raiz (página HTML), então vai direto
-                const url = homePage;
+                // 🔥 IMPORTANTE: Estamos em contagem-diaria/, então sobe um nível
+                // para a raiz do projeto onde estão os arquivos home-*.html
+                const url = `../${homePage}`;
                 
                 console.log(`🔀 Navegando para: ${url}`);
                 window.location.href = url;
                 
             } catch (error) {
                 console.error('❌ Erro ao redirecionar:', error);
-                window.location.href = 'home-gestao.html';
+                // Fallback: sobe um nível e vai para home-gestao.html
+                window.location.href = '../home-gestao.html';
             }
         }
 
+        /**
+         * 🔥 FUNÇÕES DE NAVEGAÇÃO DA PÁGINA
+         */
         function irParaTopo() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
