@@ -154,26 +154,50 @@
     <script src="../js/contagem-dmpc.js"></script>
     
     <!-- ============================================ -->
-    <!-- REDIRECIONAMENTO LOCAL                      -->
+    <!-- 🔥 FUNÇÕES DE NAVEGAÇÃO CORRIGIDAS          -->
     <!-- ============================================ -->
     <script>
+        /**
+         * 🔥 FUNÇÃO PARA VOLTAR PARA HOME CORRIGIDA
+         * Usa authService em vez da função antiga verificarSessao()
+         * E sobe um nível (../) porque estamos em contagem-dmpc/
+         */
         function redirecionarParaHome() {
-            const sessao = verificarSessao();
-            if (!sessao) {
-                window.location.href = '../login.html';
-                return;
+            console.log('🏠 Redirecionando para home...');
+            
+            try {
+                // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
+                let perfil = 'GESTAO';
+                
+                if (typeof authService !== 'undefined' && authService) {
+                    const user = authService.getUserData();
+                    if (user && user.perfil) {
+                        perfil = user.perfil;
+                    }
+                }
+                
+                console.log(`📝 Perfil detectado: ${perfil}`);
+                
+                const homeMap = {
+                    'OPERACIONAL': '../home-operacional.html',
+                    'GESTAO': '../home-gestao.html',
+                    'VISUALIZACAO': '../home-visualizacao.html'
+                };
+                
+                const homePage = homeMap[perfil] || '../home-gestao.html';
+                
+                console.log(`🔀 Navegando para: ${homePage}`);
+                window.location.href = homePage;
+                
+            } catch (error) {
+                console.error('❌ Erro ao redirecionar:', error);
+                window.location.href = '../home-gestao.html';
             }
-
-            const perfil = sessao.perfil || 'GESTAO';
-            const homePages = {
-                'GESTAO': '../home-gestao.html',
-                'OPERACIONAL': '../home-operacional.html',
-                'VISUALIZACAO': '../home-visualizacao.html'
-            };
-
-            window.location.href = homePages[perfil] || '../login.html';
         }
 
+        /**
+         * 🔥 FUNÇÕES DE NAVEGAÇÃO DA PÁGINA
+         */
         function irParaTopo() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }

@@ -43,8 +43,41 @@ if (document.getElementById('contagemForm')) {
     if (dataInput) dataInput.value = dataFormatada;
     
     // ============================================
-    // CONTAGEM-DMPC.JS - PARTE CORRIGIDA
+    // 🔥 FUNÇÃO PARA VOLTAR PARA HOME (CORRIGIDA)
     // ============================================
+
+    function redirecionarParaHome() {
+        console.log('🏠 Redirecionando para home...');
+        
+        try {
+            // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
+            let perfil = 'GESTAO';
+            
+            if (typeof authService !== 'undefined' && authService) {
+                const user = authService.getUserData();
+                if (user && user.perfil) {
+                    perfil = user.perfil;
+                }
+            }
+            
+            console.log(`📝 Perfil detectado: ${perfil}`);
+            
+            const homeMap = {
+                'OPERACIONAL': '../home-operacional.html',
+                'GESTAO': '../home-gestao.html',
+                'VISUALIZACAO': '../home-visualizacao.html'
+            };
+            
+            const homePage = homeMap[perfil] || '../home-gestao.html';
+            
+            console.log(`🔀 Navegando para: ${homePage}`);
+            window.location.href = homePage;
+            
+        } catch (error) {
+            console.error('❌ Erro ao redirecionar:', error);
+            window.location.href = '../home-gestao.html';
+        }
+    }
 
     // ============================================
     // 🔥 CARREGAR DADOS DO USUÁRIO (NOVA VERSÃO)
@@ -145,9 +178,6 @@ if (document.getElementById('contagemForm')) {
             return false;
         }
     }
-
-// ✅ O RESTO DO ARQUIVO PERMANECE IGUAL
-// (renderizarMateriaisDMPC, buscarQuantidadeAnterior, calcularDiferenca, etc.)
     
     // ============================================
     // CARREGAR MATERIAIS DO ARQUIVO contagem-dmpc.txt
@@ -972,16 +1002,21 @@ if (document.getElementById('contagemForm')) {
     window.fecharDescricaoPopup = fecharDescricaoPopup;
     
     // ============================================
-    // INICIALIZAR
+    // EXPOR FUNÇÕES GLOBAIS
     // ============================================
     
-    carregarDadosUsuarioSessao();
-    carregarMateriaisDMPC();
-    
+    window.redirecionarParaHome = redirecionarParaHome;
     window.aplicarFiltro = aplicarFiltro;
     window.limparFiltro = limparFiltro;
     window.calcularDiferenca = calcularDiferenca;
     window.mostrarToast = mostrarToast;
     window.formatarData = formatarData;
+    
+    // ============================================
+    // INICIALIZAR
+    // ============================================
+    
+    carregarDadosUsuarioSessao();
+    carregarMateriaisDMPC();
     
 } // FIM DO if (document.getElementById('contagemForm'))
