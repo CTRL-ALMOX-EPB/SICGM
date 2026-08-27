@@ -236,7 +236,7 @@ class AuthService {
     }
 
     // ============================================
-    // LIMPAR SESSÃO
+    // LIMPAR SESSÃO LOCAL
     // ============================================
     clearSession() {
         sessionStorage.removeItem('auth_token');
@@ -245,29 +245,36 @@ class AuthService {
     }
 
     // ============================================
-    // LOGOUT - SIMPLES E DIRETO
+    // 🔥 LOGOUT - COMPLETO (IGUAL AO ADMIN)
     // ============================================
     async logout() {
         try {
             console.log('👋 Iniciando logout...');
             
-            // 1. Pegar dados do usuário (se existir)
+            // 1. 🔥 PEGAR DADOS DO USUÁRIO ANTES DE LIMPAR
             const userData = this.getUserData();
             
-            // 2. Notificar o Worker (se tiver dados)
-            if (userData) {
+            // 2. 🔥 REMOVER DO WORKER (KV) - ESSE É O PASSO CRÍTICO!
+            if (userData && userData.email) {
                 try {
-                    await fetch(`${this.WORKER_URL}/sessions/remove`, {
+                    const response = await fetch(`${this.WORKER_URL}/sessions/remove`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({ email: userData.email })
                     });
-                    console.log('✅ Sessão removida do Worker');
+                    
+                    if (response.ok) {
+                        console.log('✅ Sessão removida do Worker (KV)');
+                    } else {
+                        console.warn('⚠️ Resposta do Worker:', response.status);
+                    }
                 } catch (e) {
-                    console.warn('⚠️ Não foi possível remover sessão do Worker:', e);
+                    console.warn('⚠️ Erro ao remover sessão do Worker:', e);
                 }
+            } else {
+                console.log('ℹ️ Nenhum usuário logado para remover do Worker');
             }
             
             // 3. 🔥 LIMPAR SESSIONSTORAGE
@@ -275,7 +282,12 @@ class AuthService {
             sessionStorage.removeItem('session_expiry');
             console.log('🧹 sessionStorage limpo');
             
-            // 4. Deslogar do Firebase
+            // 4. 🔥 RESETAR VARIÁVEIS GLOBAIS
+            if (typeof sessionVerified !== 'undefined') {
+                sessionVerified = false;
+            }
+            
+            // 5. 🔥 DESLOGAR DO FIREBASE
             try {
                 await this.auth.signOut();
                 console.log('✅ Firebase signOut realizado');
@@ -291,6 +303,9 @@ class AuthService {
             // 🔥 EM CASO DE ERRO, LIMPAR MESMO ASSIM
             sessionStorage.removeItem('auth_token');
             sessionStorage.removeItem('session_expiry');
+            if (typeof sessionVerified !== 'undefined') {
+                sessionVerified = false;
+            }
             return false;
         }
     }

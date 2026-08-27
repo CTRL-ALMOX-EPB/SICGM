@@ -189,26 +189,16 @@ const DEPARTAMENTOS_VISUALIZACAO = {
 // ============================================
 let departamentoAtualVisualizacao = 'DCMD';
 
-/**
- * Seleciona um departamento e atualiza a interface
- * @param {string} deptoId - ID do departamento (DCMD, DMPC, DECP, DEOP)
- */
 function selecionarDepartamentoVisualizacao(deptoId) {
     departamentoAtualVisualizacao = deptoId;
     
-    // Atualiza botões
     document.querySelectorAll('.departamento-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.depto === deptoId);
     });
     
-    // Renderiza conteúdo
     renderizarDepartamentoVisualizacao(deptoId);
 }
 
-/**
- * Renderiza o conteúdo do departamento selecionado
- * @param {string} deptoId - ID do departamento
- */
 function renderizarDepartamentoVisualizacao(deptoId) {
     const container = document.getElementById('deptoContentVisualizacao');
     const depto = DEPARTAMENTOS_VISUALIZACAO[deptoId];
@@ -236,7 +226,6 @@ function renderizarDepartamentoVisualizacao(deptoId) {
         const isDisabled = func.status !== 'disponivel';
 
         if (func.temDropdown) {
-            // Função com dropdown
             html += `
                 <div class="func-card" onclick="toggleDropdownVisualizacao(event, '${func.id}')" style="cursor: pointer;">
                     <div class="func-icon">${func.icone}</div>
@@ -275,7 +264,6 @@ function renderizarDepartamentoVisualizacao(deptoId) {
                 </div>
             `;
         } else {
-            // Função normal
             let onclick = '';
             let link = isDisabled ? '#' : func.link;
             
@@ -302,15 +290,6 @@ function renderizarDepartamentoVisualizacao(deptoId) {
     container.innerHTML = html;
 }
 
-// ============================================
-// DROPDOWN DOS DEPARTAMENTOS
-// ============================================
-
-/**
- * Alterna a visibilidade do dropdown de uma função
- * @param {Event} event - Evento do clique
- * @param {string} funcId - ID da função
- */
 function toggleDropdownVisualizacao(event, funcId) {
     event.stopPropagation();
     const dropdown = document.getElementById(`dropdownVisualizacao_${funcId}`);
@@ -318,7 +297,6 @@ function toggleDropdownVisualizacao(event, funcId) {
     
     const isOpen = dropdown.classList.contains('show');
     
-    // Fecha todos os outros dropdowns abertos
     document.querySelectorAll('.dropdown-menu.show').forEach(el => {
         if (el !== dropdown) el.classList.remove('show');
     });
@@ -330,31 +308,9 @@ function toggleDropdownVisualizacao(event, funcId) {
     }
 }
 
-// ============================================
-// FUNÇÕES DE UTILIDADE
-// ============================================
-
-/**
- * Exibe mensagem de funcionalidade em desenvolvimento
- * @param {Event} event - Evento do clique
- */
 function mostrarEmDesenvolvimentoVisualizacao(event) {
     if (event) event.preventDefault();
     alert('⚙️ Funcionalidade em desenvolvimento. Em breve disponível!');
-}
-
-/**
- * Atualiza o timestamp da sessão
- */
-function atualizarTimestampSessaoVisualizacao() {
-    const sessao = sessionStorage.getItem('sessaoSICGM');
-    if (sessao) {
-        try {
-            const dados = JSON.parse(sessao);
-            dados.timestamp = Date.now();
-            sessionStorage.setItem('sessaoSICGM', JSON.stringify(dados));
-        } catch (e) {}
-    }
 }
 
 // ============================================
@@ -362,52 +318,12 @@ function atualizarTimestampSessaoVisualizacao() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    const homeContent = document.getElementById('homeContent');
+    console.log('📋 Home Visualização carregada');
     
-    loadingOverlay.classList.add('active');
-
-    // Verifica sessão (função verificarSessao deve estar no script.js)
-    const sessao = verificarSessao();
-    
-    if (!sessao) {
-        console.log('🔒 Sessão inválida - Redirecionando para login');
-        window.location.href = 'index.html';
-        return;
-    }
-
-    if (sessao.perfil !== 'VISUALIZACAO') {
-        console.log(`🔒 Perfil ${sessao.perfil} não autorizado para esta página`);
-        window.location.href = 'index.html';
-        return;
-    }
-
-    console.log('✅ Sessão válida para:', sessao.nome, '(VISUALIZAÇÃO)');
-    
-    try {
-        document.getElementById('nomeUsuario').textContent = sessao.nome;
-        document.getElementById('matriculaUsuario').textContent = `Matrícula: ${sessao.matricula}`;
-        document.getElementById('perfilUsuario').textContent = sessao.perfil || 'VISUALIZAÇÃO';
-        document.getElementById('mensagemBoasVindas').textContent = 
-            `👋 Olá, ${sessao.nome}! Bem-vindo ao sistema (Visualização).`;
-    } catch (e) {
-        console.error('Erro ao carregar dados do usuário:', e);
-        window.location.href = 'index.html';
-        return;
-    }
-
-    // Renderiza o departamento inicial (DCMD)
+    // Renderiza departamento inicial
     renderizarDepartamentoVisualizacao('DCMD');
-
-    setTimeout(() => {
-        loadingOverlay.classList.remove('active');
-        homeContent.style.display = 'block';
-    }, 500);
-
-    atualizarTimestampSessaoVisualizacao();
 });
 
-// Fecha dropdowns ao clicar fora
 document.addEventListener('click', function(event) {
     document.querySelectorAll('.dropdown-menu.show').forEach(el => {
         const card = event.target.closest('.func-card');
@@ -417,7 +333,6 @@ document.addEventListener('click', function(event) {
     });
 });
 
-// Fecha dropdowns ao pressionar ESC
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         document.querySelectorAll('.dropdown-menu.show').forEach(el => {
@@ -425,19 +340,3 @@ document.addEventListener('keydown', function(event) {
         });
     }
 });
-
-// Atualiza timestamp da sessão em eventos
-document.addEventListener('click', atualizarTimestampSessaoVisualizacao);
-document.addEventListener('keydown', atualizarTimestampSessaoVisualizacao);
-
-// Verifica sessão a cada 5 minutos
-setInterval(function() {
-    const sessao = verificarSessao();
-    if (!sessao) {
-        console.log('🔒 Sessão expirada - Redirecionando para login');
-        window.location.href = 'index.html';
-    } else if (sessao.perfil !== 'VISUALIZACAO') {
-        console.log('🔒 Perfil alterado - Redirecionando');
-        window.location.href = 'index.html';
-    }
-}, 5 * 60 * 1000);

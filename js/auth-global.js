@@ -122,51 +122,29 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 🔥 FUNÇÃO SAIR - SIMPLES E DEFINITIVA
+// 🔥 FUNÇÃO SAIR - IGUAL AO ADMIN (FUNCIONA!)
 // ============================================
 async function sair() {
-    // Confirmar
-    if (!confirm('Tem certeza que deseja sair?')) return;
+    if (!confirm('Deseja sair do sistema?')) return;
     
     console.log('🚪 Saindo do sistema...');
     
     try {
-        // 🔥 1. LIMPAR SESSIONSTORAGE DIRETAMENTE
-        sessionStorage.removeItem('auth_token');
-        sessionStorage.removeItem('session_expiry');
-        console.log('✅ sessionStorage limpo');
+        // 🔥 1. USAR authService.logout() QUE REMOVE DO KV
+        if (typeof authService !== 'undefined' && authService) {
+            await authService.logout();
+            console.log('✅ Logout via authService concluído');
+        } else {
+            // Fallback: limpar manualmente
+            sessionStorage.removeItem('auth_token');
+            sessionStorage.removeItem('session_expiry');
+            console.log('✅ sessionStorage limpo (fallback)');
+        }
         
         // 🔥 2. RESETAR VARIÁVEL
         sessionVerified = false;
         
-        // 🔥 3. NOTIFICAR WORKER (OPCIONAL)
-        if (typeof authService !== 'undefined' && authService) {
-            try {
-                const userData = authService.getUserData();
-                if (userData) {
-                    await fetch(`${authService.WORKER_URL}/sessions/remove`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ email: userData.email })
-                    });
-                    console.log('✅ Sessão removida do Worker');
-                }
-            } catch (e) {
-                console.warn('⚠️ Erro ao notificar Worker:', e);
-            }
-            
-            // 🔥 4. DESLOGAR DO FIREBASE
-            try {
-                await authService.auth.signOut();
-                console.log('✅ Firebase signOut realizado');
-            } catch (e) {
-                console.warn('⚠️ Erro no signOut:', e);
-            }
-        }
-        
-        // 🔥 5. REDIRECIONAR PARA LOGIN
+        // 🔥 3. REDIRECIONAR PARA LOGIN
         console.log('🔀 Redirecionando para login...');
         window.location.replace('login.html');
         

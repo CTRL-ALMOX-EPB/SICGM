@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home - SICGM (Visualização)</title>
     
-    <!-- CSS Base -->
     <link rel="stylesheet" href="css/base.css">
-    
-    <!-- CSS Home Visualização -->
     <link rel="stylesheet" href="css/home-visualizacao.css">
 </head>
 <body>
@@ -25,6 +22,9 @@
                 <div>
                     <div class="user-name" id="nomeUsuario">Carregando...</div>
                     <div class="user-matricula" id="matriculaUsuario">Matrícula: ---</div>
+                    <div style="font-size: 12px; color: #718096; margin-top: 4px;">
+                        ⏰ Sessão expira em: <span id="sessionTimer">30 minutos</span>
+                    </div>
                 </div>
                 <span class="user-perfil" id="perfilUsuario">VISUALIZAÇÃO</span>
                 <button class="btn-sair" onclick="sair()">🚪 Sair</button>
@@ -53,18 +53,26 @@
             </button>
         </div>
 
-        <!-- Área de Conteúdo do Departamento -->
+        <!-- Área de Conteúdo -->
         <div class="depto-content" id="deptoContentVisualizacao">
             <!-- Renderizado via JavaScript -->
         </div>
 
-        <!-- Mensagem de Acesso -->
         <div class="restricted-msg">
             ℹ️ Seu perfil <strong>Visualização</strong> permite apenas visualizar relatórios em cada departamento.
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <!-- Configurações -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/auth-service.js"></script>
+    <script src="js/auth-global.js"></script>
+    
+    <!-- Scripts Específicos -->
     <script src="js/script.js"></script>
     <script src="js/home-visualizacao.js"></script>
 </body>

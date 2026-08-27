@@ -186,26 +186,16 @@ const DEPARTAMENTOS_OPERACIONAL = {
 // ============================================
 let departamentoAtualOperacional = 'DCMD';
 
-/**
- * Seleciona um departamento e atualiza a interface
- * @param {string} deptoId - ID do departamento (DCMD, DMPC, DECP, DEOP)
- */
 function selecionarDepartamentoOperacional(deptoId) {
     departamentoAtualOperacional = deptoId;
     
-    // Atualiza botões
     document.querySelectorAll('.departamento-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.depto === deptoId);
     });
     
-    // Renderiza conteúdo
     renderizarDepartamentoOperacional(deptoId);
 }
 
-/**
- * Renderiza o conteúdo do departamento selecionado
- * @param {string} deptoId - ID do departamento
- */
 function renderizarDepartamentoOperacional(deptoId) {
     const container = document.getElementById('deptoContentOperacional');
     const depto = DEPARTAMENTOS_OPERACIONAL[deptoId];
@@ -233,7 +223,6 @@ function renderizarDepartamentoOperacional(deptoId) {
         const isDisabled = func.status !== 'disponivel';
 
         if (func.temDropdown) {
-            // Função com dropdown
             html += `
                 <div class="func-card" onclick="toggleDropdownOperacional(event, '${func.id}')" style="cursor: pointer;">
                     <div class="func-icon">${func.icone}</div>
@@ -272,7 +261,6 @@ function renderizarDepartamentoOperacional(deptoId) {
                 </div>
             `;
         } else {
-            // Função normal
             let onclick = '';
             let link = isDisabled ? '#' : func.link;
             
@@ -299,15 +287,6 @@ function renderizarDepartamentoOperacional(deptoId) {
     container.innerHTML = html;
 }
 
-// ============================================
-// DROPDOWN DOS DEPARTAMENTOS
-// ============================================
-
-/**
- * Alterna a visibilidade do dropdown de uma função
- * @param {Event} event - Evento do clique
- * @param {string} funcId - ID da função
- */
 function toggleDropdownOperacional(event, funcId) {
     event.stopPropagation();
     const dropdown = document.getElementById(`dropdownOperacional_${funcId}`);
@@ -315,7 +294,6 @@ function toggleDropdownOperacional(event, funcId) {
     
     const isOpen = dropdown.classList.contains('show');
     
-    // Fecha todos os outros dropdowns abertos
     document.querySelectorAll('.dropdown-menu.show').forEach(el => {
         if (el !== dropdown) el.classList.remove('show');
     });
@@ -327,31 +305,9 @@ function toggleDropdownOperacional(event, funcId) {
     }
 }
 
-// ============================================
-// FUNÇÕES DE UTILIDADE
-// ============================================
-
-/**
- * Exibe mensagem de funcionalidade em desenvolvimento
- * @param {Event} event - Evento do clique
- */
 function mostrarEmDesenvolvimentoOperacional(event) {
     if (event) event.preventDefault();
     alert('⚙️ Funcionalidade em desenvolvimento. Em breve disponível!');
-}
-
-/**
- * Atualiza o timestamp da sessão
- */
-function atualizarTimestampSessaoOperacional() {
-    const sessao = sessionStorage.getItem('sessaoSICGM');
-    if (sessao) {
-        try {
-            const dados = JSON.parse(sessao);
-            dados.timestamp = Date.now();
-            sessionStorage.setItem('sessaoSICGM', JSON.stringify(dados));
-        } catch (e) {}
-    }
 }
 
 // ============================================
@@ -359,52 +315,12 @@ function atualizarTimestampSessaoOperacional() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    const homeContent = document.getElementById('homeContent');
+    console.log('📋 Home Operacional carregada');
     
-    loadingOverlay.classList.add('active');
-
-    // Verifica sessão (função verificarSessao deve estar no script.js)
-    const sessao = verificarSessao();
-    
-    if (!sessao) {
-        console.log('🔒 Sessão inválida - Redirecionando para login');
-        window.location.href = 'index.html';
-        return;
-    }
-
-    if (sessao.perfil !== 'OPERACIONAL') {
-        console.log(`🔒 Perfil ${sessao.perfil} não autorizado para esta página`);
-        window.location.href = 'index.html';
-        return;
-    }
-
-    console.log('✅ Sessão válida para:', sessao.nome, '(OPERACIONAL)');
-    
-    try {
-        document.getElementById('nomeUsuario').textContent = sessao.nome;
-        document.getElementById('matriculaUsuario').textContent = `Matrícula: ${sessao.matricula}`;
-        document.getElementById('perfilUsuario').textContent = sessao.perfil || 'OPERACIONAL';
-        document.getElementById('mensagemBoasVindas').textContent = 
-            `👋 Olá, ${sessao.nome}! Bem-vindo ao sistema (Operacional).`;
-    } catch (e) {
-        console.error('Erro ao carregar dados do usuário:', e);
-        window.location.href = 'index.html';
-        return;
-    }
-
-    // Renderiza o departamento inicial (DCMD)
+    // Renderiza departamento inicial
     renderizarDepartamentoOperacional('DCMD');
-
-    setTimeout(() => {
-        loadingOverlay.classList.remove('active');
-        homeContent.style.display = 'block';
-    }, 500);
-
-    atualizarTimestampSessaoOperacional();
 });
 
-// Fecha dropdowns ao clicar fora
 document.addEventListener('click', function(event) {
     document.querySelectorAll('.dropdown-menu.show').forEach(el => {
         const card = event.target.closest('.func-card');
@@ -414,7 +330,6 @@ document.addEventListener('click', function(event) {
     });
 });
 
-// Fecha dropdowns ao pressionar ESC
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         document.querySelectorAll('.dropdown-menu.show').forEach(el => {
@@ -422,19 +337,3 @@ document.addEventListener('keydown', function(event) {
         });
     }
 });
-
-// Atualiza timestamp da sessão em eventos
-document.addEventListener('click', atualizarTimestampSessaoOperacional);
-document.addEventListener('keydown', atualizarTimestampSessaoOperacional);
-
-// Verifica sessão a cada 5 minutos
-setInterval(function() {
-    const sessao = verificarSessao();
-    if (!sessao) {
-        console.log('🔒 Sessão expirada - Redirecionando para login');
-        window.location.href = 'index.html';
-    } else if (sessao.perfil !== 'OPERACIONAL') {
-        console.log('🔒 Perfil alterado - Redirecionando');
-        window.location.href = 'index.html';
-    }
-}, 5 * 60 * 1000);
