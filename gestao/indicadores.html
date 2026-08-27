@@ -24,6 +24,9 @@
 </head>
 <body>
     <div class="gestao-container">
+        <!-- ============================================ -->
+        <!-- HEADER                                        -->
+        <!-- ============================================ -->
         <div class="gestao-header">
             <h1>📊 Indicadores Gerenciais</h1>
             <button class="btn-voltar" onclick="voltarParaHome()">🏠 Voltar ao Início</button>
@@ -33,7 +36,10 @@
         <!-- FILTROS DE MÊS (KPIs)                        -->
         <!-- ============================================ -->
         <div class="filtros-meses">
-            <h3>📅 Filtrar por Mês</h3>
+            <div class="filtros-meses-header">
+                <h3>📅 Filtrar por Mês</h3>
+                <span class="filtros-meses-info">Clique nos meses para selecionar múltiplos</span>
+            </div>
             <div class="meses-container" id="mesesContainer">
                 <!-- Botões gerados pelo JS -->
             </div>
@@ -58,48 +64,73 @@
                 <input type="date" id="dataFim">
             </div>
             <button class="btn-limpar" id="limparPeriodo">🔄 Limpar Período</button>
+            <button class="btn-aplicar-filtros" onclick="aplicarFiltros()">📊 Aplicar Filtros</button>
         </div>
 
         <!-- ============================================ -->
         <!-- INDICADORES (KPIs)                           -->
         <!-- ============================================ -->
         <div class="indicadores-grid">
-            <div class="card-indicador">
-                <h3>RMA Total (Requisições)</h3>
-                <div class="valor-big" id="totalRMA" style="color: #3B82F6;">R$ 0,00</div>
+            <div class="card-indicador card-rma">
+                <div class="card-indicador-icon">📤</div>
+                <h3>RMA Total</h3>
+                <div class="valor-big" id="totalRMA">R$ 0</div>
                 <small id="totalRMAQtd">0 requisições</small>
             </div>
-            <div class="card-indicador">
-                <h3>DMA Total (Devoluções)</h3>
-                <div class="valor-big" id="totalDMA" style="color: #10B981;">R$ 0,00</div>
+            <div class="card-indicador card-dma">
+                <div class="card-indicador-icon">📥</div>
+                <h3>DMA Total</h3>
+                <div class="valor-big" id="totalDMA">R$ 0</div>
                 <small id="totalDMAQtd">0 devoluções</small>
             </div>
-            <div class="card-indicador">
+            <div class="card-indicador card-saldo">
+                <div class="card-indicador-icon">💰</div>
                 <h3>Saldo (RMA - DMA)</h3>
-                <div class="valor-big" id="totalSaldo">R$ 0,00</div>
+                <div class="valor-big" id="totalSaldo">R$ 0</div>
             </div>
-            <div class="card-indicador">
+            <div class="card-indicador card-total">
+                <div class="card-indicador-icon">📊</div>
                 <h3>Total de Registros</h3>
-                <div class="valor-big" id="totalRegistros" style="color: #8B5CF6;">0</div>
+                <div class="valor-big" id="totalRegistros">0</div>
+                <small>movimentos processados</small>
             </div>
         </div>
 
         <!-- ============================================ -->
-        <!-- GRÁFICOS                                     -->
+        <!-- GRÁFICOS - LINHA SUPERIOR                   -->
         <!-- ============================================ -->
-        <div class="graficos-grid">
-            <div class="card-grafico">
-                <h3>Valor por Login (RMA x DMA)</h3>
+        <div class="graficos-grid graficos-top">
+            <div class="card-grafico card-grafico-grande">
+                <div class="card-grafico-header">
+                    <h3>📊 Valor por Login (RMA x DMA)</h3>
+                    <span class="card-grafico-sub">Barras verticais lado a lado</span>
+                </div>
                 <div class="grafico-container">
                     <canvas id="graficoLogin"></canvas>
                 </div>
             </div>
-            <div class="card-grafico">
-                <h3>Valor Mensal (RMA x DMA)</h3>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- GRÁFICOS - LINHA INFERIOR                   -->
+        <!-- ============================================ -->
+        <div class="graficos-grid graficos-bottom">
+            <div class="card-grafico card-grafico-grande">
+                <div class="card-grafico-header">
+                    <h3>📈 Evolução Mensal (RMA x DMA)</h3>
+                    <span class="card-grafico-sub">Valores acumulados por mês</span>
+                </div>
                 <div class="grafico-container">
                     <canvas id="graficoMes"></canvas>
                 </div>
             </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- ESPAÇO PARA FUTUROS GRÁFICOS                 -->
+        <!-- ============================================ -->
+        <div class="graficos-grid graficos-futuro" id="graficosFuturos" style="display: none;">
+            <!-- Aqui virão mais gráficos no futuro -->
         </div>
     </div>
 

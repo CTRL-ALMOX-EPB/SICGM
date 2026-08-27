@@ -13,7 +13,7 @@ let graficoMes = null;
 // ESTADO DOS FILTROS
 // ============================================
 const filtroEstado = {
-    mesesSelecionados: [], // ['01', '02', '03']
+    mesesSelecionados: [],
     dataInicio: '',
     dataFim: '',
     loginSelecionado: 'Todos'
@@ -36,6 +36,17 @@ const MESES = {
     '11': 'Novembro',
     '12': 'Dezembro'
 };
+
+// ============================================
+// 🔥 FUNÇÃO: FORMATAR VALOR SEM DECIMAIS
+// ============================================
+function formatarValor(valor) {
+    return Math.round(valor).toLocaleString('pt-BR');
+}
+
+function formatarMoeda(valor) {
+    return `R$ ${Math.round(valor).toLocaleString('pt-BR')}`;
+}
 
 // ============================================
 // 🔥 VERIFICAR AUTENTICAÇÃO
@@ -219,7 +230,6 @@ function parseMovimentos(texto, posicaoMap) {
         let dataFormatada = '';
         
         if (datamovRaw) {
-            // Tenta extrair data no formato DD/MM/AAAA HH:MM:SS
             const match = datamovRaw.match(/(\d{2})\/(\d{2})\/(\d{4})/);
             if (match) {
                 const dia = match[1];
@@ -227,7 +237,6 @@ function parseMovimentos(texto, posicaoMap) {
                 const ano = match[3];
                 dataFormatada = `${dia}-${mes}-${ano}`;
             } else {
-                // Tenta outros formatos
                 const match2 = datamovRaw.match(/(\d{4})-(\d{2})-(\d{2})/);
                 if (match2) {
                     const ano = match2[1];
@@ -246,10 +255,9 @@ function parseMovimentos(texto, posicaoMap) {
         const orgmov = partes[idx.orgmov]?.trim() || '';
         const isRMA = orgmov === 'S' || orgmov === 'RMA' || orgmov.toUpperCase() === 'RMA';
         
-        // Extrair mês e ano para filtros
-        let mesAno = '';
         let mesNumero = '';
         let anoNumero = '';
+        let mesAno = '';
         
         if (dataFormatada) {
             const partesData = dataFormatada.split('-');
@@ -292,16 +300,19 @@ function parseMovimentos(texto, posicaoMap) {
 async function carregarDados() {
     try {
         // Mostrar loading
-        document.querySelector('.graficos-grid').innerHTML = 
-            `<div class="loading-msg">⏳ Carregando dados...</div>`;
+        const graficosGrid = document.querySelector('.graficos-top');
+        if (graficosGrid) {
+            graficosGrid.innerHTML = 
+                `<div class="loading-msg" style="grid-column: 1 / -1;">⏳ Carregando dados...</div>`;
+        }
         
         const posicaoEstoque = await carregarPosicaoEstoque();
         const texto = await buscarMovimentos();
         const movimentos = parseMovimentos(texto, posicaoEstoque);
         
         if (!movimentos || movimentos.length === 0) {
-            document.querySelector('.graficos-grid').innerHTML = 
-                `<div class="erro-msg">⚠️ Nenhum movimento encontrado.</div>`;
+            document.querySelector('.graficos-top').innerHTML = 
+                `<div class="erro-msg" style="grid-column: 1 / -1;">⚠️ Nenhum movimento encontrado.</div>`;
             return;
         }
         
@@ -315,8 +326,11 @@ async function carregarDados() {
         
     } catch (erro) {
         console.error('❌ Erro ao carregar dados:', erro);
-        document.querySelector('.graficos-grid').innerHTML = 
-            `<div class="erro-msg">❌ Erro ao carregar dados: ${erro.message}</div>`;
+        const graficosGrid = document.querySelector('.graficos-top');
+        if (graficosGrid) {
+            graficosGrid.innerHTML = 
+                `<div class="erro-msg" style="grid-column: 1 / -1;">❌ Erro ao carregar dados: ${erro.message}</div>`;
+        }
     }
 }
 
@@ -337,8 +351,6 @@ function inicializarFiltros() {
     
     // Obter meses disponíveis nos dados
     const mesesDisponiveis = [...new Set(dadosCompletos.map(d => d.mes).filter(Boolean))].sort();
-    
-    // Se não tiver meses disponíveis, mostrar todos
     const mesesParaMostrar = mesesDisponiveis.length > 0 ? mesesDisponiveis : Object.keys(MESES);
     
     mesesParaMostrar.forEach(mesNum => {
@@ -347,11 +359,9 @@ function inicializarFiltros() {
         btn.dataset.mes = mesNum;
         btn.textContent = MESES[mesNum] || mesNum;
         
-        // Contar registros deste mês
         const count = dadosCompletos.filter(d => d.mes === mesNum).length;
         btn.title = `${MESES[mesNum] || mesNum}: ${count} movimentos`;
         
-        // Verificar se está selecionado
         if (filtroEstado.mesesSelecionados.includes(mesNum)) {
             btn.classList.add('active');
         }
@@ -368,7 +378,6 @@ function inicializarFiltros() {
                 this.classList.add('active');
             }
             
-            // Se nenhum mês selecionado, selecionar todos
             if (filtroEstado.mesesSelecionados.length === 0) {
                 filtroEstado.mesesSelecionados = [...mesesParaMostrar];
                 document.querySelectorAll('.btn-mes').forEach(b => b.classList.add('active'));
@@ -409,7 +418,7 @@ function inicializarFiltros() {
     }
     
     // ============================================
-    // C) FILTRO DE PERÍODO (DATA INÍCIO E FIM)
+    // C) FILTRO DE PERÍODO
     // ============================================
     const dataInicio = document.getElementById('dataInicio');
     const dataFim = document.getElementById('dataFim');
@@ -468,7 +477,7 @@ function aplicarFiltros() {
         dados = dados.filter(d => d.sigla_mov_mat === filtroEstado.loginSelecionado);
     }
     
-    // Filtro por período (data início e fim)
+    // Filtro por período
     if (filtroEstado.dataInicio) {
         const dataInicioObj = new Date(filtroEstado.dataInicio + 'T00:00:00');
         dados = dados.filter(d => {
@@ -494,10 +503,7 @@ function aplicarFiltros() {
     dadosFiltrados = dados;
     console.log(`📊 ${dadosFiltrados.length} registros após filtros`);
     
-    // Atualizar contadores
     atualizarContadores(dadosFiltrados);
-    
-    // Gerar gráficos
     gerarGraficoLogin(dadosFiltrados);
     gerarGraficoMes(dadosFiltrados);
 }
@@ -513,27 +519,33 @@ function atualizarContadores(dados) {
     const totalRMAQtd = dados.filter(d => d.tipo === 'RMA').length;
     const totalDMAQtd = dados.filter(d => d.tipo === 'DMA').length;
     
-    document.getElementById('totalRMA').textContent = `R$ ${totalRMA.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    document.getElementById('totalDMA').textContent = `R$ ${totalDMA.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    document.getElementById('totalSaldo').textContent = `R$ ${saldo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    // 🔥 SEM CASAS DECIMAIS
+    document.getElementById('totalRMA').textContent = formatarMoeda(totalRMA);
+    document.getElementById('totalDMA').textContent = formatarMoeda(totalDMA);
+    document.getElementById('totalSaldo').textContent = formatarMoeda(saldo);
     document.getElementById('totalSaldo').style.color = saldo >= 0 ? '#3B82F6' : '#EF4444';
     
-    document.getElementById('totalRegistros').textContent = totalRegistros;
-    document.getElementById('totalRMAQtd').textContent = totalRMAQtd;
-    document.getElementById('totalDMAQtd').textContent = totalDMAQtd;
+    document.getElementById('totalRegistros').textContent = formatarValor(totalRegistros);
+    document.getElementById('totalRMAQtd').textContent = `${totalRMAQtd} requisições`;
+    document.getElementById('totalDMAQtd').textContent = `${totalDMAQtd} devoluções`;
 }
 
 // ============================================
-// 8. GRÁFICO POR LOGIN (BARRAS VERTICAIS - RMA E DMA LADO A LADO)
+// 8. GRÁFICO POR LOGIN
 // ============================================
 function gerarGraficoLogin(dados) {
-    if (!dados || dados.length === 0) {
-        document.getElementById('graficoLogin').parentElement.innerHTML = 
-            '<div class="sem-dados">Sem dados para exibir</div>';
+    const canvas = document.getElementById('graficoLogin');
+    if (!canvas) {
+        console.warn('⚠️ Canvas graficoLogin não encontrado');
         return;
     }
     
-    // Agrupar por login
+    if (!dados || dados.length === 0) {
+        const container = canvas.parentElement;
+        container.innerHTML = '<div class="sem-dados">Sem dados para exibir</div>';
+        return;
+    }
+    
     const agrupado = {};
     dados.forEach(d => {
         const login = d.sigla_mov_mat;
@@ -545,7 +557,6 @@ function gerarGraficoLogin(dados) {
         else agrupado[login].DMA += d.valor_total;
     });
     
-    // Ordenar por valor total (maior RMA primeiro)
     const labels = Object.keys(agrupado).sort((a, b) => {
         const totalA = agrupado[a].RMA + agrupado[a].DMA;
         const totalB = agrupado[b].RMA + agrupado[b].DMA;
@@ -555,15 +566,9 @@ function gerarGraficoLogin(dados) {
     const rmaValues = labels.map(l => agrupado[l].RMA);
     const dmaValues = labels.map(l => agrupado[l].DMA);
     
-    // Cores
-    const coresRMA = 'rgba(59, 130, 246, 0.8)';
-    const coresDMA = 'rgba(16, 185, 129, 0.8)';
-    const bordaRMA = '#3B82F6';
-    const bordaDMA = '#10B981';
-    
-    const ctx = document.getElementById('graficoLogin').getContext('2d');
     if (graficoLogin) graficoLogin.destroy();
     
+    const ctx = canvas.getContext('2d');
     graficoLogin = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -572,16 +577,16 @@ function gerarGraficoLogin(dados) {
                 {
                     label: 'RMA (Requisições)',
                     data: rmaValues,
-                    backgroundColor: coresRMA,
-                    borderColor: bordaRMA,
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    borderColor: '#3B82F6',
                     borderWidth: 2,
                     borderRadius: 4
                 },
                 {
                     label: 'DMA (Devoluções)',
                     data: dmaValues,
-                    backgroundColor: coresDMA,
-                    borderColor: bordaDMA,
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderColor: '#10B981',
                     borderWidth: 2,
                     borderRadius: 4
                 }
@@ -602,7 +607,7 @@ function gerarGraficoLogin(dados) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return `${context.dataset.label}: R$ ${context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+                            return `${context.dataset.label}: ${formatarMoeda(context.parsed.y)}`;
                         }
                     }
                 }
@@ -611,7 +616,7 @@ function gerarGraficoLogin(dados) {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        callback: (v) => `R$ ${v.toLocaleString('pt-BR')}`,
+                        callback: (v) => formatarMoeda(v),
                         color: '#94A3B8'
                     },
                     grid: { color: 'rgba(148, 163, 184, 0.1)' }
@@ -631,16 +636,21 @@ function gerarGraficoLogin(dados) {
 }
 
 // ============================================
-// 9. GRÁFICO MENSAL (BARRAS VERTICAIS - RMA E DMA LADO A LADO)
+// 9. GRÁFICO MENSAL
 // ============================================
 function gerarGraficoMes(dados) {
-    if (!dados || dados.length === 0) {
-        document.getElementById('graficoMes').parentElement.innerHTML = 
-            '<div class="sem-dados">Sem dados para exibir</div>';
+    const canvas = document.getElementById('graficoMes');
+    if (!canvas) {
+        console.warn('⚠️ Canvas graficoMes não encontrado');
         return;
     }
     
-    // Agrupar por mês
+    if (!dados || dados.length === 0) {
+        const container = canvas.parentElement;
+        container.innerHTML = '<div class="sem-dados">Sem dados para exibir</div>';
+        return;
+    }
+    
     const agrupado = {};
     dados.forEach(d => {
         if (!d.mes_ano) return;
@@ -651,12 +661,10 @@ function gerarGraficoMes(dados) {
         else agrupado[d.mes_ano].DMA += d.valor_total;
     });
     
-    // Ordenar por data
     const labels = Object.keys(agrupado).sort();
     const rmaValues = labels.map(l => agrupado[l].RMA);
     const dmaValues = labels.map(l => agrupado[l].DMA);
     
-    // Criar labels legíveis (Mês/Ano)
     const labelsDisplay = labels.map(l => {
         const partes = l.split('-');
         if (partes.length === 2) {
@@ -665,9 +673,9 @@ function gerarGraficoMes(dados) {
         return l;
     });
     
-    const ctx = document.getElementById('graficoMes').getContext('2d');
     if (graficoMes) graficoMes.destroy();
     
+    const ctx = canvas.getContext('2d');
     graficoMes = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -706,7 +714,7 @@ function gerarGraficoMes(dados) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return `${context.dataset.label}: R$ ${context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+                            return `${context.dataset.label}: ${formatarMoeda(context.parsed.y)}`;
                         }
                     }
                 }
@@ -715,7 +723,7 @@ function gerarGraficoMes(dados) {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        callback: (v) => `R$ ${v.toLocaleString('pt-BR')}`,
+                        callback: (v) => formatarMoeda(v),
                         color: '#94A3B8'
                     },
                     grid: { color: 'rgba(148, 163, 184, 0.1)' }
