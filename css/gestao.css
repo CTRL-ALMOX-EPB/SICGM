@@ -3,7 +3,7 @@
 /* ============================================ */
 
 .gestao-container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
     background: #F7FAFC;
@@ -46,7 +46,64 @@
 }
 
 /* ============================================ */
-/* FILTROS                                      */
+/* FILTROS DE MÊS (KPIs)                        */
+/* ============================================ */
+
+.filtros-meses {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.filtros-meses h3 {
+    font-size: 14px;
+    color: #718096;
+    margin-bottom: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.meses-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.btn-mes {
+    padding: 8px 16px;
+    border: 2px solid #E2E8F0;
+    border-radius: 8px;
+    background: white;
+    color: #4A5568;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-mes:hover {
+    border-color: #4299E1;
+    background: #EBF8FF;
+    transform: translateY(-2px);
+}
+
+.btn-mes.active {
+    background: #4299E1;
+    color: white;
+    border-color: #4299E1;
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+}
+
+.btn-mes.active:hover {
+    background: #3182CE;
+}
+
+/* ============================================ */
+/* FILTROS BOX                                  */
 /* ============================================ */
 
 .filtros-box {
@@ -76,7 +133,8 @@
     color: #4A5568;
 }
 
-.filtro-item select {
+.filtro-item select,
+.filtro-item input {
     background: white;
     color: #2D3748;
     border: 2px solid #E2E8F0;
@@ -86,17 +144,18 @@
     transition: all 0.3s ease;
 }
 
-.filtro-item select:focus {
+.filtro-item select:focus,
+.filtro-item input:focus {
     border-color: #4299E1;
     outline: none;
     box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
 
-.btn-aplicar {
-    background: #4299E1;
-    color: white;
-    border: none;
-    padding: 10px 25px;
+.btn-limpar {
+    background: #EDF2F7;
+    color: #4A5568;
+    border: 2px solid #E2E8F0;
+    padding: 10px 20px;
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
@@ -104,10 +163,9 @@
     min-height: 42px;
 }
 
-.btn-aplicar:hover {
-    background: #3182CE;
+.btn-limpar:hover {
+    background: #E2E8F0;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
 }
 
 /* ============================================ */
@@ -145,6 +203,13 @@
     letter-spacing: 0.5px;
 }
 
+.card-indicador small {
+    font-size: 12px;
+    color: #A0AEC0;
+    display: block;
+    margin-top: 4px;
+}
+
 .valor-big {
     font-size: 28px;
     font-weight: 700;
@@ -179,12 +244,12 @@
 
 .grafico-container {
     position: relative;
-    height: 300px;
+    height: 350px;
     width: 100%;
 }
 
 /* ============================================ */
-/* ERRO                                         */
+/* ERRO / LOADING / SEM DADOS                   */
 /* ============================================ */
 
 .erro-msg {
@@ -196,6 +261,27 @@
     text-align: center;
     font-weight: bold;
     border: 1px solid #FC8181;
+}
+
+.loading-msg {
+    grid-column: 1 / -1;
+    background: #EBF8FF;
+    color: #2B6CB0;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    border: 1px solid #90CDF4;
+}
+
+.sem-dados {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #A0AEC0;
+    font-size: 16px;
+    font-weight: 500;
 }
 
 /* ============================================ */
@@ -216,12 +302,21 @@
         min-width: unset;
     }
     
-    .btn-aplicar {
+    .btn-limpar {
         width: 100%;
     }
     
     .indicadores-grid {
         grid-template-columns: 1fr 1fr;
+    }
+    
+    .meses-container {
+        gap: 6px;
+    }
+    
+    .btn-mes {
+        padding: 6px 12px;
+        font-size: 12px;
     }
 }
 

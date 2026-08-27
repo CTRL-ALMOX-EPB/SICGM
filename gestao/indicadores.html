@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indicadores - Gestão</title>
     
-    <!-- 🔥 CONFIG PRIMEIRO -->
     <script src="../js/config.js"></script>
     
-    <!-- 🔥 CSS COM CAMINHOS CORRETOS -->
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/gestao.css">
     
@@ -16,7 +14,6 @@
     
     <script>
         function voltarParaHome() {
-            // Usar CONFIG se disponível, senão fallback
             if (window.CONFIG && typeof CONFIG.goHome === 'function') {
                 CONFIG.goHome();
             } else {
@@ -32,37 +29,64 @@
             <button class="btn-voltar" onclick="voltarParaHome()">🏠 Voltar ao Início</button>
         </div>
 
-        <div class="filtros-box">
-            <div class="filtro-item">
-                <label>Login (Sigla):</label>
-                <select id="filtroLogin">
-                    <option value="Todos">Todos</option>
-                </select>
+        <!-- ============================================ -->
+        <!-- FILTROS DE MÊS (KPIs)                        -->
+        <!-- ============================================ -->
+        <div class="filtros-meses">
+            <h3>📅 Filtrar por Mês</h3>
+            <div class="meses-container" id="mesesContainer">
+                <!-- Botões gerados pelo JS -->
             </div>
-            <div class="filtro-item">
-                <label>Mês (AAAA-MM):</label>
-                <select id="filtroMes">
-                    <option value="Todos">Todos</option>
-                </select>
-            </div>
-            <button class="btn-aplicar" onclick="aplicarFiltros()">Aplicar Filtros</button>
         </div>
 
+        <!-- ============================================ -->
+        <!-- FILTROS ADICIONAIS                           -->
+        <!-- ============================================ -->
+        <div class="filtros-box">
+            <div class="filtro-item">
+                <label>👤 Login (Sigla):</label>
+                <select id="filtroLogin">
+                    <option value="Todos">Todos os Logins</option>
+                </select>
+            </div>
+            <div class="filtro-item">
+                <label>📅 Data Início:</label>
+                <input type="date" id="dataInicio">
+            </div>
+            <div class="filtro-item">
+                <label>📅 Data Fim:</label>
+                <input type="date" id="dataFim">
+            </div>
+            <button class="btn-limpar" id="limparPeriodo">🔄 Limpar Período</button>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- INDICADORES (KPIs)                           -->
+        <!-- ============================================ -->
         <div class="indicadores-grid">
             <div class="card-indicador">
                 <h3>RMA Total (Requisições)</h3>
                 <div class="valor-big" id="totalRMA" style="color: #3B82F6;">R$ 0,00</div>
+                <small id="totalRMAQtd">0 requisições</small>
             </div>
             <div class="card-indicador">
                 <h3>DMA Total (Devoluções)</h3>
                 <div class="valor-big" id="totalDMA" style="color: #10B981;">R$ 0,00</div>
+                <small id="totalDMAQtd">0 devoluções</small>
             </div>
             <div class="card-indicador">
                 <h3>Saldo (RMA - DMA)</h3>
                 <div class="valor-big" id="totalSaldo">R$ 0,00</div>
             </div>
+            <div class="card-indicador">
+                <h3>Total de Registros</h3>
+                <div class="valor-big" id="totalRegistros" style="color: #8B5CF6;">0</div>
+            </div>
         </div>
 
+        <!-- ============================================ -->
+        <!-- GRÁFICOS                                     -->
+        <!-- ============================================ -->
         <div class="graficos-grid">
             <div class="card-grafico">
                 <h3>Valor por Login (RMA x DMA)</h3>
@@ -80,19 +104,19 @@
     </div>
 
     <!-- ============================================ -->
-    <!-- 🔥 FIREBASE SDK                              -->
+    <!-- FIREBASE SDK                                 -->
     <!-- ============================================ -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
     <!-- ============================================ -->
-    <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
+    <!-- CONFIGURAÇÕES DO SISTEMA                     -->
     <!-- ============================================ -->
-    <script src="../js/firebase-config.js"></script>   <!-- 1. Configura o Firebase -->
-    <script src="../js/auth-service.js"></script>      <!-- 2. Cria o authService -->
-    <script src="../js/auth-global.js"></script>       <!-- 3. Verifica sessão na página -->
-    <script src="../js/auth-helper.js"></script>       <!-- 4. 🔥 FUNÇÕES AUXILIARES -->
-    <script src="../js/script.js"></script>            <!-- 5. Funções globais -->
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/auth-service.js"></script>
+    <script src="../js/auth-global.js"></script>
+    <script src="../js/auth-helper.js"></script>
+    <script src="../js/script.js"></script>
     <script src="../js/gestao-indicadores.js"></script>
 </body>
 </html>

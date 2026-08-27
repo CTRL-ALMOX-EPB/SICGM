@@ -1,18 +1,45 @@
 // ============================================
-// GESTÃO INDICADORES - RMA x DMA
+// GESTÃO INDICADORES - RMA x DMA (VERSÃO REFATORADA)
 // ============================================
 
 const WORKER_URL = 'https://gestao-xd-almox.alefe-gomes-72f.workers.dev';
 
 let dadosCompletos = [];
+let dadosFiltrados = [];
 let graficoLogin = null;
 let graficoMes = null;
-let posicaoEstoque = {}; // Cache da posição de estoque
+
+// ============================================
+// ESTADO DOS FILTROS
+// ============================================
+const filtroEstado = {
+    mesesSelecionados: [], // ['01', '02', '03']
+    dataInicio: '',
+    dataFim: '',
+    loginSelecionado: 'Todos'
+};
+
+// ============================================
+// MÊS PARA EXIBIÇÃO
+// ============================================
+const MESES = {
+    '01': 'Janeiro',
+    '02': 'Fevereiro',
+    '03': 'Março',
+    '04': 'Abril',
+    '05': 'Maio',
+    '06': 'Junho',
+    '07': 'Julho',
+    '08': 'Agosto',
+    '09': 'Setembro',
+    '10': 'Outubro',
+    '11': 'Novembro',
+    '12': 'Dezembro'
+};
 
 // ============================================
 // 🔥 VERIFICAR AUTENTICAÇÃO
 // ============================================
-
 function verificarAutenticacaoGestao() {
     console.log('🔍 Verificando autenticação...');
     
@@ -51,7 +78,6 @@ function verificarAutenticacaoGestao() {
 // ============================================
 // FUNÇÃO: VOLTAR PARA HOME
 // ============================================
-
 function voltarParaHome() {
     try {
         if (window.CONFIG && typeof CONFIG.goHome === 'function') {
@@ -80,7 +106,7 @@ function voltarParaHome() {
 window.voltarParaHome = voltarParaHome;
 
 // ============================================
-// 1. BUSCAR POSIÇÃO DE ESTOQUE (VALORES)
+// 1. BUSCAR POSIÇÃO DE ESTOQUE
 // ============================================
 async function carregarPosicaoEstoque() {
     try {
@@ -116,7 +142,7 @@ async function carregarPosicaoEstoque() {
 }
 
 // ============================================
-// 2. BUSCAR MOVIMENTOS (ARQUIVO BRUTO)
+// 2. BUSCAR MOVIMENTOS
 // ============================================
 async function buscarMovimentos() {
     try {
@@ -149,7 +175,6 @@ function parseMovimentos(texto, posicaoMap) {
         return [];
     }
     
-    // Cabeçalho
     const cabecalho = linhas[0].split('\t').map(h => h.trim());
     
     const idx = {
@@ -171,7 +196,10 @@ function parseMovimentos(texto, posicaoMap) {
     
     for (let i = 1; i < linhas.length; i++) {
         const linha = linhas[i].trim();
-        if (!linha) continue;
+        if (!linha) {
+            ignorados++;
+            continue;
+        }
         
         const partes = linha.split('\t');
         if (partes.length < 16) {
@@ -181,25 +209,63 @@ function parseMovimentos(texto, posicaoMap) {
         
         const qtdmov = parseFloat(partes[idx.qtdmov]?.trim().replace(',', '.')) || 0;
         
-        // Pular qtd = 0
         if (qtdmov === 0) {
             ignorados++;
             continue;
         }
         
+        // 🔥 FORMATAR DATA: extrair apenas a data e converter para DD-MM-AAAA
+        const datamovRaw = partes[idx.datamov]?.trim() || '';
+        let dataFormatada = '';
+        
+        if (datamovRaw) {
+            // Tenta extrair data no formato DD/MM/AAAA HH:MM:SS
+            const match = datamovRaw.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+            if (match) {
+                const dia = match[1];
+                const mes = match[2];
+                const ano = match[3];
+                dataFormatada = `${dia}-${mes}-${ano}`;
+            } else {
+                // Tenta outros formatos
+                const match2 = datamovRaw.match(/(\d{4})-(\d{2})-(\d{2})/);
+                if (match2) {
+                    const ano = match2[1];
+                    const mes = match2[2];
+                    const dia = match2[3];
+                    dataFormatada = `${dia}-${mes}-${ano}`;
+                } else {
+                    dataFormatada = datamovRaw;
+                }
+            }
+        }
+        
         const codmat = partes[idx.codmat_mov]?.trim() || '';
         const vlrUnitario = posicaoMap[codmat] || 0;
         
-        // orgmov define se é RMA ou DMA
-        // RMA = orgmov "S" (Saída) ou "RMA"
-        // DMA = orgmov "E" (Entrada) ou "DMA"
         const orgmov = partes[idx.orgmov]?.trim() || '';
         const isRMA = orgmov === 'S' || orgmov === 'RMA' || orgmov.toUpperCase() === 'RMA';
+        
+        // Extrair mês e ano para filtros
+        let mesAno = '';
+        let mesNumero = '';
+        let anoNumero = '';
+        
+        if (dataFormatada) {
+            const partesData = dataFormatada.split('-');
+            if (partesData.length === 3) {
+                mesNumero = partesData[1];
+                anoNumero = partesData[2];
+                mesAno = `${anoNumero}-${mesNumero}`;
+            }
+        }
         
         movimentos.push({
             orgmov: orgmov,
             numdoc_mov: partes[idx.numdoc_mov]?.trim() || '',
-            datamov: partes[idx.datamov]?.trim() || '',
+            datamov_raw: datamovRaw,
+            datamov: dataFormatada,
+            datamov_display: dataFormatada,
             codmat: codmat,
             dscmat: partes[idx.dscmat]?.trim() || '',
             qtdmov: qtdmov,
@@ -209,8 +275,10 @@ function parseMovimentos(texto, posicaoMap) {
             tipo: isRMA ? 'RMA' : 'DMA',
             vlr_unitario: vlrUnitario,
             valor_total: vlrUnitario * Math.abs(qtdmov),
-            valor_abs: Math.abs(vlrUnitario * qtdmov),
-            qtd_abs: Math.abs(qtdmov)
+            qtd_abs: Math.abs(qtdmov),
+            mes: mesNumero,
+            ano: anoNumero,
+            mes_ano: mesAno
         });
     }
     
@@ -219,17 +287,16 @@ function parseMovimentos(texto, posicaoMap) {
 }
 
 // ============================================
-// 4. CARREGAR TUDO
+// 4. CARREGAR DADOS
 // ============================================
 async function carregarDados() {
     try {
-        // Carrega posição de estoque primeiro
-        posicaoEstoque = await carregarPosicaoEstoque();
+        // Mostrar loading
+        document.querySelector('.graficos-grid').innerHTML = 
+            `<div class="loading-msg">⏳ Carregando dados...</div>`;
         
-        // Carrega movimentos
+        const posicaoEstoque = await carregarPosicaoEstoque();
         const texto = await buscarMovimentos();
-        
-        // Parse
         const movimentos = parseMovimentos(texto, posicaoEstoque);
         
         if (!movimentos || movimentos.length === 0) {
@@ -242,8 +309,10 @@ async function carregarDados() {
         console.log(`📊 ${dadosCompletos.length} movimentos carregados`);
         console.log('📋 Primeiros 3:', dadosCompletos.slice(0, 3));
         
-        popularFiltros();
+        // Inicializar filtros
+        inicializarFiltros();
         aplicarFiltros();
+        
     } catch (erro) {
         console.error('❌ Erro ao carregar dados:', erro);
         document.querySelector('.graficos-grid').innerHTML = 
@@ -252,40 +321,125 @@ async function carregarDados() {
 }
 
 // ============================================
-// 5. POPULAR FILTROS
+// 5. INICIALIZAR FILTROS
 // ============================================
-function popularFiltros() {
-    if (!dadosCompletos || dadosCompletos.length === 0) return;
+function inicializarFiltros() {
+    // ============================================
+    // A) BOTÕES DE MÊS (KPIs)
+    // ============================================
+    const mesesContainer = document.getElementById('mesesContainer');
+    if (!mesesContainer) {
+        console.warn('⚠️ mesesContainer não encontrado');
+        return;
+    }
     
+    mesesContainer.innerHTML = '';
+    
+    // Obter meses disponíveis nos dados
+    const mesesDisponiveis = [...new Set(dadosCompletos.map(d => d.mes).filter(Boolean))].sort();
+    
+    // Se não tiver meses disponíveis, mostrar todos
+    const mesesParaMostrar = mesesDisponiveis.length > 0 ? mesesDisponiveis : Object.keys(MESES);
+    
+    mesesParaMostrar.forEach(mesNum => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-mes';
+        btn.dataset.mes = mesNum;
+        btn.textContent = MESES[mesNum] || mesNum;
+        
+        // Contar registros deste mês
+        const count = dadosCompletos.filter(d => d.mes === mesNum).length;
+        btn.title = `${MESES[mesNum] || mesNum}: ${count} movimentos`;
+        
+        // Verificar se está selecionado
+        if (filtroEstado.mesesSelecionados.includes(mesNum)) {
+            btn.classList.add('active');
+        }
+        
+        btn.addEventListener('click', function() {
+            const mes = this.dataset.mes;
+            const index = filtroEstado.mesesSelecionados.indexOf(mes);
+            
+            if (index > -1) {
+                filtroEstado.mesesSelecionados.splice(index, 1);
+                this.classList.remove('active');
+            } else {
+                filtroEstado.mesesSelecionados.push(mes);
+                this.classList.add('active');
+            }
+            
+            // Se nenhum mês selecionado, selecionar todos
+            if (filtroEstado.mesesSelecionados.length === 0) {
+                filtroEstado.mesesSelecionados = [...mesesParaMostrar];
+                document.querySelectorAll('.btn-mes').forEach(b => b.classList.add('active'));
+            }
+            
+            aplicarFiltros();
+        });
+        
+        mesesContainer.appendChild(btn);
+    });
+    
+    // Selecionar todos por padrão
+    if (filtroEstado.mesesSelecionados.length === 0) {
+        filtroEstado.mesesSelecionados = [...mesesParaMostrar];
+        document.querySelectorAll('.btn-mes').forEach(b => b.classList.add('active'));
+    }
+    
+    // ============================================
+    // B) FILTRO DE LOGIN
+    // ============================================
     const logins = [...new Set(dadosCompletos.map(d => d.sigla_mov_mat).filter(Boolean))].sort();
-    const meses = [...new Set(dadosCompletos.map(d => {
-        if (!d.datamov) return null;
-        const parts = d.datamov.split('/');
-        if (parts.length !== 3) return null;
-        return `${parts[2]}-${parts[1].padStart(2, '0')}`;
-    }).filter(Boolean))].sort();
-    
     const selectLogin = document.getElementById('filtroLogin');
-    const selectMes = document.getElementById('filtroMes');
     
-    if (!selectLogin || !selectMes) return;
+    if (selectLogin) {
+        selectLogin.innerHTML = '<option value="Todos">Todos os Logins</option>';
+        logins.forEach(login => {
+            const opt = document.createElement('option');
+            opt.value = login;
+            opt.textContent = login;
+            selectLogin.appendChild(opt);
+        });
+        selectLogin.value = filtroEstado.loginSelecionado || 'Todos';
+        
+        selectLogin.addEventListener('change', function() {
+            filtroEstado.loginSelecionado = this.value;
+            aplicarFiltros();
+        });
+    }
     
-    selectLogin.innerHTML = '<option value="Todos">Todos</option>';
-    selectMes.innerHTML = '<option value="Todos">Todos</option>';
+    // ============================================
+    // C) FILTRO DE PERÍODO (DATA INÍCIO E FIM)
+    // ============================================
+    const dataInicio = document.getElementById('dataInicio');
+    const dataFim = document.getElementById('dataFim');
+    const btnLimparPeriodo = document.getElementById('limparPeriodo');
     
-    logins.forEach(login => {
-        const opt = document.createElement('option');
-        opt.value = login;
-        opt.textContent = login;
-        selectLogin.appendChild(opt);
-    });
+    if (dataInicio) {
+        dataInicio.value = filtroEstado.dataInicio;
+        dataInicio.addEventListener('change', function() {
+            filtroEstado.dataInicio = this.value;
+            aplicarFiltros();
+        });
+    }
     
-    meses.forEach(mes => {
-        const opt = document.createElement('option');
-        opt.value = mes;
-        opt.textContent = mes;
-        selectMes.appendChild(opt);
-    });
+    if (dataFim) {
+        dataFim.value = filtroEstado.dataFim;
+        dataFim.addEventListener('change', function() {
+            filtroEstado.dataFim = this.value;
+            aplicarFiltros();
+        });
+    }
+    
+    if (btnLimparPeriodo) {
+        btnLimparPeriodo.addEventListener('click', function() {
+            filtroEstado.dataInicio = '';
+            filtroEstado.dataFim = '';
+            if (dataInicio) dataInicio.value = '';
+            if (dataFim) dataFim.value = '';
+            aplicarFiltros();
+        });
+    }
 }
 
 // ============================================
@@ -297,45 +451,89 @@ function aplicarFiltros() {
         return;
     }
     
-    const loginFiltro = document.getElementById('filtroLogin').value;
-    const mesFiltro = document.getElementById('filtroMes').value;
+    console.log('🔍 Aplicando filtros...');
+    console.log('📌 Meses selecionados:', filtroEstado.mesesSelecionados);
+    console.log('📌 Login:', filtroEstado.loginSelecionado);
+    console.log('📌 Período:', filtroEstado.dataInicio, 'até', filtroEstado.dataFim);
     
-    let dadosFiltrados = dadosCompletos;
-    if (loginFiltro !== 'Todos') {
-        dadosFiltrados = dadosFiltrados.filter(d => d.sigla_mov_mat === loginFiltro);
+    let dados = [...dadosCompletos];
+    
+    // Filtro por meses
+    if (filtroEstado.mesesSelecionados.length > 0) {
+        dados = dados.filter(d => filtroEstado.mesesSelecionados.includes(d.mes));
     }
-    if (mesFiltro !== 'Todos') {
-        dadosFiltrados = dadosFiltrados.filter(d => {
+    
+    // Filtro por login
+    if (filtroEstado.loginSelecionado && filtroEstado.loginSelecionado !== 'Todos') {
+        dados = dados.filter(d => d.sigla_mov_mat === filtroEstado.loginSelecionado);
+    }
+    
+    // Filtro por período (data início e fim)
+    if (filtroEstado.dataInicio) {
+        const dataInicioObj = new Date(filtroEstado.dataInicio + 'T00:00:00');
+        dados = dados.filter(d => {
             if (!d.datamov) return false;
-            const parts = d.datamov.split('/');
-            if (parts.length !== 3) return false;
-            const mesAno = `${parts[2]}-${parts[1].padStart(2, '0')}`;
-            return mesAno === mesFiltro;
+            const partes = d.datamov.split('-');
+            if (partes.length !== 3) return false;
+            const dataObj = new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`);
+            return dataObj >= dataInicioObj;
         });
     }
     
+    if (filtroEstado.dataFim) {
+        const dataFimObj = new Date(filtroEstado.dataFim + 'T23:59:59');
+        dados = dados.filter(d => {
+            if (!d.datamov) return false;
+            const partes = d.datamov.split('-');
+            if (partes.length !== 3) return false;
+            const dataObj = new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`);
+            return dataObj <= dataFimObj;
+        });
+    }
+    
+    dadosFiltrados = dados;
     console.log(`📊 ${dadosFiltrados.length} registros após filtros`);
     
-    // Calcular totais (usando valor_total)
-    const totalRMA = dadosFiltrados.filter(d => d.tipo === 'RMA').reduce((acc, d) => acc + d.valor_total, 0);
-    const totalDMA = dadosFiltrados.filter(d => d.tipo === 'DMA').reduce((acc, d) => acc + d.valor_total, 0);
+    // Atualizar contadores
+    atualizarContadores(dadosFiltrados);
+    
+    // Gerar gráficos
+    gerarGraficoLogin(dadosFiltrados);
+    gerarGraficoMes(dadosFiltrados);
+}
+
+// ============================================
+// 7. ATUALIZAR CONTADORES (KPIs)
+// ============================================
+function atualizarContadores(dados) {
+    const totalRMA = dados.filter(d => d.tipo === 'RMA').reduce((acc, d) => acc + d.valor_total, 0);
+    const totalDMA = dados.filter(d => d.tipo === 'DMA').reduce((acc, d) => acc + d.valor_total, 0);
     const saldo = totalRMA - totalDMA;
+    const totalRegistros = dados.length;
+    const totalRMAQtd = dados.filter(d => d.tipo === 'RMA').length;
+    const totalDMAQtd = dados.filter(d => d.tipo === 'DMA').length;
     
     document.getElementById('totalRMA').textContent = `R$ ${totalRMA.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
     document.getElementById('totalDMA').textContent = `R$ ${totalDMA.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
     document.getElementById('totalSaldo').textContent = `R$ ${saldo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
     document.getElementById('totalSaldo').style.color = saldo >= 0 ? '#3B82F6' : '#EF4444';
     
-    gerarGraficoLogin(dadosFiltrados);
-    gerarGraficoMes(dadosFiltrados);
+    document.getElementById('totalRegistros').textContent = totalRegistros;
+    document.getElementById('totalRMAQtd').textContent = totalRMAQtd;
+    document.getElementById('totalDMAQtd').textContent = totalDMAQtd;
 }
 
 // ============================================
-// 7. GRÁFICO POR LOGIN
+// 8. GRÁFICO POR LOGIN (BARRAS VERTICAIS - RMA E DMA LADO A LADO)
 // ============================================
 function gerarGraficoLogin(dados) {
-    if (!dados || dados.length === 0) return;
+    if (!dados || dados.length === 0) {
+        document.getElementById('graficoLogin').parentElement.innerHTML = 
+            '<div class="sem-dados">Sem dados para exibir</div>';
+        return;
+    }
     
+    // Agrupar por login
     const agrupado = {};
     dados.forEach(d => {
         const login = d.sigla_mov_mat;
@@ -347,9 +545,21 @@ function gerarGraficoLogin(dados) {
         else agrupado[login].DMA += d.valor_total;
     });
     
-    const labels = Object.keys(agrupado).sort();
+    // Ordenar por valor total (maior RMA primeiro)
+    const labels = Object.keys(agrupado).sort((a, b) => {
+        const totalA = agrupado[a].RMA + agrupado[a].DMA;
+        const totalB = agrupado[b].RMA + agrupado[b].DMA;
+        return totalB - totalA;
+    });
+    
     const rmaValues = labels.map(l => agrupado[l].RMA);
     const dmaValues = labels.map(l => agrupado[l].DMA);
+    
+    // Cores
+    const coresRMA = 'rgba(59, 130, 246, 0.8)';
+    const coresDMA = 'rgba(16, 185, 129, 0.8)';
+    const bordaRMA = '#3B82F6';
+    const bordaDMA = '#10B981';
     
     const ctx = document.getElementById('graficoLogin').getContext('2d');
     if (graficoLogin) graficoLogin.destroy();
@@ -362,16 +572,18 @@ function gerarGraficoLogin(dados) {
                 {
                     label: 'RMA (Requisições)',
                     data: rmaValues,
-                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
-                    borderColor: '#3B82F6',
-                    borderWidth: 2
+                    backgroundColor: coresRMA,
+                    borderColor: bordaRMA,
+                    borderWidth: 2,
+                    borderRadius: 4
                 },
                 {
                     label: 'DMA (Devoluções)',
                     data: dmaValues,
-                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
-                    borderColor: '#10B981',
-                    borderWidth: 2
+                    backgroundColor: coresDMA,
+                    borderColor: bordaDMA,
+                    borderWidth: 2,
+                    borderRadius: 4
                 }
             ]
         },
@@ -379,23 +591,39 @@ function gerarGraficoLogin(dados) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { 
+                legend: {
                     position: 'top',
-                    labels: { color: '#94A3B8' }
+                    labels: {
+                        color: '#94A3B8',
+                        font: { size: 12, weight: 'bold' },
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: R$ ${context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+                        }
+                    }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { 
+                    ticks: {
                         callback: (v) => `R$ ${v.toLocaleString('pt-BR')}`,
                         color: '#94A3B8'
                     },
                     grid: { color: 'rgba(148, 163, 184, 0.1)' }
                 },
                 x: {
-                    ticks: { color: '#94A3B8' },
-                    grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                    ticks: {
+                        color: '#94A3B8',
+                        maxRotation: 45,
+                        minRotation: 0,
+                        font: { size: 11 }
+                    },
+                    grid: { color: 'rgba(148, 163, 184, 0.05)' }
                 }
             }
         }
@@ -403,27 +631,39 @@ function gerarGraficoLogin(dados) {
 }
 
 // ============================================
-// 8. GRÁFICO MENSAL
+// 9. GRÁFICO MENSAL (BARRAS VERTICAIS - RMA E DMA LADO A LADO)
 // ============================================
 function gerarGraficoMes(dados) {
-    if (!dados || dados.length === 0) return;
+    if (!dados || dados.length === 0) {
+        document.getElementById('graficoMes').parentElement.innerHTML = 
+            '<div class="sem-dados">Sem dados para exibir</div>';
+        return;
+    }
     
+    // Agrupar por mês
     const agrupado = {};
     dados.forEach(d => {
-        if (!d.datamov) return;
-        const parts = d.datamov.split('/');
-        if (parts.length !== 3) return;
-        const mesAno = `${parts[2]}-${parts[1].padStart(2, '0')}`;
-        if (!agrupado[mesAno]) {
-            agrupado[mesAno] = { RMA: 0, DMA: 0 };
+        if (!d.mes_ano) return;
+        if (!agrupado[d.mes_ano]) {
+            agrupado[d.mes_ano] = { RMA: 0, DMA: 0, mes: d.mes, ano: d.ano };
         }
-        if (d.tipo === 'RMA') agrupado[mesAno].RMA += d.valor_total;
-        else agrupado[mesAno].DMA += d.valor_total;
+        if (d.tipo === 'RMA') agrupado[d.mes_ano].RMA += d.valor_total;
+        else agrupado[d.mes_ano].DMA += d.valor_total;
     });
     
+    // Ordenar por data
     const labels = Object.keys(agrupado).sort();
     const rmaValues = labels.map(l => agrupado[l].RMA);
     const dmaValues = labels.map(l => agrupado[l].DMA);
+    
+    // Criar labels legíveis (Mês/Ano)
+    const labelsDisplay = labels.map(l => {
+        const partes = l.split('-');
+        if (partes.length === 2) {
+            return `${MESES[partes[1]] || partes[1]}/${partes[0]}`;
+        }
+        return l;
+    });
     
     const ctx = document.getElementById('graficoMes').getContext('2d');
     if (graficoMes) graficoMes.destroy();
@@ -431,21 +671,23 @@ function gerarGraficoMes(dados) {
     graficoMes = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
+            labels: labelsDisplay,
             datasets: [
                 {
                     label: 'RMA (Requisições)',
                     data: rmaValues,
-                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
                     borderColor: '#3B82F6',
-                    borderWidth: 2
+                    borderWidth: 2,
+                    borderRadius: 4
                 },
                 {
                     label: 'DMA (Devoluções)',
                     data: dmaValues,
-                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
                     borderColor: '#10B981',
-                    borderWidth: 2
+                    borderWidth: 2,
+                    borderRadius: 4
                 }
             ]
         },
@@ -453,23 +695,38 @@ function gerarGraficoMes(dados) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { 
+                legend: {
                     position: 'top',
-                    labels: { color: '#94A3B8' }
+                    labels: {
+                        color: '#94A3B8',
+                        font: { size: 12, weight: 'bold' },
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: R$ ${context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+                        }
+                    }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { 
+                    ticks: {
                         callback: (v) => `R$ ${v.toLocaleString('pt-BR')}`,
                         color: '#94A3B8'
                     },
                     grid: { color: 'rgba(148, 163, 184, 0.1)' }
                 },
                 x: {
-                    ticks: { color: '#94A3B8' },
-                    grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                    ticks: {
+                        color: '#94A3B8',
+                        maxRotation: 0,
+                        font: { size: 12, weight: 'bold' }
+                    },
+                    grid: { color: 'rgba(148, 163, 184, 0.05)' }
                 }
             }
         }
