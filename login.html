@@ -69,26 +69,6 @@
             font-weight: 500;
         }
         
-        .password-actions {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 5px;
-        }
-        
-        .btn-forgot-password {
-            background: none;
-            border: none;
-            color: #4299E1;
-            font-size: 13px;
-            cursor: pointer;
-            text-decoration: underline;
-            padding: 5px 0;
-        }
-        
-        .btn-forgot-password:hover {
-            color: #2b6cb0;
-        }
-        
         .mensagem-sucesso {
             color: #48BB78;
             background: #f0fff4;
@@ -103,6 +83,17 @@
         
         .input-group {
             position: relative;
+        }
+
+        .senha-helper {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        .senha-helper strong {
+            color: #2d3748;
         }
     </style>
 </head>
@@ -138,18 +129,16 @@
                 </div>
                 
                 <div class="input-group">
-                    <label for="senha">Senha:</label>
+                    <label for="senha">Matrícula (senha):</label>
                     <input 
                         type="password" 
                         id="senha" 
-                        placeholder="Digite sua senha" 
+                        placeholder="Digite sua matrícula (ex: 123456)" 
                         required
-                        autocomplete="current-password"
+                        autocomplete="off"
                     >
-                    <div class="password-actions">
-                        <button type="button" class="btn-forgot-password" id="btnForgotPassword">
-                            🔑 Esqueceu a senha?
-                        </button>
+                    <div class="senha-helper">
+                        💡 Sua senha é gerada automaticamente com <strong>ctrl-</strong> + sua matrícula
                     </div>
                 </div>
                 

@@ -27,7 +27,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const senhaInput = document.getElementById('senha');
     const mensagemErro = document.getElementById('mensagemErro');
     const mensagemSucesso = document.getElementById('mensagemSucesso');
-    const btnForgotPassword = document.getElementById('btnForgotPassword');
 
     // ============================================
     // PREVIEW DO E-MAIL
@@ -58,6 +57,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ============================================
+    // 🔥 FUNÇÃO: MONTAR SENHA COMPLETA
+    // ============================================
+    function montarSenhaCompleta(matricula) {
+        // Remove espaços extras
+        const matriculaLimpa = matricula.trim();
+        // 🔥 Adiciona "ctrl-" na frente
+        return `ctrl-${matriculaLimpa}`;
+    }
+
+    // ============================================
     // SUBMIT DO FORMULÁRIO
     // ============================================
     form.addEventListener('submit', async function(e) {
@@ -68,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
         mensagemSucesso.style.display = 'none';
 
         const emailCompleto = getEmailCompleto();
-        const senha = senhaInput.value.trim();
+        const matriculaDigitada = senhaInput.value.trim();
 
         if (!emailCompleto) {
             mensagemErro.textContent = '⚠️ Digite a primeira parte do seu e-mail.';
@@ -77,12 +86,17 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (!senha) {
-            mensagemErro.textContent = '⚠️ Digite sua senha.';
+        if (!matriculaDigitada) {
+            mensagemErro.textContent = '⚠️ Digite sua matrícula.';
             mensagemErro.className = 'mensagem-erro';
             senhaInput.focus();
             return;
         }
+
+        // 🔥 MONTAR SENHA COMPLETA
+        const senhaCompleta = montarSenhaCompleta(matriculaDigitada);
+        console.log(`🔐 Tentando login com matrícula: ${matriculaDigitada}`);
+        console.log(`🔑 Senha gerada: ${senhaCompleta}`);
 
         // 🔥 VERIFICAR SE authService ESTÁ DISPONÍVEL
         if (typeof authService === 'undefined' || !authService) {
@@ -91,8 +105,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // 🔥 TENTAR LOGIN
-        const result = await authService.login(emailCompleto, senha);
+        // 🔥 TENTAR LOGIN COM A SENHA MONTADA
+        const result = await authService.login(emailCompleto, senhaCompleta);
         
         if (result.success) {
             mensagemSucesso.textContent = '✅ Login realizado! Redirecionando...';
@@ -113,75 +127,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 1000);
             
         } else {
-            mensagemErro.textContent = result.error || '❌ Falha no login. Tente novamente.';
+            mensagemErro.textContent = result.error || '❌ Matrícula inválida. Verifique e tente novamente.';
             mensagemErro.className = 'mensagem-erro';
             senhaInput.value = '';
             senhaInput.focus();
         }
-    });
-
-    // ============================================
-    // RECUPERAR SENHA (COM VALIDAÇÃO DE E-MAIL)
-    // ============================================
-    btnForgotPassword.addEventListener('click', async function() {
-        const emailCompleto = getEmailCompleto();
-        
-        if (!emailCompleto) {
-            mensagemErro.textContent = '⚠️ Digite seu e-mail antes de recuperar a senha.';
-            mensagemErro.className = 'mensagem-erro';
-            emailPrefix.focus();
-            return;
-        }
-
-        // 🔥 Desabilitar botão durante a verificação
-        btnForgotPassword.disabled = true;
-        btnForgotPassword.textContent = '⏳ Verificando...';
-        
-        // 🔥 Mostrar mensagem de carregamento
-        mensagemSucesso.textContent = '⏳ Verificando e-mail...';
-        mensagemSucesso.style.display = 'block';
-        mensagemErro.textContent = '';
-        mensagemErro.className = 'mensagem-erro';
-        
-        // 🔥 Primeiro: Verificar se o e-mail existe
-        const exists = await authService.emailExists(emailCompleto);
-        
-        if (!exists) {
-            // 🔥 E-mail NÃO existe
-            mensagemSucesso.style.display = 'none';
-            mensagemErro.textContent = '❌ E-mail não encontrado. Verifique se o e-mail está correto.';
-            mensagemErro.className = 'mensagem-erro';
-            
-            // Reabilitar botão
-            btnForgotPassword.disabled = false;
-            btnForgotPassword.textContent = '🔑 Esqueceu a senha?';
-            return;
-        }
-        
-        // 🔥 E-mail existe - Enviar redefinição
-        mensagemSucesso.textContent = '⏳ Enviando e-mail de recuperação...';
-        
-        const result = await authService.resetPassword(emailCompleto);
-        
-        if (result.success) {
-            mensagemSucesso.textContent = result.message;
-            mensagemSucesso.style.display = 'block';
-            mensagemErro.textContent = '';
-            mensagemErro.className = 'mensagem-erro';
-            
-            // Ocultar após 10 segundos
-            setTimeout(() => {
-                mensagemSucesso.style.display = 'none';
-            }, 10000);
-        } else {
-            mensagemSucesso.style.display = 'none';
-            mensagemErro.textContent = result.error || '❌ Erro ao enviar e-mail. Tente novamente.';
-            mensagemErro.className = 'mensagem-erro';
-        }
-        
-        // Reabilitar botão
-        btnForgotPassword.disabled = false;
-        btnForgotPassword.textContent = '🔑 Esqueceu a senha?';
     });
 
     // ============================================

@@ -304,44 +304,13 @@ class AuthService {
     }
 
     // ============================================
-    // REDEFINIR SENHA (COM VALIDAÇÃO DE E-MAIL)
+    // REDEFINIR SENHA (DESABILITADO)
     // ============================================
     async resetPassword(email) {
-        try {
-            // 🔥 PRIMEIRO: VERIFICAR SE O E-MAIL EXISTE NO SISTEMA
-            console.log(`🔍 Verificando se o e-mail existe: ${email}`);
-            const exists = await this.emailExists(email);
-            
-            if (!exists) {
-                console.log(`❌ E-mail não encontrado: ${email}`);
-                return { 
-                    success: false, 
-                    error: '❌ E-mail não encontrado. Verifique se o e-mail está correto.' 
-                };
-            }
-
-            console.log(`✅ E-mail encontrado: ${email}`);
-            
-            // 🔥 SEGUNDO: ENVIAR O E-MAIL DE REDEFINIÇÃO
-            const actionCodeSettings = {
-                url: window.location.origin + '/login.html',
-                handleCodeInApp: false
-            };
-            
-            await this.auth.sendPasswordResetEmail(email, actionCodeSettings);
-            console.log(`✅ E-mail de redefinição enviado para: ${email}`);
-            
-            return { 
-                success: true, 
-                message: '📧 E-mail de recuperação enviado! Verifique sua caixa de entrada (verifique SPAM também).' 
-            };
-        } catch (error) {
-            console.error('❌ Erro ao enviar e-mail de redefinição:', error);
-            return { 
-                success: false, 
-                error: this.handleError(error) 
-            };
-        }
+        return { 
+            success: false, 
+            error: 'ℹ️ A senha é gerada automaticamente a partir da matrícula. Entre em contato com o administrador para redefinir.' 
+        };
     }
 
     // ============================================
@@ -490,7 +459,7 @@ class AuthService {
     handleError(error) {
         const errorMap = {
             'auth/user-not-found': '❌ Usuário não encontrado. Verifique seu e-mail.',
-            'auth/wrong-password': '❌ Senha incorreta. Tente novamente.',
+            'auth/wrong-password': '❌ Matrícula inválida. Verifique e tente novamente.',
             'auth/too-many-requests': '⚠️ Muitas tentativas. Tente em alguns minutos.',
             'auth/invalid-email': '❌ E-mail inválido.',
             'auth/user-disabled': '❌ Conta desativada. Entre em contato com o administrador.',
