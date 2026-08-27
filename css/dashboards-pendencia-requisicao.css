@@ -1660,3 +1660,49 @@
     color: #718096;
     margin-left: auto;
 }
+
+/* ============================================ */
+/* FILTRO POR QUANTIDADE DE ETAPAS              */
+/* ============================================ */
+
+.filter-group select#filtroEtapas {
+    min-width: 120px;
+    padding: 6px 12px;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+    cursor: pointer;
+}
+
+.filter-group select#filtroEtapas:focus {
+    outline: none;
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+}
+
+/* Estilos para o indicador de etapas na lista */
+.obra-etapas-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: #EBF8FF;
+    color: #2B6CB0;
+    border: 1px solid #90CDF4;
+    white-space: nowrap;
+}
+
+.obra-etapas-indicator.has-etapas {
+    background: #C6F6D5;
+    border-color: #48BB78;
+    color: #276749;
+}
+
+.obra-etapas-indicator.no-etapas {
+    background: #FED7D7;
+    border-color: #FC8181;
+    color: #C53030;
+}

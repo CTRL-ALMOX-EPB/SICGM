@@ -1464,42 +1464,6 @@ function renderizarListaObrasMGM(pendencias) {
     }
     
     // ============================================
-    // EXIBIR FILTRO DE ETAPAS
-    // ============================================
-    const filtroHTML = `
-        <div class="filtro-etapas-container">
-            <label>📋 Etapas válidas:
-                <select id="filtroEtapas" onchange="aplicarFiltroEtapas()">
-                    <option value="0">Todas</option>
-                    <option value="1">1+ etapas</option>
-                    <option value="2">2+ etapas</option>
-                    <option value="3">3+ etapas</option>
-                    <option value="4">4+ etapas</option>
-                    <option value="5">5+ etapas</option>
-                    <option value="6">6+ etapas</option>
-                    <option value="7">7+ etapas</option>
-                    <option value="8">8+ etapas</option>
-                    <option value="9">9+ etapas</option>
-                    <option value="10">10+ etapas</option>
-                </select>
-            </label>
-            <span class="etapas-filtro-info">📊 ${pendenciasFiltradas.length} de ${pendencias.length} obras</span>
-        </div>
-    `;
-    
-    // Inserir o filtro antes da lista
-    const listHeader = container.querySelector('.list-header');
-    if (listHeader) {
-        const filtroExistente = container.querySelector('.filtro-etapas-container');
-        if (filtroExistente) {
-            filtroExistente.remove();
-        }
-        container.insertAdjacentHTML('afterbegin', filtroHTML);
-    } else {
-        container.innerHTML = filtroHTML + container.innerHTML;
-    }
-    
-    // ============================================
     // AGRUPAR OBJETOS
     // ============================================
     const grupos = {};
@@ -2197,6 +2161,19 @@ function aplicarFiltroEtapas() {
     filtroEtapasMinimo = parseInt(select.value) || 0;
     console.log(`🔍 Filtrando por ${filtroEtapasMinimo}+ etapas válidas`);
     
+    // Atualizar o contador
+    const totalRegistros = document.getElementById('totalRegistrosMGM');
+    if (totalRegistros) {
+        const dadosFiltrados = dadosFiltradosMGM.filter(p => {
+            if (filtroEtapasMinimo === 0) return true;
+            const obraNorm = normalizarObra(p.obra);
+            const etapasInfo = getEtapasPorObra(obraNorm);
+            if (!etapasInfo) return false;
+            return etapasInfo.etapas_validas >= filtroEtapasMinimo;
+        });
+        totalRegistros.textContent = `${dadosFiltrados.length} pendências`;
+    }
+    
     renderizarListaObrasMGM(dadosFiltradosMGM);
 }
 
@@ -2255,15 +2232,17 @@ function limparFiltrosMGM() {
     document.getElementById('filterStatusMGM').value = 'todos';
     document.getElementById('filterBuscaMGM').value = '';
     document.getElementById('filterObraMGM').value = '';
-    filtroStatusMGMAtivo = null;
-    dadosFiltradosMGM = [...pendenciasConsolidadas];
-    itemSelecionadoMGM = null;
     
+    // 🔥 RESETAR FILTRO DE ETAPAS
     const selectEtapas = document.getElementById('filtroEtapas');
     if (selectEtapas) {
         selectEtapas.value = 0;
         filtroEtapasMinimo = 0;
     }
+    
+    filtroStatusMGMAtivo = null;
+    dadosFiltradosMGM = [...pendenciasConsolidadas];
+    itemSelecionadoMGM = null;
     
     document.querySelectorAll('.kpi-card-mgm').forEach(el => {
         el.classList.remove('active-filter');
