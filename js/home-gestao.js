@@ -6,7 +6,6 @@
 // CONFIGURAÇÃO DOS DEPARTAMENTOS E FUNÇÕES
 // ============================================
 const DEPARTAMENTOS = {
-    // NOVO DEPARTAMENTO GESTÃO
     'GESTAO': {
         nome: 'GESTÃO',
         titulo: 'Gestão Estratégica do Setor',
@@ -260,6 +259,11 @@ function renderizarDepartamento(deptoId) {
     const container = document.getElementById('deptoContent');
     const depto = DEPARTAMENTOS[deptoId];
     
+    if (!container) {
+        console.warn('⚠️ Container deptoContent não encontrado');
+        return;
+    }
+    
     if (!depto) {
         container.innerHTML = `<div class="depto-empty"><p>Departamento não encontrado.</p></div>`;
         return;
@@ -367,71 +371,36 @@ function mostrarEmDesenvolvimento(event) {
     alert('📜 Funcionalidade em desenvolvimento. Em breve disponível!');
 }
 
-function atualizarTimestampSessao() {
-    const sessao = sessionStorage.getItem('sessaoSICGM');
-    if (sessao) {
-        try {
-            const dados = JSON.parse(sessao);
-            dados.timestamp = Date.now();
-            sessionStorage.setItem('sessaoSICGM', JSON.stringify(dados));
-        } catch (e) {}
-    }
-}
+// ============================================
+// INICIALIZAÇÃO
+// ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    const homeContent = document.getElementById('homeContent');
+    console.log('📋 Home Gestão carregada');
     
-    if (loadingOverlay) loadingOverlay.classList.add('active');
-
-    const sessao = verificarSessao();
-    
-    if (!sessao) {
-        console.log('🔒 Sessão inválida - Redirecionando para login');
-        const loginUrl = (typeof CONFIG !== 'undefined' && CONFIG) ? 
-            CONFIG.getPageUrl('login.html') : 'login.html';
-        window.location.href = loginUrl;
-        return;
-    }
-
-    if (sessao.perfil !== 'GESTAO') {
-        console.log(`🔒 Perfil ${sessao.perfil} não autorizado para esta página`);
-        const loginUrl = (typeof CONFIG !== 'undefined' && CONFIG) ? 
-            CONFIG.getPageUrl('login.html') : 'login.html';
-        window.location.href = loginUrl;
-        return;
-    }
-
-    console.log('✅ Sessão válida para:', sessao.nome, '(GESTÃO)');
-    
-    try {
-        const nomeUsuario = document.getElementById('nomeUsuario');
-        const matriculaUsuario = document.getElementById('matriculaUsuario');
-        const perfilUsuario = document.getElementById('perfilUsuario');
-        const mensagemBoasVindas = document.getElementById('mensagemBoasVindas');
+    // 🔥 ESPERAR O CONTAINER EXISTIR E A PÁGINA ESTAR VISÍVEL
+    const checkContainer = setInterval(function() {
+        const container = document.getElementById('deptoContent');
+        const homeContent = document.getElementById('homeContent');
         
-        if (nomeUsuario) nomeUsuario.textContent = sessao.nome;
-        if (matriculaUsuario) matriculaUsuario.textContent = `Matrícula: ${sessao.matricula}`;
-        if (perfilUsuario) perfilUsuario.textContent = sessao.perfil || 'GESTÃO';
-        if (mensagemBoasVindas) mensagemBoasVindas.textContent = `👋 Olá, ${sessao.nome}! Bem-vindo ao SICGM.`;
-    } catch (e) {
-        console.error('Erro ao carregar dados do usuário:', e);
-        const loginUrl = (typeof CONFIG !== 'undefined' && CONFIG) ? 
-            CONFIG.getPageUrl('login.html') : 'login.html';
-        window.location.href = loginUrl;
-        return;
-    }
-
-    renderizarDepartamento('DCMD');
-
-    setTimeout(() => {
-        if (loadingOverlay) loadingOverlay.classList.remove('active');
-        if (homeContent) homeContent.style.display = 'block';
-    }, 500);
-
-    atualizarTimestampSessao();
+        if (container && homeContent && homeContent.style.display !== 'none') {
+            console.log('✅ Container encontrado, renderizando...');
+            clearInterval(checkContainer);
+            renderizarDepartamento('DCMD');
+        }
+    }, 200);
+    
+    // 🔥 FALLBACK: Se após 3 segundos ainda não renderizou, forçar
+    setTimeout(function() {
+        const container = document.getElementById('deptoContent');
+        if (container && container.innerHTML === '') {
+            console.log('⏳ Fallback: renderizando após timeout');
+            renderizarDepartamento('DCMD');
+        }
+    }, 3000);
 });
 
+// Fecha dropdowns ao clicar fora
 document.addEventListener('click', function(event) {
     document.querySelectorAll('.dropdown-menu.show').forEach(el => {
         const card = event.target.closest('.func-card');
@@ -441,6 +410,7 @@ document.addEventListener('click', function(event) {
     });
 });
 
+// Fecha dropdowns ao pressionar ESC
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         document.querySelectorAll('.dropdown-menu.show').forEach(el => {
@@ -448,21 +418,3 @@ document.addEventListener('keydown', function(event) {
         });
     }
 });
-
-document.addEventListener('click', atualizarTimestampSessao);
-document.addEventListener('keydown', atualizarTimestampSessao);
-
-setInterval(function() {
-    const sessao = verificarSessao();
-    if (!sessao) {
-        console.log('🔒 Sessão expirada - Redirecionando para login');
-        const loginUrl = (typeof CONFIG !== 'undefined' && CONFIG) ? 
-            CONFIG.getPageUrl('login.html') : 'login.html';
-        window.location.href = loginUrl;
-    } else if (sessao.perfil !== 'GESTAO') {
-        console.log('🔒 Perfil alterado - Redirecionando');
-        const loginUrl = (typeof CONFIG !== 'undefined' && CONFIG) ? 
-            CONFIG.getPageUrl('login.html') : 'login.html';
-        window.location.href = loginUrl;
-    }
-}, 5 * 60 * 1000);
