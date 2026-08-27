@@ -69,65 +69,100 @@ let ordenacaoAtual = 'data_desc';
 // ============================================
 
 function carregarDadosUsuario() {
-    // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
-    if (typeof authService === 'undefined' || !authService) {
-        console.error('❌ authService não disponível');
+    console.log('🔐 Carregando dados do usuário...');
+    
+    try {
+        // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
+        if (typeof authService === 'undefined' || !authService) {
+            console.error('❌ authService não disponível');
+            window.location.href = '../login.html';
+            return null;
+        }
+
+        if (!authService.isLoggedIn()) {
+            console.error('❌ Usuário não logado');
+            window.location.href = '../login.html';
+            return null;
+        }
+
+        const user = authService.getUserData();
+        if (!user) {
+            console.error('❌ Dados do usuário não encontrados');
+            window.location.href = '../login.html';
+            return null;
+        }
+
+        dadosSessao = {
+            nome: user.nome,
+            matricula: user.matricula,
+            perfil: user.perfil,
+            timestamp: Date.now()
+        };
+        
+        perfilUsuario = user.perfil || 'OPERACIONAL';
+
+        // Atualizar elementos da UI
+        const userNameEl = document.getElementById('userName');
+        const userRoleEl = document.getElementById('userRole');
+        const userMatriculaEl = document.getElementById('userMatricula');
+        const userAvatarEl = document.getElementById('userAvatar');
+        
+        if (userNameEl) userNameEl.textContent = user.nome || 'Usuário';
+        if (userRoleEl) userRoleEl.textContent = user.perfil || 'OPERACIONAL';
+        if (userMatriculaEl) userMatriculaEl.textContent = `Matrícula: ${user.matricula || '---'}`;
+        if (userAvatarEl) userAvatarEl.textContent = (user.nome || 'U')[0].toUpperCase();
+        
+        console.log(`✅ Usuário autenticado: ${user.nome} (${user.perfil})`);
+        return dadosSessao;
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar dados do usuário:', error);
         window.location.href = '../login.html';
         return null;
     }
-
-    if (!authService.isLoggedIn()) {
-        console.error('❌ Usuário não logado');
-        window.location.href = '../login.html';
-        return null;
-    }
-
-    const user = authService.getUserData();
-    if (!user) {
-        console.error('❌ Dados do usuário não encontrados');
-        window.location.href = '../login.html';
-        return null;
-    }
-
-    dadosSessao = {
-        nome: user.nome,
-        matricula: user.matricula,
-        perfil: user.perfil,
-        timestamp: Date.now()
-    };
-    
-    perfilUsuario = user.perfil || 'OPERACIONAL';
-
-    const userNameEl = document.getElementById('userName');
-    const userRoleEl = document.getElementById('userRole');
-    const userMatriculaEl = document.getElementById('userMatricula');
-    const userAvatarEl = document.getElementById('userAvatar');
-    
-    if (userNameEl) userNameEl.textContent = user.nome || 'Usuário';
-    if (userRoleEl) userRoleEl.textContent = user.perfil || 'OPERACIONAL';
-    if (userMatriculaEl) userMatriculaEl.textContent = `Matrícula: ${user.matricula || '---'}`;
-    if (userAvatarEl) userAvatarEl.textContent = (user.nome || 'U')[0].toUpperCase();
-    
-    console.log(`✅ Usuário autenticado: ${user.nome} (${user.perfil})`);
-    return dadosSessao;
 }
 
+// ============================================
+// 🔥 FUNÇÃO PARA VOLTAR PARA HOME (CORRIGIDA)
+// ============================================
+
 function redirecionarParaHome() {
-    if (!dadosSessao) {
-        window.location.href = '../login.html';
-        return;
-    }
+    console.log('🏠 Redirecionando para home...');
     
-    const homeMap = {
-        'OPERACIONAL': '../home-operacional.html',
-        'GESTAO': '../home-gestao.html',
-        'VISUALIZACAO': '../home-visualizacao.html'
-    };
-    const homePage = homeMap[dadosSessao.perfil] || '../login.html';
-    window.location.href = homePage;
+    try {
+        let perfil = 'GESTAO';
+        
+        if (typeof authService !== 'undefined' && authService) {
+            const user = authService.getUserData();
+            if (user && user.perfil) {
+                perfil = user.perfil;
+            }
+        }
+        
+        console.log(`📝 Perfil detectado: ${perfil}`);
+        
+        const homeMap = {
+            'OPERACIONAL': '../home-operacional.html',
+            'GESTAO': '../home-gestao.html',
+            'VISUALIZACAO': '../home-visualizacao.html'
+        };
+        
+        const homePage = homeMap[perfil] || '../home-gestao.html';
+        
+        console.log(`🔀 Navegando para: ${homePage}`);
+        window.location.href = homePage;
+        
+    } catch (error) {
+        console.error('❌ Erro ao redirecionar:', error);
+        window.location.href = '../home-gestao.html';
+    }
 }
 
 window.redirecionarParaHome = redirecionarParaHome;
+
+// ============================================
+// TOAST DE NOTIFICAÇÃO
+// ============================================
 
 function mostrarToast(mensagem, tipo = 'info') {
     const toastExistente = document.querySelector('.toast-notificacao');
@@ -721,7 +756,8 @@ function controlarBotoesNavegacao() {
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Inicializando Controles DCMD - Painel...');
     
-    const sessao = carregarDatosUsuario();
+    // 🔥 CORRIGIDO: usar carregarDadosUsuario (com "Dados") em vez de carregarDatosUsuario
+    const sessao = carregarDadosUsuario();
     if (!sessao) return;
     
     const params = new URLSearchParams(window.location.search);
