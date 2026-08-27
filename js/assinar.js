@@ -12,29 +12,39 @@ const R2_PROXY_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/upload
 const R2_PUBLIC_URL = 'https://pub-8c9c377ceaa648c2ad535ea1abba45f8.r2.dev';
 
 // ============================================
-// FUNÇÃO PARA VERIFICAR SESSÃO
+// 🔥 FUNÇÃO PARA VERIFICAR SESSÃO (NOVA VERSÃO)
 // ============================================
 
 function verificarSessaoAssinatura() {
-    const sessao = sessionStorage.getItem('sessaoSICGM');
-    if (!sessao) {
-        alert('⚠️ Sua sessão expirou. Faça login novamente.');
+    // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
+    if (typeof authService === 'undefined' || !authService) {
+        console.error('❌ authService não disponível');
+        alert('⚠️ Sessão inválida. Faça login novamente.');
         window.location.href = '../login.html';
         return false;
     }
-    
-    try {
-        const dados = JSON.parse(sessao);
-        console.log('✅ Sessão válida para:', dados.nome);
-        return true;
-    } catch (e) {
+
+    if (!authService.isLoggedIn()) {
+        console.error('❌ Usuário não logado');
+        alert('⚠️ Sessão expirou. Faça login novamente.');
         window.location.href = '../login.html';
         return false;
     }
+
+    const user = authService.getUserData();
+    if (!user) {
+        console.error('❌ Dados do usuário não encontrados');
+        alert('⚠️ Sessão inválida. Faça login novamente.');
+        window.location.href = '../login.html';
+        return false;
+    }
+
+    console.log('✅ Sessão válida para:', user.nome);
+    return true;
 }
 
 // ============================================
-// FUNÇÃO PARA UPLOAD VIA API PROXY (CORRIGIDA)
+// FUNÇÃO PARA UPLOAD VIA API PROXY
 // ============================================
 
 async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
@@ -101,6 +111,7 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Inicializando página de assinatura...');
     
+    // 🔥 USAR A NOVA VERIFICAÇÃO
     if (!verificarSessaoAssinatura()) return;
     
     const params = new URLSearchParams(window.location.search);

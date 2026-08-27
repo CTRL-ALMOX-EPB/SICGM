@@ -4,6 +4,57 @@
 
 console.log('🚀 dashboards-farol-obras.js carregado!');
 
+// ============================================
+// 🔥 GET SESSÃO (NOVA VERSÃO - USANDO authService)
+// ============================================
+
+function getSessao() {
+    console.log('🔍 Verificando autenticação...');
+    
+    if (typeof authService === 'undefined' || !authService) {
+        console.error('❌ authService não disponível');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    if (!authService.isLoggedIn()) {
+        console.error('❌ Usuário não logado');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    const user = authService.getUserData();
+    if (!user) {
+        console.error('❌ Dados do usuário não encontrados');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    console.log(`✅ Sessão válida: ${user.nome} (${user.perfil})`);
+    return {
+        nome: user.nome,
+        matricula: user.matricula,
+        perfil: user.perfil,
+        timestamp: Date.now()
+    };
+}
+
+function redirecionarParaHome() {
+    const sessao = getSessao();
+    if (sessao) {
+        const homeMap = {
+            'OPERACIONAL': '../home-operacional.html',
+            'GESTAO': '../home-gestao.html',
+            'VISUALIZACAO': '../home-visualizacao.html'
+        };
+        const homePage = homeMap[sessao.perfil] || '../index.html';
+        console.log('🏠 Redirecionando para:', homePage);
+        window.location.href = homePage;
+    } else {
+        window.location.href = '../index.html';
+    }
+}
+
 let dadosCompletos = [];
 let dadosFiltrados = [];
 let dadosExibidos = [];
@@ -455,7 +506,6 @@ function renderizarDashboard(obras) {
     }
     
     if (abaAtual === 'obras') {
-        // REMOVIDO O FILTRO - Agora usa TODAS as obras, não apenas pendentes
         renderizarKPIsObras(obras, obras);
         renderizarListaObras(obras);
         renderizarGraficosObras(obras);
@@ -482,14 +532,13 @@ function renderizarDashboard(obras) {
 }
 
 // ============================================
-// KPIs - OBRAS (AGORA COM TODAS AS OBRAS)
+// KPIs - OBRAS
 // ============================================
 
 function renderizarKPIsObras(obras, todasObras) {
     const container = document.getElementById('kpiGrid');
     if (!container) return;
     
-    // Usa TODAS as obras, não apenas as pendentes
     const total = obras.length;
     const canceladas = obras.filter(o => o.cancelada === 'SIM').length;
     const comAditivo = obras.filter(o => o.aditivo === 'SIM').length;
@@ -507,7 +556,6 @@ function renderizarKPIsObras(obras, todasObras) {
         if (o.separador) separadores.add(o.separador);
     });
     
-    // Conta finalizadas
     const finalizadas = obras.filter(o => o.status === 'FINALIZADO').length;
     
     const isFilterActive = (tipo, valor) => {
@@ -748,7 +796,7 @@ function selecionarSeparador(nome) {
 }
 
 // ============================================
-// DETALHES DA OBRA (COM SELETOR DE SAÍDAS)
+// DETALHES DA OBRA
 // ============================================
 
 function renderizarDetalhesObra(saidas) {
@@ -964,13 +1012,12 @@ function renderizarDetalhesSeparador(separador) {
 }
 
 // ============================================
-// GRÁFICOS - OBRAS (COM TODAS AS OBRAS)
+// GRÁFICOS - OBRAS
 // ============================================
 
 function renderizarGraficosObras(obras) {
     console.log('📊 Renderizando gráficos de obras...');
     
-    // Usa TODAS as obras, não apenas pendentes
     const total = obras.length || 1;
     
     const categorias = {

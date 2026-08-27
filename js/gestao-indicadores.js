@@ -9,6 +9,45 @@ let graficoLogin = null;
 let graficoMes = null;
 
 // ============================================
+// 🔥 VERIFICAR AUTENTICAÇÃO
+// ============================================
+
+function verificarAutenticacaoGestao() {
+    console.log('🔍 Verificando autenticação...');
+    
+    if (typeof authService === 'undefined' || !authService) {
+        console.error('❌ authService não disponível');
+        alert('🔒 Sessão inválida. Faça login novamente.');
+        window.location.href = '../login.html';
+        return false;
+    }
+
+    if (!authService.isLoggedIn()) {
+        console.error('❌ Usuário não logado');
+        alert('🔒 Sessão expirada. Faça login novamente.');
+        window.location.href = '../login.html';
+        return false;
+    }
+
+    const user = authService.getUserData();
+    if (!user) {
+        console.error('❌ Dados do usuário não encontrados');
+        window.location.href = '../login.html';
+        return false;
+    }
+
+    if (user.perfil !== 'GESTAO') {
+        console.error(`❌ Perfil ${user.perfil} não autorizado`);
+        alert('🔒 Acesso restrito ao perfil GESTÃO.');
+        window.location.href = '../home-gestao.html';
+        return false;
+    }
+
+    console.log(`✅ Autenticado: ${user.nome} (${user.perfil})`);
+    return true;
+}
+
+// ============================================
 // 1. Buscar dados consolidados do Worker
 // ============================================
 async function buscarDadosConsolidados(deposito = '1050') {
@@ -119,7 +158,6 @@ function aplicarFiltros() {
         });
     }
     
-    // Totais
     const totalRMA = dadosFiltrados.filter(d => d.tipo === 'RMA').reduce((acc, d) => acc + d.valor_abs, 0);
     const totalDMA = dadosFiltrados.filter(d => d.tipo === 'DMA').reduce((acc, d) => acc + d.valor_abs, 0);
     const saldo = totalRMA - totalDMA;
@@ -255,12 +293,8 @@ function gerarGraficoMes(dados) {
 // Inicialização
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    const sessao = typeof verificarSessao !== 'undefined' ? verificarSessao() : null;
-    if (!sessao || sessao.perfil !== 'GESTAO') {
-        alert('Acesso restrito ao perfil GESTÃO.');
-        window.location.href = '/home-gestao.html';
-        return;
-    }
+    // 🔥 VERIFICAR AUTENTICAÇÃO PRIMEIRO
+    if (!verificarAutenticacaoGestao()) return;
     carregarDados();
 });
 

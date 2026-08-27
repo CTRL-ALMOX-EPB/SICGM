@@ -8,15 +8,48 @@
     console.log('🚀 Estrutura do Setor - Planner iniciando...');
 
     // ============================================
+    // 🔥 VERIFICAR AUTENTICAÇÃO
+    // ============================================
+    
+    function verificarAutenticacao() {
+        console.log('🔍 Verificando autenticação...');
+        
+        if (typeof authService === 'undefined' || !authService) {
+            console.error('❌ authService não disponível');
+            window.location.href = '../login.html';
+            return false;
+        }
+
+        if (!authService.isLoggedIn()) {
+            console.error('❌ Usuário não logado');
+            window.location.href = '../login.html';
+            return false;
+        }
+
+        const user = authService.getUserData();
+        if (!user) {
+            console.error('❌ Dados do usuário não encontrados');
+            window.location.href = '../login.html';
+            return false;
+        }
+
+        if (user.perfil !== 'GESTAO') {
+            console.error(`❌ Perfil ${user.perfil} não autorizado`);
+            alert('🔒 Acesso restrito ao perfil GESTÃO.');
+            window.location.href = '../home-gestao.html';
+            return false;
+        }
+
+        console.log(`✅ Autenticado: ${user.nome} (${user.perfil})`);
+        return true;
+    }
+
+    // ============================================
     // FUNÇÃO PARA VOLTAR - USANDO CAMINHO RELATIVO
     // ============================================
     
     function voltarParaHome() {
         console.log('🔙 Voltando para Home...');
-        
-        // CAMINHO RELATIVO - sobe um nível e vai para home-gestao.html
-        // Como estamos em /gestao/estrutura-setor.html
-        // Precisamos subir um nível: ../home-gestao.html
         window.location.href = '../home-gestao.html';
     }
 
@@ -33,11 +66,9 @@
 
         console.log('🔧 Configurando botão Voltar...');
 
-        // Remove qualquer listener antigo
         const newBtn = btnVoltar.cloneNode(true);
         btnVoltar.parentNode.replaceChild(newBtn, btnVoltar);
 
-        // Adiciona o listener
         newBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -55,19 +86,16 @@
     function initPlanner() {
         console.log('🔄 Inicializando Planner...');
         
-        // Elementos
         const iframe = document.getElementById('miroPlanner');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const statusIndicator = document.getElementById('statusIndicator');
         const statusTime = document.getElementById('statusTime');
         const container = document.querySelector('.planner-container');
 
-        // Estado
         let reconnectAttempts = 0;
         const MAX_RECONNECT_ATTEMPTS = 3;
         const HEARTBEAT_INTERVAL = 30000;
 
-        // Setup dos listeners do iframe
         function setupIframeListeners() {
             iframe.addEventListener('load', function() {
                 hideLoading();
@@ -82,7 +110,6 @@
             });
         }
 
-        // Esconde overlay de loading
         function hideLoading() {
             if (loadingOverlay) {
                 loadingOverlay.classList.add('hidden');
@@ -92,7 +119,6 @@
             }
         }
 
-        // Mostra overlay de loading
         function showLoading() {
             if (loadingOverlay) {
                 loadingOverlay.style.display = 'flex';
@@ -101,7 +127,6 @@
             }
         }
 
-        // Atualiza status
         function updateStatus(type, message) {
             if (!statusIndicator) return;
             
@@ -116,7 +141,6 @@
             }
         }
 
-        // Atualiza timestamp
         function updateTimestamp() {
             if (!statusTime) return;
             
@@ -132,7 +156,6 @@
             statusTime.textContent = 'Última atualização: ' + now.toLocaleDateString('pt-BR', options);
         }
 
-        // Verifica conexão
         function checkConnection() {
             if (!statusIndicator) return;
             
@@ -148,7 +171,6 @@
             updateTimestamp();
         }
 
-        // Handle erro de conexão
         function handleConnectionError() {
             updateStatus('offline', 'Desconectado');
             if (loadingOverlay) {
@@ -156,7 +178,6 @@
             }
         }
 
-        // Heartbeat
         function startHeartbeat() {
             setInterval(() => {
                 if (document.hidden) return;
@@ -168,7 +189,6 @@
             }, HEARTBEAT_INTERVAL);
         }
 
-        // FUNÇÃO DE ATUALIZAR
         function atualizarPlanner() {
             console.log('🔄 Atualizando planner...');
             showLoading();
@@ -186,7 +206,6 @@
             updateTimestamp();
         }
 
-        // Função de Tela Cheia
         function toggleFullscreen() {
             console.log('⛶ Alternando tela cheia...');
             if (!document.fullscreenElement) {
@@ -212,8 +231,6 @@
             }
         }
 
-        // CONFIGURAÇÃO DOS BOTÕES
-        // Botão Atualizar
         const btnAtualizar = document.querySelector('.btn-atualizar');
         if (btnAtualizar) {
             const newAtualizar = btnAtualizar.cloneNode(true);
@@ -226,7 +243,6 @@
             console.log('✅ Botão Atualizar configurado');
         }
 
-        // Botão Tela Cheia
         const btnTelaCheia = document.querySelector('.btn-tela-cheia');
         if (btnTelaCheia) {
             const newTelaCheia = btnTelaCheia.cloneNode(true);
@@ -239,17 +255,14 @@
             console.log('✅ Botão Tela Cheia configurado');
         }
 
-        // Inicializa
         setupIframeListeners();
         updateTimestamp();
         startHeartbeat();
         
-        // Esconde loading após 5 segundos
         setTimeout(() => {
             hideLoading();
         }, 5000);
 
-        // Verifica conexão periodicamente
         setInterval(checkConnection, HEARTBEAT_INTERVAL);
 
         console.log('✅ Planner inicializado com sucesso!');
@@ -262,11 +275,14 @@
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
             console.log('📄 DOM carregado, iniciando...');
+            // 🔥 VERIFICAR AUTENTICAÇÃO PRIMEIRO
+            if (!verificarAutenticacao()) return;
             setupVoltarButton();
             initPlanner();
         });
     } else {
         console.log('📄 DOM já carregado, iniciando...');
+        if (!verificarAutenticacao()) return;
         setupVoltarButton();
         initPlanner();
     }

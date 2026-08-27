@@ -65,27 +65,66 @@ let abortController = null;
 let ordenacaoAtual = 'data_desc';
 
 // ============================================
-// FUNÇÕES DE UTILIDADE
+// 🔥 FUNÇÕES DE AUTENTICAÇÃO (NOVA VERSÃO)
 // ============================================
 
-function redirecionarParaHome() {
-    const sessao = sessionStorage.getItem('sessaoSICGM');
-    if (sessao) {
-        try {
-            const dados = JSON.parse(sessao);
-            const homeMap = {
-                'OPERACIONAL': '../home-operacional.html',
-                'GESTAO': '../home-gestao.html',
-                'VISUALIZACAO': '../home-visualizacao.html'
-            };
-            const homePage = homeMap[dados.perfil] || '../index.html';
-            window.location.href = homePage;
-        } catch (e) {
-            window.location.href = '../index.html';
-        }
-    } else {
-        window.location.href = '../index.html';
+function carregarDadosUsuario() {
+    // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
+    if (typeof authService === 'undefined' || !authService) {
+        console.error('❌ authService não disponível');
+        window.location.href = '../login.html';
+        return null;
     }
+
+    if (!authService.isLoggedIn()) {
+        console.error('❌ Usuário não logado');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    const user = authService.getUserData();
+    if (!user) {
+        console.error('❌ Dados do usuário não encontrados');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    dadosSessao = {
+        nome: user.nome,
+        matricula: user.matricula,
+        perfil: user.perfil,
+        timestamp: Date.now()
+    };
+    
+    perfilUsuario = user.perfil || 'OPERACIONAL';
+
+    const userNameEl = document.getElementById('userName');
+    const userRoleEl = document.getElementById('userRole');
+    const userMatriculaEl = document.getElementById('userMatricula');
+    const userAvatarEl = document.getElementById('userAvatar');
+    
+    if (userNameEl) userNameEl.textContent = user.nome || 'Usuário';
+    if (userRoleEl) userRoleEl.textContent = user.perfil || 'OPERACIONAL';
+    if (userMatriculaEl) userMatriculaEl.textContent = `Matrícula: ${user.matricula || '---'}`;
+    if (userAvatarEl) userAvatarEl.textContent = (user.nome || 'U')[0].toUpperCase();
+    
+    console.log(`✅ Usuário autenticado: ${user.nome} (${user.perfil})`);
+    return dadosSessao;
+}
+
+function redirecionarParaHome() {
+    if (!dadosSessao) {
+        window.location.href = '../login.html';
+        return;
+    }
+    
+    const homeMap = {
+        'OPERACIONAL': '../home-operacional.html',
+        'GESTAO': '../home-gestao.html',
+        'VISUALIZACAO': '../home-visualizacao.html'
+    };
+    const homePage = homeMap[dadosSessao.perfil] || '../login.html';
+    window.location.href = homePage;
 }
 
 window.redirecionarParaHome = redirecionarParaHome;
@@ -137,44 +176,6 @@ function mostrarToast(mensagem, tipo = 'info') {
         toast.style.transform = 'translateX(120%)';
         setTimeout(() => { if (toast.parentNode) toast.remove(); }, 400);
     }, 4000);
-}
-
-function carregarDadosUsuario() {
-    const sessao = sessionStorage.getItem('sessaoSICGM');
-    if (!sessao) {
-        window.location.href = '../login.html';
-        return null;
-    }
-    
-    try {
-        dadosSessao = JSON.parse(sessao);
-        perfilUsuario = dadosSessao.perfil || 'OPERACIONAL';
-        
-        const timestamp = dadosSessao.timestamp || 0;
-        const agora = Date.now();
-        const oitoHoras = 8 * 60 * 60 * 1000;
-        
-        if (agora - timestamp > oitoHoras) {
-            sessionStorage.removeItem('sessaoSICGM');
-            window.location.href = '../login.html';
-            return null;
-        }
-        
-        const userNameEl = document.getElementById('userName');
-        const userRoleEl = document.getElementById('userRole');
-        const userMatriculaEl = document.getElementById('userMatricula');
-        const userAvatarEl = document.getElementById('userAvatar');
-        
-        if (userNameEl) userNameEl.textContent = dadosSessao.nome || 'Usuário';
-        if (userRoleEl) userRoleEl.textContent = dadosSessao.perfil || 'OPERACIONAL';
-        if (userMatriculaEl) userMatriculaEl.textContent = `Matrícula: ${dadosSessao.matricula || '---'}`;
-        if (userAvatarEl) userAvatarEl.textContent = (dadosSessao.nome || 'U')[0].toUpperCase();
-        
-        return dadosSessao;
-    } catch (e) {
-        window.location.href = '../login.html';
-        return null;
-    }
 }
 
 // ============================================
@@ -242,7 +243,7 @@ function aplicarOrdenacao() {
 window.aplicarOrdenacao = aplicarOrdenacao;
 
 // ============================================
-// CRIAR NOVO CONTROLE (COM FOCAR OBRA)
+// CRIAR NOVO CONTROLE
 // ============================================
 
 async function criarNovoControle() {
@@ -311,7 +312,6 @@ async function criarNovoControle() {
         
         mostrarToast(`✅ ${tipoInfo.icon} #${String(numero).padStart(4, '0')} criado com sucesso!`, 'sucesso');
         
-        // Redireciona para o formulário criado com um parâmetro para focar no campo obra
         setTimeout(() => {
             window.location.href = `formulario.html?numero=${numero}&tipo=${tipoAtual}&focarObra=true`;
         }, 500);
@@ -721,7 +721,7 @@ function controlarBotoesNavegacao() {
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Inicializando Controles DCMD - Painel...');
     
-    const sessao = carregarDadosUsuario();
+    const sessao = carregarDatosUsuario();
     if (!sessao) return;
     
     const params = new URLSearchParams(window.location.search);

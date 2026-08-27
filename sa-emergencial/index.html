@@ -69,8 +69,21 @@
         </div>
     </div>
 
+    <!-- ============================================ -->
+    <!-- 🔥 FIREBASE SDK                              -->
+    <!-- ============================================ -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <!-- ============================================ -->
+    <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
+    <!-- ============================================ -->
+    <script src="js/firebase-config.js"></script>   <!-- 1. Configura o Firebase -->
+    <script src="js/auth-service.js"></script>      <!-- 2. Cria o authService -->
+    <script src="js/auth-global.js"></script>       <!-- 3. Verifica sessão na página -->
+    <script src="js/auth-helper.js"></script>       <!-- 4. 🔥 FUNÇÕES AUXILIARES -->
+    <script src="js/script.js"></script>            <!-- 5. Funções globais -->
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
-    <script src="../js/script.js"></script>
     <script src="../js/sa-emergencial.js"></script>
 </body>
 </html>

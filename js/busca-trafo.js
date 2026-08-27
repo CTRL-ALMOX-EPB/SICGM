@@ -1,4 +1,6 @@
-// js/busca-trafo.js
+// ============================================
+// BUSCA-TRAFO.JS - COM AUTENTICAÇÃO
+// ============================================
 
 // URL da sua API no Cloudflare
 const API_URL = 'https://busca-trafo-worker.alefe-gomes-72f.workers.dev';
@@ -6,6 +8,7 @@ const API_URL = 'https://busca-trafo-worker.alefe-gomes-72f.workers.dev';
 let currentFilters = {};
 let currentData = [];
 let currentSort = { field: 'codigo', direction: 'asc' };
+let usuarioLogado = null;
 
 const statusMap = {
     'Estoque': 'estoque',
@@ -15,13 +18,42 @@ const statusMap = {
 };
 
 // ============================================
+// 🔥 VERIFICAR AUTENTICAÇÃO
+// ============================================
+
+function verificarAutenticacao() {
+    // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
+    if (typeof authService === 'undefined' || !authService) {
+        console.error('❌ authService não disponível');
+        window.location.href = 'login.html';
+        return false;
+    }
+
+    if (!authService.isLoggedIn()) {
+        console.error('❌ Usuário não logado');
+        window.location.href = 'login.html';
+        return false;
+    }
+
+    const user = authService.getUserData();
+    if (!user) {
+        console.error('❌ Dados do usuário não encontrados');
+        window.location.href = 'login.html';
+        return false;
+    }
+
+    usuarioLogado = user;
+    console.log(`✅ Usuário autenticado: ${user.nome} (${user.perfil})`);
+    return true;
+}
+
+// ============================================
 // ORDENAÇÃO
 // ============================================
 function ordenarPor(campo) {
     const th = document.querySelector(`th[data-sort="${campo}"]`);
     if (!th) return;
 
-    // Alterna direção se for o mesmo campo
     if (currentSort.field === campo) {
         currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
     } else {
@@ -29,15 +61,12 @@ function ordenarPor(campo) {
         currentSort.direction = 'asc';
     }
 
-    // Remove classes de ordenação de todos os th
     document.querySelectorAll('th.sortable').forEach(el => {
         el.classList.remove('sorted-asc', 'sorted-desc');
     });
 
-    // Adiciona classe ao th atual
     th.classList.add(currentSort.direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
 
-    // Aplica ordenação
     aplicarOrdenacao();
 }
 
@@ -84,7 +113,6 @@ function aplicarOrdenacao() {
                 return 0;
         }
 
-        // Comparação
         if (valA < valB) return direction === 'asc' ? -1 : 1;
         if (valA > valB) return direction === 'asc' ? 1 : -1;
         return 0;
@@ -211,12 +239,10 @@ function limparFiltros() {
     
     currentSort = { field: 'codigo', direction: 'asc' };
     
-    // Remove classes de ordenação
     document.querySelectorAll('th.sortable').forEach(el => {
         el.classList.remove('sorted-asc', 'sorted-desc');
     });
     
-    // Adiciona classe ao primeiro th
     const primeiroTh = document.querySelector('th[data-sort="codigo"]');
     if (primeiroTh) primeiroTh.classList.add('sorted-asc');
     
@@ -245,7 +271,6 @@ function configurarEventos() {
             dataFim: dataFim
         };
         
-        // Aplica ordenação selecionada
         const ordenacao = document.getElementById('filtroOrdenacao').value;
         switch(ordenacao) {
             case 'codigo':
@@ -276,7 +301,6 @@ function configurarEventos() {
                 currentSort = { field: 'codigo', direction: 'asc' };
         }
         
-        // Atualiza classes de ordenação nos cabeçalhos
         document.querySelectorAll('th.sortable').forEach(el => {
             el.classList.remove('sorted-asc', 'sorted-desc');
         });
@@ -290,7 +314,6 @@ function configurarEventos() {
 
     btnLimpar.addEventListener('click', limparFiltros);
 
-    // Enter nos inputs
     document.querySelectorAll('.filtro-item input').forEach(input => {
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -304,9 +327,11 @@ function configurarEventos() {
 // INICIAR APLICAÇÃO
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
+    // 🔥 VERIFICAR AUTENTICAÇÃO PRIMEIRO
+    if (!verificarAutenticacao()) return;
+    
     configurarEventos();
     
-    // Ordenação padrão: código ascendente
     currentSort = { field: 'codigo', direction: 'asc' };
     const primeiroTh = document.querySelector('th[data-sort="codigo"]');
     if (primeiroTh) primeiroTh.classList.add('sorted-asc');

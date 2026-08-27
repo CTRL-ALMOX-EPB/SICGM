@@ -4,6 +4,57 @@
 
 console.log('🚀 dashboards-pendencia-devolucao.js carregado!');
 
+// ============================================
+// 🔥 GET SESSÃO (NOVA VERSÃO - USANDO authService)
+// ============================================
+
+function getSessao() {
+    console.log('🔍 Verificando autenticação...');
+    
+    if (typeof authService === 'undefined' || !authService) {
+        console.error('❌ authService não disponível');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    if (!authService.isLoggedIn()) {
+        console.error('❌ Usuário não logado');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    const user = authService.getUserData();
+    if (!user) {
+        console.error('❌ Dados do usuário não encontrados');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    console.log(`✅ Sessão válida: ${user.nome} (${user.perfil})`);
+    return {
+        nome: user.nome,
+        matricula: user.matricula,
+        perfil: user.perfil,
+        timestamp: Date.now()
+    };
+}
+
+function redirecionarParaHome() {
+    const sessao = getSessao();
+    if (sessao) {
+        const homeMap = {
+            'OPERACIONAL': '../home-operacional.html',
+            'GESTAO': '../home-gestao.html',
+            'VISUALIZACAO': '../home-visualizacao.html'
+        };
+        const homePage = homeMap[sessao.perfil] || '../index.html';
+        console.log('🏠 Redirecionando para:', homePage);
+        window.location.href = homePage;
+    } else {
+        window.location.href = '../index.html';
+    }
+}
+
 let dadosCompletos = [];
 let dadosFiltrados = [];
 let itemSelecionado = null;

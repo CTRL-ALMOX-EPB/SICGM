@@ -48,27 +48,25 @@ const DADOS_FALLBACK = {
 };
 
 // ============================================
-// FUNÇÃO DE VOLTAR PARA HOME - CORRIGIDA DEFINITIVAMENTE
+// FUNÇÃO DE VOLTAR PARA HOME - CORRIGIDA
 // ============================================
 
 function redirecionarParaHome() {
     console.log('🏠 Redirecionando para home...');
     
     try {
-        // Obtém o perfil da sessão diretamente
+        // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
         let perfil = 'GESTAO';
-        try {
-            const sessaoStr = sessionStorage.getItem('sessaoSICGM');
-            if (sessaoStr) {
-                const sessao = JSON.parse(sessaoStr);
-                perfil = sessao.perfil || 'GESTAO';
-                console.log(`📝 Perfil detectado: ${perfil}`);
+        
+        if (typeof authService !== 'undefined' && authService) {
+            const user = authService.getUserData();
+            if (user && user.perfil) {
+                perfil = user.perfil;
             }
-        } catch (e) {
-            console.warn('⚠️ Erro ao ler sessão:', e);
         }
         
-        // Mapeamento de perfis
+        console.log(`📝 Perfil detectado: ${perfil}`);
+        
         const homeMap = {
             'OPERACIONAL': 'home-operacional.html',
             'GESTAO': 'home-gestao.html',
@@ -76,9 +74,6 @@ function redirecionarParaHome() {
         };
         
         const homePage = homeMap[perfil] || 'home-gestao.html';
-        
-        // CONSTRÓI O CAMINHO CORRETO
-        // Estamos em /processos/, então precisamos voltar uma pasta
         const url = `../${homePage}`;
         
         console.log(`🔀 Navegando para: ${url}`);
@@ -86,7 +81,6 @@ function redirecionarParaHome() {
         
     } catch (error) {
         console.error('❌ Erro ao redirecionar:', error);
-        // Fallback direto
         window.location.href = '../home-gestao.html';
     }
 }
@@ -204,7 +198,6 @@ function renderizarPassoAPasso(processo, index) {
             textColor = 'white';
         }
         
-        // Extrai apenas o número para exibir no círculo
         const numero = e.titulo.match(/\d+/)?.[0] || (idx + 1);
         
         html += `
@@ -400,11 +393,40 @@ window.carregarProcessos = carregarProcessos;
 window.renderizarProcessos = renderizarProcessos;
 
 // ============================================
-// INICIALIZAÇÃO
+// 🔥 INICIALIZAÇÃO (CORRIGIDA)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Inicializando página de processos...');
+    
+    // 🔥 VERIFICAR AUTENTICAÇÃO PRIMEIRO
+    if (typeof authService === 'undefined' || !authService) {
+        console.error('❌ authService não disponível');
+        window.location.href = '../login.html';
+        return;
+    }
+
+    if (!authService.isLoggedIn()) {
+        console.error('❌ Usuário não logado');
+        window.location.href = '../login.html';
+        return;
+    }
+
+    const user = authService.getUserData();
+    if (!user) {
+        console.error('❌ Dados do usuário não encontrados');
+        window.location.href = '../login.html';
+        return;
+    }
+
+    if (user.perfil !== 'GESTAO') {
+        console.error(`❌ Perfil ${user.perfil} não autorizado`);
+        alert('🔒 Acesso restrito a usuários de gestão.');
+        redirecionarParaHome();
+        return;
+    }
+
+    console.log(`✅ Autenticado: ${user.nome} (${user.perfil})`);
     
     const loadingOverlay = document.getElementById('loadingOverlay');
     const content = document.getElementById('processosContent');
@@ -413,18 +435,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadingOverlay.classList.add('active');
     content.style.display = 'none';
     
-    const sessao = window.verificarSessao();
-    if (!sessao) {
-        window.location.href = '../login.html';
-        return;
-    }
-
-    if (sessao.perfil !== 'GESTAO') {
-        alert('Acesso restrito a usuários de gestão.');
-        redirecionarParaHome();
-        return;
-    }
-
     const urlParams = new URLSearchParams(window.location.search);
     const depto = urlParams.get('depto') || 'DCMD';
 

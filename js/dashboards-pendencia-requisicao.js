@@ -4,6 +4,57 @@
 
 console.log('🚀 dashboards-pendencia-requisicao.js carregado!');
 
+// ============================================
+// 🔥 GET SESSÃO (NOVA VERSÃO - USANDO authService)
+// ============================================
+
+function getSessao() {
+    console.log('🔍 Verificando autenticação...');
+    
+    if (typeof authService === 'undefined' || !authService) {
+        console.error('❌ authService não disponível');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    if (!authService.isLoggedIn()) {
+        console.error('❌ Usuário não logado');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    const user = authService.getUserData();
+    if (!user) {
+        console.error('❌ Dados do usuário não encontrados');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    console.log(`✅ Sessão válida: ${user.nome} (${user.perfil})`);
+    return {
+        nome: user.nome,
+        matricula: user.matricula,
+        perfil: user.perfil,
+        timestamp: Date.now()
+    };
+}
+
+function redirecionarParaHome() {
+    const sessao = getSessao();
+    if (sessao) {
+        const homeMap = {
+            'OPERACIONAL': '../home-operacional.html',
+            'GESTAO': '../home-gestao.html',
+            'VISUALIZACAO': '../home-visualizacao.html'
+        };
+        const homePage = homeMap[sessao.perfil] || '../index.html';
+        console.log('🏠 Redirecionando para:', homePage);
+        window.location.href = homePage;
+    } else {
+        window.location.href = '../index.html';
+    }
+}
+
 // URLs R2 - Usando binding do Worker (via proxy)
 const ARQUIVOS_R2 = {
     movimentosSiago: `${API_URL}/proxy/movimentos-siago`,
@@ -106,7 +157,7 @@ function formatarObra(obra) {
 }
 
 // ============================================
-// FUNÇÃO: OBTER MÊS DA DATA (CORRIGIDA - FUSO HORÁRIO)
+// FUNÇÃO: OBTER MÊS DA DATA
 // ============================================
 
 function getMesAno(dataString) {
@@ -142,7 +193,7 @@ function formatarValor(valor) {
 }
 
 // ============================================
-// FUNÇÃO: FORMATAR DATA (CORRIGIDA - FUSO HORÁRIO)
+// FUNÇÃO: FORMATAR DATA
 // ============================================
 
 function formatarData(dataString) {
@@ -335,10 +386,6 @@ function parsearMovimentosSiago(texto) {
     return movimentos;
 }
 
-// ============================================
-// FUNÇÃO: PARSEAR DEVOLUÇÃO COMPILADA (CORRIGIDA - DATAS)
-// ============================================
-
 function parsearDevolucaoCompilada(texto) {
     console.log('🔄 Parseando devolucao_compilada.txt...');
     const linhas = texto.trim().split('\n');
@@ -442,10 +489,6 @@ function parsearDevolucaoCompilada(texto) {
     return itens;
 }
 
-// ============================================
-// FUNÇÃO: CONSOLIDAR PENDÊNCIAS MGM (CORRIGIDA - APENAS QTD. APLICADA)
-// ============================================
-
 function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanco, aditivosSistemicos) {
     console.log('🔄 Consolidando pendências MGM...');
     console.log(`📊 Devolução: ${devolucaoItens.length} itens`);
@@ -453,9 +496,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
     console.log(`📊 Movimentos Banco: ${movimentosBanco.length}`);
     console.log(`📊 Aditivos: ${aditivosSistemicos.length}`);
     
-    // ============================================
-    // CORREÇÃO: FILTRAR APENAS ITENS COM QTD. APLICADA > 0
-    // ============================================
     const itensComAplicada = devolucaoItens.filter(item => {
         const qtdAplicada = parseFloat(item.qtdAplicada) || 0;
         return qtdAplicada > 0;
@@ -468,9 +508,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
         return [];
     }
     
-    // ============================================
-    // PASSO 1: IDENTIFICAR DOCUMENTOS MÚLTIPLOS
-    // ============================================
     const documentosMultiplos = new Set();
     const documentosPorObraDocumento = {};
     
@@ -528,9 +565,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
         console.log(`📋 Códigos: ${Array.from(documentosMultiplos).join(', ')}`);
     }
     
-    // ============================================
-    // PASSO 2: MAPEAR MOVIMENTOS DO BANCO
-    // ============================================
     const movimentosPorDocumento = {};
     const movimentosPorObraData = {};
     
@@ -551,9 +585,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
         movimentosPorObraData[chave].push(m);
     });
     
-    // ============================================
-    // PASSO 3: MAPEAR ADITIVOS
-    // ============================================
     const aditivosPorDocumento = {};
     const aditivosPorObraData = {};
     
@@ -591,9 +622,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
     
     console.log(`📊 ${Object.keys(aditivosPorDocumento).length} documentos com aditivos`);
     
-    // ============================================
-    // PASSO 4: AGRUPAR DEVOLUÇÕES (APENAS QTD. APLICADA > 0)
-    // ============================================
     const gruposMultiplos = {};
     const gruposUnicos = {};
     
@@ -703,9 +731,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
         console.log(`✅ ${Object.keys(gruposMultiplos).length} grupos criados a partir de documentos múltiplos`);
     }
     
-    // ============================================
-    // PASSO 5: PROCESSAR MGM ÚNICA
-    // ============================================
     const pendencias = [];
     const itensRepresadosTemp = [];
     let totalRepresados = 0;
@@ -914,10 +939,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
             });
         }
     }
-    
-    // ============================================
-    // PASSO 6: PROCESSAR MGM MÚLTIPLA
-    // ============================================
     
     for (const chave in gruposMultiplos) {
         const grupo = gruposMultiplos[chave];
@@ -1191,10 +1212,6 @@ async function carregarDadosMGM() {
     }
 }
 
-// ============================================
-// FUNÇÃO: FILTRAR POR STATUS (KPI INTERATIVO)
-// ============================================
-
 function aplicarFiltroStatusMGM(status) {
     console.log(`🔍 Filtrando por status: ${status}`);
     
@@ -1223,10 +1240,6 @@ function aplicarFiltroStatusMGM(status) {
     
     renderizarDashboardMGM();
 }
-
-// ============================================
-// RENDERIZAÇÃO DO DASHBOARD MGM
-// ============================================
 
 function renderizarDashboardMGM() {
     console.log('🔄 Renderizando dashboard MGM...');
@@ -1383,10 +1396,6 @@ function renderizarKPIsMGM(pendencias) {
         </div>
     `;
 }
-
-// ============================================
-// FUNÇÃO: RENDERIZAR LISTA DE OBRAS MGM
-// ============================================
 
 function renderizarListaObrasMGM(pendencias) {
     const container = document.getElementById('itemListMGM');
@@ -1656,10 +1665,6 @@ function renderizarGraficosMGM(pendencias) {
     document.getElementById('valorChartMGM').innerHTML = htmlObras;
 }
 
-// ============================================
-// FUNÇÃO: SELECIONAR OBRA MGM
-// ============================================
-
 function selecionarObraMGM(obra) {
     console.log(`🔍 Selecionando obra MGM: ${obra}`);
     
@@ -1685,10 +1690,6 @@ function selecionarObraMGM(obra) {
     }
 }
 
-// ============================================
-// FUNÇÃO: SELECIONAR DATA NA OBRA
-// ============================================
-
 function selecionarDataObraMGM(obra, data) {
     console.log(`📅 Selecionando data ${data} da obra ${obra}`);
     
@@ -1702,10 +1703,6 @@ function selecionarDataObraMGM(obra, data) {
     
     renderizarDetalhesObraMGM(itemSelecionadoMGM);
 }
-
-// ============================================
-// FUNÇÃO: RENDERIZAR DETALHES DA OBRA MGM
-// ============================================
 
 function renderizarDetalhesObraMGM(itemSelecionado) {
     const container = document.getElementById('itemDetailsMGM');
@@ -2003,10 +2000,6 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
     container.innerHTML = html;
 }
 
-// ============================================
-// FUNÇÕES DE FILTRO MGM
-// ============================================
-
 function aplicarFiltrosMGM() {
     console.log('🔄 Aplicando filtros MGM...');
     const filtroStatus = document.getElementById('filterStatusMGM')?.value || 'todos';
@@ -2064,10 +2057,6 @@ function limparFiltrosMGM() {
     renderizarDashboardMGM();
 }
 
-// ============================================
-// FUNÇÕES DE TROCA DE ABA
-// ============================================
-
 function trocarAbaPrincipal(aba) {
     console.log(`🔄 Trocando para aba: ${aba}`);
     abaAtual = aba;
@@ -2095,10 +2084,6 @@ function trocarAbaPrincipal(aba) {
         }
     }
 }
-
-// ============================================
-// FUNÇÕES DO DASHBOARD ANTIGO (SEPARAÇÃO) - MANTIDAS
-// ============================================
 
 function criarMeses() {
     const container = document.getElementById('mesesContainer');

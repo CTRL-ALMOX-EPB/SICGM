@@ -5,39 +5,53 @@
 console.log('🚀 dashboards-index.js carregado!');
 
 // ============================================
-// CARREGAR INFORMAÇÕES DO USUÁRIO
+// 🔥 CARREGAR INFORMAÇÕES DO USUÁRIO (NOVA VERSÃO)
 // ============================================
 
 function carregarDadosUsuario() {
     try {
-        const sessao = sessionStorage.getItem('sessaoSICGM');
-        if (sessao) {
-            const dados = JSON.parse(sessao);
-            
-            // Atualiza o nome
-            const nomeEl = document.getElementById('userName');
-            if (nomeEl && dados.nome) {
-                nomeEl.textContent = dados.nome;
-            }
-            
-            // Atualiza a matrícula
-            const matriculaEl = document.getElementById('userMatricula');
-            if (matriculaEl && dados.matricula) {
-                matriculaEl.textContent = `Matrícula: ${dados.matricula}`;
-            }
-            
-            // Atualiza o perfil
-            const perfilEl = document.getElementById('userPerfil');
-            if (perfilEl && dados.perfil) {
-                perfilEl.textContent = dados.perfil;
-            }
-            
-            return dados;
+        // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
+        if (typeof authService === 'undefined' || !authService) {
+            console.warn('⚠️ authService não disponível');
+            return null;
         }
+
+        if (!authService.isLoggedIn()) {
+            console.warn('⚠️ Usuário não logado');
+            return null;
+        }
+
+        const user = authService.getUserData();
+        if (!user) {
+            console.warn('⚠️ Dados do usuário não encontrados');
+            return null;
+        }
+
+        // Atualiza o nome
+        const nomeEl = document.getElementById('userName');
+        if (nomeEl && user.nome) {
+            nomeEl.textContent = user.nome;
+        }
+        
+        // Atualiza a matrícula
+        const matriculaEl = document.getElementById('userMatricula');
+        if (matriculaEl && user.matricula) {
+            matriculaEl.textContent = `Matrícula: ${user.matricula}`;
+        }
+        
+        // Atualiza o perfil
+        const perfilEl = document.getElementById('userPerfil');
+        if (perfilEl && user.perfil) {
+            perfilEl.textContent = user.perfil;
+        }
+        
+        console.log(`✅ Usuário carregado: ${user.nome} (${user.perfil})`);
+        return user;
+        
     } catch (e) {
         console.warn('⚠️ Erro ao carregar dados do usuário:', e);
+        return null;
     }
-    return null;
 }
 
 // ============================================

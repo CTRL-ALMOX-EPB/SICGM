@@ -4,6 +4,57 @@
 
 console.log('🚀 dashboards-aditivos-sistemicos.js carregado!');
 
+// ============================================
+// 🔥 GET SESSÃO (NOVA VERSÃO - USANDO authService)
+// ============================================
+
+function getSessao() {
+    console.log('🔍 Verificando autenticação...');
+    
+    if (typeof authService === 'undefined' || !authService) {
+        console.error('❌ authService não disponível');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    if (!authService.isLoggedIn()) {
+        console.error('❌ Usuário não logado');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    const user = authService.getUserData();
+    if (!user) {
+        console.error('❌ Dados do usuário não encontrados');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    console.log(`✅ Sessão válida: ${user.nome} (${user.perfil})`);
+    return {
+        nome: user.nome,
+        matricula: user.matricula,
+        perfil: user.perfil,
+        timestamp: Date.now()
+    };
+}
+
+function redirecionarParaHome() {
+    const sessao = getSessao();
+    if (sessao) {
+        const homeMap = {
+            'OPERACIONAL': '../home-operacional.html',
+            'GESTAO': '../home-gestao.html',
+            'VISUALIZACAO': '../home-visualizacao.html'
+        };
+        const homePage = homeMap[sessao.perfil] || '../index.html';
+        console.log('🏠 Redirecionando para:', homePage);
+        window.location.href = homePage;
+    } else {
+        window.location.href = '../index.html';
+    }
+}
+
 // URL do Cloudflare R2
 const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
 
@@ -459,7 +510,7 @@ function limparFiltros() {
 }
 
 // ============================================
-// AGRUPAMENTO DE ITENS POR CÓDIGO (COUNT)
+// AGRUPAMENTO DE ITENS POR CÓDIGO
 // ============================================
 
 function agruparItensPorCodigo(controles) {
@@ -539,7 +590,7 @@ function agruparItensPorCodigo(controles) {
 }
 
 // ============================================
-// AGRUPAR POR OBRA (COUNT)
+// AGRUPAR POR OBRA
 // ============================================
 
 function agruparPorObra(controles) {
@@ -648,7 +699,7 @@ function renderizarDashboard(aditivos) {
 }
 
 // ============================================
-// KPIs - MATERIAIS (COUNT) - INTERATIVOS
+// KPIs - MATERIAIS
 // ============================================
 
 function renderizarKPIsMateriais(itensAgrupados) {
@@ -1089,15 +1140,13 @@ function getStatusBadge(status) {
 }
 
 // ============================================
-// GRÁFICOS - OCORRÊNCIAS E VALORES
+// GRÁFICOS
 // ============================================
 
 function renderizarGraficos(itensAgrupados) {
     console.log('📊 Renderizando gráficos de indicadores...');
     
-    // ============================================
-    // GRÁFICO 1: OCORRÊNCIAS POR STATUS
-    // ============================================
+    // Gráfico 1: Ocorrências por Status
     const statusCount = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     itensAgrupados.forEach(item => {
         Object.keys(statusCount).forEach(status => {
@@ -1155,9 +1204,7 @@ function renderizarGraficos(itensAgrupados) {
     
     document.getElementById('statusChart').innerHTML = htmlStatus;
     
-    // ============================================
-    // GRÁFICO 2: VALORES POR STATUS
-    // ============================================
+    // Gráfico 2: Valores por Status
     const valorStatus = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     itensAgrupados.forEach(item => {
         Object.keys(valorStatus).forEach(status => {

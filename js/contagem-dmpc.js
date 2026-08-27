@@ -43,39 +43,49 @@ if (document.getElementById('contagemForm')) {
     if (dataInput) dataInput.value = dataFormatada;
     
     // ============================================
-    // CARREGAR DADOS DO USUÁRIO DA SESSÃO
+    // CONTAGEM-DMPC.JS - PARTE CORRIGIDA
     // ============================================
-    
+
+    // ============================================
+    // 🔥 CARREGAR DADOS DO USUÁRIO (NOVA VERSÃO)
+    // ============================================
+
     function carregarDadosUsuarioSessao() {
         try {
-            const sessao = sessionStorage.getItem('sessaoSICGM');
-            
-            if (sessao) {
-                const dadosSessao = JSON.parse(sessao);
-                
-                const tempoDecorrido = Date.now() - dadosSessao.timestamp;
-                if (tempoDecorrido > 30 * 60 * 1000) {
-                    console.warn('⏰ Sessão expirada, redirecionando para login...');
-                    window.location.href = 'login.html';
-                    return false;
-                }
-                
-                document.getElementById('nome').value = dadosSessao.nome || '';
-                document.getElementById('matricula').value = dadosSessao.matricula || '';
-                
-                console.log('✅ Dados do usuário carregados da sessão:', dadosSessao.nome);
-                return true;
-            } else {
-                console.warn('⚠️ Sessão não encontrada, tentando carregar do arquivo...');
+            // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
+            if (typeof authService === 'undefined' || !authService) {
+                console.warn('⚠️ authService não disponível, tentando fallback...');
                 return carregarColaboradoresArquivo();
             }
+
+            if (!authService.isLoggedIn()) {
+                console.warn('⚠️ Usuário não logado, tentando fallback...');
+                return carregarColaboradoresArquivo();
+            }
+
+            const user = authService.getUserData();
+            if (!user) {
+                console.warn('⚠️ Dados do usuário não encontrados, tentando fallback...');
+                return carregarColaboradoresArquivo();
+            }
+
+            // Preencher campos com os dados do usuário
+            document.getElementById('nome').value = user.nome || '';
+            document.getElementById('matricula').value = user.matricula || '';
             
+            console.log('✅ Dados do usuário carregados do authService:', user.nome);
+            return true;
+
         } catch (error) {
             console.error('❌ Erro ao carregar dados da sessão:', error);
             return carregarColaboradoresArquivo();
         }
     }
-    
+
+    // ============================================
+    // FUNÇÃO DE FALLBACK (MANTIDA PARA COMPATIBILIDADE)
+    // ============================================
+
     async function carregarColaboradoresArquivo() {
         try {
             const response = await fetch('../data/colaboradores.txt');
@@ -119,7 +129,7 @@ if (document.getElementById('contagemForm')) {
             if (usuarioEncontrado) {
                 document.getElementById('nome').value = usuarioEncontrado.nome;
                 document.getElementById('matricula').value = usuarioEncontrado.matricula;
-                console.log('✅ Dados do usuário carregados do arquivo:', usuarioEncontrado.nome);
+                console.log('✅ Dados do usuário carregados do arquivo (fallback):', usuarioEncontrado.nome);
                 return true;
             } else {
                 document.getElementById('nome').removeAttribute('readonly');
@@ -135,6 +145,9 @@ if (document.getElementById('contagemForm')) {
             return false;
         }
     }
+
+// ✅ O RESTO DO ARQUIVO PERMANECE IGUAL
+// (renderizarMateriaisDMPC, buscarQuantidadeAnterior, calcularDiferenca, etc.)
     
     // ============================================
     // CARREGAR MATERIAIS DO ARQUIVO contagem-dmpc.txt

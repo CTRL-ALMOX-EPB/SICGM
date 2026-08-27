@@ -58,27 +58,63 @@ function getDataHoraBrasilString() {
 }
 
 // ============================================
+// 🔥 CARREGAR DADOS DO USUÁRIO (NOVA VERSÃO)
+// ============================================
+
+function carregarDadosUsuarioRelatorio() {
+    // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
+    if (typeof authService === 'undefined' || !authService) {
+        console.error('❌ authService não disponível');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    if (!authService.isLoggedIn()) {
+        console.error('❌ Usuário não logado');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    const user = authService.getUserData();
+    if (!user) {
+        console.error('❌ Dados do usuário não encontrados');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    const sessao = {
+        nome: user.nome,
+        matricula: user.matricula,
+        perfil: user.perfil,
+        timestamp: Date.now()
+    };
+    
+    perfilUsuario = user.perfil || 'OPERACIONAL';
+    
+    console.log(`✅ Usuário autenticado: ${user.nome} (${user.perfil})`);
+    return sessao;
+}
+
+// ============================================
 // FUNÇÃO PARA REDIRECIONAR PARA HOME
 // ============================================
 
 function redirecionarParaHome() {
-    const sessao = sessionStorage.getItem('sessaoSICGM');
-    if (sessao) {
-        try {
-            const dados = JSON.parse(sessao);
+    // 🔥 USAR authService
+    if (typeof authService !== 'undefined' && authService) {
+        const user = authService.getUserData();
+        if (user) {
             const homeMap = {
                 'OPERACIONAL': '../home-operacional.html',
                 'GESTAO': '../home-gestao.html',
                 'VISUALIZACAO': '../home-visualizacao.html'
             };
-            const homePage = homeMap[dados.perfil] || '../index.html';
+            const homePage = homeMap[user.perfil] || '../index.html';
             window.location.href = homePage;
-        } catch (e) {
-            window.location.href = '../index.html';
+            return;
         }
-    } else {
-        window.location.href = '../index.html';
     }
+    window.location.href = '../index.html';
 }
 
 window.redirecionarParaHome = redirecionarParaHome;
@@ -1055,9 +1091,6 @@ async function carregarRelatorios() {
         const config = DEPOSITOS_CONFIG[depositoAtual];
         mostrarToast(`✅ ${total} códigos encontrados (${contados} contados, ${total - contados} não contados) - ${config?.nome || depositoAtual}`, 'sucesso');
         
-        // ============================================
-        // CARREGA ESTOQUE MÍNIMO DO REPOSITÓRIO
-        // ============================================
         await carregarEstoqueMinimo();
         if (Object.keys(estoqueMinimoCache).length > 0) {
             const resultado = monitorarEstoqueMinimo(dadosProcessados);
@@ -1798,13 +1831,7 @@ function restaurarRelatorioAtual() {
 }
 
 // ============================================
-// ============================================
 // MONITORAMENTO DE ESTOQUE MÍNIMO
-// ============================================
-// ============================================
-
-// ============================================
-// CARREGAR ESTOQUE MÍNIMO DO REPOSITÓRIO (data/estoque-minimo.txt)
 // ============================================
 
 async function carregarEstoqueMinimo() {
@@ -1867,10 +1894,6 @@ async function carregarEstoqueMinimo() {
     }
 }
 
-// ============================================
-// CARREGAR LISTA DE EMAILS - BUCKET 2 (EMAILS)
-// ============================================
-
 async function carregarListaEmails() {
     try {
         console.log(`📧 Carregando lista de emails do bucket de emails...`);
@@ -1902,10 +1925,6 @@ async function carregarListaEmails() {
     }
 }
 
-// ============================================
-// MONITORAR ESTOQUE E GERAR ALERTAS - COM SEPARAÇÃO
-// ============================================
-
 function monitorarEstoqueMinimo(dados) {
     const itensAbaixoMinimo = [];
     const itensSemPrevisao = [];
@@ -1924,7 +1943,6 @@ function monitorarEstoqueMinimo(dados) {
         const codigo = item.codigo;
         const estoqueMinimo = estoqueMinimoCache[codigo];
         
-        // Se não tem estoque mínimo definido OU estoque_minimo = 0
         if (!estoqueMinimo || estoqueMinimo.estoque_minimo === 0) {
             itensSemPrevisao.push({
                 codigo: codigo,
@@ -1970,14 +1988,12 @@ function monitorarEstoqueMinimo(dados) {
         }
     });
     
-    // Ordena os itens críticos por maior falta
     itensAbaixoMinimo.sort((a, b) => {
         const faltaA = Math.max(a.falta_fisico, a.falta_sistemico);
         const faltaB = Math.max(b.falta_fisico, b.falta_sistemico);
         return faltaB - faltaA;
     });
     
-    // Ordena os itens sem previsão por código
     itensSemPrevisao.sort((a, b) => a.codigo.localeCompare(b.codigo));
     
     return {
@@ -1987,10 +2003,6 @@ function monitorarEstoqueMinimo(dados) {
         total_sem_previsao: itensSemPrevisao.length
     };
 }
-
-// ============================================
-// GERAR RELATÓRIO EM TEXTO PURO (COM SEPARAÇÃO)
-// ============================================
 
 function gerarRelatorioTexto(itensCriticos, itensSemPrevisao, deposito) {
     const dataHora = getDataHoraBrasilString();
@@ -2008,9 +2020,6 @@ function gerarRelatorioTexto(itensCriticos, itensSemPrevisao, deposito) {
     texto += `Total de Itens sem Previsao: ${totalSemPrevisao}\n`;
     texto += '='.repeat(60) + '\n\n';
     
-    // ============================================
-    // SEÇÃO 1: ITENS CRÍTICOS (ABAIXO DO MÍNIMO)
-    // ============================================
     if (totalCriticos > 0) {
         texto += '='.repeat(60) + '\n';
         texto += 'ITENS COM ESTOQUE ABAIXO DO MINIMO\n';
@@ -2032,7 +2041,6 @@ function gerarRelatorioTexto(itensCriticos, itensSemPrevisao, deposito) {
         
         texto += '-'.repeat(85) + '\n\n';
         
-        // Resumo por tipo dos críticos
         const tiposCriticos = {};
         itensCriticos.forEach(item => {
             const tipo = item.tipo_material || 'desconhecido';
@@ -2048,9 +2056,6 @@ function gerarRelatorioTexto(itensCriticos, itensSemPrevisao, deposito) {
         }
     }
     
-    // ============================================
-    // SEÇÃO 2: ITENS SEM PREVISÃO
-    // ============================================
     if (totalSemPrevisao > 0) {
         texto += '='.repeat(60) + '\n';
         texto += 'ITENS SEM PREVISAO DE ESTOQUE MINIMO\n';
@@ -2080,10 +2085,6 @@ function gerarRelatorioTexto(itensCriticos, itensSemPrevisao, deposito) {
     return texto;
 }
 
-// ============================================
-// GERAR RELATÓRIO RESUMIDO (CASO SEJA MUITO GRANDE)
-// ============================================
-
 function gerarRelatorioTextoResumido(itensCriticos, itensSemPrevisao, totalCriticos, totalSemPrevisao, deposito) {
     const dataHora = getDataHoraBrasilString();
     
@@ -2098,7 +2099,6 @@ function gerarRelatorioTextoResumido(itensCriticos, itensSemPrevisao, totalCriti
     texto += `Total de Itens sem Previsao: ${totalSemPrevisao}\n`;
     texto += '='.repeat(60) + '\n\n';
     
-    // CRÍTICOS (mostra apenas os 10 primeiros)
     if (itensCriticos.length > 0) {
         texto += 'ITENS CRITICOS (10 primeiros):\n';
         texto += 'CODIGO   | DESCRICAO                 | UND | MINIMO  | FISICO  | SISTEMICO\n';
@@ -2120,7 +2120,6 @@ function gerarRelatorioTextoResumido(itensCriticos, itensSemPrevisao, totalCriti
         texto += '\n';
     }
     
-    // SEM PREVISÃO (mostra apenas os 10 primeiros)
     if (itensSemPrevisao.length > 0) {
         texto += 'ITENS SEM PREVISAO (10 primeiros):\n';
         texto += 'CODIGO   | DESCRICAO                 | UND | FISICO  | SISTEMICO\n';
@@ -2147,10 +2146,6 @@ function gerarRelatorioTextoResumido(itensCriticos, itensSemPrevisao, totalCriti
     
     return texto;
 }
-
-// ============================================
-// FUNÇÃO PARA ENVIAR EMAIL VIA WORKER (APENAS 1 EMAIL)
-// ============================================
 
 async function enviarRelatorioEstoque(relatorioTexto, itensCriticos, emailsDestino, itensSemPrevisao = []) {
     try {
@@ -2246,10 +2241,6 @@ async function enviarRelatorioEstoque(relatorioTexto, itensCriticos, emailsDesti
     }
 }
 
-// ============================================
-// EXIBIR ITENS CRÍTICOS NA TELA (COM SEPARAÇÃO)
-// ============================================
-
 function exibirItensCriticos(itensCriticos, itensSemPrevisao) {
     const painelExistente = document.getElementById('painel-itens-criticos');
     if (painelExistente) painelExistente.remove();
@@ -2279,7 +2270,6 @@ function exibirItensCriticos(itensCriticos, itensSemPrevisao) {
         </div>
     `;
     
-    // TABELA DE ITENS CRÍTICOS
     if (itensCriticos && itensCriticos.length > 0) {
         html += `
             <div style="overflow-x: auto; margin-bottom: 20px;">
@@ -2326,7 +2316,6 @@ function exibirItensCriticos(itensCriticos, itensSemPrevisao) {
         html += `</tbody></table></div>`;
     }
     
-    // TABELA DE ITENS SEM PREVISÃO
     if (itensSemPrevisao && itensSemPrevisao.length > 0) {
         html += `
             <div style="overflow-x: auto;">
@@ -2373,10 +2362,6 @@ function exibirItensCriticos(itensCriticos, itensSemPrevisao) {
         statsContainer.parentNode.insertBefore(painel, statsContainer.nextSibling);
     }
 }
-
-// ============================================
-// FUNÇÃO PRINCIPAL: MONITORAR E ENVIAR RELATÓRIO
-// ============================================
 
 async function monitorarEEnviarRelatorio() {
     try {
@@ -2441,55 +2426,47 @@ async function monitorarEEnviarRelatorio() {
 }
 
 // ============================================
-// INICIALIZAR
+// INICIALIZAÇÃO
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    const sessao = sessionStorage.getItem('sessaoSICGM');
+    // 🔥 VERIFICAR AUTENTICAÇÃO PRIMEIRO
+    const sessao = carregarDadosUsuarioRelatorio();
     if (!sessao) {
-        window.location.href = '../index.html';
+        window.location.href = '../login.html';
         return;
     }
     
-    try {
-        const dadosSessao = JSON.parse(sessao);
-        perfilUsuario = dadosSessao.perfil || 'OPERACIONAL';
-        console.log(`👤 Perfil do usuário: ${perfilUsuario}`);
-        
-        const perfilBadge = document.createElement('span');
-        perfilBadge.style.cssText = `
-            display: inline-block;
-            background: ${perfilUsuario === 'GESTAO' ? '#48BB78' : perfilUsuario === 'OPERACIONAL' ? '#4299E1' : '#ED8936'};
-            color: white;
-            padding: 2px 12px;
-            border-radius: 12px;
-            font-size: 0.6em;
-            font-weight: 600;
-            margin-left: 10px;
-            vertical-align: middle;
-        `;
-        perfilBadge.textContent = perfilUsuario;
-        
-        const title = document.querySelector('.header-container .title');
-        if (title) {
-            title.appendChild(perfilBadge);
-        }
-        
-        const table = document.querySelector('.relatorio-tabela');
-        if (table) {
-            if (perfilUsuario === 'GESTAO') {
-                table.style.minWidth = '1200px';
-            } else {
-                table.style.minWidth = '800px';
-            }
-        }
-        
-    } catch (e) {
-        console.error('❌ Erro ao ler sessão:', e);
-        perfilUsuario = 'OPERACIONAL';
+    console.log('🚀 Inicializando página de relatórios...');
+    console.log(`👤 Perfil do usuário: ${perfilUsuario}`);
+    
+    const perfilBadge = document.createElement('span');
+    perfilBadge.style.cssText = `
+        display: inline-block;
+        background: ${perfilUsuario === 'GESTAO' ? '#48BB78' : perfilUsuario === 'OPERACIONAL' ? '#4299E1' : '#ED8936'};
+        color: white;
+        padding: 2px 12px;
+        border-radius: 12px;
+        font-size: 0.6em;
+        font-weight: 600;
+        margin-left: 10px;
+        vertical-align: middle;
+    `;
+    perfilBadge.textContent = perfilUsuario;
+    
+    const title = document.querySelector('.header-container .title');
+    if (title) {
+        title.appendChild(perfilBadge);
     }
     
-    console.log('🚀 Inicializando página de relatórios...');
+    const table = document.querySelector('.relatorio-tabela');
+    if (table) {
+        if (perfilUsuario === 'GESTAO') {
+            table.style.minWidth = '1200px';
+        } else {
+            table.style.minWidth = '800px';
+        }
+    }
     
     window.addEventListener('scroll', controlarBotoesNavegacao);
     window.addEventListener('load', function() {
@@ -2499,10 +2476,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     await carregarPosicaoEstoque();
     await carregarRelatorios();
-    
-    // ============================================
-    // CONFIGURAR MONITORAMENTO AUTOMÁTICO ÀS 08:00
-    // ============================================
     
     await carregarListaEmails();
     
@@ -2545,8 +2518,6 @@ window.carregarHistorico = carregarHistorico;
 window.carregarSnapshotParaTabela = carregarSnapshotParaTabela;
 window.restaurarRelatorioAtual = restaurarRelatorioAtual;
 window.criarSnapshotManual = criarSnapshotManual;
-
-// Funções de monitoramento
 window.carregarEstoqueMinimo = carregarEstoqueMinimo;
 window.carregarListaEmails = carregarListaEmails;
 window.monitorarEstoqueMinimo = monitorarEstoqueMinimo;

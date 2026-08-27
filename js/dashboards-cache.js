@@ -4,6 +4,41 @@
 
 console.log('🚀 dashboards-cache.js carregado!');
 
+// ============================================
+// 🔥 VERIFICAR AUTENTICAÇÃO ANTES DE CARREGAR
+// ============================================
+
+function verificarAutenticacaoCache() {
+    if (typeof authService === 'undefined' || !authService) {
+        console.error('❌ authService não disponível');
+        window.location.href = '../login.html';
+        return false;
+    }
+
+    if (!authService.isLoggedIn()) {
+        console.error('❌ Usuário não logado');
+        window.location.href = '../login.html';
+        return false;
+    }
+
+    const user = authService.getUserData();
+    if (!user) {
+        console.error('❌ Dados do usuário não encontrados');
+        window.location.href = '../login.html';
+        return false;
+    }
+
+    console.log(`✅ Autenticado: ${user.nome} (${user.perfil})`);
+    return true;
+}
+
+// Executar verificação
+if (!verificarAutenticacaoCache()) {
+    // A página já vai redirecionar, mas evitamos executar o resto
+    throw new Error('Autenticação necessária');
+}
+
+
 // Usa a API_URL do dashboards-common.js (já declarada globalmente)
 // Não redeclarar com const/let, apenas usar a existente
 if (typeof API_URL === 'undefined') {

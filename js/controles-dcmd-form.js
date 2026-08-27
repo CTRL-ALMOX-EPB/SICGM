@@ -159,33 +159,52 @@ function mostrarToast(mensagem, tipo = 'info') {
     }, 4000);
 }
 
+// ============================================
+// 🔥 CARREGAR DADOS DO USUÁRIO (NOVA VERSÃO)
+// ============================================
+
 function carregarDadosUsuario() {
-    const sessao = sessionStorage.getItem('sessaoSICGM');
-    
-    if (!sessao) {
+    // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
+    if (typeof authService === 'undefined' || !authService) {
+        console.error('❌ authService não disponível');
         window.location.href = '../login.html';
         return null;
     }
-    
-    try {
-        dadosSessao = JSON.parse(sessao);
-        perfilUsuario = dadosSessao.perfil || 'OPERACIONAL';
-        
-        const userNameEl = document.getElementById('userName');
-        const userRoleEl = document.getElementById('userRole');
-        const userMatriculaEl = document.getElementById('userMatricula');
-        const userAvatarEl = document.getElementById('userAvatar');
-        
-        if (userNameEl) userNameEl.textContent = dadosSessao.nome || 'Usuário';
-        if (userRoleEl) userRoleEl.textContent = dadosSessao.perfil || 'OPERACIONAL';
-        if (userMatriculaEl) userMatriculaEl.textContent = `Matrícula: ${dadosSessao.matricula || '---'}`;
-        if (userAvatarEl) userAvatarEl.textContent = (dadosSessao.nome || 'U')[0].toUpperCase();
-        
-        return dadosSessao;
-    } catch (e) {
+
+    if (!authService.isLoggedIn()) {
+        console.error('❌ Usuário não logado');
         window.location.href = '../login.html';
         return null;
     }
+
+    const user = authService.getUserData();
+    if (!user) {
+        console.error('❌ Dados do usuário não encontrados');
+        window.location.href = '../login.html';
+        return null;
+    }
+
+    dadosSessao = {
+        nome: user.nome,
+        matricula: user.matricula,
+        perfil: user.perfil,
+        timestamp: Date.now()
+    };
+    
+    perfilUsuario = user.perfil || 'OPERACIONAL';
+
+    const userNameEl = document.getElementById('userName');
+    const userRoleEl = document.getElementById('userRole');
+    const userMatriculaEl = document.getElementById('userMatricula');
+    const userAvatarEl = document.getElementById('userAvatar');
+    
+    if (userNameEl) userNameEl.textContent = user.nome || 'Usuário';
+    if (userRoleEl) userRoleEl.textContent = user.perfil || 'OPERACIONAL';
+    if (userMatriculaEl) userMatriculaEl.textContent = `Matrícula: ${user.matricula || '---'}`;
+    if (userAvatarEl) userAvatarEl.textContent = (user.nome || 'U')[0].toUpperCase();
+    
+    console.log(`✅ Usuário autenticado: ${user.nome} (${user.perfil})`);
+    return dadosSessao;
 }
 
 // ============================================
