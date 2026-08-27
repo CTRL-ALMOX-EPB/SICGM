@@ -94,6 +94,14 @@ let itemSelecionadoMGM = null;
 let dadosCarregadosMGM = false;
 
 // ============================================
+// VARIÁVEIS PARA PROGRAMAÇÃO SIAGO
+// ============================================
+
+let dadosProgramacaoSiagoCarregados = false;
+let dadosProgramacaoSiago = null;
+let etapasPorObraData = {};
+
+// ============================================
 // NOVA VARIÁVEL: ITENS REPRESADOS
 // ============================================
 
@@ -1525,10 +1533,37 @@ function renderizarListaObrasMGM(pendencias) {
         const multiplasInfo = temMultiplas ? `🔀${grupo.multiplasMGM}` : '';
         const infoExtra = [docsInfo, aditivoInfo, multiplasInfo].filter(Boolean).join(' ');
         
+        // ============================================
+        // INDICADOR DE ETAPAS NA LISTA DE OBRAS
+        // ============================================
+        const obraNorm = normalizarObra(grupo.obra);
+        const etapasInfo = getEtapasPorObra(obraNorm);
+        let etapasIndicator = '';
+        
+        if (etapasInfo && etapasInfo.total_etapas > 0) {
+            const validas = etapasInfo.etapas_validas;
+            const total = etapasInfo.total_etapas;
+            const hasValid = validas > 0;
+            etapasIndicator = `
+                <span class="obra-etapas-indicator ${hasValid ? 'has-etapas' : 'no-etapas'}" title="${validas} etapas válidas de ${total}">
+                    📋 ${validas}/${total}
+                </span>
+            `;
+        } else {
+            etapasIndicator = `
+                <span class="obra-etapas-indicator no-etapas" title="Sem dados de programação">
+                    📭
+                </span>
+            `;
+        }
+        
         html += `
             <div class="item-group-item ${isActive ? 'active' : ''} ${statusClass}" onclick="selecionarObraMGM('${grupo.obra}')" style="display: grid; grid-template-columns: 80px 1fr 40px 50px 50px 60px 50px 45px; gap: 4px; padding: 8px 10px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s; ${temRepresado ? 'border-left: 4px solid #805AD5;' : ''} ${temSobra ? 'border-left: 4px solid #D69E2E;' : ''} ${temFalta ? 'border-right: 4px solid #E53E3E;' : ''}">
                 <span class="item-code" style="font-size: 11px;">${grupo.obraFormatada}</span>
-                <span class="item-desc" style="font-size: 11px;">${totalItens} itens ${infoExtra}</span>
+                <span class="item-desc" style="font-size: 11px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    ${totalItens} itens ${infoExtra}
+                    ${etapasIndicator}
+                </span>
                 <span style="text-align: right; font-weight: 700; color: #2B6CB0; font-size: 11px;">${totalItens}</span>
                 <span style="text-align: center; font-weight: 600; color: ${temRepresado ? '#805AD5' : '#A0AEC0'}; font-size: 11px;">${totalRepresadoExibicao}</span>
                 <span style="text-align: center; font-weight: 600; color: ${temSobra ? '#D69E2E' : '#A0AEC0'}; font-size: 11px;">${totalSobraExibicao}</span>
@@ -1820,6 +1855,62 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         valorTotal += p.qtdEsperada * (p.valor_unitario || 0);
     });
     
+    // ============================================
+    // ADICIONAR ETAPAS DA PROGRAMAÇÃO SIAGO
+    // ============================================
+    
+    const obraNorm = normalizarObra(obra);
+    const etapasInfo = getEtapasPorObra(obraNorm);
+    let etapasHTML = '';
+    
+    if (etapasInfo) {
+        const total = etapasInfo.total_etapas;
+        const validas = etapasInfo.etapas_validas;
+        const reprovadas = etapasInfo.etapas_reprovadas;
+        const percentual = total > 0 ? Math.round((validas / total) * 100) : 0;
+        
+        let badgesHTML = '';
+        etapasInfo.etapas.forEach(etapa => {
+            const detalhe = etapasInfo.etapas_detalhes[etapa] || {};
+            const situacao = detalhe.situacao || 'Desconhecida';
+            const isReprovada = situacao === 'ETAPA REPROVADA';
+            const icon = isReprovada ? '🔴' : (situacao === 'ETAPA CONCLUÍDA' ? '✅' : '⏳');
+            const classe = isReprovada ? 'etapa-reprovada' : (situacao === 'ETAPA CONCLUÍDA' ? 'etapa-concluida' : 'etapa-pendente');
+            
+            badgesHTML += `
+                <span class="etapa-badge ${classe}" title="${situacao}">
+                    ${icon} ${etapa}
+                </span>
+            `;
+        });
+        
+        etapasHTML = `
+            <div class="detail-etapas-section">
+                <div class="section-title">📋 Etapas da Obra</div>
+                <div class="etapas-info">
+                    <div class="etapas-resumo">
+                        <span class="etapas-total">📊 ${total} etapas</span>
+                        <span class="etapas-validas" style="color: ${validas > 0 ? '#48BB78' : '#718096'};">✅ ${validas} válidas</span>
+                        <span class="etapas-reprovadas" style="color: ${reprovadas > 0 ? '#FC8181' : '#718096'};">🔴 ${reprovadas} reprovadas</span>
+                        <span class="etapas-percentual">${percentual}% válidas</span>
+                    </div>
+                    <div class="etapas-badges">
+                        ${badgesHTML}
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        etapasHTML = `
+            <div class="detail-etapas-section">
+                <div class="section-title">📋 Etapas da Obra</div>
+                <div class="etapas-info empty">
+                    <span>📭 Sem dados de programação para esta obra</span>
+                </div>
+            </div>
+        `;
+    }
+    
     let html = `
         <div class="detail-header">
             <div class="detail-title">🏗️ ${obraFormatada}</div>
@@ -1995,6 +2086,7 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
     
     html += `
         </div>
+        ${etapasHTML}
     `;
     
     container.innerHTML = html;
@@ -2671,6 +2763,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         aplicarFiltros();
         
         trocarAbaPrincipal('separacao');
+        
+        // ============================================
+        // CARREGAR PROGRAMAÇÃO SIAGO
+        // ============================================
+        try {
+            console.log('📡 Carregando programação siago...');
+            const programacaoData = await carregarProgramacaoSiago();
+            if (programacaoData) {
+                dadosProgramacaoSiagoCarregados = true;
+                dadosProgramacaoSiago = programacaoData;
+                etapasPorObraData = etapasPorObra;
+                console.log(`✅ Programação siago carregada: ${Object.keys(etapasPorObraData).length} obras`);
+            }
+        } catch (error) {
+            console.warn('⚠️ Erro ao carregar programação siago:', error);
+        }
         
         setTimeout(() => {
             carregarDadosMGM();

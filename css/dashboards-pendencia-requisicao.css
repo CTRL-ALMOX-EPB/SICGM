@@ -1466,3 +1466,152 @@
         padding: 1px 4px;
     }
 }
+
+/* ============================================ */
+/* ESTILOS PARA ETAPAS DE PROGRAMAÇÃO           */
+/* ============================================ */
+
+.etapas-info {
+    background: #F7FAFC;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 10px 0;
+    border: 1px solid #E2E8F0;
+}
+
+.etapas-info.empty {
+    background: #FFF5F5;
+    border-color: #FC8181;
+    text-align: center;
+    color: #718096;
+}
+
+.etapas-resumo {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.etapas-resumo .etapas-total {
+    color: #2D3748;
+    font-weight: 700;
+}
+
+.etapas-resumo .etapas-validas {
+    color: #48BB78;
+}
+
+.etapas-resumo .etapas-reprovadas {
+    color: #FC8181;
+}
+
+.etapas-resumo .etapas-percentual {
+    color: #4299E1;
+    font-weight: 600;
+}
+
+.etapas-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.etapa-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #EDF2F7;
+    color: #4A5568;
+    border: 1px solid #E2E8F0;
+    transition: all 0.2s;
+}
+
+.etapa-badge:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.etapa-badge.etapa-concluida {
+    background: #C6F6D5;
+    border-color: #48BB78;
+    color: #276749;
+}
+
+.etapa-badge.etapa-reprovada {
+    background: #FED7D7;
+    border-color: #FC8181;
+    color: #C53030;
+}
+
+.etapa-badge.etapa-pendente {
+    background: #FEFCBF;
+    border-color: #ECC94B;
+    color: #975A16;
+}
+
+/* Badge de situação no detalhe da obra */
+.detail-etapas-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 2px solid #E2E8F0;
+}
+
+.detail-etapas-section .section-title {
+    font-weight: 600;
+    color: #2D3748;
+    font-size: 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Indicador de etapas no card da obra */
+.obra-etapas-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    background: #EBF8FF;
+    color: #2B6CB0;
+    border: 1px solid #90CDF4;
+}
+
+.obra-etapas-indicator.has-etapas {
+    background: #C6F6D5;
+    border-color: #48BB78;
+    color: #276749;
+}
+
+.obra-etapas-indicator.no-etapas {
+    background: #FED7D7;
+    border-color: #FC8181;
+    color: #C53030;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .etapas-resumo {
+        font-size: 12px;
+        gap: 10px;
+    }
+    
+    .etapas-badges {
+        gap: 4px;
+    }
+    
+    .etapa-badge {
+        font-size: 10px;
+        padding: 2px 8px;
+    }
+}
