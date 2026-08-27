@@ -5,14 +5,6 @@
 console.log('🚀 programacao-siago.js carregado!');
 
 // ============================================
-// VARIÁVEIS GLOBAIS
-// ============================================
-
-let dadosProgramacaoSiago = {};
-let etapasPorObra = {};
-let dadosProgramacaoSiagoCarregados = false;
-
-// ============================================
 // URL DO ARQUIVO NO R2
 // ============================================
 
@@ -101,11 +93,16 @@ async function carregarProgramacaoSiago() {
         const texto = await response.text();
         console.log(`✅ Arquivo carregado (${texto.split('\n').length} linhas)`);
         
-        processarDadosProgramacao(texto);
-        dadosProgramacaoSiagoCarregados = true;
-        console.log(`✅ Dados processados: ${Object.keys(etapasPorObra).length} obras únicas`);
+        const resultado = processarDadosProgramacao(texto);
         
-        return dadosProgramacaoSiago;
+        // Armazenar no escopo global do window para acesso de outros scripts
+        window.__dadosProgramacaoSiago = resultado.dados;
+        window.__etapasPorObra = resultado.etapas;
+        window.__dadosProgramacaoSiagoCarregados = true;
+        
+        console.log(`✅ Dados processados: ${Object.keys(resultado.etapas).length} obras únicas`);
+        
+        return resultado;
         
     } catch (error) {
         console.error('❌ Erro ao carregar programacao_siago.txt:', error);
@@ -124,7 +121,7 @@ function processarDadosProgramacao(texto) {
     
     if (linhas.length < 2) {
         console.warn('⚠️ Arquivo vazio ou com apenas cabeçalho');
-        return;
+        return { dados: {}, etapas: {} };
     }
     
     // Parse do cabeçalho
@@ -274,17 +271,13 @@ function processarDadosProgramacao(texto) {
         obra.etapas.sort((a, b) => a - b); // Ordenar etapas numericamente
     }
     
-    // Armazenar nos objetos globais
-    dadosProgramacaoSiago = obrasMap;
-    etapasPorObra = etapasPorObraTemp;
-    
     console.log(`📊 Resumo por obra:`);
     let totalObras = 0;
     let totalEtapas = 0;
     let totalReprovadas = 0;
     
-    for (const numObra in etapasPorObra) {
-        const obra = etapasPorObra[numObra];
+    for (const numObra in etapasPorObraTemp) {
+        const obra = etapasPorObraTemp[numObra];
         totalObras++;
         totalEtapas += obra.total_etapas;
         totalReprovadas += obra.etapas_reprovadas;
@@ -294,6 +287,11 @@ function processarDadosProgramacao(texto) {
     console.log(`   - ${totalEtapas} etapas no total`);
     console.log(`   - ${totalReprovadas} etapas reprovadas`);
     console.log(`   - ${totalEtapas - totalReprovadas} etapas válidas (não reprovadas)`);
+    
+    return {
+        dados: obrasMap,
+        etapas: etapasPorObraTemp
+    };
 }
 
 // ============================================
@@ -306,14 +304,17 @@ function getEtapasPorObra(numObra) {
     // 🔥 NORMALIZAR OBRA PARA 10 DÍGITOS
     const obraNorm = normalizarObraSiago(numObra);
     
+    // Buscar no window.__etapasPorObra
+    const etapas = window.__etapasPorObra || {};
+    
     // Buscar exata
-    if (etapasPorObra[obraNorm]) {
-        return etapasPorObra[obraNorm];
+    if (etapas[obraNorm]) {
+        return etapas[obraNorm];
     }
     
     // Buscar por obra formatada (com hífens)
-    for (const key in etapasPorObra) {
-        const obra = etapasPorObra[key];
+    for (const key in etapas) {
+        const obra = etapas[key];
         if (obra.obra_formatada === numObra || obra.num_obra_original === numObra) {
             return obra;
         }

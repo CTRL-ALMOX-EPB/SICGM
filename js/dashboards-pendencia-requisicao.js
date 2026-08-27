@@ -94,14 +94,24 @@ let itemSelecionadoMGM = null;
 let dadosCarregadosMGM = false;
 
 // ============================================
-// VARIÁVEIS PARA PROGRAMAÇÃO SIAGO (CORRIGIDAS)
+// VARIÁVEIS PARA PROGRAMAÇÃO SIAGO
 // ============================================
 
-let dadosProgramacaoSiagoCarregados = false;
-let etapasPorObraData = {};
+// As variáveis são gerenciadas pelo programacao-siago.js via window.__*
+// Não redeclarar para evitar conflito
 
-// NOTA: dadosProgramacaoSiago e etapasPorObra vêm do programacao-siago.js
-// Não redeclarar essas variáveis para evitar conflito
+// Criar alias local para acesso fácil
+function getDadosProgramacaoSiago() {
+    return window.__dadosProgramacaoSiago || {};
+}
+
+function getEtapasPorObraData() {
+    return window.__etapasPorObra || {};
+}
+
+function isProgramacaoSiagoCarregado() {
+    return window.__dadosProgramacaoSiagoCarregados || false;
+}
 
 // ============================================
 // VARIÁVEIS PARA FILTRO DE ETAPAS
@@ -2884,10 +2894,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.log('📡 Carregando programação siago...');
             const programacaoData = await carregarProgramacaoSiago();
             if (programacaoData) {
-                dadosProgramacaoSiagoCarregados = true;
-                dadosProgramacaoSiago = programacaoData;
-                etapasPorObraData = etapasPorObra;
-                console.log(`✅ Programação siago carregada: ${Object.keys(etapasPorObraData).length} obras`);
+                // Os dados já estão em window.__dadosProgramacaoSiago e window.__etapasPorObra
+                console.log(`✅ Programação siago carregada: ${Object.keys(window.__etapasPorObra || {}).length} obras`);
             }
         } catch (error) {
             console.warn('⚠️ Erro ao carregar programação siago:', error);
