@@ -1,5 +1,5 @@
 // ============================================
-// GESTÃO INDICADORES - RMA x DMA (VERSÃO REFATORADA)
+// GESTÃO INDICADORES - RMA x DMA (VERSÃO FINAL)
 // ============================================
 
 const WORKER_URL = 'https://gestao-xd-almox.alefe-gomes-72f.workers.dev';
@@ -225,7 +225,7 @@ function parseMovimentos(texto, posicaoMap) {
             continue;
         }
         
-        // 🔥 FORMATAR DATA: extrair apenas a data e converter para DD-MM-AAAA
+        // 🔥 FORMATAR DATA
         const datamovRaw = partes[idx.datamov]?.trim() || '';
         let dataFormatada = '';
         
@@ -300,9 +300,9 @@ function parseMovimentos(texto, posicaoMap) {
 async function carregarDados() {
     try {
         // Mostrar loading
-        const graficosGrid = document.querySelector('.graficos-top');
-        if (graficosGrid) {
-            graficosGrid.innerHTML = 
+        const graficosTop = document.querySelector('.graficos-top');
+        if (graficosTop) {
+            graficosTop.innerHTML = 
                 `<div class="loading-msg" style="grid-column: 1 / -1;">⏳ Carregando dados...</div>`;
         }
         
@@ -311,8 +311,10 @@ async function carregarDados() {
         const movimentos = parseMovimentos(texto, posicaoEstoque);
         
         if (!movimentos || movimentos.length === 0) {
-            document.querySelector('.graficos-top').innerHTML = 
-                `<div class="erro-msg" style="grid-column: 1 / -1;">⚠️ Nenhum movimento encontrado.</div>`;
+            if (graficosTop) {
+                graficosTop.innerHTML = 
+                    `<div class="erro-msg" style="grid-column: 1 / -1;">⚠️ Nenhum movimento encontrado.</div>`;
+            }
             return;
         }
         
@@ -322,13 +324,17 @@ async function carregarDados() {
         
         // Inicializar filtros
         inicializarFiltros();
-        aplicarFiltros();
+        
+        // Aguardar um pequeno delay para o DOM renderizar os canvas
+        setTimeout(() => {
+            aplicarFiltros();
+        }, 100);
         
     } catch (erro) {
         console.error('❌ Erro ao carregar dados:', erro);
-        const graficosGrid = document.querySelector('.graficos-top');
-        if (graficosGrid) {
-            graficosGrid.innerHTML = 
+        const graficosTop = document.querySelector('.graficos-top');
+        if (graficosTop) {
+            graficosTop.innerHTML = 
                 `<div class="erro-msg" style="grid-column: 1 / -1;">❌ Erro ao carregar dados: ${erro.message}</div>`;
         }
     }
@@ -349,7 +355,6 @@ function inicializarFiltros() {
     
     mesesContainer.innerHTML = '';
     
-    // Obter meses disponíveis nos dados
     const mesesDisponiveis = [...new Set(dadosCompletos.map(d => d.mes).filter(Boolean))].sort();
     const mesesParaMostrar = mesesDisponiveis.length > 0 ? mesesDisponiveis : Object.keys(MESES);
     
@@ -389,7 +394,6 @@ function inicializarFiltros() {
         mesesContainer.appendChild(btn);
     });
     
-    // Selecionar todos por padrão
     if (filtroEstado.mesesSelecionados.length === 0) {
         filtroEstado.mesesSelecionados = [...mesesParaMostrar];
         document.querySelectorAll('.btn-mes').forEach(b => b.classList.add('active'));
@@ -467,17 +471,14 @@ function aplicarFiltros() {
     
     let dados = [...dadosCompletos];
     
-    // Filtro por meses
     if (filtroEstado.mesesSelecionados.length > 0) {
         dados = dados.filter(d => filtroEstado.mesesSelecionados.includes(d.mes));
     }
     
-    // Filtro por login
     if (filtroEstado.loginSelecionado && filtroEstado.loginSelecionado !== 'Todos') {
         dados = dados.filter(d => d.sigla_mov_mat === filtroEstado.loginSelecionado);
     }
     
-    // Filtro por período
     if (filtroEstado.dataInicio) {
         const dataInicioObj = new Date(filtroEstado.dataInicio + 'T00:00:00');
         dados = dados.filter(d => {
@@ -519,7 +520,6 @@ function atualizarContadores(dados) {
     const totalRMAQtd = dados.filter(d => d.tipo === 'RMA').length;
     const totalDMAQtd = dados.filter(d => d.tipo === 'DMA').length;
     
-    // 🔥 SEM CASAS DECIMAIS
     document.getElementById('totalRMA').textContent = formatarMoeda(totalRMA);
     document.getElementById('totalDMA').textContent = formatarMoeda(totalDMA);
     document.getElementById('totalSaldo').textContent = formatarMoeda(saldo);
@@ -633,6 +633,8 @@ function gerarGraficoLogin(dados) {
             }
         }
     });
+    
+    console.log('✅ Gráfico de Login gerado com sucesso!');
 }
 
 // ============================================
@@ -739,6 +741,8 @@ function gerarGraficoMes(dados) {
             }
         }
     });
+    
+    console.log('✅ Gráfico Mensal gerado com sucesso!');
 }
 
 // ============================================
