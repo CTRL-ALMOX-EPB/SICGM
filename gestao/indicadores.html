@@ -88,6 +88,11 @@
                         <span class="detalhes-titulo" id="detalhesLoginTitulo">Detalhes</span>
                         <button class="btn-fechar-detalhes" onclick="fecharDetalhes('detalhesLogin')">✕</button>
                     </div>
+                    <!-- 🔥 INPUT DE BUSCA -->
+                    <div class="detalhes-busca">
+                        <input type="text" id="searchLogin" placeholder="🔍 Filtrar por código ou descrição..." oninput="filtrarDetalhes('login')">
+                        <button class="btn-limpar-busca" onclick="document.getElementById('searchLogin').value='';filtrarDetalhes('login')">✕</button>
+                    </div>
                     <div class="detalhes-conteudo" id="detalhesLoginConteudo"></div>
                 </div>
             </div>
@@ -106,6 +111,11 @@
                     <div class="detalhes-header">
                         <span class="detalhes-titulo" id="detalhesMesTitulo">Detalhes</span>
                         <button class="btn-fechar-detalhes" onclick="fecharDetalhes('detalhesMes')">✕</button>
+                    </div>
+                    <!-- 🔥 INPUT DE BUSCA -->
+                    <div class="detalhes-busca">
+                        <input type="text" id="searchMes" placeholder="🔍 Filtrar por código ou descrição..." oninput="filtrarDetalhes('mes')">
+                        <button class="btn-limpar-busca" onclick="document.getElementById('searchMes').value='';filtrarDetalhes('mes')">✕</button>
                     </div>
                     <div class="detalhes-conteudo" id="detalhesMesConteudo"></div>
                 </div>

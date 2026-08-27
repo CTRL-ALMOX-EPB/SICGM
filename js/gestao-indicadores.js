@@ -1,5 +1,5 @@
 // ============================================
-// GESTÃO INDICADORES - RMA x DMA (COM CLIQUE)
+// GESTÃO INDICADORES - RMA x DMA (COM FILTRO NOS DETALHES)
 // ============================================
 
 const WORKER_URL = 'https://gestao-xd-almox.alefe-gomes-72f.workers.dev';
@@ -9,6 +9,13 @@ let dadosFiltrados = [];
 let graficoLogin = null;
 let graficoMes = null;
 let filtrosAplicados = false;
+
+// 🔥 ARMAZENAR OS DADOS DOS DETALHES PARA FILTRO
+let dadosDetalhesAtuais = {
+    tipo: '',
+    label: '',
+    itens: []
+};
 
 const filtroEstado = {
     mesesSelecionados: [],
@@ -42,10 +49,105 @@ function fecharDetalhes(id) {
     const container = document.getElementById(id);
     if (container) {
         container.style.display = 'none';
+        // Limpar campo de busca
+        const searchInput = document.getElementById(`search${id === 'detalhesLogin' ? 'Login' : 'Mes'}`);
+        if (searchInput) searchInput.value = '';
+        dadosDetalhesAtuais = { tipo: '', label: '', itens: [] };
     }
 }
 
 window.fecharDetalhes = fecharDetalhes;
+
+// ============================================
+// FILTRAR DETALHES
+// ============================================
+function filtrarDetalhes(tipo) {
+    const searchId = tipo === 'login' ? 'searchLogin' : 'searchMes';
+    const conteudoId = tipo === 'login' ? 'detalhesLoginConteudo' : 'detalhesMesConteudo';
+    const tituloId = tipo === 'login' ? 'detalhesLoginTitulo' : 'detalhesMesTitulo';
+    
+    const searchInput = document.getElementById(searchId);
+    const conteudo = document.getElementById(conteudoId);
+    const titulo = document.getElementById(tituloId);
+    
+    if (!searchInput || !conteudo) return;
+    
+    const termo = searchInput.value.toLowerCase().trim();
+    const itens = dadosDetalhesAtuais.itens || [];
+    
+    // Filtrar itens
+    let itensFiltrados = itens;
+    if (termo) {
+        itensFiltrados = itens.filter(item => {
+            const codigo = (item.codigo || '').toLowerCase();
+            const descricao = (item.descricao || item.dscmat || '').toLowerCase();
+            return codigo.includes(termo) || descricao.includes(termo);
+        });
+    }
+    
+    // Atualizar título com contagem
+    const label = dadosDetalhesAtuais.label || '';
+    const tipoLabel = dadosDetalhesAtuais.tipo === 'login' ? 'Login' : 'Mês';
+    titulo.textContent = `📋 Detalhes do ${tipoLabel}: ${label} (${itensFiltrados.length} itens)`;
+    
+    // Gerar tabela filtrada
+    const rmaItens = itensFiltrados.filter(d => d.tipo === 'RMA');
+    const dmaItens = itensFiltrados.filter(d => d.tipo === 'DMA');
+    
+    let html = '';
+    
+    // Resumo
+    html += `
+        <div style="display:flex; gap:20px; margin-bottom:15px; flex-wrap:wrap;">
+            <span style="color:#3B82F6; font-weight:600;">RMA: ${rmaItens.length} itens (${formatarMoeda(rmaItens.reduce((acc, d) => acc + d.valor_total, 0))})</span>
+            <span style="color:#10B981; font-weight:600;">DMA: ${dmaItens.length} itens (${formatarMoeda(dmaItens.reduce((acc, d) => acc + d.valor_total, 0))})</span>
+            ${termo ? `<span style="color:#F59E0B; font-weight:600;">🔍 Filtro: "${termo}"</span>` : ''}
+        </div>
+    `;
+    
+    if (itensFiltrados.length === 0) {
+        html += `<p style="color:#A0AEC0; text-align:center; padding:20px;">Nenhum item encontrado para "${termo}"</p>`;
+        conteudo.innerHTML = html;
+        return;
+    }
+    
+    // Tabela de itens
+    html += `<table class="tabela-detalhes">
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Código</th>
+                <th>Descrição</th>
+                <th>Qtd</th>
+                <th>Valor Unit.</th>
+                <th>Valor Total</th>
+            </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    // Ordenar: RMA primeiro, depois DMA
+    const sortedItens = [...rmaItens, ...dmaItens];
+    sortedItens.forEach(item => {
+        const rowClass = item.tipo === 'RMA' ? 'rma-row' : 'dma-row';
+        html += `
+            <tr class="${rowClass}">
+                <td><strong>${item.tipo}</strong></td>
+                <td>${item.codigo || '-'}</td>
+                <td>${item.descricao || item.dscmat || '-'}</td>
+                <td>${Math.abs(item.qtdmov)}</td>
+                <td>${formatarMoeda(item.vlr_unitario)}</td>
+                <td class="valor">${formatarMoeda(item.valor_total)}</td>
+            </tr>
+        `;
+    });
+    
+    html += `</tbody></table>`;
+    
+    conteudo.innerHTML = html;
+}
+
+window.filtrarDetalhes = filtrarDetalhes;
 
 // ============================================
 // VERIFICAR AUTENTICAÇÃO
@@ -509,14 +611,16 @@ function exibirDetalhes(tipo, label, dados) {
     const containerId = tipo === 'login' ? 'detalhesLogin' : 'detalhesMes';
     const tituloId = tipo === 'login' ? 'detalhesLoginTitulo' : 'detalhesMesTitulo';
     const conteudoId = tipo === 'login' ? 'detalhesLoginConteudo' : 'detalhesMesConteudo';
+    const searchId = tipo === 'login' ? 'searchLogin' : 'searchMes';
     
     const container = document.getElementById(containerId);
     const titulo = document.getElementById(tituloId);
     const conteudo = document.getElementById(conteudoId);
+    const searchInput = document.getElementById(searchId);
     
     if (!container || !titulo || !conteudo) return;
     
-    // Filtrar dados pelo label (login ou mês)
+    // Filtrar dados pelo label
     let itens = [];
     let tituloTexto = '';
     
@@ -524,69 +628,36 @@ function exibirDetalhes(tipo, label, dados) {
         itens = dados.filter(d => d.sigla_mov_mat === label);
         tituloTexto = `📋 Detalhes do Login: ${label}`;
     } else {
-        // label é o mês_ano (ex: "2025-01")
         itens = dados.filter(d => d.mes_ano === label);
         const partes = label.split('-');
         const mesNome = MESES[partes[1]] || partes[1];
         tituloTexto = `📋 Detalhes do Mês: ${mesNome}/${partes[0]}`;
     }
     
+    // Armazenar dados para filtro
+    dadosDetalhesAtuais = {
+        tipo: tipo,
+        label: label,
+        itens: itens
+    };
+    
+    // Limpar busca
+    if (searchInput) searchInput.value = '';
+    
     if (itens.length === 0) {
-        conteudo.innerHTML = '<p style="color:#A0AEC0;">Nenhum item encontrado</p>';
+        conteudo.innerHTML = '<p style="color:#A0AEC0; text-align:center; padding:20px;">Nenhum item encontrado</p>';
         container.style.display = 'block';
         return;
     }
     
-    // Agrupar por tipo (RMA/DMA) e mostrar os itens
-    const rmaItens = itens.filter(d => d.tipo === 'RMA');
-    const dmaItens = itens.filter(d => d.tipo === 'DMA');
+    // Atualizar título
+    titulo.textContent = `${tituloTexto} (${itens.length} itens)`;
     
-    let html = '';
-    
-    // Resumo
-    html += `
-        <div style="display:flex; gap:20px; margin-bottom:15px; flex-wrap:wrap;">
-            <span style="color:#3B82F6; font-weight:600;">RMA: ${rmaItens.length} itens (${formatarMoeda(rmaItens.reduce((acc, d) => acc + d.valor_total, 0))})</span>
-            <span style="color:#10B981; font-weight:600;">DMA: ${dmaItens.length} itens (${formatarMoeda(dmaItens.reduce((acc, d) => acc + d.valor_total, 0))})</span>
-        </div>
-    `;
-    
-    // Tabela de itens
-    html += `<table class="tabela-detalhes">
-        <thead>
-            <tr>
-                <th>Tipo</th>
-                <th>Código</th>
-                <th>Descrição</th>
-                <th>Qtd</th>
-                <th>Valor Unit.</th>
-                <th>Valor Total</th>
-            </tr>
-        </thead>
-        <tbody>
-    `;
-    
-    // Ordenar: RMA primeiro, depois DMA
-    const sortedItens = [...rmaItens, ...dmaItens];
-    sortedItens.forEach(item => {
-        const rowClass = item.tipo === 'RMA' ? 'rma-row' : 'dma-row';
-        html += `
-            <tr class="${rowClass}">
-                <td><strong>${item.tipo}</strong></td>
-                <td>${item.codigo || '-'}</td>
-                <td>${item.descricao || item.dscmat || '-'}</td>
-                <td>${Math.abs(item.qtdmov)}</td>
-                <td>${formatarMoeda(item.vlr_unitario)}</td>
-                <td class="valor">${formatarMoeda(item.valor_total)}</td>
-            </tr>
-        `;
-    });
-    
-    html += `</tbody></table>`;
-    
-    conteudo.innerHTML = html;
-    titulo.textContent = tituloTexto;
+    // Mostrar container
     container.style.display = 'block';
+    
+    // Gerar conteúdo inicial
+    filtrarDetalhes(tipo);
     
     // Scroll para os detalhes
     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -708,7 +779,6 @@ function gerarGraficoLogin(dados) {
                     grid: { color: 'rgba(148, 163, 184, 0.05)' }
                 }
             },
-            // 🔥 CLIQUE NAS BARRAS
             onClick: function(event, elements) {
                 if (elements.length > 0) {
                     const index = elements[0].index;
@@ -829,11 +899,10 @@ function gerarGraficoMes(dados) {
                     grid: { color: 'rgba(148, 163, 184, 0.05)' }
                 }
             },
-            // 🔥 CLIQUE NAS BARRAS
             onClick: function(event, elements) {
                 if (elements.length > 0) {
                     const index = elements[0].index;
-                    const label = labels[index]; // mes_ano original
+                    const label = labels[index];
                     console.log(`🖱️ Clicou em: ${label}`);
                     exibirDetalhes('mes', label, dados);
                 }
