@@ -68,15 +68,6 @@ function goHome() {
 }
 
 // ============================================
-// FUNÇÕES DE GERENCIAMENTO DE SESSÃO (DEPRECATED)
-// 🔥 REMOVIDAS PARA EVITAR CONFLITO COM auth-service.js
-// ============================================
-
-// ⚠️ As funções abaixo foram removidas para evitar conflito
-// com o auth-service.js. Use authService.isLoggedIn() e
-// authService.getUserData() no lugar.
-
-// ============================================
 // OUTRAS FUNÇÕES ÚTEIS
 // ============================================
 
@@ -85,7 +76,22 @@ function goHome() {
  * 🔥 USA O authService
  */
 function redirecionarParaHome() {
-    goHome();
+    // 🔥 CORRIGIDO: USA authService EM VEZ DE verificarSessao()
+    let perfil = 'GESTAO';
+    try {
+        if (typeof authService !== 'undefined' && authService) {
+            const user = authService.getUserData();
+            if (user && user.perfil) {
+                perfil = user.perfil;
+            }
+        }
+    } catch (e) {
+        console.warn('⚠️ Erro ao obter perfil:', e);
+    }
+    
+    const homePage = HOME_PAGES[perfil.toUpperCase()] || 'home-gestao.html';
+    console.log(`🏠 Redirecionando para home: ${homePage} (Perfil: ${perfil})`);
+    navigateTo(homePage);
 }
 
 /**
