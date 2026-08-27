@@ -94,11 +94,20 @@ let itemSelecionadoMGM = null;
 let dadosCarregadosMGM = false;
 
 // ============================================
-// VARIÁVEIS PARA PROGRAMAÇÃO SIAGO
+// VARIÁVEIS PARA PROGRAMAÇÃO SIAGO (CORRIGIDAS)
 // ============================================
 
 let dadosProgramacaoSiagoCarregados = false;
 let etapasPorObraData = {};
+
+// NOTA: dadosProgramacaoSiago e etapasPorObra vêm do programacao-siago.js
+// Não redeclarar essas variáveis para evitar conflito
+
+// ============================================
+// VARIÁVEIS PARA FILTRO DE ETAPAS
+// ============================================
+
+let filtroEtapasMinimo = 0;
 
 // ============================================
 // NOVA VARIÁVEL: ITENS REPRESADOS
@@ -1419,8 +1428,72 @@ function renderizarListaObrasMGM(pendencias) {
         return;
     }
     
+    // ============================================
+    // APLICAR FILTRO POR ETAPAS
+    // ============================================
+    let pendenciasFiltradas = pendencias;
+    
+    if (filtroEtapasMinimo > 0) {
+        pendenciasFiltradas = pendencias.filter(p => {
+            const obraNorm = normalizarObra(p.obra);
+            const etapasInfo = getEtapasPorObra(obraNorm);
+            if (!etapasInfo) return false;
+            return etapasInfo.etapas_validas >= filtroEtapasMinimo;
+        });
+    }
+    
+    if (pendenciasFiltradas.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-dashboard">
+                <div class="icon">🔍</div>
+                <p>Nenhuma obra encontrada com ${filtroEtapasMinimo}+ etapas válidas</p>
+                <p class="sub">Ajuste o filtro para ver mais resultados</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // ============================================
+    // EXIBIR FILTRO DE ETAPAS
+    // ============================================
+    const filtroHTML = `
+        <div class="filtro-etapas-container">
+            <label>📋 Etapas válidas:
+                <select id="filtroEtapas" onchange="aplicarFiltroEtapas()">
+                    <option value="0">Todas</option>
+                    <option value="1">1+ etapas</option>
+                    <option value="2">2+ etapas</option>
+                    <option value="3">3+ etapas</option>
+                    <option value="4">4+ etapas</option>
+                    <option value="5">5+ etapas</option>
+                    <option value="6">6+ etapas</option>
+                    <option value="7">7+ etapas</option>
+                    <option value="8">8+ etapas</option>
+                    <option value="9">9+ etapas</option>
+                    <option value="10">10+ etapas</option>
+                </select>
+            </label>
+            <span class="etapas-filtro-info">📊 ${pendenciasFiltradas.length} de ${pendencias.length} obras</span>
+        </div>
+    `;
+    
+    // Inserir o filtro antes da lista
+    const listHeader = container.querySelector('.list-header');
+    if (listHeader) {
+        const filtroExistente = container.querySelector('.filtro-etapas-container');
+        if (filtroExistente) {
+            filtroExistente.remove();
+        }
+        container.insertAdjacentHTML('afterbegin', filtroHTML);
+    } else {
+        container.innerHTML = filtroHTML + container.innerHTML;
+    }
+    
+    // ============================================
+    // AGRUPAR OBJETOS
+    // ============================================
     const grupos = {};
-    pendencias.forEach(p => {
+    pendenciasFiltradas.forEach(p => {
         const obra = p.obra;
         if (!grupos[obra]) {
             grupos[obra] = {
@@ -1476,6 +1549,9 @@ function renderizarListaObrasMGM(pendencias) {
         }
     });
     
+    // ============================================
+    // RENDERIZAR LISTA
+    // ============================================
     let html = `
         <div class="list-header" style="display: grid; grid-template-columns: 80px 1fr 40px 50px 50px 60px 50px 45px; gap: 4px; padding: 6px 10px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 10px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
@@ -1558,10 +1634,13 @@ function renderizarListaObrasMGM(pendencias) {
         
         html += `
             <div class="item-group-item ${isActive ? 'active' : ''} ${statusClass}" onclick="selecionarObraMGM('${grupo.obra}')" style="display: grid; grid-template-columns: 80px 1fr 40px 50px 50px 60px 50px 45px; gap: 4px; padding: 8px 10px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s; ${temRepresado ? 'border-left: 4px solid #805AD5;' : ''} ${temSobra ? 'border-left: 4px solid #D69E2E;' : ''} ${temFalta ? 'border-right: 4px solid #E53E3E;' : ''}">
-                <span class="item-code" style="font-size: 11px;">${grupo.obraFormatada}</span>
+                <span class="item-code" style="font-size: 11px;">
+                    ${grupo.obraFormatada}
+                    <br>
+                    ${etapasIndicator}
+                </span>
                 <span class="item-desc" style="font-size: 11px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                     ${totalItens} itens ${infoExtra}
-                    ${etapasIndicator}
                 </span>
                 <span style="text-align: right; font-weight: 700; color: #2B6CB0; font-size: 11px;">${totalItens}</span>
                 <span style="text-align: center; font-weight: 600; color: ${temRepresado ? '#805AD5' : '#A0AEC0'}; font-size: 11px;">${totalRepresadoExibicao}</span>
@@ -1574,6 +1653,12 @@ function renderizarListaObrasMGM(pendencias) {
     }
     
     container.innerHTML = html;
+    
+    // Atualizar o valor do select
+    const selectEtapas = document.getElementById('filtroEtapas');
+    if (selectEtapas) {
+        selectEtapas.value = filtroEtapasMinimo;
+    }
 }
 
 function renderizarGraficosMGM(pendencias) {
@@ -2091,6 +2176,22 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
     container.innerHTML = html;
 }
 
+// ============================================
+// FUNÇÃO: APLICAR FILTRO POR ETAPAS
+// ============================================
+
+function aplicarFiltroEtapas() {
+    const select = document.getElementById('filtroEtapas');
+    if (!select) return;
+    
+    filtroEtapasMinimo = parseInt(select.value) || 0;
+    console.log(`🔍 Filtrando por ${filtroEtapasMinimo}+ etapas válidas`);
+    
+    renderizarListaObrasMGM(dadosFiltradosMGM);
+}
+
+window.aplicarFiltroEtapas = aplicarFiltroEtapas;
+
 function aplicarFiltrosMGM() {
     console.log('🔄 Aplicando filtros MGM...');
     const filtroStatus = document.getElementById('filterStatusMGM')?.value || 'todos';
@@ -2129,6 +2230,13 @@ function aplicarFiltrosMGM() {
         totalRegistros.textContent = `${filtrados.length} pendências`;
     }
     
+    // Resetar filtro de etapas ao aplicar outros filtros
+    const selectEtapas = document.getElementById('filtroEtapas');
+    if (selectEtapas) {
+        selectEtapas.value = 0;
+        filtroEtapasMinimo = 0;
+    }
+    
     renderizarDashboardMGM();
 }
 
@@ -2140,6 +2248,12 @@ function limparFiltrosMGM() {
     filtroStatusMGMAtivo = null;
     dadosFiltradosMGM = [...pendenciasConsolidadas];
     itemSelecionadoMGM = null;
+    
+    const selectEtapas = document.getElementById('filtroEtapas');
+    if (selectEtapas) {
+        selectEtapas.value = 0;
+        filtroEtapasMinimo = 0;
+    }
     
     document.querySelectorAll('.kpi-card-mgm').forEach(el => {
         el.classList.remove('active-filter');
@@ -2822,5 +2936,6 @@ window.aplicarFiltrosMGM = aplicarFiltrosMGM;
 window.limparFiltrosMGM = limparFiltrosMGM;
 window.renderizarDashboardMGM = renderizarDashboardMGM;
 window.aplicarFiltroStatusMGM = aplicarFiltroStatusMGM;
+window.aplicarFiltroEtapas = aplicarFiltroEtapas;
 
 console.log('✅ dashboards-pendencia-requisicao.js inicializado!');

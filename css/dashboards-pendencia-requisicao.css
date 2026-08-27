@@ -1615,3 +1615,48 @@
         padding: 2px 8px;
     }
 }
+
+/* ============================================ */
+/* FILTRO POR QUANTIDADE DE ETAPAS              */
+/* ============================================ */
+
+.filtro-etapas-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    border-top: 1px solid #E2E8F0;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+.filtro-etapas-container label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4A5568;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filtro-etapas-container select {
+    padding: 6px 12px;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+    cursor: pointer;
+}
+
+.filtro-etapas-container select:focus {
+    outline: none;
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+}
+
+.filtro-etapas-container .etapas-filtro-info {
+    font-size: 12px;
+    color: #718096;
+    margin-left: auto;
+}

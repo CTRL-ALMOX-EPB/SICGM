@@ -8,15 +8,82 @@ console.log('🚀 programacao-siago.js carregado!');
 // VARIÁVEIS GLOBAIS
 // ============================================
 
-let dadosProgramacaoSiago = [];
-let dadosProgramacaoProcessados = {};
+let dadosProgramacaoSiago = {};
 let etapasPorObra = {};
+let dadosProgramacaoSiagoCarregados = false;
 
 // ============================================
 // URL DO ARQUIVO NO R2
 // ============================================
 
 const PROGRAMACAO_SIAGO_URL = `${API_URL}/proxy/programacao-siago`;
+
+// ============================================
+// FUNÇÃO: NORMALIZAR OBRA (10 DÍGITOS SEM HÍFENS)
+// ============================================
+
+function normalizarObraSiago(obra) {
+    if (!obra) return '';
+    
+    // Remove tudo que não é número
+    let limpo = obra.trim().replace(/[^0-9]/g, '');
+    
+    if (!limpo) return '';
+    
+    // Se já tem 10 dígitos, retorna
+    if (limpo.length === 10) {
+        return limpo;
+    }
+    
+    // Se tem 9 dígitos, adiciona um zero à esquerda
+    if (limpo.length === 9) {
+        return '0' + limpo;
+    }
+    
+    // Se tem 8 dígitos
+    if (limpo.length === 8) {
+        // Se começa com 18, adiciona apenas um zero (ex: 18xxxxxx → 018xxxxxx)
+        if (limpo.startsWith('18')) {
+            return '0' + limpo;
+        }
+        // Se começa com 1, adiciona dois zeros (ex: 1xxxxxxx → 001xxxxxxx)
+        if (limpo.startsWith('1')) {
+            return '00' + limpo;
+        }
+        // Caso contrário, adiciona dois zeros
+        return '00' + limpo;
+    }
+    
+    // Se tem menos de 8 dígitos, completa com zeros à esquerda
+    if (limpo.length < 8) {
+        const padStart = 10 - limpo.length;
+        return '0'.repeat(padStart) + limpo;
+    }
+    
+    return limpo;
+}
+
+// ============================================
+// FUNÇÃO: FORMATAR OBRA COM HÍFENS PARA EXIBIÇÃO
+// ============================================
+
+function formatarObraComHifens(obra) {
+    if (!obra) return '';
+    
+    let limpo = obra.trim().replace(/[^0-9]/g, '');
+    
+    // Garantir 10 dígitos
+    if (limpo.length < 10) {
+        const padStart = 10 - limpo.length;
+        limpo = '0'.repeat(padStart) + limpo;
+    }
+    
+    if (limpo.length !== 10) return obra;
+    
+    return limpo.substring(0, 3) + '-' + 
+           limpo.substring(3, 5) + '-' + 
+           limpo.substring(5, 10);
+}
 
 // ============================================
 // FUNÇÃO: CARREGAR E PROCESSAR PROGRAMAÇÃO SIAGO
@@ -35,9 +102,10 @@ async function carregarProgramacaoSiago() {
         console.log(`✅ Arquivo carregado (${texto.split('\n').length} linhas)`);
         
         processarDadosProgramacao(texto);
+        dadosProgramacaoSiagoCarregados = true;
         console.log(`✅ Dados processados: ${Object.keys(etapasPorObra).length} obras únicas`);
         
-        return dadosProgramacaoProcessados;
+        return dadosProgramacaoSiago;
         
     } catch (error) {
         console.error('❌ Erro ao carregar programacao_siago.txt:', error);
@@ -93,13 +161,16 @@ function processarDadosProgramacao(texto) {
         const partes = linha.split('\t');
         if (partes.length < 3) continue;
         
-        const numObra = partes[idxNumObra]?.trim() || '';
+        const numObraOriginal = partes[idxNumObra]?.trim() || '';
         const etapaStr = partes[idxEtapa]?.trim() || '';
         const situacao = partes[idxSituacao]?.trim() || '';
         
-        if (!numObra || !etapaStr) continue;
+        if (!numObraOriginal || !etapaStr) continue;
         
+        // 🔥 NORMALIZAR OBRA PARA 10 DÍGITOS
+        const numObra = normalizarObraSiago(numObraOriginal);
         const etapa = parseInt(etapaStr);
+        
         if (isNaN(etapa)) continue;
         
         // Chave única: obra + etapa
@@ -124,7 +195,8 @@ function processarDadosProgramacao(texto) {
         // Armazenar
         obrasMap[chave] = {
             num_obra: numObra,
-            obra_formatada: formatarObraParaExibicao(numObra),
+            num_obra_original: numObraOriginal,
+            obra_formatada: formatarObraComHifens(numObra),
             etapa: etapa,
             situacao: situacao,
             endereco: endereco,
@@ -135,7 +207,6 @@ function processarDadosProgramacao(texto) {
             data_inicial: dataInicial,
             data_final: dataFinal,
             status: statusObra,
-            // Flag: é reprovada?
             is_reprovada: situacao === 'ETAPA REPROVADA'
         };
         
@@ -157,6 +228,7 @@ function processarDadosProgramacao(texto) {
         if (!etapasPorObraTemp[numObra]) {
             etapasPorObraTemp[numObra] = {
                 num_obra: numObra,
+                num_obra_original: dado.num_obra_original,
                 obra_formatada: dado.obra_formatada,
                 endereco: dado.endereco,
                 bairro: dado.bairro,
@@ -185,7 +257,12 @@ function processarDadosProgramacao(texto) {
             situacao: dado.situacao,
             is_reprovada: dado.is_reprovada,
             data_inicial: dado.data_inicial,
-            data_final: dado.data_final
+            data_final: dado.data_final,
+            endereco: dado.endereco,
+            bairro: dado.bairro,
+            localidade: dado.localidade,
+            uf: dado.uf,
+            cliente: dado.cliente
         };
     }
     
@@ -198,7 +275,7 @@ function processarDadosProgramacao(texto) {
     }
     
     // Armazenar nos objetos globais
-    dadosProgramacaoProcessados = obrasMap;
+    dadosProgramacaoSiago = obrasMap;
     etapasPorObra = etapasPorObraTemp;
     
     console.log(`📊 Resumo por obra:`);
@@ -220,23 +297,31 @@ function processarDadosProgramacao(texto) {
 }
 
 // ============================================
-// FUNÇÃO: OBTER ETAPAS POR OBRA
+// FUNÇÃO: OBTER ETAPAS POR OBRA (BUSCA POR 10 DÍGITOS)
 // ============================================
 
 function getEtapasPorObra(numObra) {
     if (!numObra) return null;
     
-    // Normalizar obra para 10 dígitos
-    const obraNorm = normalizarObra(numObra);
+    // 🔥 NORMALIZAR OBRA PARA 10 DÍGITOS
+    const obraNorm = normalizarObraSiago(numObra);
     
+    // Buscar exata
     if (etapasPorObra[obraNorm]) {
         return etapasPorObra[obraNorm];
     }
     
-    // Tentar buscar com zeros à esquerda
+    // Buscar por obra formatada (com hífens)
     for (const key in etapasPorObra) {
-        if (key === obraNorm || key === numObra) {
-            return etapasPorObra[key];
+        const obra = etapasPorObra[key];
+        if (obra.obra_formatada === numObra || obra.num_obra_original === numObra) {
+            return obra;
+        }
+        // Buscar no formato sem hífens
+        const keySemHifen = key.replace(/-/g, '');
+        const obraSemHifen = numObra.replace(/-/g, '');
+        if (keySemHifen === obraSemHifen) {
+            return obra;
         }
     }
     
@@ -256,7 +341,8 @@ function getResumoEtapasParaExibicao(numObra) {
             total: 0,
             validas: 0,
             reprovadas: 0,
-            texto: '📭 Sem dados de programação'
+            texto: '📭 Sem dados de programação',
+            cor: '#A0AEC0'
         };
     }
     
@@ -363,5 +449,7 @@ window.getResumoEtapasParaExibicao = getResumoEtapasParaExibicao;
 window.formatarEtapasParaExibicao = formatarEtapasParaExibicao;
 window.formatarSituacaoEtapa = formatarSituacaoEtapa;
 window.gerarHTMLEtapas = gerarHTMLEtapas;
+window.normalizarObraSiago = normalizarObraSiago;
+window.formatarObraComHifens = formatarObraComHifens;
 
 console.log('✅ programacao-siago.js inicializado!');
