@@ -1,5 +1,5 @@
 // ============================================
-// GESTÃO INDICADORES - RMA x DMA (VERSÃO FINAL)
+// GESTÃO INDICADORES - RMA x DMA (VERSÃO DEFINITIVA)
 // ============================================
 
 const WORKER_URL = 'https://gestao-xd-almox.alefe-gomes-72f.workers.dev';
@@ -46,6 +46,29 @@ function formatarValor(valor) {
 
 function formatarMoeda(valor) {
     return `R$ ${Math.round(valor).toLocaleString('pt-BR')}`;
+}
+
+// ============================================
+// 🔥 FUNÇÃO: OBTER CANVAS COM RETRY
+// ============================================
+function obterCanvas(id, tentativas = 0) {
+    const canvas = document.getElementById(id);
+    if (canvas) {
+        return canvas;
+    }
+    
+    // Se não encontrou e ainda há tentativas, esperar e tentar novamente
+    if (tentativas < 10) {
+        console.log(`⏳ Aguardando canvas #${id}... (tentativa ${tentativas + 1})`);
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                resolve(obterCanvas(id, tentativas + 1));
+            }, 200);
+        });
+    }
+    
+    console.error(`❌ Canvas #${id} não encontrado após várias tentativas`);
+    return null;
 }
 
 // ============================================
@@ -225,7 +248,6 @@ function parseMovimentos(texto, posicaoMap) {
             continue;
         }
         
-        // 🔥 FORMATAR DATA
         const datamovRaw = partes[idx.datamov]?.trim() || '';
         let dataFormatada = '';
         
@@ -299,18 +321,12 @@ function parseMovimentos(texto, posicaoMap) {
 // ============================================
 async function carregarDados() {
     try {
-        // Mostrar loading
-        const graficosTop = document.querySelector('.graficos-top');
-        if (graficosTop) {
-            graficosTop.innerHTML = 
-                `<div class="loading-msg" style="grid-column: 1 / -1;">⏳ Carregando dados...</div>`;
-        }
-        
         const posicaoEstoque = await carregarPosicaoEstoque();
         const texto = await buscarMovimentos();
         const movimentos = parseMovimentos(texto, posicaoEstoque);
         
         if (!movimentos || movimentos.length === 0) {
+            const graficosTop = document.querySelector('.graficos-top');
             if (graficosTop) {
                 graficosTop.innerHTML = 
                     `<div class="erro-msg" style="grid-column: 1 / -1;">⚠️ Nenhum movimento encontrado.</div>`;
@@ -322,13 +338,12 @@ async function carregarDados() {
         console.log(`📊 ${dadosCompletos.length} movimentos carregados`);
         console.log('📋 Primeiros 3:', dadosCompletos.slice(0, 3));
         
-        // Inicializar filtros
         inicializarFiltros();
         
-        // Aguardar um pequeno delay para o DOM renderizar os canvas
-        setTimeout(() => {
-            aplicarFiltros();
-        }, 100);
+        // 🔥 AGUARDAR O DOM ESTAR PRONTO ANTES DE GERAR GRÁFICOS
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        aplicarFiltros();
         
     } catch (erro) {
         console.error('❌ Erro ao carregar dados:', erro);
@@ -505,8 +520,22 @@ function aplicarFiltros() {
     console.log(`📊 ${dadosFiltrados.length} registros após filtros`);
     
     atualizarContadores(dadosFiltrados);
-    gerarGraficoLogin(dadosFiltrados);
-    gerarGraficoMes(dadosFiltrados);
+    
+    // 🔥 VERIFICAR SE OS CANVAS EXISTEM ANTES DE GERAR
+    const canvasLogin = document.getElementById('graficoLogin');
+    const canvasMes = document.getElementById('graficoMes');
+    
+    if (!canvasLogin) {
+        console.error('❌ Canvas graficoLogin não encontrado no DOM!');
+    } else {
+        gerarGraficoLogin(dadosFiltrados);
+    }
+    
+    if (!canvasMes) {
+        console.error('❌ Canvas graficoMes não encontrado no DOM!');
+    } else {
+        gerarGraficoMes(dadosFiltrados);
+    }
 }
 
 // ============================================
@@ -536,7 +565,7 @@ function atualizarContadores(dados) {
 function gerarGraficoLogin(dados) {
     const canvas = document.getElementById('graficoLogin');
     if (!canvas) {
-        console.warn('⚠️ Canvas graficoLogin não encontrado');
+        console.error('❌ Canvas graficoLogin não encontrado no HTML!');
         return;
     }
     
@@ -643,7 +672,7 @@ function gerarGraficoLogin(dados) {
 function gerarGraficoMes(dados) {
     const canvas = document.getElementById('graficoMes');
     if (!canvas) {
-        console.warn('⚠️ Canvas graficoMes não encontrado');
+        console.error('❌ Canvas graficoMes não encontrado no HTML!');
         return;
     }
     
@@ -749,6 +778,7 @@ function gerarGraficoMes(dados) {
 // INICIALIZAÇÃO
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM completamente carregado!');
     if (!verificarAutenticacaoGestao()) return;
     carregarDados();
 });
