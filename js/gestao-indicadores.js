@@ -1,5 +1,5 @@
 // ============================================
-// GESTÃO INDICADORES - RMA x DMA (VERSÃO FINAL)
+// GESTÃO INDICADORES - RMA x DMA (COM CLIQUE)
 // ============================================
 
 const WORKER_URL = 'https://gestao-xd-almox.alefe-gomes-72f.workers.dev';
@@ -8,7 +8,7 @@ let dadosCompletos = [];
 let dadosFiltrados = [];
 let graficoLogin = null;
 let graficoMes = null;
-let filtrosAplicados = false; // 🔥 CONTROLA SE FILTROS FORAM APLICADOS
+let filtrosAplicados = false;
 
 const filtroEstado = {
     mesesSelecionados: [],
@@ -34,6 +34,18 @@ function formatarMoeda(valor) {
 function formatarValor(valor) {
     return Math.round(valor).toLocaleString('pt-BR');
 }
+
+// ============================================
+// FECHAR DETALHES
+// ============================================
+function fecharDetalhes(id) {
+    const container = document.getElementById(id);
+    if (container) {
+        container.style.display = 'none';
+    }
+}
+
+window.fecharDetalhes = fecharDetalhes;
 
 // ============================================
 // VERIFICAR AUTENTICAÇÃO
@@ -266,7 +278,9 @@ function parseMovimentos(texto, posicaoMap) {
             qtd_abs: Math.abs(qtdmov),
             mes: mesNumero,
             ano: anoNumero,
-            mes_ano: mesAno
+            mes_ano: mesAno,
+            descricao: partes[idx.dscmat]?.trim() || '',
+            codigo: codmat
         });
     }
     
@@ -307,9 +321,6 @@ async function carregarDados() {
 // INICIALIZAR FILTROS
 // ============================================
 function inicializarFiltros() {
-    // ============================================
-    // A) BOTÕES DE MÊS - COMEÇAM DESMARCADOS
-    // ============================================
     const mesesContainer = document.getElementById('mesesContainer');
     if (!mesesContainer) {
         console.warn('⚠️ mesesContainer não encontrado');
@@ -350,9 +361,7 @@ function inicializarFiltros() {
         mesesContainer.appendChild(btn);
     });
     
-    // ============================================
-    // B) FILTRO DE LOGIN
-    // ============================================
+    // FILTRO DE LOGIN
     const logins = [...new Set(dadosCompletos.map(d => d.sigla_mov_mat).filter(Boolean))].sort();
     const selectLogin = document.getElementById('filtroLogin');
     
@@ -372,9 +381,7 @@ function inicializarFiltros() {
         });
     }
     
-    // ============================================
-    // C) FILTRO DE PERÍODO
-    // ============================================
+    // FILTRO DE PERÍODO
     const dataInicio = document.getElementById('dataInicio');
     const dataFim = document.getElementById('dataFim');
     const btnLimparPeriodo = document.getElementById('limparPeriodo');
@@ -422,7 +429,6 @@ function aplicarFiltros() {
     
     let dados = [...dadosCompletos];
     
-    // Verificar se algum filtro foi aplicado
     const temFiltroMes = filtroEstado.mesesSelecionados.length > 0;
     const temFiltroLogin = filtroEstado.loginSelecionado && filtroEstado.loginSelecionado !== 'Todos';
     const temFiltroPeriodo = filtroEstado.dataInicio || filtroEstado.dataFim;
@@ -464,7 +470,6 @@ function aplicarFiltros() {
     
     atualizarContadores(dadosFiltrados);
     
-    // 🔥 GERAR GRÁFICOS
     const canvasLogin = document.getElementById('graficoLogin');
     const canvasMes = document.getElementById('graficoMes');
     
@@ -482,26 +487,113 @@ function aplicarFiltros() {
 }
 
 // ============================================
-// ATUALIZAR CONTADORES
+// ATUALIZAR CONTADORES (APENAS 3 KPIs)
 // ============================================
 function atualizarContadores(dados) {
     const totalRMA = dados.filter(d => d.tipo === 'RMA').reduce((acc, d) => acc + d.valor_total, 0);
     const totalDMA = dados.filter(d => d.tipo === 'DMA').reduce((acc, d) => acc + d.valor_total, 0);
-    const saldo = totalRMA - totalDMA;
     const totalRMAQtd = dados.filter(d => d.tipo === 'RMA').length;
     const totalDMAQtd = dados.filter(d => d.tipo === 'DMA').length;
     
     document.getElementById('totalRMA').textContent = formatarMoeda(totalRMA);
     document.getElementById('totalDMA').textContent = formatarMoeda(totalDMA);
-    document.getElementById('totalSaldo').textContent = formatarMoeda(saldo);
-    document.getElementById('totalSaldo').style.color = saldo >= 0 ? '#3B82F6' : '#EF4444';
     document.getElementById('totalRegistros').textContent = formatarValor(dados.length);
     document.getElementById('totalRMAQtd').textContent = `${totalRMAQtd} requisições`;
     document.getElementById('totalDMAQtd').textContent = `${totalDMAQtd} devoluções`;
 }
 
 // ============================================
-// GRÁFICO POR LOGIN - TOP 10 INICIAL / TODOS APÓS FILTROS
+// EXIBIR DETALHES AO CLICAR NO GRÁFICO
+// ============================================
+function exibirDetalhes(tipo, label, dados) {
+    const containerId = tipo === 'login' ? 'detalhesLogin' : 'detalhesMes';
+    const tituloId = tipo === 'login' ? 'detalhesLoginTitulo' : 'detalhesMesTitulo';
+    const conteudoId = tipo === 'login' ? 'detalhesLoginConteudo' : 'detalhesMesConteudo';
+    
+    const container = document.getElementById(containerId);
+    const titulo = document.getElementById(tituloId);
+    const conteudo = document.getElementById(conteudoId);
+    
+    if (!container || !titulo || !conteudo) return;
+    
+    // Filtrar dados pelo label (login ou mês)
+    let itens = [];
+    let tituloTexto = '';
+    
+    if (tipo === 'login') {
+        itens = dados.filter(d => d.sigla_mov_mat === label);
+        tituloTexto = `📋 Detalhes do Login: ${label}`;
+    } else {
+        // label é o mês_ano (ex: "2025-01")
+        itens = dados.filter(d => d.mes_ano === label);
+        const partes = label.split('-');
+        const mesNome = MESES[partes[1]] || partes[1];
+        tituloTexto = `📋 Detalhes do Mês: ${mesNome}/${partes[0]}`;
+    }
+    
+    if (itens.length === 0) {
+        conteudo.innerHTML = '<p style="color:#A0AEC0;">Nenhum item encontrado</p>';
+        container.style.display = 'block';
+        return;
+    }
+    
+    // Agrupar por tipo (RMA/DMA) e mostrar os itens
+    const rmaItens = itens.filter(d => d.tipo === 'RMA');
+    const dmaItens = itens.filter(d => d.tipo === 'DMA');
+    
+    let html = '';
+    
+    // Resumo
+    html += `
+        <div style="display:flex; gap:20px; margin-bottom:15px; flex-wrap:wrap;">
+            <span style="color:#3B82F6; font-weight:600;">RMA: ${rmaItens.length} itens (${formatarMoeda(rmaItens.reduce((acc, d) => acc + d.valor_total, 0))})</span>
+            <span style="color:#10B981; font-weight:600;">DMA: ${dmaItens.length} itens (${formatarMoeda(dmaItens.reduce((acc, d) => acc + d.valor_total, 0))})</span>
+        </div>
+    `;
+    
+    // Tabela de itens
+    html += `<table class="tabela-detalhes">
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Código</th>
+                <th>Descrição</th>
+                <th>Qtd</th>
+                <th>Valor Unit.</th>
+                <th>Valor Total</th>
+            </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    // Ordenar: RMA primeiro, depois DMA
+    const sortedItens = [...rmaItens, ...dmaItens];
+    sortedItens.forEach(item => {
+        const rowClass = item.tipo === 'RMA' ? 'rma-row' : 'dma-row';
+        html += `
+            <tr class="${rowClass}">
+                <td><strong>${item.tipo}</strong></td>
+                <td>${item.codigo || '-'}</td>
+                <td>${item.descricao || item.dscmat || '-'}</td>
+                <td>${Math.abs(item.qtdmov)}</td>
+                <td>${formatarMoeda(item.vlr_unitario)}</td>
+                <td class="valor">${formatarMoeda(item.valor_total)}</td>
+            </tr>
+        `;
+    });
+    
+    html += `</tbody></table>`;
+    
+    conteudo.innerHTML = html;
+    titulo.textContent = tituloTexto;
+    container.style.display = 'block';
+    
+    // Scroll para os detalhes
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ============================================
+// GRÁFICO POR LOGIN - COM CLIQUE
 // ============================================
 function gerarGraficoLogin(dados) {
     const canvas = document.getElementById('graficoLogin');
@@ -528,21 +620,17 @@ function gerarGraficoLogin(dados) {
         agrupado[login].total = agrupado[login].RMA + agrupado[login].DMA;
     });
     
-    // Ordenar por total (maior para menor)
     const sorted = Object.entries(agrupado)
         .sort((a, b) => b[1].total - a[1].total);
     
-    // 🔥 DECISÃO: TOP 10 ou TODOS?
     let dadosGrafico = sorted;
     let labelSufixo = '';
     
     if (!filtrosAplicados) {
-        // 🔥 SEM FILTROS: MOSTRAR APENAS TOP 10
         dadosGrafico = sorted.slice(0, 10);
         labelSufixo = ' (Top 10)';
         console.log('📊 Sem filtros - mostrando Top 10 logins');
     } else {
-        // 🔥 COM FILTROS: MOSTRAR TODOS
         console.log('📊 Com filtros - mostrando todos os logins');
     }
     
@@ -619,6 +707,15 @@ function gerarGraficoLogin(dados) {
                     },
                     grid: { color: 'rgba(148, 163, 184, 0.05)' }
                 }
+            },
+            // 🔥 CLIQUE NAS BARRAS
+            onClick: function(event, elements) {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const label = this.data.labels[index];
+                    console.log(`🖱️ Clicou em: ${label}`);
+                    exibirDetalhes('login', label, dados);
+                }
             }
         }
     });
@@ -627,7 +724,7 @@ function gerarGraficoLogin(dados) {
 }
 
 // ============================================
-// GRÁFICO MENSAL
+// GRÁFICO MENSAL - COM CLIQUE
 // ============================================
 function gerarGraficoMes(dados) {
     const canvas = document.getElementById('graficoMes');
@@ -730,6 +827,15 @@ function gerarGraficoMes(dados) {
                         font: { size: 12, weight: 'bold' }
                     },
                     grid: { color: 'rgba(148, 163, 184, 0.05)' }
+                }
+            },
+            // 🔥 CLIQUE NAS BARRAS
+            onClick: function(event, elements) {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const label = labels[index]; // mes_ano original
+                    console.log(`🖱️ Clicou em: ${label}`);
+                    exibirDetalhes('mes', label, dados);
                 }
             }
         }

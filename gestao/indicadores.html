@@ -11,49 +11,29 @@
     <link rel="stylesheet" href="../css/gestao.css">
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <script>
-        function voltarParaHome() {
-            if (window.CONFIG && typeof CONFIG.goHome === 'function') {
-                CONFIG.goHome();
-            } else {
-                window.location.href = '../home-gestao.html';
-            }
-        }
-    </script>
 </head>
 <body>
     <div class="gestao-container">
-        <!-- ============================================ -->
-        <!-- HEADER                                        -->
-        <!-- ============================================ -->
+        <!-- HEADER -->
         <div class="gestao-header">
             <h1>📊 Indicadores Gerenciais</h1>
-            <button class="btn-voltar" onclick="voltarParaHome()">🏠 Voltar ao Início</button>
+            <button class="btn-voltar" onclick="window.location.href='../home-gestao.html'">🏠 Voltar</button>
         </div>
 
-        <!-- ============================================ -->
-        <!-- FILTROS DE MÊS (KPIs)                        -->
-        <!-- ============================================ -->
+        <!-- FILTROS DE MÊS -->
         <div class="filtros-meses">
             <div class="filtros-meses-header">
                 <h3>📅 Filtrar por Mês</h3>
-                <span class="filtros-meses-info">Clique nos meses para selecionar múltiplos</span>
+                <span class="filtros-meses-info">Clique para selecionar múltiplos</span>
             </div>
-            <div class="meses-container" id="mesesContainer">
-                <!-- Botões gerados pelo JS -->
-            </div>
+            <div class="meses-container" id="mesesContainer"></div>
         </div>
 
-        <!-- ============================================ -->
-        <!-- FILTROS ADICIONAIS                           -->
-        <!-- ============================================ -->
+        <!-- FILTROS -->
         <div class="filtros-box">
             <div class="filtro-item">
-                <label>👤 Login (Sigla):</label>
-                <select id="filtroLogin">
-                    <option value="Todos">Todos os Logins</option>
-                </select>
+                <label>👤 Login:</label>
+                <select id="filtroLogin"><option value="Todos">Todos</option></select>
             </div>
             <div class="filtro-item">
                 <label>📅 Data Início:</label>
@@ -63,24 +43,24 @@
                 <label>📅 Data Fim:</label>
                 <input type="date" id="dataFim">
             </div>
-            <button class="btn-limpar" id="limparPeriodo">🔄 Limpar Período</button>
-            <button class="btn-aplicar-filtros" onclick="aplicarFiltros()">📊 Aplicar Filtros</button>
+            <button class="btn-limpar" id="limparPeriodo">🔄 Limpar</button>
+            <button class="btn-aplicar-filtros" onclick="aplicarFiltros()">📊 Aplicar</button>
         </div>
 
         <!-- ============================================ -->
-        <!-- INDICADORES (KPIs)                           -->
+        <!-- INDICADORES (KPIs) - 3 COLUNAS              -->
         <!-- ============================================ -->
-        <div class="indicadores-grid">
+        <div class="indicadores-grid indicadores-3col">
             <div class="card-indicador card-rma">
                 <div class="card-indicador-icon">📤</div>
                 <h3>RMA Total</h3>
-                <div class="valor-big" id="totalRMA" style="color: #3B82F6;">R$ 0</div>
+                <div class="valor-big" id="totalRMA" style="color:#3B82F6;">R$ 0</div>
                 <small id="totalRMAQtd">0 requisições</small>
             </div>
             <div class="card-indicador card-dma">
                 <div class="card-indicador-icon">📥</div>
                 <h3>DMA Total</h3>
-                <div class="valor-big" id="totalDMA" style="color: #10B981;">R$ 0</div>
+                <div class="valor-big" id="totalDMA" style="color:#10B981;">R$ 0</div>
                 <small id="totalDMAQtd">0 devoluções</small>
             </div>
             <div class="card-indicador card-total">
@@ -92,52 +72,53 @@
         </div>
 
         <!-- ============================================ -->
-        <!-- GRÁFICOS - LINHA SUPERIOR                   -->
+        <!-- GRÁFICOS                                     -->
         <!-- ============================================ -->
         <div class="graficos-grid graficos-top">
             <div class="card-grafico card-grafico-grande">
                 <div class="card-grafico-header">
-                    <h3>📊 Valor por Login (RMA x DMA)</h3>
-                    <span class="card-grafico-sub">Barras verticais lado a lado</span>
+                    <h3>📊 Valor por Login</h3>
+                    <span class="card-grafico-sub">Clique em uma barra para ver detalhes</span>
                 </div>
                 <div class="grafico-container">
                     <canvas id="graficoLogin"></canvas>
                 </div>
+                <div class="detalhes-container" id="detalhesLogin" style="display:none;">
+                    <div class="detalhes-header">
+                        <span class="detalhes-titulo" id="detalhesLoginTitulo">Detalhes</span>
+                        <button class="btn-fechar-detalhes" onclick="fecharDetalhes('detalhesLogin')">✕</button>
+                    </div>
+                    <div class="detalhes-conteudo" id="detalhesLoginConteudo"></div>
+                </div>
             </div>
         </div>
 
-        <!-- ============================================ -->
-        <!-- GRÁFICOS - LINHA INFERIOR                   -->
-        <!-- ============================================ -->
         <div class="graficos-grid graficos-bottom">
             <div class="card-grafico card-grafico-grande">
                 <div class="card-grafico-header">
-                    <h3>📈 Evolução Mensal (RMA x DMA)</h3>
-                    <span class="card-grafico-sub">Valores acumulados por mês</span>
+                    <h3>📈 Evolução Mensal</h3>
+                    <span class="card-grafico-sub">Clique em uma barra para ver detalhes</span>
                 </div>
                 <div class="grafico-container">
                     <canvas id="graficoMes"></canvas>
                 </div>
+                <div class="detalhes-container" id="detalhesMes" style="display:none;">
+                    <div class="detalhes-header">
+                        <span class="detalhes-titulo" id="detalhesMesTitulo">Detalhes</span>
+                        <button class="btn-fechar-detalhes" onclick="fecharDetalhes('detalhesMes')">✕</button>
+                    </div>
+                    <div class="detalhes-conteudo" id="detalhesMesConteudo"></div>
+                </div>
             </div>
-        </div>
-
-        <!-- ============================================ -->
-        <!-- ESPAÇO PARA FUTUROS GRÁFICOS                 -->
-        <!-- ============================================ -->
-        <div class="graficos-grid graficos-futuro" id="graficosFuturos" style="display: none;">
-            <!-- Aqui virão mais gráficos no futuro -->
         </div>
     </div>
 
     <!-- ============================================ -->
-    <!-- FIREBASE SDK                                 -->
+    <!-- FIREBASE                                     -->
     <!-- ============================================ -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-    <!-- ============================================ -->
-    <!-- CONFIGURAÇÕES DO SISTEMA                     -->
-    <!-- ============================================ -->
     <script src="../js/firebase-config.js"></script>
     <script src="../js/auth-service.js"></script>
     <script src="../js/auth-global.js"></script>
