@@ -98,7 +98,6 @@ let dadosCarregadosMGM = false;
 // ============================================
 
 let dadosProgramacaoSiagoCarregados = false;
-let dadosProgramacaoSiago = null;
 let etapasPorObraData = {};
 
 // ============================================
