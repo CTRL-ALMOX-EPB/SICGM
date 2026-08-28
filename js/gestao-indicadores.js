@@ -1,5 +1,5 @@
 // ============================================
-// GESTÃO INDICADORES - RMA x DMA (COM FILTRO NOS DETALHES)
+// GESTÃO INDICADORES - RMA x DMA (COM AGRUPAMENTO)
 // ============================================
 
 const WORKER_URL = 'https://gestao-xd-almox.alefe-gomes-72f.workers.dev';
@@ -10,7 +10,6 @@ let graficoLogin = null;
 let graficoMes = null;
 let filtrosAplicados = false;
 
-// 🔥 ARMAZENAR OS DADOS DOS DETALHES PARA FILTRO
 let dadosDetalhesAtuais = {
     tipo: '',
     label: '',
@@ -49,7 +48,6 @@ function fecharDetalhes(id) {
     const container = document.getElementById(id);
     if (container) {
         container.style.display = 'none';
-        // Limpar campo de busca
         const searchInput = document.getElementById(`search${id === 'detalhesLogin' ? 'Login' : 'Mes'}`);
         if (searchInput) searchInput.value = '';
         dadosDetalhesAtuais = { tipo: '', label: '', itens: [] };
@@ -59,7 +57,7 @@ function fecharDetalhes(id) {
 window.fecharDetalhes = fecharDetalhes;
 
 // ============================================
-// FILTRAR DETALHES
+// FILTRAR DETALHES (COM AGRUPAMENTO)
 // ============================================
 function filtrarDetalhes(tipo) {
     const searchId = tipo === 'login' ? 'searchLogin' : 'searchMes';
@@ -85,59 +83,101 @@ function filtrarDetalhes(tipo) {
         });
     }
     
-    // Atualizar título com contagem
+    // 🔥 AGRUPAR POR MATERIAL (código + descrição)
+    const agrupado = {};
+    itensFiltrados.forEach(item => {
+        const key = item.codigo || item.dscmat || 'unknown';
+        if (!agrupado[key]) {
+            agrupado[key] = {
+                codigo: item.codigo || '',
+                descricao: item.dscmat || item.descricao || '',
+                unidade: item.codund || '',
+                RMA_qtd: 0,
+                RMA_valor: 0,
+                DMA_qtd: 0,
+                DMA_valor: 0,
+                total_qtd: 0,
+                total_valor: 0
+            };
+        }
+        if (item.tipo === 'RMA') {
+            agrupado[key].RMA_qtd += Math.abs(item.qtdmov);
+            agrupado[key].RMA_valor += item.valor_total;
+        } else {
+            agrupado[key].DMA_qtd += Math.abs(item.qtdmov);
+            agrupado[key].DMA_valor += item.valor_total;
+        }
+        agrupado[key].total_qtd = agrupado[key].RMA_qtd + agrupado[key].DMA_qtd;
+        agrupado[key].total_valor = agrupado[key].RMA_valor + agrupado[key].DMA_valor;
+    });
+    
+    const itensAgrupados = Object.values(agrupado);
+    
+    // Ordenar por valor total (maior primeiro)
+    itensAgrupados.sort((a, b) => b.total_valor - a.total_valor);
+    
+    // Atualizar título
     const label = dadosDetalhesAtuais.label || '';
     const tipoLabel = dadosDetalhesAtuais.tipo === 'login' ? 'Login' : 'Mês';
-    titulo.textContent = `📋 Detalhes do ${tipoLabel}: ${label} (${itensFiltrados.length} itens)`;
+    titulo.textContent = `📋 Detalhes do ${tipoLabel}: ${label} (${itensAgrupados.length} materiais)`;
     
-    // Gerar tabela filtrada
-    const rmaItens = itensFiltrados.filter(d => d.tipo === 'RMA');
-    const dmaItens = itensFiltrados.filter(d => d.tipo === 'DMA');
+    // Gerar tabela
+    const rmaTotal = itensAgrupados.reduce((acc, d) => acc + d.RMA_valor, 0);
+    const dmaTotal = itensAgrupados.reduce((acc, d) => acc + d.DMA_valor, 0);
     
     let html = '';
     
     // Resumo
     html += `
         <div style="display:flex; gap:20px; margin-bottom:15px; flex-wrap:wrap;">
-            <span style="color:#3B82F6; font-weight:600;">RMA: ${rmaItens.length} itens (${formatarMoeda(rmaItens.reduce((acc, d) => acc + d.valor_total, 0))})</span>
-            <span style="color:#10B981; font-weight:600;">DMA: ${dmaItens.length} itens (${formatarMoeda(dmaItens.reduce((acc, d) => acc + d.valor_total, 0))})</span>
+            <span style="color:#3B82F6; font-weight:600;">RMA: ${itensAgrupados.filter(d => d.RMA_qtd > 0).length} materiais (${formatarMoeda(rmaTotal)})</span>
+            <span style="color:#10B981; font-weight:600;">DMA: ${itensAgrupados.filter(d => d.DMA_qtd > 0).length} materiais (${formatarMoeda(dmaTotal)})</span>
+            <span style="color:#6B7280; font-weight:600;">Total: ${itensAgrupados.length} materiais</span>
             ${termo ? `<span style="color:#F59E0B; font-weight:600;">🔍 Filtro: "${termo}"</span>` : ''}
         </div>
     `;
     
-    if (itensFiltrados.length === 0) {
-        html += `<p style="color:#A0AEC0; text-align:center; padding:20px;">Nenhum item encontrado para "${termo}"</p>`;
+    if (itensAgrupados.length === 0) {
+        html += `<p style="color:#A0AEC0; text-align:center; padding:20px;">Nenhum material encontrado para "${termo}"</p>`;
         conteudo.innerHTML = html;
         return;
     }
     
-    // Tabela de itens
+    // Tabela de itens agrupados
     html += `<table class="tabela-detalhes">
         <thead>
             <tr>
-                <th>Tipo</th>
                 <th>Código</th>
                 <th>Descrição</th>
-                <th>Qtd</th>
-                <th>Valor Unit.</th>
-                <th>Valor Total</th>
+                <th>Un.</th>
+                <th style="color:#3B82F6;">RMA Qtd</th>
+                <th style="color:#3B82F6;">RMA Valor</th>
+                <th style="color:#10B981;">DMA Qtd</th>
+                <th style="color:#10B981;">DMA Valor</th>
+                <th>Total Valor</th>
             </tr>
         </thead>
         <tbody>
     `;
     
-    // Ordenar: RMA primeiro, depois DMA
-    const sortedItens = [...rmaItens, ...dmaItens];
-    sortedItens.forEach(item => {
-        const rowClass = item.tipo === 'RMA' ? 'rma-row' : 'dma-row';
+    itensAgrupados.forEach(item => {
+        const hasRMA = item.RMA_qtd > 0;
+        const hasDMA = item.DMA_qtd > 0;
+        let rowClass = '';
+        if (hasRMA && hasDMA) rowClass = 'ambos-row';
+        else if (hasRMA) rowClass = 'rma-row';
+        else if (hasDMA) rowClass = 'dma-row';
+        
         html += `
             <tr class="${rowClass}">
-                <td><strong>${item.tipo}</strong></td>
-                <td>${item.codigo || '-'}</td>
-                <td>${item.descricao || item.dscmat || '-'}</td>
-                <td>${Math.abs(item.qtdmov)}</td>
-                <td>${formatarMoeda(item.vlr_unitario)}</td>
-                <td class="valor">${formatarMoeda(item.valor_total)}</td>
+                <td><strong>${item.codigo || '-'}</strong></td>
+                <td>${item.descricao || '-'}</td>
+                <td>${item.unidade || '-'}</td>
+                <td style="color:#3B82F6; font-weight:600;">${hasRMA ? formatarValor(item.RMA_qtd) : '-'}</td>
+                <td style="color:#3B82F6;">${hasRMA ? formatarMoeda(item.RMA_valor) : '-'}</td>
+                <td style="color:#10B981; font-weight:600;">${hasDMA ? formatarValor(item.DMA_qtd) : '-'}</td>
+                <td style="color:#10B981;">${hasDMA ? formatarMoeda(item.DMA_valor) : '-'}</td>
+                <td class="valor">${formatarMoeda(item.total_valor)}</td>
             </tr>
         `;
     });
@@ -289,6 +329,7 @@ function parseMovimentos(texto, posicaoMap) {
         datamov: cabecalho.indexOf('datamov'),
         codmat_mov: cabecalho.indexOf('codmat_mov'),
         dscmat: cabecalho.indexOf('dscmat'),
+        codund: cabecalho.indexOf('codund'),
         qtdmov: cabecalho.indexOf('qtdmov'),
         vlrmov: cabecalho.indexOf('vlrmov'),
         nummov: cabecalho.indexOf('nummov'),
@@ -370,6 +411,7 @@ function parseMovimentos(texto, posicaoMap) {
             datamov_display: dataFormatada,
             codmat: codmat,
             dscmat: partes[idx.dscmat]?.trim() || '',
+            codund: partes[idx.codund]?.trim() || '',
             qtdmov: qtdmov,
             vlrmov: parseFloat(partes[idx.vlrmov]?.trim().replace(',', '.')) || 0,
             nummov: partes[idx.nummov]?.trim() || '',
@@ -382,7 +424,8 @@ function parseMovimentos(texto, posicaoMap) {
             ano: anoNumero,
             mes_ano: mesAno,
             descricao: partes[idx.dscmat]?.trim() || '',
-            codigo: codmat
+            codigo: codmat,
+            unidade: partes[idx.codund]?.trim() || ''
         });
     }
     
@@ -651,12 +694,12 @@ function exibirDetalhes(tipo, label, dados) {
     }
     
     // Atualizar título
-    titulo.textContent = `${tituloTexto} (${itens.length} itens)`;
+    titulo.textContent = tituloTexto;
     
     // Mostrar container
     container.style.display = 'block';
     
-    // Gerar conteúdo inicial
+    // Gerar conteúdo inicial (agrupado)
     filtrarDetalhes(tipo);
     
     // Scroll para os detalhes
@@ -678,7 +721,6 @@ function gerarGraficoLogin(dados) {
         return;
     }
     
-    // Agrupar por login
     const agrupado = {};
     dados.forEach(d => {
         const login = d.sigla_mov_mat;
