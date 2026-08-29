@@ -176,24 +176,21 @@
                 </div>
 
                 <div class="controle-form-body">
-                    <div class="form-row">
+                    <!-- TRÊS CAMPOS LADO A LADO -->
+                    <div class="form-row form-row-3col">
                         <div class="form-group">
                             <label>📋 Tipo de Controle</label>
                             <input type="text" id="formTipo" readonly>
                         </div>
-                    </div>
-
-                    <div id="camposComuns">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="formObra">🏗️ Obra *</label>
-                                <input type="text" id="formObra" placeholder="Digite o número da obra" required>
-                            </div>
-                            <!-- CAMPO DATA DE PROGRAMAÇÃO - lado a lado com a obra -->
-                            <div class="form-group" id="campoDataProgramacao">
-                                <label for="formDataProgramacao">📅 Data de Programação <span style="color:#FC8181;">*</span></label>
-                                <input type="date" id="formDataProgramacao">
-                            </div>
+                        
+                        <div class="form-group">
+                            <label for="formObra">🏗️ Obra *</label>
+                            <input type="text" id="formObra" placeholder="Digite o número da obra" required>
+                        </div>
+                        
+                        <div class="form-group" id="campoDataProgramacao">
+                            <label for="formDataProgramacao">📅 Data de Programação <span style="color:#FC8181;">*</span></label>
+                            <input type="date" id="formDataProgramacao">
                         </div>
                     </div>
 
@@ -460,7 +457,6 @@
                                         <th style="width:12%;">Descrição</th>
                                         <th style="width:4%;">UND</th>
                                         <th style="width:6%;">QTD</th>
-                                        <th style="width:7%;" id="thPendenteAditivo" style="display:none;">Pend. Aditivo</th>
                                         <th style="width:9%;" id="thDataBaixa" style="display:none;">Data Baixa</th>
                                         <th style="width:7%;" id="thBaixado" style="display:none;">Baixado?</th>
                                         <th style="width:10%;" id="thMotivo" style="display:none;">Motivo</th>
