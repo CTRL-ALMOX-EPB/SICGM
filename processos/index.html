@@ -10,6 +10,58 @@
     
     <!-- CSS Processos (passo a passo) -->
     <link rel="stylesheet" href="../css/processos.css">
+    
+    <style>
+        .processos-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 16px 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            border: 1px solid #E2E8F0;
+        }
+        .processos-header h1 {
+            font-size: 22px;
+            color: #2D3748;
+            margin: 0;
+        }
+        .processos-header .header-timer {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .processos-header .btn-voltar {
+            background: #4299E1;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .processos-header .btn-voltar:hover {
+            background: #3182CE;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+        }
+        /* Ajuste para o container principal */
+        .processos-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 12px;
+        }
+    </style>
 </head>
 <body>
     <!-- Loading Overlay -->
@@ -19,7 +71,21 @@
     </div>
 
     <div class="processos-container" id="processosContent" style="display: none;">
-        <!-- Renderizado via JavaScript -->
+        <!-- Header com Timer -->
+        <div class="processos-header">
+            <h1>📋 Processos</h1>
+            <div class="header-timer">
+                <div class="session-timer-wrapper">
+                    <span class="timer-icon">⏱️</span>
+                    <span class="timer-label">Sessão:</span>
+                    <span id="sessionTimer">30:00</span>
+                    <span class="timer-status">(ativa)</span>
+                </div>
+                <button class="btn-voltar" onclick="window.location.href='../home-gestao.html'">🏠 Voltar</button>
+            </div>
+        </div>
+        
+        <!-- Conteúdo renderizado via JavaScript -->
     </div>
     
     <!-- ============================================ -->
@@ -31,12 +97,14 @@
     <!-- ============================================ -->
     <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
     <!-- ============================================ -->
-    <script src="../js/firebase-config.js"></script>   <!-- 1. Configura o Firebase -->
-    <script src="../js/auth-service.js"></script>      <!-- 2. Cria o authService -->
-    <script src="../js/auth-global.js"></script>       <!-- 3. Verifica sessão na página -->
-    <script src="../js/auth-helper.js"></script>       <!-- 4. 🔥 FUNÇÕES AUXILIARES -->
-    <script src="../js/script.js"></script>            <!-- 5. Funções globais -->
+    <script src="../js/firebase-config.js"></script>   
+    <script src="../js/config.js"></script>  
+    <script src="../js/auth-service.js"></script>      
+    <script src="../js/auth-helper.js"></script>  
+    <script src="../js/timer.js"></script>
+    <script src="../js/script.js"></script>
+    <script src="../js/auth-global.js"></script>  
+    <Script src="../js/login.js"></script>      
     <script src="../js/processos.js"></script>
-    <script src="../js/config.js"></script>
 </body>
 </html>

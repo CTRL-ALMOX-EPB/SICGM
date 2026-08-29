@@ -19,24 +19,18 @@
         <div class="home-header">
             <h1>🏢 SICGM - Gestão</h1>
             <div class="user-info">
-                <div>
+                <div class="user-details">
                     <div class="user-name" id="nomeUsuario">Carregando...</div>
                     <div class="user-matricula" id="matriculaUsuario">Matrícula: ---</div>
-                    <div style="font-size: 12px; color: #718096; margin-top: 4px;">
-                        ⏰ Sessão expira em: <span id="sessionTimer">30 minutos</span>
+                    <div class="session-timer-wrapper">
+                        <span class="timer-icon">⏱️</span>
+                        <span class="timer-label">Sessão:</span>
+                        <span id="sessionTimer">30:00</span>
+                        <span class="timer-status">(ativa)</span>
                     </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <a href="gestao/admin.html" class="btn-admin-header" style="
-                        background: #9F7AEA;
-                        color: white;
-                        padding: 8px 16px;
-                        border-radius: 8px;
-                        text-decoration: none;
-                        font-size: 13px;
-                        font-weight: 600;
-                        transition: background 0.3s;
-                    ">👑 Admin</a>
+                <div class="user-actions">
+                    <a href="gestao/admin.html" class="btn-admin-header">👑 Admin</a>
                     <span class="user-perfil" id="perfilUsuario">GESTÃO</span>
                     <button class="btn-sair" onclick="sair()">🚪 Sair</button>
                 </div>
@@ -82,13 +76,17 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
-    <!-- 🔥 CONFIGURAÇÕES (OBRIGATÓRIO) -->
-    <script src="js/firebase-config.js"></script>
-    <script src="js/auth-service.js"></script>
-    <script src="js/auth-global.js"></script>  <!-- ← ESSE É O CRÍTICO! -->
-    
-    <!-- Scripts Específicos -->
+    <!-- ============================================ -->
+    <!-- SCRIPTS NA ORDEM CORRETA -->
+    <!-- ============================================ -->
+    <script src="js/firebase-config.js"></script>   
+    <script src="js/config.js"></script>  
+    <script src="js/auth-service.js"></script>      
+    <script src="js/auth-helper.js"></script>  
+    <script src="js/timer.js"></script>
     <script src="js/script.js"></script>
+    <script src="js/auth-global.js"></script>  
+    <script src="js/login.js"></script>      
     <script src="js/home-gestao.js"></script>
 </body>
 </html>

@@ -7,6 +7,56 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/sa-emergencial.css">
+    
+    <style>
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 6px 0;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 14px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header-left .title {
+            font-size: 1.3rem;
+            color: #2d3748;
+            margin: 0;
+            font-weight: 700;
+        }
+        .header-timer {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .session-timer-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: #718096;
+            background: rgba(66, 153, 225, 0.06);
+            padding: 2px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(66, 153, 225, 0.12);
+            white-space: nowrap;
+            height: 26px;
+        }
+        .session-timer-wrapper .timer-icon { font-size: 12px; }
+        .session-timer-wrapper .timer-label { color: #A0AEC0; font-size: 10px; font-weight: 500; }
+        .session-timer-wrapper .timer-status { font-size: 9px; color: #A0AEC0; font-weight: 400; }
+        #sessionTimer { font-weight: 600; min-width: 35px; font-family: 'Courier New', monospace; font-size: 12px; color: #48BB78; }
+        #sessionTimer.normal { color: #48BB78; }
+        #sessionTimer.warning { color: #ECC94B; }
+        #sessionTimer.danger { color: #E53E3E; font-weight: 800; animation: timerBlink 1s ease-in-out infinite; }
+        @keyframes timerBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
 </head>
 <body>
     <!-- Botões de navegação -->
@@ -21,10 +71,20 @@
 
     <div class="container">
         <div class="form-card">
-            <!-- Logo e Título -->
+            <!-- Logo e Título com Timer -->
             <div class="header-container">
-                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
-                <h1 class="title">🚨 S.A. Emergencial</h1>
+                <div class="header-left">
+                    <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                    <h1 class="title">🚨 S.A. Emergencial</h1>
+                </div>
+                <div class="header-timer">
+                    <div class="session-timer-wrapper">
+                        <span class="timer-icon">⏱️</span>
+                        <span class="timer-label">Sessão:</span>
+                        <span id="sessionTimer">30:00</span>
+                        <span class="timer-status">(ativa)</span>
+                    </div>
+                </div>
             </div>
             
             <!-- Botão Voltar -->
@@ -78,11 +138,14 @@
     <!-- ============================================ -->
     <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
     <!-- ============================================ -->
-    <script src="../js/firebase-config.js"></script>   <!-- 1. Configura o Firebase -->
-    <script src="../js/auth-service.js"></script>      <!-- 2. Cria o authService -->
-    <script src="../js/auth-global.js"></script>       <!-- 3. Verifica sessão na página -->
-    <script src="../js/auth-helper.js"></script>       <!-- 4. 🔥 FUNÇÕES AUXILIARES -->
-    <script src="../js/script.js"></script>            <!-- 5. Funções globais -->
+    <script src="../js/firebase-config.js"></script>   
+    <script src="../js/config.js"></script>  
+    <script src="../js/auth-service.js"></script>      
+    <script src="../js/auth-helper.js"></script>  
+    <script src="../js/timer.js"></script>
+    <script src="../js/script.js"></script>
+    <script src="../js/auth-global.js"></script>  
+    <Script src="../js/login.js"></script>      
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <script src="../js/sa-emergencial.js"></script>
 </body>

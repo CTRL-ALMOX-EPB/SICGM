@@ -2,360 +2,130 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Assinatura - S.A. Emergencial</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✍️</text></svg>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SICGM - S.A. Emergencial</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
     <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/sa-emergencial.css">
+    
     <style>
-        /* ============================================ */
-        /* ASSINATURA - PÁGINA DEDICADA                */
-        /* ============================================ */
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-
-        html, body {
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
-            position: fixed;
-            top: 0;
-            left: 0;
-        }
-
-        body {
-            background: #1a237e;
+        .header-container {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            padding: 10px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        }
-
-        .assinatura-container {
-            background: white;
-            border-radius: 16px;
-            max-width: 700px;
-            width: 100%;
-            max-height: 98vh;
-            height: auto;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            animation: slideUp 0.4s ease;
-            overflow: hidden;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .assinatura-header {
-            background: linear-gradient(135deg, #1a237e, #0d47a1);
-            color: white;
-            padding: 20px 25px;
-            text-align: center;
-            flex-shrink: 0;
-        }
-
-        .assinatura-header h1 {
-            font-size: clamp(20px, 4vw, 28px);
-            margin-bottom: 3px;
-            font-weight: 600;
-        }
-
-        .assinatura-header p {
-            opacity: 0.9;
-            font-size: clamp(13px, 2vw, 16px);
-        }
-
-        .assinatura-body {
-            padding: 20px 25px;
-            flex: 1;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .assinatura-info {
-            background: #F7FAFC;
-            padding: 12px 18px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            text-align: center;
-            border: 1px solid #E2E8F0;
-            flex-shrink: 0;
-        }
-
-        .assinatura-info .label {
-            font-weight: 600;
-            color: #1a237e;
-            font-size: clamp(12px, 1.8vw, 14px);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .assinatura-info .nome {
-            font-size: clamp(18px, 3.5vw, 22px);
-            font-weight: 700;
-            color: #2D3748;
-            margin-top: 3px;
-            word-break: break-word;
-        }
-
-        .assinatura-info .tipo {
-            font-size: clamp(12px, 1.5vw, 14px);
-            color: #718096;
-            margin-top: 3px;
-        }
-
-        .form-group {
-            margin-bottom: 12px;
-            flex-shrink: 0;
-        }
-
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 4px;
-            color: #4A5568;
-            font-size: clamp(13px, 1.6vw, 14px);
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 10px 14px;
-            border: 2px solid #E2E8F0;
-            border-radius: 8px;
-            font-size: clamp(14px, 2vw, 16px);
-            transition: border-color 0.3s;
-            background: #FFFFFF;
-            -webkit-user-select: text;
-            user-select: text;
-            -webkit-touch-callout: text;
-        }
-
-        .form-group input:focus {
-            border-color: #4299E1;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
-        }
-
-        .signature-area {
-            border: 2px solid #E2E8F0;
-            border-radius: 10px;
-            margin: 10px 0 15px;
-            background: white;
-            touch-action: none;
-            overflow: hidden;
-            flex: 1;
-            min-height: 150px;
-            position: relative;
-        }
-
-        .signature-area canvas {
-            display: block;
-            width: 100% !important;
-            height: 100% !important;
-            min-height: 150px;
-            touch-action: none;
-            cursor: crosshair;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        .signature-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
             flex-wrap: wrap;
-            flex-shrink: 0;
-            padding-top: 5px;
+            gap: 10px;
+            padding: 6px 0;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 14px;
         }
-
-        .signature-actions button {
-            padding: 12px 20px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header-left .title {
+            font-size: 1.3rem;
+            color: #2d3748;
+            margin: 0;
             font-weight: 700;
-            font-size: clamp(13px, 1.6vw, 15px);
-            transition: all 0.3s ease;
-            flex: 1;
-            min-width: 80px;
-            touch-action: manipulation;
         }
-
-        .signature-actions button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
+        .header-timer {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
-
-        .btn-limpar {
-            background: #ED8936;
-            color: white;
+        .session-timer-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: #718096;
+            background: rgba(66, 153, 225, 0.06);
+            padding: 2px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(66, 153, 225, 0.12);
+            white-space: nowrap;
+            height: 26px;
         }
-
-        .btn-limpar:hover:not(:disabled) {
-            background: #DD6B20;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(237, 137, 54, 0.4);
-        }
-
-        .btn-confirmar {
-            background: #48BB78;
-            color: white;
-        }
-
-        .btn-confirmar:hover:not(:disabled) {
-            background: #38A169;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
-        }
-
-        .btn-cancelar {
-            background: #FC8181;
-            color: white;
-        }
-
-        .btn-cancelar:hover:not(:disabled) {
-            background: #F56565;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(252, 129, 129, 0.4);
-        }
-
-        .btn-voltar {
-            background: #718096;
-            color: white;
-        }
-
-        .btn-voltar:hover:not(:disabled) {
-            background: #4A5568;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(113, 128, 150, 0.4);
-        }
-
-        .assinatura-status {
-            text-align: center;
-            padding: 8px 12px;
-            margin-top: 10px;
-            border-radius: 8px;
-            display: none;
-            font-size: clamp(13px, 1.5vw, 14px);
-            flex-shrink: 0;
-        }
-
-        .assinatura-status.success {
-            display: block;
-            background: #F0FFF4;
-            color: #276749;
-            border: 1px solid #48BB78;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .assinatura-status.error {
-            display: block;
-            background: #FFF5F5;
-            color: #C53030;
-            border: 1px solid #FC8181;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @media (max-width: 768px) {
-            body { padding: 8px; }
-            .assinatura-container { max-height: 99vh; border-radius: 12px; }
-            .assinatura-header { padding: 15px 20px; }
-            .assinatura-body { padding: 15px 20px; }
-            .assinatura-info { padding: 10px 14px; margin-bottom: 12px; }
-            .signature-area { min-height: 180px; }
-            .signature-area canvas { min-height: 180px; }
-            .signature-actions button { padding: 10px 16px; min-width: 70px; }
-        }
-
-        @media (max-width: 480px) {
-            body { padding: 5px; }
-            .assinatura-header { padding: 12px 15px; }
-            .assinatura-header h1 { font-size: 18px; }
-            .assinatura-header p { font-size: 13px; }
-            .assinatura-body { padding: 12px 15px; }
-            .assinatura-info { padding: 8px 12px; margin-bottom: 10px; }
-            .assinatura-info .nome { font-size: 16px; }
-            .assinatura-info .label { font-size: 11px; }
-            .signature-area { min-height: 160px; margin: 8px 0 12px; }
-            .signature-area canvas { min-height: 160px; }
-            .signature-actions { flex-direction: row; gap: 6px; flex-wrap: wrap; }
-            .signature-actions button { padding: 10px 12px; font-size: 12px; min-width: 60px; flex: 1; }
-            .form-group input { padding: 8px 12px; font-size: 14px; }
-        }
-
-        @media (max-height: 500px) and (orientation: landscape) {
-            .assinatura-container { max-height: 98vh; flex-direction: row; flex-wrap: wrap; }
-            .assinatura-header { width: 100%; padding: 10px 15px; }
-            .assinatura-header h1 { font-size: 16px; }
-            .assinatura-header p { font-size: 12px; }
-            .assinatura-body { width: 100%; padding: 10px 15px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
-            .assinatura-info { width: 100%; padding: 6px 12px; margin-bottom: 8px; }
-            .assinatura-info .nome { font-size: 14px; }
-            .assinatura-info .label { font-size: 10px; }
-            .form-group { width: 100%; margin-bottom: 8px; }
-            .form-group input { padding: 6px 10px; font-size: 13px; }
-            .signature-area { width: 100%; min-height: 120px; margin: 5px 0 10px; }
-            .signature-area canvas { min-height: 120px; }
-            .signature-actions { width: 100%; gap: 5px; }
-            .signature-actions button { padding: 8px 12px; font-size: 11px; min-width: 50px; }
-            .assinatura-status { width: 100%; margin-top: 5px; padding: 5px 10px; font-size: 12px; }
-        }
-
-        .assinatura-container::-webkit-scrollbar { width: 4px; }
-        .assinatura-container::-webkit-scrollbar-track { background: #f1f1f1; }
-        .assinatura-container::-webkit-scrollbar-thumb { background: #1a237e; border-radius: 3px; }
-        .assinatura-container::-webkit-scrollbar-thumb:hover { background: #0d47a1; }
+        .session-timer-wrapper .timer-icon { font-size: 12px; }
+        .session-timer-wrapper .timer-label { color: #A0AEC0; font-size: 10px; font-weight: 500; }
+        .session-timer-wrapper .timer-status { font-size: 9px; color: #A0AEC0; font-weight: 400; }
+        #sessionTimer { font-weight: 600; min-width: 35px; font-family: 'Courier New', monospace; font-size: 12px; color: #48BB78; }
+        #sessionTimer.normal { color: #48BB78; }
+        #sessionTimer.warning { color: #ECC94B; }
+        #sessionTimer.danger { color: #E53E3E; font-weight: 800; animation: timerBlink 1s ease-in-out infinite; }
+        @keyframes timerBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
-    <div class="assinatura-container" id="assinaturaContainer">
-        <div class="assinatura-header">
-            <h1>✍️ ASSINATURA</h1>
-            <p>Assine no campo abaixo com o mouse ou dedo</p>
+    <!-- Botões de navegação -->
+    <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
+        <span class="btn-navegacao-icone">⬆</span>
+        <span class="btn-navegacao-texto">Topo</span>
+    </button>
+    <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
+        <span class="btn-navegacao-icone">⬇</span>
+        <span class="btn-navegacao-texto">Fim</span>
+    </button>
+
+    <div class="container">
+        <div class="form-card">
+            <!-- Logo e Título com Timer -->
+            <div class="header-container">
+                <div class="header-left">
+                    <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                    <h1 class="title">🚨 S.A. Emergencial</h1>
+                </div>
+                <div class="header-timer">
+                    <div class="session-timer-wrapper">
+                        <span class="timer-icon">⏱️</span>
+                        <span class="timer-label">Sessão:</span>
+                        <span id="sessionTimer">30:00</span>
+                        <span class="timer-status">(ativa)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botão Voltar -->
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <button onclick="redirecionarParaHome()" class="btn-voltar-home">🏠 Voltar ao Início</button>
+                <button onclick="exportarSAPainel()" class="btn-exportar-pdf" id="btnExportarPDFPainel" style="display: none;">
+                    📄 Exportar PDF Selecionado
+                </button>
+            </div>
+
+            <!-- Header do Usuário -->
+            <div class="user-header" id="userHeader">
+                <div class="user-info">
+                    <div class="avatar" id="userAvatar">U</div>
+                    <div class="user-details">
+                        <h3 id="userName">Carregando...</h3>
+                        <p id="userRole">Carregando...</p>
+                        <p id="userMatricula">Matrícula: ---</p>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <button class="btn-primary" id="btnNovaSA">➕ Nova S.A.</button>
+                </div>
+            </div>
+
+            <!-- Lista de SA com Filtros -->
+            <div class="sa-list-container">
+                <div id="saList">
+                    <div class="sa-list-loading">
+                        <div class="spinner"></div>
+                        <p>⏳ Carregando S.A. Emergenciais...</p>
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <div class="assinatura-body">
-            <div class="assinatura-info">
-                <div class="label" id="tipoAssinatura">ENTREGUE POR</div>
-                <div class="nome" id="nomeSignatario">-</div>
-                <div class="tipo" id="infoAdicional">S.A. Emergencial</div>
-            </div>
-
-            <div class="form-group">
-                <label for="nomeInput">Nome do Signatário *</label>
-                <input type="text" id="nomeInput" placeholder="Digite seu nome completo" autocomplete="off">
-            </div>
-
-            <div class="signature-area" id="signatureArea">
-                <canvas id="signatureCanvas"></canvas>
-            </div>
-
-            <div class="assinatura-status" id="statusMessage"></div>
-
-            <div class="signature-actions">
-                <button class="btn-limpar" onclick="limparAssinatura()">🗑️ Limpar</button>
-                <button class="btn-confirmar" onclick="confirmarAssinatura()">✅ Confirmar</button>
-                <button class="btn-cancelar" onclick="cancelarAssinatura()">❌ Cancelar</button>
-                <button class="btn-voltar" onclick="voltarSemAssinar()">⬅ Voltar</button>
-            </div>
+        
+        <!-- Rodapé -->
+        <div style="text-align: center; margin-top: 1rem;">
+            <button onclick="redirecionarParaHome()" style="background: transparent; color: #4299E1; border: none; cursor: pointer; font-weight: 500; font-size: 14px; text-decoration: underline;">
+                ← Voltar para Home
+            </button>
         </div>
     </div>
 
@@ -368,12 +138,15 @@
     <!-- ============================================ -->
     <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
     <!-- ============================================ -->
-    <script src="../js/firebase-config.js"></script>   <!-- 1. Configura o Firebase -->
-    <script src="../js/auth-service.js"></script>      <!-- 2. Cria o authService -->
-    <script src="../js/auth-global.js"></script>       <!-- 3. Verifica sessão na página -->
-    <script src="../js/auth-helper.js"></script>       <!-- 4. 🔥 FUNÇÕES AUXILIARES -->
-    <script src="../js/script.js"></script>            <!-- 5. Funções globais -->
+    <script src="../js/firebase-config.js"></script>   
+    <script src="../js/config.js"></script>  
+    <script src="../js/auth-service.js"></script>      
+    <script src="../js/auth-helper.js"></script>  
+    <script src="../js/timer.js"></script>
+    <script src="../js/script.js"></script>
+    <script src="../js/auth-global.js"></script>  
+    <Script src="../js/login.js"></script>      
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
-    <script src="../js/assinar.js"></script>
+    <script src="../js/sa-emergencial.js"></script>
 </body>
 </html>

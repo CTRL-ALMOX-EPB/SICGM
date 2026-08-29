@@ -14,22 +14,43 @@
             height: 100vh;
             overflow: hidden;
         }
+        /* Timer no header */
+        .gestao-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header-timer {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
     </style>
 </head>
 <body>
     <div class="gestao-container">
         <div class="gestao-header">
             <h1>🏗️ Estrutura do Setor</h1>
-            <div class="header-actions">
-                <button class="btn-atualizar">
-                    🔄 <span>Atualizar</span>
-                </button>
-                <button class="btn-tela-cheia">
-                    ⛶ <span>Tela Cheia</span>
-                </button>
-                <button class="btn-voltar" id="btnVoltar">
-                    ⬅ <span>Voltar</span>
-                </button>
+            <div class="header-timer">
+                <div class="session-timer-wrapper">
+                    <span class="timer-icon">⏱️</span>
+                    <span class="timer-label">Sessão:</span>
+                    <span id="sessionTimer">30:00</span>
+                    <span class="timer-status">(ativa)</span>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-atualizar">
+                        🔄 <span>Atualizar</span>
+                    </button>
+                    <button class="btn-tela-cheia">
+                        ⛶ <span>Tela Cheia</span>
+                    </button>
+                    <button class="btn-voltar" id="btnVoltar">
+                        ⬅ <span>Voltar</span>
+                    </button>
+                </div>
             </div>
         </div>
         
@@ -72,11 +93,14 @@
     <!-- ============================================ -->
     <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
     <!-- ============================================ -->
-    <script src="../js/firebase-config.js"></script>   <!-- 1. Configura o Firebase -->
-    <script src="../js/auth-service.js"></script>      <!-- 2. Cria o authService -->
-    <script src="../js/auth-global.js"></script>       <!-- 3. Verifica sessão na página -->
-    <script src="../js/auth-helper.js"></script>       <!-- 4. 🔥 FUNÇÕES AUXILIARES -->
-    <script src="../js/script.js"></script>            <!-- 5. Funções globais -->
+    <script src="../js/firebase-config.js"></script>   
+    <script src="../js/config.js"></script>  
+    <script src="../js/auth-service.js"></script>      
+    <script src="../js/auth-helper.js"></script>  
+    <script src="../js/timer.js"></script>
+    <script src="../js/script.js"></script>
+    <script src="../js/auth-global.js"></script>  
+    <Script src="../js/login.js"></script>      
     <script src="../js/estrutura-setor.js"></script>
 </body>
 </html>

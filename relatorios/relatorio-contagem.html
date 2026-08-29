@@ -10,6 +10,54 @@
     
     <!-- CSS Relatório -->
     <link rel="stylesheet" href="../css/relatorios.css">
+    
+    <style>
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 6px 0;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 14px;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header-left .title {
+            font-size: 1.3rem;
+            color: #2d3748;
+            margin: 0;
+            font-weight: 700;
+        }
+        .header-timer {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .btn-voltar-home {
+            background: #4299E1;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-voltar-home:hover {
+            background: #3182CE;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+        }
+    </style>
 </head>
 <body>
     <!-- ============================================ -->
@@ -31,17 +79,23 @@
     <div class="container">
         <div class="form-card">
             
-            <!-- Logo e Título -->
+            <!-- Logo e Título com Timer -->
             <div class="header-container">
-                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
-                <h1 class="title">📊 SICGM - Relatórios de Contagem</h1>
-            </div>
-            
-            <!-- Botão Voltar -->
-            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
-                <button onclick="redirecionarParaHome()" class="btn-voltar-home">
-                    🏠 Voltar ao Início
-                </button>
+                <div class="header-left">
+                    <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                    <h1 class="title">📊 SICGM - Relatórios de Contagem</h1>
+                </div>
+                <div class="header-timer">
+                    <div class="session-timer-wrapper">
+                        <span class="timer-icon">⏱️</span>
+                        <span class="timer-label">Sessão:</span>
+                        <span id="sessionTimer">30:00</span>
+                        <span class="timer-status">(ativa)</span>
+                    </div>
+                    <button onclick="redirecionarParaHome()" class="btn-voltar-home">
+                        🏠 Voltar
+                    </button>
+                </div>
             </div>
 
             <!-- ============================================ -->
@@ -356,14 +410,44 @@
     <!-- ============================================ -->
     <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
     <!-- ============================================ -->
-    <script src="../js/firebase-config.js"></script>   <!-- 1. Configura o Firebase -->
-    <script src="../js/auth-service.js"></script>      <!-- 2. Cria o authService -->
-    <script src="../js/auth-global.js"></script>       <!-- 3. Verifica sessão na página -->
-    <script src="../js/auth-helper.js"></script>       <!-- 4. 🔥 FUNÇÕES AUXILIARES -->
-    <script src="../js/script.js"></script>            <!-- 5. Funções globais -->
+    <script src="../js/firebase-config.js"></script>   
+    <script src="../js/config.js"></script>  
+    <script src="../js/auth-service.js"></script>      
+    <script src="../js/auth-helper.js"></script>  
+    <script src="../js/timer.js"></script>
+    <script src="../js/script.js"></script>
+    <script src="../js/auth-global.js"></script>  
+    <Script src="../js/login.js"></script>      
     <script src="../js/config-depositos.js"></script>
     <script src="../js/relatorios.js"></script>
+    
     <script>
+        // ============================================
+        // FUNÇÃO PARA VOLTAR PARA HOME
+        // ============================================
+        function redirecionarParaHome() {
+            console.log('🏠 Redirecionando para home...');
+            try {
+                let perfil = 'GESTAO';
+                if (typeof authService !== 'undefined' && authService) {
+                    const user = authService.getUserData();
+                    if (user && user.perfil) {
+                        perfil = user.perfil;
+                    }
+                }
+                const homeMap = {
+                    'OPERACIONAL': '../home-operacional.html',
+                    'GESTAO': '../home-gestao.html',
+                    'VISUALIZACAO': '../home-visualizacao.html'
+                };
+                const homePage = homeMap[perfil] || '../home-gestao.html';
+                window.location.href = homePage;
+            } catch (error) {
+                console.error('❌ Erro ao redirecionar:', error);
+                window.location.href = '../home-gestao.html';
+            }
+        }
+
         // ============================================
         // CONTROLAR BOTÕES DE NAVEGAÇÃO
         // ============================================
@@ -392,5 +476,6 @@
             setTimeout(controlarBotoesNavegacao, 100);
         });
     </script>
+
 </body>
 </html>

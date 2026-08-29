@@ -1,58 +1,59 @@
 /* ============================================ */
-/* PROCESSOS - ESTILOS COMPLETOS                */
+/* PROCESSOS - ESTILOS COMPLETOS - OTIMIZADO    */
 /* ============================================ */
 
-/* Container principal */
+/* 🔥 CORRIGIDO: SEM PADDING LATERAL EXCESSIVO */
 .processos-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-    width: 100%;
-    overflow-x: hidden;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 6px 12px !important; /* 🔥 PADDING MÍNIMO */
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 
-/* ===== HEADER ===== */
+/* ============================================ */
+/* HEADER - MAIS COMPACTO                       */
+/* ============================================ */
+
 .processos-header {
     background: white;
-    padding: 25px 30px;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    margin-bottom: 30px;
+    padding: 12px 16px !important; /* 🔥 ANTES: 14px 20px */
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    margin-bottom: 14px !important; /* 🔥 ANTES: 16px */
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 15px;
-    min-height: 80px;
+    gap: 8px;
+    min-height: 50px;
     width: 100%;
-    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .processos-header h1 {
     color: #2D3748;
-    font-size: 24px;
+    font-size: 20px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     margin: 0;
-    white-space: nowrap;
 }
 
 .processos-header .depto-badge {
     background: #ED8936;
     color: white;
-    padding: 4px 16px;
-    border-radius: 20px;
-    font-size: 14px;
+    padding: 2px 12px;
+    border-radius: 14px;
+    font-size: 11px;
     font-weight: 600;
-    white-space: nowrap;
 }
 
 .btn-voltar {
     background: #718096;
     color: white;
     border: none;
-    padding: 10px 25px;
+    padding: 6px 14px;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
@@ -60,11 +61,10 @@
     text-decoration: none;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    min-width: 80px;
+    gap: 5px;
+    font-size: 12px;
+    min-width: 60px;
     justify-content: center;
-    white-space: nowrap;
 }
 
 .btn-voltar:hover {
@@ -73,41 +73,48 @@
     box-shadow: 0 4px 12px rgba(74, 85, 104, 0.3);
 }
 
-/* ===== LISTA DE PROCESSOS ===== */
+/* ============================================ */
+/* LISTA DE PROCESSOS                           */
+/* ============================================ */
+
 .processos-list {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 12px;
     width: 100%;
 }
 
 .processo-card {
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
     overflow: hidden;
     transition: all 0.3s ease;
     width: 100%;
 }
 
 .processo-card:hover {
-    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.10);
 }
 
-/* ===== HEADER DO PROCESSO ===== */
+/* ============================================ */
+/* HEADER DO PROCESSO - MAIS COMPACTO           */
+/* ============================================ */
+
 .processo-card .processo-header {
-    padding: 20px 25px;
+    padding: 10px 14px !important; /* 🔥 ANTES: 14px 18px */
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 8px;
     background: #F7FAFC;
     border-bottom: 1px solid #E2E8F0;
     cursor: pointer;
     transition: background 0.2s;
-    min-height: 70px;
+    min-height: 48px;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .processo-card .processo-header:hover {
@@ -117,39 +124,39 @@
 .processo-card .processo-info {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 10px;
     flex: 1;
     min-width: 0;
+    flex-wrap: wrap;
 }
 
 .processo-card .processo-id {
     background: #ED8936;
     color: white;
-    padding: 4px 14px;
-    border-radius: 12px;
-    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 10px;
     font-weight: 600;
-    white-space: nowrap;
 }
 
 .processo-card .processo-nome {
-    font-size: 18px;
+    font-size: 15px;
     font-weight: 600;
     color: #2D3748;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .processo-card .processo-descricao {
     color: #718096;
-    font-size: 14px;
-    padding: 12px 25px;
+    font-size: 12px;
+    padding: 6px 14px !important; /* 🔥 ANTES: 8px 18px */
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 10px;
-    min-height: 50px;
+    gap: 6px;
+    min-height: 34px;
 }
 
 .processo-card .processo-descricao span:first-child {
@@ -160,11 +167,11 @@
 }
 
 .processo-card .expand-hint {
-    font-size: 14px;
+    font-size: 12px;
     color: #ED8936;
     transition: transform 0.3s;
     cursor: pointer;
-    padding: 5px 10px;
+    padding: 2px 6px;
     flex-shrink: 0;
 }
 
@@ -172,20 +179,23 @@
     transform: rotate(180deg);
 }
 
-/* ===== EXPAND BUTTON ===== */
+/* ============================================ */
+/* EXPAND BUTTON - MAIS COMPACTO               */
+/* ============================================ */
+
 .expand-btn {
     background: #ED8936;
     color: white;
     border: none;
-    padding: 8px 20px;
+    padding: 4px 12px;
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s;
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 14px;
+    gap: 4px;
+    font-size: 12px;
     white-space: nowrap;
     flex-shrink: 0;
 }
@@ -205,14 +215,18 @@
     transform: rotate(180deg);
 }
 
-/* ===== WORKFLOW CONTAINER ===== */
+/* ============================================ */
+/* WORKFLOW CONTAINER                          */
+/* ============================================ */
+
 .workflow-container {
-    padding: 0 25px 25px 25px;
+    padding: 0 14px 14px 14px !important; /* 🔥 ANTES: 0 18px 18px 18px */
     background: #FAFAFA;
     border-top: 1px solid #E2E8F0;
     display: none;
     animation: slideDown 0.4s ease;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .workflow-container.open {
@@ -222,7 +236,7 @@
 @keyframes slideDown {
     from {
         opacity: 0;
-        transform: translateY(-10px);
+        transform: translateY(-8px);
     }
     to {
         opacity: 1;
@@ -230,14 +244,17 @@
     }
 }
 
-/* ===== TIMELINE ===== */
+/* ============================================ */
+/* TIMELINE - MAIS COMPACTA                    */
+/* ============================================ */
+
 .workflow-timeline {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     position: relative;
-    padding: 30px 0 20px 0;
-    gap: 5px;
+    padding: 16px 0 10px 0;
+    gap: 4px;
     overflow-x: auto;
     width: 100%;
 }
@@ -245,10 +262,10 @@
 .workflow-timeline::before {
     content: '';
     position: absolute;
-    top: 42px;
-    left: 30px;
-    right: 30px;
-    height: 3px;
+    top: 28px;
+    left: 16px;
+    right: 16px;
+    height: 2px;
     background: #E2E8F0;
     z-index: 0;
 }
@@ -258,7 +275,7 @@
     flex-direction: column;
     align-items: center;
     flex: 1;
-    min-width: 60px;
+    min-width: 44px;
     position: relative;
     z-index: 1;
     cursor: pointer;
@@ -266,19 +283,19 @@
 }
 
 .workflow-step-indicator:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
 }
 
 .workflow-step-indicator .step-circle {
-    width: 40px;
-    height: 40px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     background: white;
     border: 3px solid #E2E8F0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 700;
     color: #A0AEC0;
     transition: all 0.3s ease;
@@ -286,13 +303,13 @@
 }
 
 .workflow-step-indicator .step-label {
-    font-size: 10px;
+    font-size: 8px;
     color: #A0AEC0;
     text-align: center;
-    margin-top: 8px;
+    margin-top: 4px;
     font-weight: 500;
-    max-width: 80px;
-    line-height: 1.2;
+    max-width: 50px;
+    line-height: 1.1;
 }
 
 /* Estados do indicador */
@@ -300,7 +317,7 @@
     background: #48BB78;
     border-color: #48BB78;
     color: white;
-    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+    box-shadow: 0 3px 10px rgba(72, 187, 120, 0.3);
 }
 
 .workflow-step-indicator.completed .step-label {
@@ -311,13 +328,13 @@
     background: #ED8936;
     border-color: #ED8936;
     color: white;
-    box-shadow: 0 4px 15px rgba(237, 137, 54, 0.4);
+    box-shadow: 0 3px 12px rgba(237, 137, 54, 0.4);
     animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(237, 137, 54, 0.4); }
-    70% { box-shadow: 0 0 0 15px rgba(237, 137, 54, 0); }
+    70% { box-shadow: 0 0 0 10px rgba(237, 137, 54, 0); }
     100% { box-shadow: 0 0 0 0 rgba(237, 137, 54, 0); }
 }
 
@@ -331,28 +348,32 @@
     color: #A0AEC0;
 }
 
-/* ===== DETALHE DA ETAPA - ALTURA FIXA ===== */
+/* ============================================ */
+/* DETALHE DA ETAPA - MAIS COMPACTO            */
+/* ============================================ */
+
 .workflow-detail {
     background: white;
-    border-radius: 12px;
-    padding: 25px;
-    margin-top: 10px;
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 6px;
     border: 1px solid #E2E8F0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    min-height: 250px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    min-height: 160px;
     display: flex;
     flex-direction: column;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .workflow-detail .step-title {
-    font-size: 20px;
+    font-size: 15px;
     font-weight: 700;
     color: #2D3748;
-    margin-bottom: 15px;
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 10px;
     flex-wrap: wrap;
     flex-shrink: 0;
 }
@@ -360,24 +381,24 @@
 .workflow-detail .step-title .step-badge {
     background: #ED8936;
     color: white;
-    padding: 2px 14px;
-    border-radius: 12px;
-    font-size: 13px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 11px;
 }
 
 .workflow-detail .step-description {
     color: #4A5568;
-    line-height: 1.8;
-    font-size: 15px;
-    margin-bottom: 15px;
+    line-height: 1.5;
+    font-size: 13px;
+    margin-bottom: 8px;
     background: #F7FAFC;
-    padding: 20px;
+    padding: 10px 14px;
     border-radius: 8px;
-    border-left: 4px solid #ED8936;
+    border-left: 3px solid #ED8936;
     flex: 1;
     overflow-y: auto;
-    max-height: 200px;
-    min-height: 100px;
+    max-height: 130px;
+    min-height: 60px;
 }
 
 .workflow-detail .step-description strong {
@@ -385,17 +406,20 @@
 }
 
 .workflow-detail .step-description ul {
-    margin: 10px 0;
-    padding-left: 20px;
+    margin: 4px 0;
+    padding-left: 16px;
 }
 
 .workflow-detail .step-description ul li {
-    margin: 5px 0;
+    margin: 2px 0;
 }
 
-/* ===== IMAGEM ===== */
+/* ============================================ */
+/* IMAGEM                                       */
+/* ============================================ */
+
 .step-image-container {
-    min-height: 60px;
+    min-height: 30px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -404,12 +428,12 @@
 
 .workflow-detail .step-image {
     max-width: 100%;
-    max-height: 200px;
+    max-height: 140px;
     object-fit: contain;
     border-radius: 8px;
     display: none;
     border: 1px solid #E2E8F0;
-    padding: 10px;
+    padding: 6px;
     background: white;
 }
 
@@ -417,21 +441,24 @@
     display: block;
 }
 
-/* ===== NAVEGAÇÃO ===== */
+/* ============================================ */
+/* NAVEGAÇÃO - MAIS COMPACTA                   */
+/* ============================================ */
+
 .workflow-nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 20px;
-    padding-top: 20px;
+    margin-top: 10px;
+    padding-top: 10px;
     border-top: 1px solid #E2E8F0;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 6px;
     flex-shrink: 0;
 }
 
 .workflow-nav .nav-btn {
-    padding: 10px 25px;
+    padding: 6px 14px;
     border: 2px solid #E2E8F0;
     border-radius: 8px;
     background: white;
@@ -441,9 +468,9 @@
     transition: all 0.3s;
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    min-width: 100px;
+    gap: 4px;
+    font-size: 12px;
+    min-width: 60px;
     justify-content: center;
 }
 
@@ -472,123 +499,149 @@
 
 .workflow-nav .step-counter {
     color: #718096;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 500;
     flex-shrink: 0;
 }
 
-/* ===== INFO ADICIONAL ===== */
+/* ============================================ */
+/* INFO ADICIONAL - MAIS COMPACTA              */
+/* ============================================ */
+
 .workflow-info {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 15px;
-    margin-top: 20px;
-    padding-top: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
     border-top: 1px solid #E2E8F0;
     flex-shrink: 0;
     width: 100%;
 }
 
 .workflow-info .info-item {
-    padding: 12px 15px;
+    padding: 6px 10px;
     border-radius: 8px;
     background: #F7FAFC;
     border: 1px solid #E2E8F0;
 }
 
 .workflow-info .info-item .info-label {
-    font-size: 11px;
+    font-size: 9px;
     color: #A0AEC0;
     text-transform: uppercase;
     font-weight: 600;
 }
 
 .workflow-info .info-item .info-value {
-    font-size: 14px;
+    font-size: 12px;
     color: #2D3748;
-    margin-top: 3px;
+    margin-top: 2px;
     font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-/* ===== CONTATOS ===== */
+/* ============================================ */
+/* CONTATOS - MAIS COMPACTO                    */
+/* ============================================ */
+
 .contatos-box {
     background: #F7FAFC;
     border: 2px solid #E2E8F0;
-    border-radius: 12px;
-    padding: 20px;
-    margin-top: 20px;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-top: 10px;
     flex-shrink: 0;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .contatos-box h4 {
     color: #2D3748;
-    margin-bottom: 15px;
-    font-size: 16px;
+    margin-bottom: 8px;
+    font-size: 13px;
 }
 
 .contatos-box .contato-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
+    gap: 6px;
+    padding: 4px 8px;
     background: white;
     border-radius: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     border-left: 3px solid #ED8936;
 }
 
 .contatos-box .contato-item .contato-icon {
-    font-size: 18px;
+    font-size: 14px;
 }
 
 .contatos-box .contato-item .contato-nome {
     font-weight: 600;
     color: #2D3748;
+    font-size: 12px;
 }
 
 .contatos-box .contato-item .contato-setor {
     color: #718096;
-    font-size: 13px;
+    font-size: 11px;
 }
 
-/* ===== DEPTO EMPTY ===== */
+/* ============================================ */
+/* DEPTO EMPTY                                  */
+/* ============================================ */
+
 .depto-empty {
     text-align: center;
-    padding: 60px 20px;
+    padding: 30px 20px;
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
     width: 100%;
+    box-sizing: border-box;
 }
 
 .depto-empty .empty-icon {
-    font-size: 64px;
-    margin-bottom: 15px;
+    font-size: 40px;
+    margin-bottom: 8px;
 }
 
 .depto-empty h3 {
     color: #4A5568;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
+    font-size: 16px;
 }
 
 .depto-empty p {
     color: #A0AEC0;
+    font-size: 13px;
 }
 
 /* ============================================ */
-/* RESPONSIVIDADE                               */
+/* FLUXOGRAMA                                   */
+/* ============================================ */
+
+.fluxograma-svg {
+    width: 100%;
+    min-height: 240px;
+    background: #FAFAFA;
+    border-radius: 8px;
+    padding: 6px;
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE - CORRIGIDA                   */
 /* ============================================ */
 
 @media (max-width: 992px) {
     .workflow-timeline {
         flex-wrap: wrap;
         justify-content: flex-start;
-        gap: 15px;
-        padding: 20px 0;
+        gap: 8px;
+        padding: 12px 0;
     }
     
     .workflow-timeline::before {
@@ -598,61 +651,65 @@
     .workflow-step-indicator {
         flex: 0 0 auto;
         flex-direction: row;
-        gap: 12px;
+        gap: 8px;
         background: #F7FAFC;
-        padding: 8px 16px;
-        border-radius: 20px;
+        padding: 4px 12px;
+        border-radius: 14px;
         border: 1px solid #E2E8F0;
         min-width: auto;
     }
     
     .workflow-step-indicator .step-label {
         margin-top: 0;
-        font-size: 12px;
+        font-size: 10px;
         max-width: none;
     }
     
     .workflow-step-indicator .step-circle {
-        width: 32px;
-        height: 32px;
-        font-size: 12px;
+        width: 24px;
+        height: 24px;
+        font-size: 10px;
     }
 }
 
 @media (max-width: 768px) {
     .processos-container {
-        padding: 15px;
+        padding: 4px 8px !important;
     }
 
     .processos-header {
         flex-direction: column;
         align-items: flex-start;
-        padding: 15px 20px;
-        min-height: 100px;
+        padding: 10px 12px !important;
+        min-height: 60px;
+        gap: 6px;
     }
 
     .processos-header h1 {
-        font-size: 20px;
-        white-space: normal;
+        font-size: 17px;
     }
 
     .btn-voltar {
         width: 100%;
         justify-content: center;
+        padding: 5px 12px;
+        font-size: 11px;
     }
 
     .processo-card .processo-header {
         flex-direction: column;
         align-items: flex-start;
-        padding: 15px 20px;
+        padding: 10px 12px !important;
+        gap: 6px;
     }
 
     .processo-card .processo-info {
         width: 100%;
+        flex-wrap: wrap;
     }
 
     .processo-card .processo-nome {
-        font-size: 15px;
+        font-size: 13px;
         white-space: normal;
     }
 
@@ -664,8 +721,9 @@
     .processo-card .processo-descricao {
         flex-direction: column;
         align-items: flex-start;
-        padding: 10px 20px;
-        gap: 5px;
+        padding: 6px 12px !important;
+        gap: 4px;
+        min-height: 28px;
     }
 
     .processo-card .processo-descricao span:first-child {
@@ -673,29 +731,31 @@
     }
 
     .workflow-detail .step-title {
-        font-size: 17px;
+        font-size: 14px;
         flex-direction: column;
         align-items: flex-start;
-        gap: 8px;
+        gap: 4px;
     }
 
     .workflow-detail .step-description {
-        font-size: 14px;
-        padding: 15px;
-        max-height: 150px;
-        min-height: 80px;
+        font-size: 12px;
+        padding: 8px 12px;
+        max-height: 100px;
+        min-height: 50px;
     }
 
     .workflow-nav {
         flex-direction: column;
         align-items: stretch;
-        gap: 10px;
+        gap: 6px;
     }
 
     .workflow-nav .nav-btn {
         justify-content: center;
         width: 100%;
         min-width: unset;
+        padding: 5px 12px;
+        font-size: 11px;
     }
 
     .workflow-nav .step-counter {
@@ -704,240 +764,205 @@
     }
 
     .workflow-info {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
     }
 
     .contatos-box .contato-item {
         flex-wrap: wrap;
-        gap: 4px;
+        gap: 2px;
     }
 
     .contatos-box .contato-item .contato-setor {
         width: 100%;
-        padding-left: 28px;
+        padding-left: 20px;
+    }
+
+    .workflow-container {
+        padding: 0 10px 10px 10px !important;
+    }
+
+    .workflow-detail {
+        padding: 10px;
+        min-height: 130px;
+    }
+
+    .fluxograma-svg {
+        min-height: 180px;
     }
 }
 
 @media (max-width: 480px) {
     .processos-container {
-        padding: 10px;
+        padding: 3px 4px !important;
     }
 
     .processos-header {
-        padding: 12px 15px;
-        min-height: 80px;
+        padding: 8px 10px !important;
+        min-height: 50px;
     }
 
     .processos-header h1 {
-        font-size: 17px;
-    }
-
-    .processos-header .depto-badge {
-        font-size: 12px;
-        padding: 3px 12px;
-    }
-
-    .btn-voltar {
-        font-size: 12px;
-        padding: 8px 16px;
-    }
-
-    .processo-card .processo-header {
-        padding: 12px 15px;
-        min-height: 60px;
-    }
-
-    .processo-card .processo-id {
-        font-size: 10px;
-        padding: 3px 10px;
-    }
-
-    .processo-card .processo-nome {
-        font-size: 14px;
-    }
-
-    .processo-card .processo-descricao {
-        font-size: 12px;
-        padding: 8px 15px;
-        min-height: 40px;
-    }
-
-    .processo-card .expand-btn {
-        font-size: 12px;
-        padding: 6px 14px;
-    }
-
-    .workflow-container {
-        padding: 0 15px 15px 15px;
-    }
-
-    .workflow-detail {
-        padding: 15px;
-        min-height: 200px;
-    }
-
-    .workflow-detail .step-title {
         font-size: 15px;
     }
 
-    .workflow-detail .step-title .step-badge {
+    .processos-header .depto-badge {
+        font-size: 10px;
+        padding: 2px 8px;
+    }
+
+    .btn-voltar {
+        font-size: 10px;
+        padding: 4px 10px;
+    }
+
+    .processo-card .processo-header {
+        padding: 8px 10px !important;
+        min-height: 40px;
+    }
+
+    .processo-card .processo-id {
+        font-size: 9px;
+        padding: 2px 8px;
+    }
+
+    .processo-card .processo-nome {
+        font-size: 12px;
+    }
+
+    .processo-card .processo-descricao {
         font-size: 11px;
-        padding: 2px 10px;
+        padding: 4px 10px !important;
+        min-height: 24px;
+    }
+
+    .processo-card .expand-btn {
+        font-size: 10px;
+        padding: 4px 10px;
+    }
+
+    .workflow-container {
+        padding: 0 8px 8px 8px !important;
+    }
+
+    .workflow-detail {
+        padding: 8px;
+        min-height: 110px;
+    }
+
+    .workflow-detail .step-title {
+        font-size: 13px;
+    }
+
+    .workflow-detail .step-title .step-badge {
+        font-size: 9px;
+        padding: 2px 8px;
     }
 
     .workflow-detail .step-description {
-        font-size: 13px;
-        padding: 12px;
-        max-height: 120px;
-        min-height: 60px;
+        font-size: 11px;
+        padding: 6px 10px;
+        max-height: 80px;
+        min-height: 40px;
     }
 
     .workflow-nav .nav-btn {
-        font-size: 12px;
-        padding: 8px 16px;
+        font-size: 10px;
+        padding: 4px 10px;
     }
 
     .workflow-nav .step-counter {
-        font-size: 12px;
+        font-size: 10px;
+    }
+
+    .workflow-info {
+        grid-template-columns: 1fr;
+        gap: 4px;
     }
 
     .workflow-info .info-item .info-value {
-        font-size: 12px;
+        font-size: 11px;
     }
 
     .contatos-box {
-        padding: 15px;
+        padding: 8px 10px;
     }
 
     .contatos-box h4 {
-        font-size: 14px;
+        font-size: 12px;
+        margin-bottom: 6px;
     }
 
     .contatos-box .contato-item {
-        padding: 6px 10px;
-        font-size: 13px;
+        padding: 4px 6px;
+        font-size: 11px;
     }
 
     .contatos-box .contato-item .contato-nome {
-        font-size: 13px;
+        font-size: 11px;
     }
 
     .contatos-box .contato-item .contato-setor {
-        font-size: 12px;
+        font-size: 10px;
+    }
+
+    .depto-empty {
+        padding: 20px 15px;
+    }
+
+    .depto-empty .empty-icon {
+        font-size: 32px;
+    }
+
+    .depto-empty h3 {
+        font-size: 14px;
+    }
+
+    .fluxograma-svg {
+        min-height: 140px;
+    }
+
+    .workflow-step-indicator .step-circle {
+        width: 20px;
+        height: 20px;
+        font-size: 9px;
+    }
+
+    .workflow-step-indicator .step-label {
+        font-size: 7px;
+    }
+
+    .workflow-step-indicator {
+        padding: 3px 8px;
     }
 }
 
 @media (max-width: 360px) {
     .processos-header h1 {
-        font-size: 15px;
+        font-size: 13px;
     }
 
     .processo-card .processo-nome {
-        font-size: 12px;
+        font-size: 11px;
     }
 
     .workflow-detail .step-description {
-        font-size: 12px;
-        padding: 10px;
-        max-height: 100px;
+        font-size: 10px;
+        padding: 4px 8px;
+        max-height: 60px;
     }
 
     .workflow-step-indicator .step-circle {
-        width: 28px;
-        height: 28px;
-        font-size: 10px;
+        width: 18px;
+        height: 18px;
+        font-size: 8px;
     }
 
     .workflow-step-indicator .step-label {
-        font-size: 9px;
+        font-size: 6px;
     }
-}
 
-/* ============================================ */
-/* FLUXOGRAMA - ESTILOS (adicionar ao final)    */
-/* ============================================ */
-
-.fluxograma-svg {
-    width: 100%;
-    min-height: 400px;
-    background: #FAFAFA;
-    border-radius: 8px;
-    padding: 10px;
-}
-
-.fluxograma-svg text {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-/* Ajustes para o container do workflow */
-.workflow-container {
-    padding: 20px 25px;
-    background: #FAFAFA;
-    border-top: 1px solid #E2E8F0;
-    display: none;
-    animation: slideDown 0.4s ease;
-    width: 100%;
-    overflow-x: auto;
-}
-
-.workflow-container.open {
-    display: block;
-}
-
-/* Contatos */
-.contatos-box {
-    background: #F7FAFC;
-    border: 2px solid #E2E8F0;
-    border-radius: 12px;
-    padding: 20px;
-    margin-top: 20px;
-    flex-shrink: 0;
-    width: 100%;
-}
-
-.contatos-box h4 {
-    color: #2D3748;
-    margin-bottom: 15px;
-    font-size: 16px;
-}
-
-.contatos-box .contato-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    background: white;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    border-left: 3px solid #ED8936;
-}
-
-.contatos-box .contato-item .contato-icon {
-    font-size: 18px;
-}
-
-.contatos-box .contato-item .contato-nome {
-    font-weight: 600;
-    color: #2D3748;
-}
-
-.contatos-box .contato-item .contato-setor {
-    color: #718096;
-    font-size: 13px;
-}
-
-@media (max-width: 768px) {
-    .fluxograma-svg {
-        min-height: 300px;
-    }
-    
-    .contatos-box .contato-item {
-        flex-wrap: wrap;
-        gap: 4px;
-    }
-    
-    .contatos-box .contato-item .contato-setor {
-        width: 100%;
-        padding-left: 28px;
+    .workflow-step-indicator {
+        padding: 2px 6px;
     }
 }

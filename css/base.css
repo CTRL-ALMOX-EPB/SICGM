@@ -8,27 +8,45 @@
     box-sizing: border-box;
 }
 
+/* ============================================ */
+/* BODY - 100% DA TELA                          */
+/* ============================================ */
+
 body {
     background-color: #F0F4F8;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
+    width: 100%;
+    overflow-x: hidden;
+    padding: 0;
+    margin: 0;
 }
+
+/* ============================================ */
+/* CONTAINER PRINCIPAL - USA 100% DA TELA      */
+/* ============================================ */
 
 .container {
     width: 100%;
-    max-width: 1000px;
+    max-width: 100%;
+    margin: 0;
+    padding: 8px 12px;
+    box-sizing: border-box;
 }
+
+/* ============================================ */
+/* FORM CARD - PADRÃO                           */
+/* ============================================ */
 
 .form-card {
     background-color: #FFFFFF;
-    border-radius: 15px;
-    padding: 40px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    border-radius: 10px;
+    padding: 16px 18px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
     border: 1px solid #E8EDF2;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 /* ============================================ */
@@ -39,26 +57,24 @@ body {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 15px;
-    margin-bottom: 2rem;
-    padding: 0.5rem 0;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 6px 0;
     border-bottom: 2px solid #e2e8f0;
+    flex-wrap: wrap;
 }
 
 .logo-empresa {
-    width: 60px;
-    height: 60px;
+    width: 44px;
+    height: 44px;
     object-fit: contain;
 }
 
-.header-container .title {
-    margin-bottom: 0;
-}
-
 .title {
-    font-size: 1.6rem;
+    font-size: 1.3rem;
     color: #2d3748;
     margin: 0;
+    font-weight: 700;
 }
 
 /* ============================================ */
@@ -69,15 +85,15 @@ body {
     background: #4299E1;
     color: white;
     border: none;
-    padding: 10px 25px;
+    padding: 6px 16px;
     border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 12px;
     transition: all 0.3s ease;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .btn-voltar-home:hover {
@@ -86,13 +102,9 @@ body {
     box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
 }
 
-.btn-voltar-home:active {
-    transform: translateY(0);
-}
-
 .btn-voltar-home.small {
-    padding: 6px 15px;
-    font-size: 12px;
+    padding: 4px 12px;
+    font-size: 11px;
 }
 
 .btn-voltar-home.outline {
@@ -107,27 +119,26 @@ body {
 }
 
 /* ============================================ */
-/* TOAST DE NOTIFICAÇÃO FLUTUANTE               */
+/* TOAST DE NOTIFICAÇÃO                         */
 /* ============================================ */
 
 .toast-notificacao {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 25px;
+    top: 12px;
+    right: 12px;
+    padding: 10px 18px;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     z-index: 9999;
-    max-width: 400px;
+    max-width: 350px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(10px);
     cursor: pointer;
-    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     animation: toastSlideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
@@ -166,100 +177,17 @@ body {
     }
 }
 
-@keyframes toastSlideOut {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(120%);
-        opacity: 0;
-    }
-}
-
-/* ============================================ */
-/* BOTÕES DE NAVEGAÇÃO - TOPO E FIM            */
-/* ============================================ */
-
-.btn-navegacao {
-    position: fixed;
-    right: 20px;
-    z-index: 9998;
-    width: 50px;
-    height: 50px;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(20px);
-}
-
-.btn-navegacao.visivel {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.btn-navegacao:hover {
-    transform: scale(1.1) translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-}
-
-.btn-navegacao:active {
-    transform: scale(0.95);
-}
-
-.btn-navegacao-icone {
-    font-size: 18px;
-    line-height: 1;
-}
-
-.btn-navegacao-texto {
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.btn-topo {
-    bottom: 80px;
-    background: linear-gradient(135deg, #4299E1, #3182CE);
-    color: white;
-}
-
-.btn-topo:hover {
-    background: linear-gradient(135deg, #3182CE, #2B6CB0);
-}
-
-.btn-fim {
-    bottom: 20px;
-    background: linear-gradient(135deg, #48BB78, #38A169);
-    color: white;
-}
-
-.btn-fim:hover {
-    background: linear-gradient(135deg, #38A169, #2F855A);
-}
-
 /* ============================================ */
 /* MENSAGEM                                     */
 /* ============================================ */
 
 .mensagem {
     display: none;
-    padding: 15px;
+    padding: 10px 14px;
     border-radius: 8px;
-    margin: 15px 0;
+    margin: 10px 0;
     font-weight: 500;
+    font-size: 0.9em;
 }
 
 .mensagem.sucesso {
@@ -295,149 +223,481 @@ body {
 }
 
 /* ============================================ */
-/* RESPONSIVIDADE BASE                          */
+/* BOTÕES DE NAVEGAÇÃO - TOPO E FIM            */
+/* ============================================ */
+
+.btn-navegacao {
+    position: fixed;
+    right: 14px;
+    z-index: 9998;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+}
+
+.btn-navegacao.visivel {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.btn-navegacao:hover {
+    transform: scale(1.1) translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.btn-navegacao-icone {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.btn-navegacao-texto {
+    font-size: 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-topo {
+    bottom: 65px;
+    background: linear-gradient(135deg, #4299E1, #3182CE);
+    color: white;
+}
+
+.btn-topo:hover {
+    background: linear-gradient(135deg, #3182CE, #2B6CB0);
+}
+
+.btn-fim {
+    bottom: 14px;
+    background: linear-gradient(135deg, #48BB78, #38A169);
+    color: white;
+}
+
+.btn-fim:hover {
+    background: linear-gradient(135deg, #38A169, #2F855A);
+}
+
+/* ============================================ */
+/* UTILITÁRIOS                                  */
+/* ============================================ */
+
+.hidden {
+    display: none !important;
+}
+
+.visible {
+    display: block !important;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.mt-5 { margin-top: 5px; }
+.mt-10 { margin-top: 10px; }
+.mt-15 { margin-top: 15px; }
+.mt-20 { margin-top: 20px; }
+.mt-30 { margin-top: 30px; }
+
+.mb-5 { margin-bottom: 5px; }
+.mb-10 { margin-bottom: 10px; }
+.mb-15 { margin-bottom: 15px; }
+.mb-20 { margin-bottom: 20px; }
+.mb-30 { margin-bottom: 30px; }
+
+/* ============================================ */
+/* TIMER GLOBAL - PADRÃO PARA TODAS AS PÁGINAS  */
+/* ============================================ */
+
+/* Wrapper do timer */
+.session-timer-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #718096;
+    background: rgba(66, 153, 225, 0.06);
+    padding: 2px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(66, 153, 225, 0.12);
+    white-space: nowrap;
+    height: 26px;
+    transition: all 0.3s ease;
+}
+
+.session-timer-wrapper .timer-icon {
+    font-size: 12px;
+}
+
+.session-timer-wrapper .timer-label {
+    color: #A0AEC0;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.session-timer-wrapper .timer-status {
+    font-size: 9px;
+    color: #A0AEC0;
+    font-weight: 400;
+}
+
+/* Modos de warning e danger */
+.session-timer-wrapper.warning-mode {
+    border-color: #ECC94B;
+    background: rgba(236, 201, 75, 0.08);
+}
+
+.session-timer-wrapper.danger-mode {
+    border-color: #E53E3E;
+    background: rgba(229, 62, 62, 0.08);
+    box-shadow: 0 0 15px rgba(229, 62, 62, 0.1);
+}
+
+/* Timer - Estados */
+#sessionTimer {
+    font-weight: 600;
+    min-width: 35px;
+    display: inline-block;
+    transition: color 0.3s ease, font-weight 0.3s ease;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #48BB78;
+}
+
+#sessionTimer.normal {
+    color: #48BB78;
+    font-weight: 600;
+}
+
+#sessionTimer.warning {
+    color: #ECC94B;
+    font-weight: 700;
+}
+
+#sessionTimer.danger {
+    color: #E53E3E;
+    font-weight: 800;
+    animation: timerBlink 1s ease-in-out infinite;
+}
+
+/* Animação de piscar para o estado crítico */
+@keyframes timerBlink {
+    0%, 100% { 
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.5;
+        transform: scale(1.05);
+    }
+}
+
+/* ============================================ */
+/* TIMER RESPONSIVO                             */
 /* ============================================ */
 
 @media (max-width: 768px) {
-    .header-container {
-        gap: 10px;
-        margin-bottom: 20px;
+    .session-timer-wrapper {
+        font-size: 10px;
+        padding: 1px 8px;
+        gap: 3px;
+        height: 22px;
     }
-    
-    .logo-empresa {
-        width: 45px;
-        height: 45px;
+
+    #sessionTimer {
+        font-size: 11px;
+        min-width: 30px;
     }
-    
-    .title {
-        font-size: 1.3rem;
+
+    .session-timer-wrapper .timer-label {
+        font-size: 9px;
     }
-    
-    .form-card {
-        padding: 25px;
-    }
-    
-    .btn-voltar-home {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .btn-navegacao {
-        width: 42px;
-        height: 42px;
-        right: 15px;
-        font-size: 12px;
-    }
-    
-    .btn-navegacao-icone {
-        font-size: 15px;
-    }
-    
-    .btn-navegacao-texto {
-        font-size: 7px;
-    }
-    
-    .btn-topo {
-        bottom: 70px;
-    }
-    
-    .btn-fim {
-        bottom: 15px;
-    }
-    
-    .toast-notificacao {
-        max-width: 350px;
-        font-size: 13px;
-        padding: 12px 18px;
+
+    .session-timer-wrapper .timer-status {
+        font-size: 8px;
     }
 }
 
 @media (max-width: 480px) {
-    body {
-        padding: 10px;
-        align-items: flex-start;
+    .session-timer-wrapper {
+        font-size: 9px;
+        padding: 1px 6px;
+        gap: 2px;
+        height: 18px;
+        border-radius: 8px;
     }
-    
+
+    #sessionTimer {
+        font-size: 10px;
+        min-width: 26px;
+    }
+
+    .session-timer-wrapper .timer-label {
+        display: none;
+    }
+
+    .session-timer-wrapper .timer-status {
+        display: none;
+    }
+
+    .session-timer-wrapper .timer-icon {
+        font-size: 10px;
+    }
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE GERAL                         */
+/* ============================================ */
+
+/* TABLETS */
+@media (max-width: 1024px) {
+    .container {
+        padding: 6px 10px;
+    }
+
     .form-card {
-        padding: 15px 12px;
-        border-radius: 10px;
+        padding: 14px 16px;
     }
-    
+}
+
+/* TABLETS PEQUENOS */
+@media (max-width: 768px) {
+    .container {
+        padding: 4px 8px;
+    }
+
     .header-container {
         gap: 8px;
-        margin-bottom: 15px;
-        flex-wrap: wrap;
+        margin-bottom: 12px;
+        padding: 4px 0;
     }
-    
+
     .logo-empresa {
-        width: 35px;
-        height: 35px;
+        width: 36px;
+        height: 36px;
     }
-    
+
     .title {
-        font-size: 1rem;
+        font-size: 1.1rem;
     }
-    
+
+    .form-card {
+        padding: 12px 14px;
+        border-radius: 8px;
+    }
+
     .btn-voltar-home {
-        font-size: 0.8em;
-        padding: 8px 12px;
+        width: 100%;
+        justify-content: center;
+        padding: 5px 12px;
+        font-size: 11px;
     }
-    
+
     .btn-navegacao {
         width: 36px;
         height: 36px;
         right: 10px;
         font-size: 10px;
     }
-    
+
     .btn-navegacao-icone {
         font-size: 12px;
     }
-    
+
     .btn-navegacao-texto {
         font-size: 6px;
     }
-    
+
     .btn-topo {
-        bottom: 60px;
+        bottom: 55px;
     }
-    
+
     .btn-fim {
         bottom: 10px;
     }
-    
+
     .toast-notificacao {
-        top: 10px;
-        right: 10px;
-        left: 10px;
-        max-width: none;
-        font-size: 0.8em;
-        padding: 10px 14px;
-        border-radius: 6px;
+        max-width: 300px;
+        font-size: 12px;
+        padding: 8px 14px;
+        top: 8px;
+        right: 8px;
     }
-    
+
     .mensagem {
+        padding: 8px 12px;
         font-size: 0.8em;
-        padding: 10px;
+        margin: 8px 0;
     }
 }
 
-@media (max-width: 360px) {
+/* CELULARES */
+@media (max-width: 480px) {
+    body {
+        padding: 0;
+    }
+
+    .container {
+        padding: 4px 6px;
+    }
+
     .form-card {
-        padding: 10px 8px;
+        padding: 10px 10px;
+        border-radius: 6px;
     }
-    
-    .title {
-        font-size: 0.9rem;
+
+    .header-container {
+        gap: 6px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
     }
-    
+
     .logo-empresa {
         width: 30px;
         height: 30px;
     }
-    
+
+    .title {
+        font-size: 0.95rem;
+    }
+
+    .btn-voltar-home {
+        font-size: 10px;
+        padding: 4px 10px;
+    }
+
+    .btn-navegacao {
+        width: 30px;
+        height: 30px;
+        right: 8px;
+        font-size: 9px;
+    }
+
+    .btn-navegacao-icone {
+        font-size: 10px;
+    }
+
+    .btn-navegacao-texto {
+        font-size: 5px;
+    }
+
+    .btn-topo {
+        bottom: 45px;
+    }
+
+    .btn-fim {
+        bottom: 8px;
+    }
+
     .toast-notificacao {
-        font-size: 0.7em;
+        top: 6px;
+        right: 6px;
+        left: 6px;
+        max-width: none;
+        font-size: 0.75em;
         padding: 8px 12px;
+        border-radius: 6px;
+    }
+
+    .mensagem {
+        font-size: 0.7em;
+        padding: 6px 10px;
+        margin: 6px 0;
+        border-radius: 6px;
+    }
+}
+
+/* CELULARES MUITO PEQUENOS */
+@media (max-width: 360px) {
+    .form-card {
+        padding: 8px 6px;
+    }
+
+    .title {
+        font-size: 0.8rem;
+    }
+
+    .logo-empresa {
+        width: 26px;
+        height: 26px;
+    }
+
+    .btn-voltar-home {
+        font-size: 9px;
+        padding: 3px 8px;
+    }
+
+    .toast-notificacao {
+        font-size: 0.65em;
+        padding: 6px 10px;
+    }
+
+    .btn-navegacao {
+        width: 26px;
+        height: 26px;
+        right: 6px;
+        font-size: 8px;
+    }
+
+    .btn-navegacao-icone {
+        font-size: 9px;
+    }
+
+    .btn-navegacao-texto {
+        font-size: 4px;
+    }
+
+    .btn-topo {
+        bottom: 38px;
+    }
+
+    .btn-fim {
+        bottom: 6px;
+    }
+}
+
+/* ============================================ */
+/* IMPRESSÃO                                    */
+/* ============================================ */
+
+@media print {
+    body {
+        background: white;
+        padding: 0;
+    }
+
+    .form-card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+        padding: 20px;
+    }
+
+    .btn-voltar-home,
+    .btn-navegacao,
+    .toast-notificacao,
+    .session-timer-wrapper {
+        display: none !important;
+    }
+
+    .container {
+        padding: 0;
     }
 }

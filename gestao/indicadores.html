@@ -11,13 +11,36 @@
     <link rel="stylesheet" href="../css/gestao.css">
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        .gestao-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header-timer {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+    </style>
 </head>
 <body>
     <div class="gestao-container">
-        <!-- HEADER -->
+        <!-- HEADER com Timer -->
         <div class="gestao-header">
             <h1>📊 Indicadores Gerenciais</h1>
-            <button class="btn-voltar" onclick="window.location.href='../home-gestao.html'">🏠 Voltar</button>
+            <div class="header-timer">
+                <div class="session-timer-wrapper">
+                    <span class="timer-icon">⏱️</span>
+                    <span class="timer-label">Sessão:</span>
+                    <span id="sessionTimer">30:00</span>
+                    <span class="timer-status">(ativa)</span>
+                </div>
+                <button class="btn-voltar" onclick="window.location.href='../home-gestao.html'">🏠 Voltar</button>
+            </div>
         </div>
 
         <!-- FILTROS DE MÊS -->
@@ -88,7 +111,6 @@
                         <span class="detalhes-titulo" id="detalhesLoginTitulo">Detalhes</span>
                         <button class="btn-fechar-detalhes" onclick="fecharDetalhes('detalhesLogin')">✕</button>
                     </div>
-                    <!-- 🔥 INPUT DE BUSCA -->
                     <div class="detalhes-busca">
                         <input type="text" id="searchLogin" placeholder="🔍 Filtrar por código ou descrição..." oninput="filtrarDetalhes('login')">
                         <button class="btn-limpar-busca" onclick="document.getElementById('searchLogin').value='';filtrarDetalhes('login')">✕</button>
@@ -112,7 +134,6 @@
                         <span class="detalhes-titulo" id="detalhesMesTitulo">Detalhes</span>
                         <button class="btn-fechar-detalhes" onclick="fecharDetalhes('detalhesMes')">✕</button>
                     </div>
-                    <!-- 🔥 INPUT DE BUSCA -->
                     <div class="detalhes-busca">
                         <input type="text" id="searchMes" placeholder="🔍 Filtrar por código ou descrição..." oninput="filtrarDetalhes('mes')">
                         <button class="btn-limpar-busca" onclick="document.getElementById('searchMes').value='';filtrarDetalhes('mes')">✕</button>
@@ -129,11 +150,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-    <script src="../js/firebase-config.js"></script>
-    <script src="../js/auth-service.js"></script>
-    <script src="../js/auth-global.js"></script>
-    <script src="../js/auth-helper.js"></script>
+    <script src="../js/firebase-config.js"></script>   
+    <script src="../js/config.js"></script>  
+    <script src="../js/auth-service.js"></script>      
+    <script src="../js/auth-helper.js"></script>  
+    <script src="../js/timer.js"></script>
     <script src="../js/script.js"></script>
+    <script src="../js/auth-global.js"></script>  
+    <Script src="../js/login.js"></script>      
     <script src="../js/gestao-indicadores.js"></script>
 </body>
 </html>

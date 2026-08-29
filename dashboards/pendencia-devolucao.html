@@ -8,6 +8,42 @@
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/dashboards-common.css">
     <link rel="stylesheet" href="../css/dashboards-pendencia-devolucao.css">
+    
+    <style>
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header-timer {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .session-timer-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: #718096;
+            background: rgba(66, 153, 225, 0.06);
+            padding: 2px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(66, 153, 225, 0.12);
+            white-space: nowrap;
+            height: 26px;
+        }
+        .session-timer-wrapper .timer-icon { font-size: 12px; }
+        .session-timer-wrapper .timer-label { color: #A0AEC0; font-size: 10px; font-weight: 500; }
+        .session-timer-wrapper .timer-status { font-size: 9px; color: #A0AEC0; font-weight: 400; }
+        #sessionTimer { font-weight: 600; min-width: 35px; font-family: 'Courier New', monospace; font-size: 12px; color: #48BB78; }
+        #sessionTimer.normal { color: #48BB78; }
+        #sessionTimer.warning { color: #ECC94B; }
+        #sessionTimer.danger { color: #E53E3E; font-weight: 800; animation: timerBlink 1s ease-in-out infinite; }
+        @keyframes timerBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
 </head>
 <body>
     <!-- Loading Overlay -->
@@ -17,19 +53,27 @@
     </div>
 
     <div class="dashboard-container" id="dashboardContent" style="display: none;">
-        <!-- Header -->
+        <!-- Header com Timer -->
         <header class="dashboard-header">
             <h1>
                 <span class="icon">📦</span>
                 Pendência de Devolução
             </h1>
-            <div class="user-info">
-                <div class="user-details">
-                    <span class="user-name" id="userName">Carregando...</span>
-                    <span class="user-matricula" id="userMatricula">Matrícula: ---</span>
+            <div class="header-timer">
+                <div class="session-timer-wrapper">
+                    <span class="timer-icon">⏱️</span>
+                    <span class="timer-label">Sessão:</span>
+                    <span id="sessionTimer">30:00</span>
+                    <span class="timer-status">(ativa)</span>
                 </div>
-                <span class="user-perfil" id="userPerfil">GESTÃO</span>
-                <a href="../dashboards/index.html" class="btn-voltar">📊 Dashboards</a>
+                <div class="user-info">
+                    <div class="user-details">
+                        <span class="user-name" id="userName">Carregando...</span>
+                        <span class="user-matricula" id="userMatricula">Matrícula: ---</span>
+                    </div>
+                    <span class="user-perfil" id="userPerfil">GESTÃO</span>
+                    <a href="../dashboards/index.html" class="btn-voltar">📊 Dashboards</a>
+                </div>
             </div>
         </header>
 
@@ -142,11 +186,14 @@
     <!-- ============================================ -->
     <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
     <!-- ============================================ -->
-    <script src="../js/firebase-config.js"></script>   <!-- 1. Configura o Firebase -->
-    <script src="../js/auth-service.js"></script>      <!-- 2. Cria o authService -->
-    <script src="../js/auth-global.js"></script>       <!-- 3. Verifica sessão na página -->
-    <script src="../js/auth-helper.js"></script>       <!-- 4. 🔥 FUNÇÕES AUXILIARES -->
-    <script src="../js/script.js"></script>            <!-- 5. Funções globais -->
+    <script src="../js/firebase-config.js"></script>   
+    <script src="../js/config.js"></script>  
+    <script src="../js/auth-service.js"></script>      
+    <script src="../js/auth-helper.js"></script>  
+    <script src="../js/timer.js"></script>
+    <script src="../js/script.js"></script>
+    <script src="../js/auth-global.js"></script>  
+    <Script src="../js/login.js"></script>      
     <script src="../js/dashboards-common.js"></script>
     <script src="../js/dashboards-cache.js"></script>
     <script src="../js/dashboards-pendencia-devolucao.js"></script>

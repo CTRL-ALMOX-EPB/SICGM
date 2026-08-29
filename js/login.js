@@ -1,21 +1,15 @@
 // ============================================
-// LOGIN.JS - PÁGINA DE LOGIN
+// LOGIN.JS - PÁGINA DE LOGIN (CORRIGIDO - SEM LOOP)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Página de login carregada');
 
     // ============================================
-    // VERIFICAR SE JÁ ESTÁ LOGADO
+    // 🔥 REMOVIDO: Verificação automática de login
+    // Isso estava causando o loop de redirecionamento
+    // O usuário deve fazer login manualmente
     // ============================================
-    if (typeof authService !== 'undefined' && authService && authService.isLoggedIn()) {
-        const user = authService.getUserData();
-        if (user) {
-            console.log(`👤 Usuário já logado: ${user.nome}`);
-            redirecionarPorPerfil(user.perfil);
-            return;
-        }
-    }
 
     // ============================================
     // ELEMENTOS DO DOM
@@ -96,7 +90,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // 🔥 MONTAR SENHA COMPLETA
         const senhaCompleta = montarSenhaCompleta(matriculaDigitada);
         console.log(`🔐 Tentando login com matrícula: ${matriculaDigitada}`);
-        console.log(`🔑 Senha gerada: ${senhaCompleta}`);
 
         // 🔥 VERIFICAR SE authService ESTÁ DISPONÍVEL
         if (typeof authService === 'undefined' || !authService) {
@@ -178,5 +171,6 @@ function redirecionarPorPerfil(perfil) {
     
     const page = pages[perfil] || 'home-operacional.html';
     console.log(`🔀 Redirecionando para: ${page}`);
-    window.location.replace(page);
+    // 🔥 Usando window.location.href em vez de replace para evitar loops
+    window.location.href = page;
 }

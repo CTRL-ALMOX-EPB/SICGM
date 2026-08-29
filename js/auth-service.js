@@ -107,6 +107,39 @@ class AuthService {
     }
 
     // ============================================
+    // RENOVAR SESSÃO (VERSÃO SIMPLES E SEGURA - SEM LOOP)
+    // ============================================
+    async renewSession() {
+        try {
+            const token = sessionStorage.getItem('auth_token');
+            if (!token) {
+                return false;
+            }
+
+            const payload = JSON.parse(atob(token));
+            if (!payload || !payload.email) {
+                return false;
+            }
+
+            // Renovar localmente (apenas isso, sem chamadas externas)
+            const newPayload = {
+                ...payload,
+                exp: Date.now() + 1800000 // 30 minutos
+            };
+            
+            const newToken = btoa(JSON.stringify(newPayload));
+            sessionStorage.setItem('auth_token', newToken);
+            sessionStorage.setItem('session_expiry', Date.now() + 1800000);
+            
+            console.log('🔄 Sessão renovada localmente');
+            return true;
+        } catch (error) {
+            console.warn('⚠️ Erro ao renovar sessão:', error);
+            return false;
+        }
+    }
+
+    // ============================================
     // BUSCAR DADOS DO USUÁRIO
     // ============================================
     async fetchUserData(email) {
@@ -159,7 +192,7 @@ class AuthService {
     }
 
     // ============================================
-    // REGISTRAR SESSÃO ATIVA (OPCIONAL)
+    // REGISTRAR SESSÃO ATIVA
     // ============================================
     async registerActiveSession(userData) {
         try {
@@ -175,7 +208,14 @@ class AuthService {
                     exp: Date.now() + 1800000
                 })
             });
-            return response.ok;
+            
+            if (response.ok) {
+                console.log('✅ Sessão registrada no Worker');
+                return true;
+            } else {
+                console.warn('⚠️ Falha ao registrar sessão no Worker:', response.status);
+                return false;
+            }
         } catch (error) {
             console.warn('⚠️ Não foi possível registrar sessão:', error);
             return false;
@@ -189,14 +229,12 @@ class AuthService {
         try {
             const token = sessionStorage.getItem('auth_token');
             if (!token) {
-                console.log('🔒 Nenhum token encontrado');
                 return false;
             }
 
             const payload = JSON.parse(atob(token));
             
             if (!payload || !payload.email || !payload.exp) {
-                console.log('🔒 Token inválido');
                 this.clearSession();
                 return false;
             }
@@ -207,7 +245,6 @@ class AuthService {
                 return false;
             }
 
-            console.log('✅ Sessão válida');
             return true;
         } catch (e) {
             console.error('❌ Erro ao verificar sessão:', e);
@@ -231,6 +268,7 @@ class AuthService {
             const payload = JSON.parse(atob(token));
             return payload;
         } catch (e) {
+            console.error('❌ Erro ao obter dados do usuário:', e);
             return null;
         }
     }
@@ -245,16 +283,16 @@ class AuthService {
     }
 
     // ============================================
-    // 🔥 LOGOUT - COMPLETO (IGUAL AO ADMIN)
+    // LOGOUT - COMPLETO
     // ============================================
     async logout() {
         try {
             console.log('👋 Iniciando logout...');
             
-            // 1. 🔥 PEGAR DADOS DO USUÁRIO ANTES DE LIMPAR
+            // 1. PEGAR DADOS DO USUÁRIO ANTES DE LIMPAR
             const userData = this.getUserData();
             
-            // 2. 🔥 REMOVER DO WORKER (KV) - ESSE É O PASSO CRÍTICO!
+            // 2. REMOVER DO WORKER (KV)
             if (userData && userData.email) {
                 try {
                     const response = await fetch(`${this.WORKER_URL}/sessions/remove`, {
@@ -277,17 +315,12 @@ class AuthService {
                 console.log('ℹ️ Nenhum usuário logado para remover do Worker');
             }
             
-            // 3. 🔥 LIMPAR SESSIONSTORAGE
+            // 3. LIMPAR SESSIONSTORAGE
             sessionStorage.removeItem('auth_token');
             sessionStorage.removeItem('session_expiry');
             console.log('🧹 sessionStorage limpo');
             
-            // 4. 🔥 RESETAR VARIÁVEIS GLOBAIS
-            if (typeof sessionVerified !== 'undefined') {
-                sessionVerified = false;
-            }
-            
-            // 5. 🔥 DESLOGAR DO FIREBASE
+            // 4. DESLOGAR DO FIREBASE
             try {
                 await this.auth.signOut();
                 console.log('✅ Firebase signOut realizado');
@@ -300,12 +333,9 @@ class AuthService {
             
         } catch (error) {
             console.error('❌ Erro ao sair:', error);
-            // 🔥 EM CASO DE ERRO, LIMPAR MESMO ASSIM
+            // EM CASO DE ERRO, LIMPAR MESMO ASSIM
             sessionStorage.removeItem('auth_token');
             sessionStorage.removeItem('session_expiry');
-            if (typeof sessionVerified !== 'undefined') {
-                sessionVerified = false;
-            }
             return false;
         }
     }

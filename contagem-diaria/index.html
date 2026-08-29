@@ -29,7 +29,7 @@
     </button>
 
     <!-- ============================================ -->
-    <!-- MODAL DE CONFIRMAÇÃO DE BAIXA - CORRIGIDO   -->
+    <!-- MODAL DE CONFIRMAÇÃO DE BAIXA               -->
     <!-- ============================================ -->
     <div id="modal-baixa" class="modal-overlay">
         <div class="modal-container">
@@ -65,10 +65,20 @@
     <div class="container">
         <div class="form-card">
             
-            <!-- Logo e Título -->
+            <!-- Logo e Título com Timer Integrado -->
             <div class="header-container">
-                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
-                <h1 class="title">SICGM - Contagem Diária</h1>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                        <h1 class="title">SICGM - Contagem Diária</h1>
+                    </div>
+                    <div class="session-timer-wrapper">
+                        <span class="timer-icon">⏱️</span>
+                        <span class="timer-label">Sessão:</span>
+                        <span id="sessionTimer">30:00</span>
+                        <span class="timer-status">(ativa)</span>
+                    </div>
+                </div>
             </div>
             
             <!-- Botão Voltar ao Início Baseado no Perfil -->
@@ -251,11 +261,14 @@
     <!-- ============================================ -->
     <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
     <!-- ============================================ -->
-    <script src="../js/firebase-config.js"></script>   <!-- 1. Configura o Firebase -->
-    <script src="../js/auth-service.js"></script>      <!-- 2. Cria o authService -->
-    <script src="../js/auth-global.js"></script>       <!-- 3. Verifica sessão na página -->
-    <script src="../js/auth-helper.js"></script>       <!-- 4. 🔥 FUNÇÕES AUXILIARES -->
-    <script src="../js/script.js"></script>            <!-- 5. Funções globais -->
+    <script src="../js/firebase-config.js"></script>   
+    <script src="../js/config.js"></script>  
+    <script src="../js/auth-service.js"></script>      
+    <script src="../js/auth-helper.js"></script>  
+    <script src="../js/timer.js"></script>
+    <script src="../js/script.js"></script>
+    <script src="../js/auth-global.js"></script>  
+    <Script src="../js/login.js"></script>      
     <script src="../js/config-depositos.js"></script>
     <script src="../js/contagem-diaria.js"></script>
     
@@ -285,19 +298,15 @@
                 console.log(`📝 Perfil detectado: ${perfil}`);
                 
                 const homeMap = {
-                    'OPERACIONAL': 'home-operacional.html',
-                    'GESTAO': 'home-gestao.html',
-                    'VISUALIZACAO': 'home-visualizacao.html'
+                    'OPERACIONAL': '../home-operacional.html',
+                    'GESTAO': '../home-gestao.html',
+                    'VISUALIZACAO': '../home-visualizacao.html'
                 };
                 
-                const homePage = homeMap[perfil] || 'home-gestao.html';
+                const homePage = homeMap[perfil] || '../home-gestao.html';
                 
-                // 🔥 IMPORTANTE: Estamos em contagem-diaria/, então sobe um nível
-                // para a raiz do projeto onde estão os arquivos home-*.html
-                const url = `../${homePage}`;
-                
-                console.log(`🔀 Navegando para: ${url}`);
-                window.location.href = url;
+                console.log(`🔀 Navegando para: ${homePage}`);
+                window.location.href = homePage;
                 
             } catch (error) {
                 console.error('❌ Erro ao redirecionar:', error);
