@@ -1149,7 +1149,7 @@ function fecharDetalhesObras() {
 }
 
 // ============================================
-// DETALHES: SITUAÇÃO DAS OBRAS
+// DETALHES: SITUAÇÃO DAS OBRAS (COM DATA PARA ANTIGAS)
 // ============================================
 function mostrarDetalhesSituacao(tipo, titulo) {
     var container = document.getElementById('detalhesSituacao');
@@ -1181,7 +1181,8 @@ function mostrarDetalhesSituacao(tipo, titulo) {
             obraFormatada: formatarObraComTraco(obra),
             status: 'N/A',
             etapas: '0',
-            situacao: label
+            situacao: label,
+            data: '-' // Valor padrão
         };
         
         if (dadosObras.detalhesProgramacaoCompleta[obra]) {
@@ -1192,9 +1193,11 @@ function mostrarDetalhesSituacao(tipo, titulo) {
             info.etapas = dadosObras.detalhesProgramacao[obra].etapas || '0';
         }
         
-        if (tipo === 'antigas' && dadosObras.detalhesMovimentos[obra]) {
+        // Buscar dados do movimento (data e valor)
+        if (dadosObras.detalhesMovimentos[obra]) {
             info.ultimaData = dadosObras.detalhesMovimentos[obra].data || '-';
             info.valor = dadosObras.detalhesMovimentos[obra].valor || 0;
+            info.data = dadosObras.detalhesMovimentos[obra].data || '-'; // Adiciona a data
         }
         
         return info;
@@ -1226,11 +1229,27 @@ function renderizarDetalhesSituacao(itens) {
         return;
     }
     
-    var html = '<table class="tabela-obras-detalhes"><thead><tr><th>Obra</th><th>Status</th><th>Etapas</th><th>Situação</th></tr></thead><tbody>';
+    // Verificar se é a lista de "Antigas Corrigidas" para adicionar a coluna Data
+    var isAntigas = filtrados.length > 0 && filtrados[0].situacao === '🔄 Antigas Corrigidas';
+    
+    var html = '<table class="tabela-obras-detalhes"><thead><tr>';
+    html += '<th>Obra</th><th>Status</th><th>Etapas</th>';
+    if (isAntigas) {
+        html += '<th>Data Movimentação</th>'; // Coluna extra para Antigas
+    }
+    html += '<th>Situação</th></tr></thead><tbody>';
+    
     filtrados.forEach(function(item) {
         var obraExibicao = item.obraFormatada || item.obra || '-';
-        html += '<tr><td><strong>' + obraExibicao + '</strong></td><td><span class="status-badge ' + getStatusClass(item.status) + '" title="' + item.status + '">' + item.status + '</span></td><td>' + item.etapas + '</td><td>' + item.situacao + '</td></tr>';
+        html += '<tr><td><strong>' + obraExibicao + '</strong></td>';
+        html += '<td><span class="status-badge ' + getStatusClass(item.status) + '" title="' + item.status + '">' + item.status + '</span></td>';
+        html += '<td>' + item.etapas + '</td>';
+        if (isAntigas) {
+            html += '<td>' + (item.data || '-') + '</td>'; // Data da movimentação
+        }
+        html += '<td>' + item.situacao + '</td></tr>';
     });
+    
     html += '</tbody></table>';
     conteudo.innerHTML = html;
 }

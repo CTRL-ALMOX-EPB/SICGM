@@ -161,10 +161,19 @@
             <!-- FILTROS DE MÊS (OBRAS) -->
             <div class="filtros-meses">
                 <div class="filtros-meses-header">
-                    <h3>📅 Filtrar por Mês</h3>
+                    <h3>📅 Filtrar por Mês (a partir de 01/08/2026)</h3>
                     <span class="filtros-meses-info">Clique para selecionar múltiplos meses</span>
                 </div>
                 <div class="meses-container" id="mesesContainerObras"></div>
+            </div>
+
+            <!-- FILTROS -->
+            <div class="filtros-box" style="margin-bottom:25px;">
+                <div class="filtro-item" style="flex:2;">
+                    <label>📅 Período (Obras por Mês):</label>
+                    <span style="color:#4A5568;font-weight:600;padding:10px 0;">Todos os meses disponíveis</span>
+                </div>
+                <button class="btn-aplicar-filtros" onclick="carregarDadosObras()">📊 Atualizar</button>
             </div>
 
             <!-- ============================================ -->
