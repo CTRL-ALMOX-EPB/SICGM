@@ -158,108 +158,112 @@
         <!-- ABA 2: OBRAS MOVIMENTADAS                   -->
         <!-- ============================================ -->
         <div id="tab-obras" class="tab-content">
-            <!-- FILTRO DE PERÍODO PARA OBRAS -->
-            <div class="filtros-box" style="margin-bottom:25px;">
-                <div class="filtro-item">
-                    <label>📅 Data Início (Movimentos):</label>
-                    <input type="date" id="dataInicioObras" value="2026-08-01">
+            <!-- FILTROS DE MÊS (OBRAS) -->
+            <div class="filtros-meses">
+                <div class="filtros-meses-header">
+                    <h3>📅 Filtrar por Mês</h3>
+                    <span class="filtros-meses-info">Clique para selecionar múltiplos meses</span>
                 </div>
-                <div class="filtro-item">
-                    <label>📅 Data Fim (Movimentos):</label>
-                    <input type="date" id="dataFimObras" value="2026-09-08">
-                </div>
-                <div class="filtro-item">
-                    <label>📅 Data Início (Programação):</label>
-                    <input type="date" id="dataInicioProgObras" value="2026-08-01">
-                </div>
-                <button class="btn-aplicar-filtros" onclick="carregarDadosObras()">📊 Atualizar</button>
+                <div class="meses-container" id="mesesContainerObras"></div>
             </div>
 
-            <!-- INDICADORES - OBRAS -->
+            <!-- ============================================ -->
+            <!-- INDICADORES - 5 COLUNAS                     -->
+            <!-- ============================================ -->
             <div class="indicadores-obras-grid">
                 <div class="card-indicador-obras card-obras-total">
                     <div class="card-indicador-icon">📋</div>
-                    <h3>Total de Obras</h3>
+                    <h3>Obras Gerais</h3>
                     <div class="valor-big" id="totalObras">0</div>
-                    <small class="sub-valor">programação + devolução</small>
+                    <small class="sub-valor">programação + devolução (após 01/08)</small>
+                </div>
+                <div class="card-indicador-obras card-obras-programadas">
+                    <div class="card-indicador-icon">📝</div>
+                    <h3>Programadas</h3>
+                    <div class="valor-big" id="obrasProgramadas" style="color:#3B82F6;">0</div>
+                    <small class="sub-valor">na programação SIAGO</small>
+                </div>
+                <div class="card-indicador-obras card-obras-movimentadas">
+                    <div class="card-indicador-icon">✅</div>
+                    <h3>Movimentadas</h3>
+                    <div class="valor-big" id="obrasMovimentadas" style="color:#48BB78;">0</div>
+                    <small class="sub-valor" id="pctMovimentadas">0% do total</small>
                 </div>
                 <div class="card-indicador-obras card-obras-pendentes">
                     <div class="card-indicador-icon">⏳</div>
-                    <h3>Pendentes de Movimentação</h3>
+                    <h3>Pendentes</h3>
                     <div class="valor-big" id="obrasPendentes" style="color:#EF4444;">0</div>
-                    <small class="sub-valor">precisam requisitar ou devolver</small>
+                    <small class="sub-valor" id="pctPendentes">0% do total</small>
                 </div>
                 <div class="card-indicador-obras card-obras-antigas">
                     <div class="card-indicador-icon">🔄</div>
-                    <h3>Obras Antigas Corrigidas</h3>
+                    <h3>Antigas Corrigidas</h3>
                     <div class="valor-big" id="obrasAntigas" style="color:#F59E0B;">0</div>
-                    <small class="sub-valor">não estão na programação atual</small>
+                    <small class="sub-valor">movimentadas sem programação</small>
                 </div>
             </div>
 
-            <!-- GRÁFICO DE OBRAS REQUISITADAS (Mensal) -->
-            <div class="obras-mensais-container">
-                <div class="obras-mensais-header">
-                    <h3>📊 Obras Requisitadas por Mês</h3>
-                    <span class="sub-info">Clique em uma barra para ver detalhes</span>
-                </div>
-                <div class="grafico-container">
-                    <canvas id="graficoObrasMensal"></canvas>
-                </div>
-                <!-- Detalhes ao clicar no gráfico -->
-                <div class="detalhes-obras-container" id="detalhesObrasMensal">
-                    <div class="detalhes-obras-header">
-                        <span class="detalhes-obras-titulo" id="detalhesObrasTitulo">Detalhes</span>
-                        <button class="btn-fechar-detalhes-obras" onclick="fecharDetalhesObras()">✕</button>
+            <!-- ============================================ -->
+            <!-- GRÁFICOS - 2 COLUNAS                        -->
+            <!-- ============================================ -->
+            <div class="graficos-obras-grid">
+                <!-- Gráfico 1: Obras por Mês -->
+                <div class="obras-mensais-container">
+                    <div class="obras-mensais-header">
+                        <h3>📊 Obras por Mês</h3>
+                        <span class="sub-info">Clique na barra para ver detalhes (valor total por obra)</span>
                     </div>
-                    <div class="detalhes-obras-busca">
-                        <input type="text" id="searchObrasDetalhes" placeholder="🔍 Filtrar por obra..." oninput="filtrarDetalhesObras()">
-                        <button class="btn-limpar-busca" onclick="document.getElementById('searchObrasDetalhes').value='';filtrarDetalhesObras()">✕</button>
+                    <div class="grafico-container" style="height:280px;">
+                        <canvas id="graficoObrasMensal"></canvas>
                     </div>
-                    <div class="detalhes-obras-conteudo" id="detalhesObrasConteudo"></div>
+                    <div class="detalhes-obras-container" id="detalhesObrasMensal">
+                        <div class="detalhes-obras-header">
+                            <span class="detalhes-obras-titulo" id="detalhesObrasTitulo">Detalhes</span>
+                            <button class="btn-fechar-detalhes-obras" onclick="fecharDetalhesObras()">✕</button>
+                        </div>
+                        <div class="detalhes-obras-busca">
+                            <input type="text" id="searchObrasDetalhes" placeholder="🔍 Filtrar por obra..." oninput="filtrarDetalhesObras()">
+                            <button class="btn-limpar-busca" onclick="document.getElementById('searchObrasDetalhes').value='';filtrarDetalhesObras()">✕</button>
+                        </div>
+                        <div class="detalhes-obras-conteudo" id="detalhesObrasConteudo"></div>
+                    </div>
+                </div>
+
+                <!-- Gráfico 2: Situação das Obras (Donut) -->
+                <div class="obras-mensais-container">
+                    <div class="obras-mensais-header">
+                        <h3>📊 Situação das Obras</h3>
+                        <span class="sub-info">Clique no gráfico para ver detalhes</span>
+                    </div>
+                    <div class="grafico-container" style="height:280px;">
+                        <canvas id="graficoSituacao"></canvas>
+                    </div>
+                    <div class="detalhes-obras-container" id="detalhesSituacao">
+                        <div class="detalhes-obras-header">
+                            <span class="detalhes-obras-titulo" id="detalhesSituacaoTitulo">Detalhes</span>
+                            <button class="btn-fechar-detalhes-obras" onclick="fecharDetalhesSituacao()">✕</button>
+                        </div>
+                        <div class="detalhes-obras-busca">
+                            <input type="text" id="searchSituacaoDetalhes" placeholder="🔍 Filtrar por obra..." oninput="filtrarDetalhesSituacao()">
+                            <button class="btn-limpar-busca" onclick="document.getElementById('searchSituacaoDetalhes').value='';filtrarDetalhesSituacao()">✕</button>
+                        </div>
+                        <div class="detalhes-obras-conteudo" id="detalhesSituacaoConteudo"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- LISTA DE OBRAS PENDENTES (Detalhada) -->
-            <div class="card-grafico" style="margin-bottom:25px;">
-                <div class="card-grafico-header">
-                    <h3>📋 Obras Pendentes de Movimentação</h3>
-                    <span class="card-grafico-sub">Obras que precisam de requisição ou devolução</span>
-                </div>
-                <div style="overflow-x:auto;">
-                    <table class="tabela-obras-detalhes" id="tabelaPendentes">
-                        <thead>
-                            <tr>
-                                <th>Obra</th>
-                                <th>Status</th>
-                                <th>Origem</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabelaPendentesBody">
-                            <tr><td colspan="3" style="text-align:center;color:#A0AEC0;">Carregando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- LISTA DE OBRAS ANTIGAS CORRIGIDAS -->
-            <div class="card-grafico">
-                <div class="card-grafico-header">
-                    <h3>🔄 Obras Antigas Corrigidas</h3>
-                    <span class="card-grafico-sub">Obras com movimentação que não estão na programação atual</span>
-                </div>
-                <div style="overflow-x:auto;">
-                    <table class="tabela-obras-detalhes" id="tabelaAntigas">
-                        <thead>
-                            <tr>
-                                <th>Obra</th>
-                                <th>Última Movimentação</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabelaAntigasBody">
-                            <tr><td colspan="2" style="text-align:center;color:#A0AEC0;">Carregando...</td></tr>
-                        </tbody>
-                    </table>
+            <!-- ============================================ -->
+            <!-- GRÁFICO 3: COMPARATIVO GERAL               -->
+            <!-- ============================================ -->
+            <div class="graficos-obras-grid">
+                <div class="obras-mensais-container" style="grid-column: 1 / -1;">
+                    <div class="obras-mensais-header">
+                        <h3>📊 Comparativo Geral</h3>
+                        <span class="sub-info">Distribuição das obras por categoria (após 01/08/2026)</span>
+                    </div>
+                    <div class="grafico-container" style="height:250px;">
+                        <canvas id="graficoComparativo"></canvas>
+                    </div>
                 </div>
             </div>
 
@@ -276,17 +280,13 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-    <!-- CONFIG - Carregar apenas uma vez -->
     <script src="../js/firebase-config.js"></script>
-    
-    <!-- AUTH e UTILITÁRIOS -->
     <script src="../js/auth-service.js"></script>
     <script src="../js/auth-helper.js"></script>
     <script src="../js/timer.js"></script>
     <script src="../js/script.js"></script>
     <script src="../js/auth-global.js"></script>
     
-    <!-- INDICADORES -->
     <script src="../js/gestao-indicadores.js"></script>
     <script src="../js/gestao-indicadores-obras.js"></script>
 </body>
