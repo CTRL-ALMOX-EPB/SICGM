@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indicadores - Gestão</title>
     
-    <script src="../js/config.js"></script>
-    
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/gestao.css">
     
@@ -43,121 +41,253 @@
             </div>
         </div>
 
-        <!-- FILTROS DE MÊS -->
-        <div class="filtros-meses">
-            <div class="filtros-meses-header">
-                <h3>📅 Filtrar por Mês</h3>
-                <span class="filtros-meses-info">Clique para selecionar múltiplos</span>
-            </div>
-            <div class="meses-container" id="mesesContainer"></div>
-        </div>
-
-        <!-- FILTROS -->
-        <div class="filtros-box">
-            <div class="filtro-item">
-                <label>👤 Login:</label>
-                <select id="filtroLogin"><option value="Todos">Todos</option></select>
-            </div>
-            <div class="filtro-item">
-                <label>📅 Data Início:</label>
-                <input type="date" id="dataInicio">
-            </div>
-            <div class="filtro-item">
-                <label>📅 Data Fim:</label>
-                <input type="date" id="dataFim">
-            </div>
-            <button class="btn-limpar" id="limparPeriodo">🔄 Limpar</button>
-            <button class="btn-aplicar-filtros" onclick="aplicarFiltros()">📊 Aplicar</button>
+        <!-- ============================================ -->
+        <!-- ABAS DE NAVEGAÇÃO                           -->
+        <!-- ============================================ -->
+        <div class="tabs-container">
+            <button class="tab-btn active" data-tab="tab-valores">
+                💰 VALORES EMPENHADOS
+            </button>
+            <button class="tab-btn" data-tab="tab-obras">
+                🏗️ OBRAS MOVIMENTADAS
+            </button>
         </div>
 
         <!-- ============================================ -->
-        <!-- INDICADORES (KPIs) - 3 COLUNAS              -->
+        <!-- ABA 1: VALORES EMPENHADOS (Original)        -->
         <!-- ============================================ -->
-        <div class="indicadores-grid indicadores-3col">
-            <div class="card-indicador card-rma">
-                <div class="card-indicador-icon">📤</div>
-                <h3>RMA Total</h3>
-                <div class="valor-big" id="totalRMA" style="color:#3B82F6;">R$ 0</div>
-                <small id="totalRMAQtd">0 requisições</small>
+        <div id="tab-valores" class="tab-content active">
+            <!-- FILTROS DE MÊS -->
+            <div class="filtros-meses">
+                <div class="filtros-meses-header">
+                    <h3>📅 Filtrar por Mês</h3>
+                    <span class="filtros-meses-info">Clique para selecionar múltiplos</span>
+                </div>
+                <div class="meses-container" id="mesesContainer"></div>
             </div>
-            <div class="card-indicador card-dma">
-                <div class="card-indicador-icon">📥</div>
-                <h3>DMA Total</h3>
-                <div class="valor-big" id="totalDMA" style="color:#10B981;">R$ 0</div>
-                <small id="totalDMAQtd">0 devoluções</small>
+
+            <!-- FILTROS -->
+            <div class="filtros-box">
+                <div class="filtro-item">
+                    <label>👤 Login:</label>
+                    <select id="filtroLogin"><option value="Todos">Todos</option></select>
+                </div>
+                <div class="filtro-item">
+                    <label>📅 Data Início:</label>
+                    <input type="date" id="dataInicio">
+                </div>
+                <div class="filtro-item">
+                    <label>📅 Data Fim:</label>
+                    <input type="date" id="dataFim">
+                </div>
+                <button class="btn-limpar" id="limparPeriodo">🔄 Limpar</button>
+                <button class="btn-aplicar-filtros" onclick="aplicarFiltros()">📊 Aplicar</button>
             </div>
-            <div class="card-indicador card-total">
-                <div class="card-indicador-icon">📊</div>
-                <h3>Total de Registros</h3>
-                <div class="valor-big" id="totalRegistros">0</div>
-                <small>movimentos processados</small>
+
+            <!-- INDICADORES (KPIs) - 3 COLUNAS -->
+            <div class="indicadores-grid indicadores-3col">
+                <div class="card-indicador card-rma">
+                    <div class="card-indicador-icon">📤</div>
+                    <h3>RMA Total</h3>
+                    <div class="valor-big" id="totalRMA" style="color:#3B82F6;">R$ 0</div>
+                    <small id="totalRMAQtd">0 requisições</small>
+                </div>
+                <div class="card-indicador card-dma">
+                    <div class="card-indicador-icon">📥</div>
+                    <h3>DMA Total</h3>
+                    <div class="valor-big" id="totalDMA" style="color:#10B981;">R$ 0</div>
+                    <small id="totalDMAQtd">0 devoluções</small>
+                </div>
+                <div class="card-indicador card-total">
+                    <div class="card-indicador-icon">📊</div>
+                    <h3>Total de Registros</h3>
+                    <div class="valor-big" id="totalRegistros">0</div>
+                    <small>movimentos processados</small>
+                </div>
+            </div>
+
+            <!-- GRÁFICOS -->
+            <div class="graficos-grid graficos-top">
+                <div class="card-grafico card-grafico-grande">
+                    <div class="card-grafico-header">
+                        <h3>📊 Valor por Login</h3>
+                        <span class="card-grafico-sub">Clique em uma barra para ver detalhes</span>
+                    </div>
+                    <div class="grafico-container">
+                        <canvas id="graficoLogin"></canvas>
+                    </div>
+                    <div class="detalhes-container" id="detalhesLogin" style="display:none;">
+                        <div class="detalhes-header">
+                            <span class="detalhes-titulo" id="detalhesLoginTitulo">Detalhes</span>
+                            <button class="btn-fechar-detalhes" onclick="fecharDetalhes('detalhesLogin')">✕</button>
+                        </div>
+                        <div class="detalhes-busca">
+                            <input type="text" id="searchLogin" placeholder="🔍 Filtrar por código ou descrição..." oninput="filtrarDetalhes('login')">
+                            <button class="btn-limpar-busca" onclick="document.getElementById('searchLogin').value='';filtrarDetalhes('login')">✕</button>
+                        </div>
+                        <div class="detalhes-conteudo" id="detalhesLoginConteudo"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graficos-grid graficos-bottom">
+                <div class="card-grafico card-grafico-grande">
+                    <div class="card-grafico-header">
+                        <h3>📈 Evolução Mensal</h3>
+                        <span class="card-grafico-sub">Clique em uma barra para ver detalhes</span>
+                    </div>
+                    <div class="grafico-container">
+                        <canvas id="graficoMes"></canvas>
+                    </div>
+                    <div class="detalhes-container" id="detalhesMes" style="display:none;">
+                        <div class="detalhes-header">
+                            <span class="detalhes-titulo" id="detalhesMesTitulo">Detalhes</span>
+                            <button class="btn-fechar-detalhes" onclick="fecharDetalhes('detalhesMes')">✕</button>
+                        </div>
+                        <div class="detalhes-busca">
+                            <input type="text" id="searchMes" placeholder="🔍 Filtrar por código ou descrição..." oninput="filtrarDetalhes('mes')">
+                            <button class="btn-limpar-busca" onclick="document.getElementById('searchMes').value='';filtrarDetalhes('mes')">✕</button>
+                        </div>
+                        <div class="detalhes-conteudo" id="detalhesMesConteudo"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- ============================================ -->
-        <!-- GRÁFICOS                                     -->
+        <!-- ABA 2: OBRAS MOVIMENTADAS                   -->
         <!-- ============================================ -->
-        <div class="graficos-grid graficos-top">
-            <div class="card-grafico card-grafico-grande">
-                <div class="card-grafico-header">
-                    <h3>📊 Valor por Login</h3>
-                    <span class="card-grafico-sub">Clique em uma barra para ver detalhes</span>
+        <div id="tab-obras" class="tab-content">
+            <!-- FILTRO DE PERÍODO PARA OBRAS -->
+            <div class="filtros-box" style="margin-bottom:25px;">
+                <div class="filtro-item">
+                    <label>📅 Data Início (Movimentos):</label>
+                    <input type="date" id="dataInicioObras" value="2026-08-01">
+                </div>
+                <div class="filtro-item">
+                    <label>📅 Data Fim (Movimentos):</label>
+                    <input type="date" id="dataFimObras" value="2026-09-08">
+                </div>
+                <div class="filtro-item">
+                    <label>📅 Data Início (Programação):</label>
+                    <input type="date" id="dataInicioProgObras" value="2026-08-01">
+                </div>
+                <button class="btn-aplicar-filtros" onclick="carregarDadosObras()">📊 Atualizar</button>
+            </div>
+
+            <!-- INDICADORES - OBRAS -->
+            <div class="indicadores-obras-grid">
+                <div class="card-indicador-obras card-obras-total">
+                    <div class="card-indicador-icon">📋</div>
+                    <h3>Total de Obras</h3>
+                    <div class="valor-big" id="totalObras">0</div>
+                    <small class="sub-valor">programação + devolução</small>
+                </div>
+                <div class="card-indicador-obras card-obras-pendentes">
+                    <div class="card-indicador-icon">⏳</div>
+                    <h3>Pendentes de Movimentação</h3>
+                    <div class="valor-big" id="obrasPendentes" style="color:#EF4444;">0</div>
+                    <small class="sub-valor">precisam requisitar ou devolver</small>
+                </div>
+                <div class="card-indicador-obras card-obras-antigas">
+                    <div class="card-indicador-icon">🔄</div>
+                    <h3>Obras Antigas Corrigidas</h3>
+                    <div class="valor-big" id="obrasAntigas" style="color:#F59E0B;">0</div>
+                    <small class="sub-valor">não estão na programação atual</small>
+                </div>
+            </div>
+
+            <!-- GRÁFICO DE OBRAS REQUISITADAS (Mensal) -->
+            <div class="obras-mensais-container">
+                <div class="obras-mensais-header">
+                    <h3>📊 Obras Requisitadas por Mês</h3>
+                    <span class="sub-info">Clique em uma barra para ver detalhes</span>
                 </div>
                 <div class="grafico-container">
-                    <canvas id="graficoLogin"></canvas>
+                    <canvas id="graficoObrasMensal"></canvas>
                 </div>
-                <div class="detalhes-container" id="detalhesLogin" style="display:none;">
-                    <div class="detalhes-header">
-                        <span class="detalhes-titulo" id="detalhesLoginTitulo">Detalhes</span>
-                        <button class="btn-fechar-detalhes" onclick="fecharDetalhes('detalhesLogin')">✕</button>
+                <!-- Detalhes ao clicar no gráfico -->
+                <div class="detalhes-obras-container" id="detalhesObrasMensal">
+                    <div class="detalhes-obras-header">
+                        <span class="detalhes-obras-titulo" id="detalhesObrasTitulo">Detalhes</span>
+                        <button class="btn-fechar-detalhes-obras" onclick="fecharDetalhesObras()">✕</button>
                     </div>
-                    <div class="detalhes-busca">
-                        <input type="text" id="searchLogin" placeholder="🔍 Filtrar por código ou descrição..." oninput="filtrarDetalhes('login')">
-                        <button class="btn-limpar-busca" onclick="document.getElementById('searchLogin').value='';filtrarDetalhes('login')">✕</button>
+                    <div class="detalhes-obras-busca">
+                        <input type="text" id="searchObrasDetalhes" placeholder="🔍 Filtrar por obra..." oninput="filtrarDetalhesObras()">
+                        <button class="btn-limpar-busca" onclick="document.getElementById('searchObrasDetalhes').value='';filtrarDetalhesObras()">✕</button>
                     </div>
-                    <div class="detalhes-conteudo" id="detalhesLoginConteudo"></div>
+                    <div class="detalhes-obras-conteudo" id="detalhesObrasConteudo"></div>
                 </div>
             </div>
-        </div>
 
-        <div class="graficos-grid graficos-bottom">
-            <div class="card-grafico card-grafico-grande">
+            <!-- LISTA DE OBRAS PENDENTES (Detalhada) -->
+            <div class="card-grafico" style="margin-bottom:25px;">
                 <div class="card-grafico-header">
-                    <h3>📈 Evolução Mensal</h3>
-                    <span class="card-grafico-sub">Clique em uma barra para ver detalhes</span>
+                    <h3>📋 Obras Pendentes de Movimentação</h3>
+                    <span class="card-grafico-sub">Obras que precisam de requisição ou devolução</span>
                 </div>
-                <div class="grafico-container">
-                    <canvas id="graficoMes"></canvas>
+                <div style="overflow-x:auto;">
+                    <table class="tabela-obras-detalhes" id="tabelaPendentes">
+                        <thead>
+                            <tr>
+                                <th>Obra</th>
+                                <th>Status</th>
+                                <th>Origem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaPendentesBody">
+                            <tr><td colspan="3" style="text-align:center;color:#A0AEC0;">Carregando...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="detalhes-container" id="detalhesMes" style="display:none;">
-                    <div class="detalhes-header">
-                        <span class="detalhes-titulo" id="detalhesMesTitulo">Detalhes</span>
-                        <button class="btn-fechar-detalhes" onclick="fecharDetalhes('detalhesMes')">✕</button>
-                    </div>
-                    <div class="detalhes-busca">
-                        <input type="text" id="searchMes" placeholder="🔍 Filtrar por código ou descrição..." oninput="filtrarDetalhes('mes')">
-                        <button class="btn-limpar-busca" onclick="document.getElementById('searchMes').value='';filtrarDetalhes('mes')">✕</button>
-                    </div>
-                    <div class="detalhes-conteudo" id="detalhesMesConteudo"></div>
+            </div>
+
+            <!-- LISTA DE OBRAS ANTIGAS CORRIGIDAS -->
+            <div class="card-grafico">
+                <div class="card-grafico-header">
+                    <h3>🔄 Obras Antigas Corrigidas</h3>
+                    <span class="card-grafico-sub">Obras com movimentação que não estão na programação atual</span>
                 </div>
+                <div style="overflow-x:auto;">
+                    <table class="tabela-obras-detalhes" id="tabelaAntigas">
+                        <thead>
+                            <tr>
+                                <th>Obra</th>
+                                <th>Última Movimentação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaAntigasBody">
+                            <tr><td colspan="2" style="text-align:center;color:#A0AEC0;">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="loadingObras" class="loading-obras">
+                <div class="spinner"></div>
+                <div>⏳ Carregando dados das obras...</div>
             </div>
         </div>
     </div>
 
     <!-- ============================================ -->
-    <!-- FIREBASE                                     -->
+    <!-- FIREBASE E SCRIPTS                          -->
     <!-- ============================================ -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-    <script src="../js/firebase-config.js"></script>   
-    <script src="../js/config.js"></script>  
-    <script src="../js/auth-service.js"></script>      
-    <script src="../js/auth-helper.js"></script>  
+    <!-- CONFIG - Carregar apenas uma vez -->
+    <script src="../js/firebase-config.js"></script>
+    
+    <!-- AUTH e UTILITÁRIOS -->
+    <script src="../js/auth-service.js"></script>
+    <script src="../js/auth-helper.js"></script>
     <script src="../js/timer.js"></script>
     <script src="../js/script.js"></script>
-    <script src="../js/auth-global.js"></script>  
-    <Script src="../js/login.js"></script>      
+    <script src="../js/auth-global.js"></script>
+    
+    <!-- INDICADORES -->
     <script src="../js/gestao-indicadores.js"></script>
+    <script src="../js/gestao-indicadores-obras.js"></script>
 </body>
 </html>
