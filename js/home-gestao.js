@@ -41,6 +41,15 @@ const DEPARTAMENTOS = {
                 link: 'gestao/planejamento.html',
                 status: 'disponivel',
                 descricao: 'Metas, orçamento e cronogramas'
+            },
+            // 🔥 NOVO: Despacho de Obras (visão Gestão)
+            {
+                id: 'despacho-obras-gestao',
+                nome: 'Despacho de Obras',
+                icone: '📦',
+                link: 'despacho/index.html',
+                status: 'disponivel',
+                descricao: 'Vincule obras a separadores e acompanhe o despacho'
             }
         ]
     },
@@ -284,6 +293,9 @@ function renderizarDepartamento(deptoId) {
                            func.status === 'desenvolvimento' ? '⚙️ Em desenvolvimento' : '📅 Em breve';
         const isDisabled = func.status !== 'disponivel';
 
+        // 🔥 NOVO: Verifica se é a função de Despacho para aplicar destaque visual
+        const isDespacho = func.id && func.id.startsWith('despacho-obras');
+
         if (func.temDropdown) {
             html += `
                 <div class="func-card" onclick="toggleDropdownDepto(event, '${func.id}')" style="cursor: pointer;" data-func="${func.id}">
@@ -331,8 +343,11 @@ function renderizarDepartamento(deptoId) {
             }
             const onclick = isDisabled ? `onclick="event.preventDefault(); mostrarEmDesenvolvimento(event)"` : '';
             
+            // 🔥 NOVO: Aplica classe de destaque para o card de Despacho
+            const extraClass = isDespacho ? 'func-card-destaque' : '';
+
             html += `
-                <a href="${link}" class="func-card ${isDisabled ? 'disabled' : ''}" data-func="${func.id}" ${onclick}>
+                <a href="${link}" class="func-card ${isDisabled ? 'disabled' : ''} ${extraClass}" data-func="${func.id}" ${onclick}>
                     <div class="func-icon">${func.icone}</div>
                     <div class="func-name">${func.nome}</div>
                     <div class="func-status ${statusClass}">${statusLabel}</div>

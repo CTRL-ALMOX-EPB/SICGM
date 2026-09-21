@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Despacho de Obras - SICGM</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/despacho.css">
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header-container">
+            <img src="../assests/img/logo-control.png" alt="Control" class="logo-empresa" onerror="this.style.display='none'">
+            <h1 class="title">📦 Despacho de Obras</h1>
+            <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+                <span class="session-timer-wrapper">
+                    <span class="timer-icon">⏱️</span>
+                    <span id="sessionTimer">30:00</span>
+                </span>
+                <button class="btn-voltar-home small" onclick="window.location.href='../home-gestao.html'">
+                    ← Voltar
+                </button>
+            </div>
+        </div>
+
+        <!-- STATS BAR -->
+        <div class="stats-bar">
+            <div class="stat-card stat-blue">
+                <div class="stat-icon">📋</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="statDisponiveis">0</div>
+                    <div class="stat-label">Obras Disponíveis</div>
+                </div>
+            </div>
+            <div class="stat-card stat-orange">
+                <div class="stat-icon">👷</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="statUsuarios">0</div>
+                    <div class="stat-label">Separadores</div>
+                </div>
+            </div>
+            <div class="stat-card stat-green">
+                <div class="stat-icon">✅</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="statDespachadas">0</div>
+                    <div class="stat-label">Despachadas</div>
+                </div>
+            </div>
+            <div class="stat-card stat-purple">
+                <div class="stat-icon">📊</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="statItens">0</div>
+                    <div class="stat-label">Total de Itens</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LAYOUT DE 3 COLUNAS -->
+        <div class="despacho-layout">
+
+            <!-- COLUNA 1: OBRAS DISPONÍVEIS -->
+            <div class="panel panel-obras">
+                <div class="panel-header">
+                    <div>
+                        <h2>📋 Obras Disponíveis</h2>
+                        <span class="panel-subtitle">Arraste para um separador →</span>
+                    </div>
+                    <div class="search-box">
+                        <input type="text" id="buscaObra" placeholder="🔍 Buscar...">
+                    </div>
+                </div>
+                <div class="panel-body" id="obrasDisponiveis">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
+
+            <!-- COLUNA 2: LISTA COMPACTA DE SEPARADORES -->
+            <div class="panel panel-separadores">
+                <div class="panel-header">
+                    <div>
+                        <h2>👷 Separadores</h2>
+                        <span class="panel-subtitle">Clique para selecionar</span>
+                    </div>
+                </div>
+                <div class="panel-body" id="separadoresList">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
+
+            <!-- COLUNA 3: PAINEL INLINE DO SEPARADOR SELECIONADO -->
+            <div class="panel panel-destino" id="painelDestino">
+                <!-- EMPTY STATE (nenhum separador selecionado) -->
+                <div class="destino-empty" id="destinoEmpty">
+                    <div class="destino-empty-icon">👤</div>
+                    <h3>Selecione um separador</h3>
+                    <p>Clique em um separador à esquerda para começar a despachar obras</p>
+                </div>
+
+                <!-- CONTEÚDO DO SEPARADOR SELECIONADO -->
+                <div class="destino-content" id="destinoContent" style="display:none;">
+                    <div class="destino-header">
+                        <div class="user-avatar" id="destinoAvatar">?</div>
+                        <div class="destino-info">
+                            <h3 id="destinoNome">Nome</h3>
+                            <span id="destinoEmail">email@control.eng.br</span>
+                            <span class="user-badge" id="destinoPerfil">OPERACIONAL</span>
+                        </div>
+                        <button class="destino-close" onclick="fecharPainelDestino()" title="Fechar painel">✕</button>
+                    </div>
+
+                    <div class="destino-stats">
+                        <div class="mini-stat">
+                            <span class="mini-value" id="destinoQtdObras">0</span>
+                            <span class="mini-label">Obras vinculadas</span>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="mini-value" id="destinoQtdItens">0</span>
+                            <span class="mini-label">Itens totais</span>
+                        </div>
+                    </div>
+
+                    <div class="destino-drop-zone" id="destinoDropZone">
+                        <div class="drop-zone-hint" id="dropHint">
+                            <div class="drop-icon">📥</div>
+                            <p>Solte as obras aqui</p>
+                            <small>Arraste de "Obras Disponíveis"</small>
+                        </div>
+                        <div id="obrasVinculadas">
+                            <!-- Obras vinculadas -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL DETALHES DA OBRA (esse SIM pode ser modal) -->
+    <div id="modalObra" class="modal-overlay">
+        <div class="modal-obra">
+            <div class="modal-obra-header">
+                <div>
+                    <span class="obra-label">OBRA</span>
+                    <h3 id="obraDetNumero">---</h3>
+                </div>
+                <button class="modal-close" onclick="fecharModalObra()">✕</button>
+            </div>
+            <div class="modal-obra-meta">
+                <span class="badge" id="obraDetTipo">---</span>
+                <span class="badge-date">📅 <span id="obraDetData">--/--/----</span></span>
+                <span class="badge-itens">📦 <span id="obraDetItens">0</span> itens</span>
+            </div>
+            <div class="modal-obra-body">
+                <table class="tabela-materiais">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Código</th>
+                            <th>Descrição</th>
+                            <th>Un</th>
+                            <th>Qtd</th>
+                        </tr>
+                    </thead>
+                    <tbody id="obraDetMateriais"></tbody>
+                </table>
+            </div>
+            <div class="modal-obra-footer">
+                <button class="btn btn-outline" onclick="fecharModalObra()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/auth-service.js"></script>
+    <script src="../js/auth-helper.js"></script>
+    <script src="../js/timer.js"></script>
+    <script src="../js/despacho.js"></script>
+</body>
+</html>

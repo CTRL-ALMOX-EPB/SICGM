@@ -1,0 +1,665 @@
+// ============================================
+// DESPACHO.JS - SISTEMA DE DESPACHO DE OBRAS
+// Versão com painel inline (sem modal travando)
+// ============================================
+
+// ============================================
+// ESTADO GLOBAL
+// ============================================
+const DespachoState = {
+    obras: [],              // Todas as obras carregadas
+    usuarios: [],           // Usuários que podem receber
+    despachos: {},          // { email: [obras] }
+    usuarioSelecionado: null, // Usuário no painel inline
+    obraAtual: null         // Obra no modal de detalhes
+};
+
+// ============================================
+// USUÁRIOS FALLBACK
+// ============================================
+const USUARIOS_FALLBACK = [
+    { nome: 'Ewerton Silva',   email: 'ewerton@control.eng.br',        perfil: 'OPERACIONAL', ativo: true },
+    { nome: 'Maria Santos',    email: 'maria.santos@control.eng.br',   perfil: 'OPERACIONAL', ativo: true },
+    { nome: 'João Pereira',    email: 'joao.pereira@control.eng.br',   perfil: 'OPERACIONAL', ativo: true },
+    { nome: 'Ana Costa',       email: 'ana.costa@control.eng.br',      perfil: 'OPERACIONAL', ativo: true },
+    { nome: 'Carlos Lima',     email: 'carlos.lima@control.eng.br',    perfil: 'OPERACIONAL', ativo: true },
+    { nome: 'Juliana Rocha',   email: 'juliana.rocha@control.eng.br',  perfil: 'OPERACIONAL', ativo: true }
+];
+
+// ============================================
+// DADOS FICTÍCIOS DAS OBRAS
+// ============================================
+const OBRAS_FICTICIAS = `
+obra: 0012600288
+data_programacao: 07/09/2026
+tipo: OBRAS FORA DE PROGRAMACAO
+lista-de-materiais:
+01	90395	ABRACADEIRA CINTA AUTOTRAV POLIAM 390X9X3,0MM PRT	UN	54,00
+02	90308	ALCA PREF DISTR ACO-ZINC 13,10-14,65MM 865MM VRM	UN	36,00
+03	90683	ALCA PREF DISTR ACO-ZINC 5,70-6,45MM 430MM LRJ	UN	14,00
+04	90306	ALCA PREF DISTR ACO-ZINC 7,30-8,20MM 610MM VRM	UN	20,00
+05	90715	ALCA PREF DISTR LIGA-ALUM 13,50-14,50MM 545MM PRT	UN	2,00
+06	90303	ALCA PREF SERV ACO-ZINC 3,90-4,30MM 345MM MRM	UN	13,00
+07	90726	ALCA PREF SERV CONC LIGA-ALUM 8,70-9,70MM 325MM VRD	UN	1,00
+08	90727	ALCA PREF SERV CONC LIGA-ALUM 9,80-10,50MM 355MM AMR	UN	4,00
+09	90393	ARMACAO SECUNDARIA ACO GALV 1 ESTRIBO 110X50X5,0MM 125X16MM	UN	46,00
+10	90389	ARRUELA QUADRADA ACO GALV 38X18X3MM	UN	55,00
+11	90836	CABO ACO COBREADO 1F LCA IACS53% 3X2,59MM 16MM2	KG	5,20
+12	90296	CABO ALUM CONCENTR 0,6/1KV XLPE 1F 1X10MM2+10MM2	M	40,00
+13	90272	CABO ALUM MULTIPLEX 0,6/1,0KV XLPE 1F 1X1X10MM2+10MM2	M	80,00
+14	90284	CABO ALUM MULTIPLEX 0,6/1,0KV XLPE 2F 2X1X35MM2+35MM2	M	310,55
+15	90562	CABO ALUM MULTIPLEX NI 0,6/1,0KV XLPE 3F 3X1X70MM2+70MM2	M	27,00
+16	90258	CABO ALUM NU 1F CA/AAC 2AWG IRIS	KG	1,00
+17	90262	CABO ALUM NU CAA/ASCR 1F 2AWG SPARROW	KG	12,00
+18	90264	CABO ALUM NU CAA/ASCR 1F 4/0AWG PENGUIN	KG	527,00
+19	90266	CABO ALUM PROT SPL XLPE 1F 15,0KV 50MM2 BLOQ CNZ	M	12,00
+20	91095	CABO COBR POTENC SUBT 0,6/1,0KV PVC/XLPE 1X6MM2 1F PRT	M	3,00
+21	90487	CARTUCHO CONECTOR CUNHA METAL 14,8X5,7X7,0MM AZUL	UN	30,00
+22	90488	CARTUCHO CONECTOR CUNHA METAL 14,8X5,7X7,0MM VERMELHO	UN	4,00
+23	90547	CHAVE FUS DIST PRC BASE C 15,0KV 315A 1F MAN SEC	PC	2,00
+24	90347	CONECTOR CUNHA CB-EST ALUM 11,20-13,30MM 2AWG AZ	UN	9,00
+25	90467	CONEC CUNHA RML COBR TP G 5,60-8,33/1,36-1,73MM VL/AZ	UN	9,00
+26	90472	CONEC CUNHA RML COBR TP II 3,17-8,12/3,17-5,21MM VD	UN	9,00
+27	90474	CONEC CUNHA RML COBR TP IV 2,54-6,55/1,27-4,65MM AZ	UN	22,00
+28	90491	CONECT TERM COMPR CB/BAR ALUM 1F 5,60-6,50MM 62X23X14MM	UN	18,00
+29	90826	CONECT TERM COMPR CB/BAR ALUM 1F 7,70-8,60MM 85X23X14MM	UN	6,00
+30	90340	CONECT TERM ESTRANG CB/BAR ALUM 1F 48X18MM 6.70-7.30MM	UN	3,00
+31	90341	CONECT TERM ESTRANG CB/BAR ALUM 2F 106X22MM 9.00-9.70MM	UN	4,00
+32	90490	CONECTOR ATERR CUNHA COBRE CB/HST 16-25MM2 14,3MM	UN	5,00
+33	90797	CONECTOR CUNHA ALUM CN-13 6,55-10,11/5,18-8,38MM VRM	UN	3,00
+34	90798	CONECTOR CUNHA ALUM CN-15 10,40-14,53/10,40-14,53MM AZL	UN	15,00
+35	90479	CONECTOR DERIV COMPR ALUM H1 4,10-8,40MM/4,10-8,40MM	UN	40,00
+36	90353	CONECTOR DERIV PERFURAT C/C 1,0KV 16-120MM2/4-35MM2	UN	7,00
+37	90355	CONECTOR DERIV PERFURAT C/C 1,0KV 35-120MM2/10-35MM2	UN	14,00
+38	90356	CONECTOR DERIV PERFURAT C/C 1,0KV 35-120MM2/35-120MM2	UN	30,00
+39	90352	CONECTOR DERIV PERFURAT C/C 1,0KV 35-95MM2/1,5-6MM2	UN	9,00
+40	90460	CONECTOR GRAMPO LINHA VIVA COBR 2-1/0AWG/8-2/0AWG 100A	UN	9,00
+41	90255	CORDOALHA ACO CARB CL A 7 FIOS MR 6,4MM 1430DAN	M	16,50
+42	90400	CRUZETA DISTR CONCR TIPO T 1900MM 90X90MM 250DAN CAA2	UN	2,00
+43	90499	ELO FUSIVEL DISTRIBUICAO TIPO H 2A 500MM	UN	2,00
+44	90660	FECHO P/ FITA AMARRACAO FE-2 46X24MM 3MM 760DAN	PC	6,00
+45	91119	FITA AMARRACAO ACO-INOX ANSI304 FE-3 19X0,8MM 1520DAN	M	10,00
+46	90391	FIO AMARRACAO ALUMINIO MOLE 1F 6AWG 4.11MM 80DAN	KG	0,60
+47	90414	FITA ISOLANTE AUTOFUSAO 35KV 5M 19X0,76MM PRT	UN	4,00
+48	90415	FITA ISOLANTE SIMPLES 750V 10M 19X0,76MM PRT	UN	4,00
+49	90392	FITA LISA P/ AMARRACAO CABO ALUM 1F 10,0X1,0MM	KG	0,45
+50	90448	GANCHO OLHAL ACO-GALV 130X88X13MM 50KN S/TRAVA	UN	15,00
+51	90462	HASTE ATERRAMENTO CIRC 2400X14,3MM S/ ROSCA	UN	5,00
+52	90463	HASTE ATERRAMENTO PERF L CHANF ACO-GALV 2400X25X25MM 5,0MM	UN	11,00
+53	90277	ISOLADOR BASTAO POLIM ANCOR 15.0KV 370MM 380MM 50KN GO	UN	15,00
+54	90253	ISOLADOR PILAR PORCEL 15,0KV 220MM 300MM 8.0KN M20 CTC	UN	6,00
+55	90295	ISOLADOR ROLDANA PORCELANA 79X76MM 1350DAN MRM	UN	46,00
+56	90698	LACO PREF DISTR ACO-ZN TOPO 13,10-14,65MM 800MM VRM COX	UN	15,00
+57	90428	LUVA EMENDA COMPRES DISTR ALUM CA 4AWG 67MM	UN	10,00
+58	90440	MANILHA SAPATILHA ACO GALV 110X60X34MM 5000DAN	UN	15,00
+59	90837	MASSA CALAFETAR CINZA 500G	KG	7,00
+60	90376	PARAFUSO DISTR ROSC TOTAL ACO-GALV M16 250MM 5000DAN	UN	20,00
+61	90377	PARAFUSO DISTR ROSC TOTAL ACO-GALV M16 300MM 5000DAN	UN	13,00
+62	90378	PARAFUSO DISTR ROSC TOTAL ACO-GALV M16 350MM 5000DAN	UN	20,00
+63	90379	PARAFUSO DISTR ROSC TOTAL ACO-GALV M16 400MM 5000DAN	UN	12,00
+64	90380	PARAFUSO DISTR ROSC TOTAL ACO-GALV M16 450MM 5000DAN	UN	8,00
+65	90208	PARA-RAIOS DISTR BT POLIM 220V 10KA OX MT S/CENT RSI	UN	7,00
+66	90210	PARA-RAIOS DISTR MT POLIM 12KV 10KA OX ZN S/CENT S/FERR	UN	3,00
+67	90251	PINO ISOLADOR AUTOTRAVANTE ACO M20/M16 168,5MM	UN	6,00
+68	90387	PORCA OLHAL STD SAE1045 GALV MG M16 78,0MM	UN	5,00
+69	90388	PORCA QUADR PESADA ACO-GALV M16 24X24X13MM 5000DAN	UN	4,00
+70	90203	POSTE DISTR CONCR DT 12M 600DAN 350X476MM 110X140MM CL2	PC	1,00
+71	90584	SECCIONADOR PREF ACO-GALV 3,26-4,11MM 650MM 450DAN VRD	UN	76,00
+72	90522	SUPORTE TIPO L CRUZETA ACO-GALV 205X85X38X8MM 200DAN	UN	4,00
+
+obra: 0012601226
+data_programacao: 07/09/2026
+tipo: MGM ELABORADA
+lista-de-materiais:
+01	90396	ABRACADEIRA CINTA AUTOTRAV POLIAM 225X7X1,5MM LETRA A PRT	UN	1,00
+02	90397	ABRACADEIRA CINTA AUTOTRAV POLIAM 225X7X1,5MM LETRA B PRT	UN	1,00
+03	90398	ABRACADEIRA CINTA AUTOTRAV POLIAM 225X7X1,5MM LETRA C PRT	UN	1,00
+04	90395	ABRACADEIRA CINTA AUTOTRAV POLIAM 390X9X3,0MM PRT	UN	8,00
+05	90565	ALCA PREF DISTR LIGA-ALUM 10,41-11,69MM 545MM VRM	UN	2,00
+06	90715	ALCA PREF DISTR LIGA-ALUM 13,50-14,50MM 545MM PRT	UN	2,00
+07	90683	ALCA PREF DISTR ACO-ZINC 5,70-6,45MM 430MM LRJ	UN	2,00
+08	90303	ALCA PREF SERV ACO-ZINC 3,90-4,30MM 345MM MRM	UN	2,00
+09	90393	ARMACAO SECUNDARIA ACO GALV 1 ESTRIBO 110X50X5,0MM 125X16MM	UN	4,00
+10	90389	ARRUELA QUADRADA ACO GALV 38X18X3MM	UN	40,00
+11	90836	CABO ACO COBREADO 1F LCA IACS53% 3X2,59MM 16MM2	KG	4,00
+12	90779	CABO ALUM MULTIPLEX NI 0,6/1,0KV XLPE 3F 3X1X16MM2+16MM2	M	20,00
+13	90288	CABO ALUM MULTIPLEX 0,6/1,0KV XLPE 3F 3X1X35MM2+35MM2	M	1,40
+14	90564	CABO ALUM MULTIPLEX NI 0,6/1,0KV XLPE 3F 3X1X120MM2+70MM2	M	5,25
+15	90702	CABO ALUM NU 1F CAL/AAAC 2AWG	KG	5,07
+16	91095	CABO COBR POTENC SUBT 0,6/1,0KV PVC/XLPE 1X6MM2 1F PRT	M	1,50
+17	90488	CARTUCHO CONECTOR CUNHA METAL 14,8X5,7X7,0MM VERMELHO	UN	3,00
+18	90547	CHAVE FUS DIST PRC BASE C 15,0KV 315A 1F MAN SEC	PC	3,00
+19	90345	CONECTOR CUNHA CB-EST ALUM 5,88-8,01MM 2AWG VM	UN	3,00
+20	90472	CONEC CUNHA RML COBR TP II 3,17-8,12/3,17-5,21MM VD	UN	1,00
+21	90474	CONEC CUNHA RML COBR TP IV 2,54-6,55/1,27-4,65MM AZ	UN	6,00
+22	90491	CONECT TERM COMPR CB/BAR ALUM 1F 5,60-6,50MM 62X23X14MM	UN	6,00
+23	90826	CONECT TERM COMPR CB/BAR ALUM 1F 7,70-8,60MM 85X23X14MM	UN	6,00
+24	90490	CONECTOR ATERR CUNHA COBRE CB/HST 16-25MM2 14,3MM	UN	3,00
+25	90479	CONECTOR DERIV COMPR ALUM H1 4,10-8,40MM/4,10-8,40MM	UN	2,00
+26	90353	CONECTOR DERIV PERFURAT C/C 1,0KV 16-120MM2/4-35MM2	UN	3,00
+27	90355	CONECTOR DERIV PERFURAT C/C 1,0KV 35-120MM2/10-35MM2	UN	3,00
+28	90356	CONECTOR DERIV PERFURAT C/C 1,0KV 35-120MM2/35-120MM2	UN	8,00
+29	90460	CONECTOR GRAMPO LINHA VIVA COBR 2-1/0AWG/8-2/0AWG 100A	UN	3,00
+30	91074	CRUZETA DISTR CONCR TIPO T 1900MM 90X90MM 250DAN CAA4	UN	6,00
+31	90501	ELO FUSIVEL DISTRIBUICAO TIPO H 5A 500MM	UN	3,00
+32	90391	FIO AMARRACAO ALUMINIO MOLE 1F 6AWG 4.11MM 80DAN	KG	0,24
+33	90392	FITA LISA P/ AMARRACAO CABO ALUM 1F 10,0X1,0MM	KG	0,18
+34	90448	GANCHO OLHAL ACO-GALV 130X88X13MM 50KN S/TRAVA	UN	6,00
+35	90462	HASTE ATERRAMENTO CIRC 2400X14,3MM S/ ROSCA	UN	3,00
+36	90277	ISOLADOR BASTAO POLIM ANCOR 15.0KV 370MM 380MM 50KN GO	UN	6,00
+37	90253	ISOLADOR PILAR PORCEL 15,0KV 220MM 300MM 8.0KN M20 CTC	UN	6,00
+38	90295	ISOLADOR ROLDANA PORCELANA 79X76MM 1350DAN MRM	UN	4,00
+39	37928	LACRE SEG. POLICARBONATO AZUL	UN	2,00
+40	90440	MANILHA SAPATILHA ACO GALV 110X60X34MM 5000DAN	UN	6,00
+41	90837	MASSA CALAFETAR CINZA 500G	KG	0,50
+42	42826	MEDIDOR TRIF.EN.ATIV/REAT 240V	PC	1,00
+43	90375	PARAFUSO DISTR ROSC TOTAL ACO-GALV M16 200MM 5000DAN	UN	2,00
+44	90376	PARAFUSO DISTR ROSC TOTAL ACO-GALV M16 250MM 5000DAN	UN	2,00
+45	90378	PARAFUSO DISTR ROSC TOTAL ACO-GALV M16 350MM 5000DAN	UN	8,00
+46	90379	PARAFUSO DISTR ROSC TOTAL ACO-GALV M16 400MM 5000DAN	UN	8,00
+47	90208	PARA-RAIOS DISTR BT POLIM 220V 10KA OX MT S/CENT RSI	UN	3,00
+48	90210	PARA-RAIOS DISTR MT POLIM 12KV 10KA OX ZN S/CENT S/FERR	UN	3,00
+49	90251	PINO ISOLADOR AUTOTRAVANTE ACO M20/M16 168,5MM	UN	6,00
+50	90387	PORCA OLHAL STD SAE1045 GALV MG M16 78,0MM	UN	6,00
+51	90388	PORCA QUADR PESADA ACO-GALV M16 24X24X13MM 5000DAN	UN	12,00
+52	90667	POSTE DISTR CONCR DT 11M 600DAN 330X448MM 110X140MM CL4	PC	1,00
+53	90671	POSTE DISTR CONCR DT 12M 1000DAN 380X518MM 140X182MM CL4	PC	1,00
+54	90522	SUPORTE TIPO L CRUZETA ACO-GALV 205X85X38X8MM 200DAN	UN	3,00
+55	90423	SUPORTE TRANSF ESP PST DT ACO GALV 360X76X10MM 3000DAN	UN	4,00
+56	91154	TRANSF DISTR AER OVI 3F 13,8KV 380/220V 112,5KVA CL4 4TP	UN	1,00
+
+obra: 0012400615
+data_programacao: 10/09/2026
+tipo: OBRAS FORA DE PROGRAMACAO
+lista-de-materiais:
+01	90389	ARRUELA QUADRADA ACO GALV 38X18X3MM	UN	104,00
+02	90400	CRUZETA DISTR CONCR TIPO T 1900MM 90X90MM 250DAN CAA2	UN	20,00
+03	90253	ISOLADOR PILAR PORCEL 15,0KV 220MM 300MM 8.0KN M20 CTC	UN	45,00
+04	90378	PARAFUSO DISTR ROSC TOTAL ACO-GALV M16 350MM 5000DAN	UN	16,00
+05	90379	PARAFUSO DISTR ROSC TOTAL ACO-GALV M16 400MM 5000DAN	UN	30,00
+06	90380	PARAFUSO DISTR ROSC TOTAL ACO-GALV M16 450MM 5000DAN	UN	8,00
+07	90251	PINO ISOLADOR AUTOTRAVANTE ACO M20/M16 168,5MM	UN	45,00
+08	90387	PORCA OLHAL STD SAE1045 GALV MG M16 78,0MM	UN	15,00
+09	90202	POSTE DISTR CONCR DT 12M 300DAN 350X476MM 110X140MM CL2	PC	9,00
+10	90203	POSTE DISTR CONCR DT 12M 600DAN 350X476MM 110X140MM CL2	PC	3,00
+
+obra: 0012501791
+data_programacao: 12/09/2026
+tipo: MGM ELABORADA
+lista-de-materiais:
+01	90395	ABRACADEIRA CINTA AUTOTRAV POLIAM 390X9X3,0MM PRT	UN	12,00
+02	90389	ARRUELA QUADRADA ACO GALV 38X18X3MM	UN	30,00
+03	90203	POSTE DISTR CONCR DT 12M 600DAN 350X476MM 110X140MM CL2	PC	4,00
+04	90251	PINO ISOLADOR AUTOTRAVANTE ACO M20/M16 168,5MM	UN	18,00
+05	90387	PORCA OLHAL STD SAE1045 GALV MG M16 78,0MM	UN	18,00
+`;
+
+// ============================================
+// PARSER
+// ============================================
+function parseObras(texto) {
+    const obras = [];
+    const blocos = texto.split(/\n(?=obra:)/);
+
+    blocos.forEach(bloco => {
+        const linhas = bloco.split('\n').map(l => l.trim()).filter(Boolean);
+        if (linhas.length === 0) return;
+
+        let obra = null;
+
+        linhas.forEach(linha => {
+            if (linha.startsWith('obra:')) {
+                if (obra) obras.push(obra);
+                obra = { numero: linha.replace('obra:', '').trim(), data: '', tipo: '', materiais: [] };
+            } else if (linha.startsWith('data_programacao:')) {
+                if (obra) obra.data = linha.replace('data_programacao:', '').trim();
+            } else if (linha.startsWith('tipo:')) {
+                if (obra) obra.tipo = linha.replace('tipo:', '').trim();
+            } else if (linha.startsWith('lista-de-materiais:')) {
+                // ignora
+            } else if (/^\d{2}\t/.test(linha)) {
+                const partes = linha.split('\t').filter(p => p !== '');
+                if (partes.length >= 5 && obra) {
+                    obra.materiais.push({
+                        item: partes[0],
+                        codigo: partes[1],
+                        descricao: partes[2],
+                        unidade: partes[3],
+                        quantidade: parseFloat(partes[4].replace(',', '.')) || 0
+                    });
+                }
+            }
+        });
+
+        if (obra) obras.push(obra);
+    });
+
+    return obras;
+}
+
+// ============================================
+// CARREGAR USUÁRIOS
+// ============================================
+async function carregarUsuarios() {
+    try {
+        if (typeof authService !== 'undefined' && authService.listUsers) {
+            const result = await authService.listUsers();
+            const usuarios = (result.usuarios || []).filter(u => u.ativo && u.perfil === 'OPERACIONAL');
+            if (usuarios.length > 0) {
+                DespachoState.usuarios = usuarios;
+                console.log(`✅ ${usuarios.length} usuários carregados`);
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn('⚠️ authService falhou, usando fallback:', e.message);
+    }
+    DespachoState.usuarios = USUARIOS_FALLBACK;
+    console.log(`⚠️ Usando ${USUARIOS_FALLBACK.length} usuários de fallback`);
+}
+
+// ============================================
+// RENDERIZAR OBRAS DISPONÍVEIS
+// ============================================
+function renderizarObras(filtro = '') {
+    const container = document.getElementById('obrasDisponiveis');
+    if (!container) return;
+
+    const despachadas = new Set();
+    Object.values(DespachoState.despachos).forEach(lista => {
+        lista.forEach(o => despachadas.add(o.numero));
+    });
+
+    let obrasFiltradas = DespachoState.obras.filter(o => !despachadas.has(o.numero));
+
+    if (filtro) {
+        const termo = filtro.toLowerCase();
+        obrasFiltradas = obrasFiltradas.filter(o =>
+            o.numero.includes(termo) || o.tipo.toLowerCase().includes(termo)
+        );
+    }
+
+    if (obrasFiltradas.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📭</div>
+                <p>${filtro ? 'Nenhuma obra encontrada' : 'Todas as obras foram despachadas!'}</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    obrasFiltradas.forEach(obra => {
+        const tipoClass = obra.tipo.includes('FORA') ? 'tipo-fora' : 'tipo-mgm';
+        const badgeClass = obra.tipo.includes('FORA') ? 'badge-tipo-fora' : 'badge-tipo-mgm';
+
+        html += `
+            <div class="obra-card ${tipoClass}" draggable="true" data-obra="${obra.numero}">
+                <div class="obra-card-header">
+                    <span class="obra-numero">📋 ${obra.numero}</span>
+                </div>
+                <div class="obra-card-meta">
+                    <span class="${badgeClass}">${obra.tipo}</span>
+                    <span>📅 ${obra.data}</span>
+                </div>
+                <div class="obra-card-footer">
+                    <span class="obra-itens-badge">📦 ${obra.materiais.length} itens</span>
+                    <button class="btn-ver-materiais" onclick="abrirModalObra('${obra.numero}', event)">
+                        Ver lista →
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+
+    container.querySelectorAll('.obra-card').forEach(card => {
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragend', handleDragEnd);
+    });
+}
+
+// ============================================
+// RENDERIZAR SEPARADORES (coluna do meio)
+// ============================================
+function renderizarSeparadores() {
+    const container = document.getElementById('separadoresList');
+    if (!container) return;
+
+    if (DespachoState.usuarios.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">👤</div>
+                <p>Nenhum separador encontrado</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    DespachoState.usuarios.forEach(user => {
+        const iniciais = user.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+        const qtdObras = (DespachoState.despachos[user.email] || []).length;
+        const hasObras = qtdObras > 0;
+        const isSelected = DespachoState.usuarioSelecionado?.email === user.email;
+
+        html += `
+            <div class="separador-card ${hasObras ? 'has-obras' : ''} ${isSelected ? 'selected' : ''}" 
+                 data-email="${user.email}"
+                 onclick="selecionarSeparador('${user.email}')">
+                <div class="user-avatar small">${iniciais}</div>
+                <div class="separador-info">
+                    <div class="separador-nome">${user.nome}</div>
+                    <div class="separador-sub">${qtdObras} obra${qtdObras !== 1 ? 's' : ''}</div>
+                </div>
+                <div class="separador-badge ${hasObras ? '' : 'zero'}">${qtdObras}</div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+// ============================================
+// SELECIONAR SEPARADOR (abre painel inline à direita)
+// ============================================
+function selecionarSeparador(email) {
+    const user = DespachoState.usuarios.find(u => u.email === email);
+    if (!user) return;
+
+    DespachoState.usuarioSelecionado = user;
+
+    // Atualiza destaque na lista
+    renderizarSeparadores();
+
+    // Mostra painel
+    document.getElementById('destinoEmpty').style.display = 'none';
+    document.getElementById('destinoContent').style.display = 'flex';
+
+    // Preenche dados
+    const iniciais = user.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    document.getElementById('destinoAvatar').textContent = iniciais;
+    document.getElementById('destinoNome').textContent = user.nome;
+    document.getElementById('destinoEmail').textContent = user.email;
+    document.getElementById('destinoPerfil').textContent = user.perfil;
+    document.getElementById('destinoPerfil').className = `user-badge perfil-${user.perfil}`;
+
+    renderizarObrasVinculadas();
+    atualizarStatsDestino();
+
+    // Configura drop zone
+    configurarDropZone();
+}
+
+function fecharPainelDestino() {
+    DespachoState.usuarioSelecionado = null;
+    document.getElementById('destinoEmpty').style.display = 'flex';
+    document.getElementById('destinoContent').style.display = 'none';
+    renderizarSeparadores();
+}
+
+function renderizarObrasVinculadas() {
+    const container = document.getElementById('obrasVinculadas');
+    const hint = document.getElementById('dropHint');
+    const user = DespachoState.usuarioSelecionado;
+    if (!user || !container || !hint) return;
+
+    const obras = DespachoState.despachos[user.email] || [];
+
+    if (obras.length === 0) {
+        container.innerHTML = '';
+        hint.classList.remove('hidden');
+        return;
+    }
+
+    hint.classList.add('hidden');
+
+    let html = '';
+    obras.forEach(obra => {
+        html += `
+            <div class="obra-vinculada">
+                <div class="obra-info">
+                    <div class="obra-numero">📋 ${obra.numero}</div>
+                    <div class="obra-sub">📅 ${obra.data} • 📦 ${obra.materiais.length} itens</div>
+                </div>
+                <button class="btn-remover" onclick="removerObra('${obra.numero}', event)" title="Remover">
+                    ✕
+                </button>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+function atualizarStatsDestino() {
+    const user = DespachoState.usuarioSelecionado;
+    if (!user) return;
+
+    const obras = DespachoState.despachos[user.email] || [];
+    const totalItens = obras.reduce((acc, o) => acc + o.materiais.length, 0);
+
+    document.getElementById('destinoQtdObras').textContent = obras.length;
+    document.getElementById('destinoQtdItens').textContent = totalItens;
+}
+
+// ============================================
+// DROP ZONE INLINE
+// ============================================
+function configurarDropZone() {
+    const dropZone = document.getElementById('destinoDropZone');
+    if (!dropZone) return;
+
+    // Remove listeners antigos clonando o elemento (evita duplicação)
+    const newZone = dropZone.cloneNode(true);
+    dropZone.parentNode.replaceChild(newZone, dropZone);
+
+    newZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        newZone.classList.add('drag-over');
+    });
+
+    newZone.addEventListener('dragleave', (e) => {
+        if (!newZone.contains(e.relatedTarget)) {
+            newZone.classList.remove('drag-over');
+        }
+    });
+
+    newZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        newZone.classList.remove('drag-over');
+        if (obraArrastada) {
+            despacharObra(obraArrastada);
+            obraArrastada = null;
+        }
+    });
+}
+
+// ============================================
+// DRAG & DROP
+// ============================================
+let obraArrastada = null;
+
+function handleDragStart(e) {
+    const numero = e.currentTarget.dataset.obra;
+    obraArrastada = DespachoState.obras.find(o => o.numero === numero);
+    e.currentTarget.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', numero);
+}
+
+function handleDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+}
+
+// ============================================
+// DESPACHAR OBRA
+// ============================================
+function despacharObra(obra) {
+    const user = DespachoState.usuarioSelecionado;
+    if (!user) {
+        mostrarToast('⚠️ Selecione um separador primeiro', 'error');
+        return;
+    }
+
+    if (!DespachoState.despachos[user.email]) {
+        DespachoState.despachos[user.email] = [];
+    }
+
+    if (DespachoState.despachos[user.email].some(o => o.numero === obra.numero)) {
+        mostrarToast('⚠️ Obra já está vinculada a este separador', 'error');
+        return;
+    }
+
+    DespachoState.despachos[user.email].push(obra);
+
+    mostrarToast(`✅ Obra ${obra.numero} despachada para ${user.nome}`, 'success');
+
+    renderizarObras(document.getElementById('buscaObra')?.value || '');
+    renderizarSeparadores();
+    renderizarObrasVinculadas();
+    atualizarStatsDestino();
+    atualizarStatsGerais();
+}
+
+// ============================================
+// REMOVER OBRA
+// ============================================
+function removerObra(numero, event) {
+    event.stopPropagation();
+    const user = DespachoState.usuarioSelecionado;
+    if (!user) return;
+
+    const lista = DespachoState.despachos[user.email] || [];
+    const index = lista.findIndex(o => o.numero === numero);
+    if (index === -1) return;
+
+    if (!confirm(`Remover a obra ${numero} de ${user.nome}?`)) return;
+
+    lista.splice(index, 1);
+
+    mostrarToast(`↩️ Obra ${numero} removida de ${user.nome}`, 'info');
+
+    renderizarObras(document.getElementById('buscaObra')?.value || '');
+    renderizarSeparadores();
+    renderizarObrasVinculadas();
+    atualizarStatsDestino();
+    atualizarStatsGerais();
+}
+
+// ============================================
+// MODAL DE DETALHES DA OBRA (esse mantém modal)
+// ============================================
+function abrirModalObra(numero, event) {
+    if (event) event.stopPropagation();
+
+    const obra = DespachoState.obras.find(o => o.numero === numero);
+    if (!obra) return;
+
+    DespachoState.obraAtual = obra;
+
+    document.getElementById('obraDetNumero').textContent = obra.numero;
+    document.getElementById('obraDetTipo').textContent = obra.tipo;
+    document.getElementById('obraDetData').textContent = obra.data;
+    document.getElementById('obraDetItens').textContent = obra.materiais.length;
+
+    const tbody = document.getElementById('obraDetMateriais');
+    let html = '';
+    obra.materiais.forEach(m => {
+        html += `
+            <tr>
+                <td>${m.item}</td>
+                <td>${m.codigo}</td>
+                <td>${m.descricao}</td>
+                <td>${m.unidade}</td>
+                <td>${m.quantidade.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+
+    document.getElementById('modalObra').classList.add('active');
+}
+
+function fecharModalObra() {
+    document.getElementById('modalObra').classList.remove('active');
+    DespachoState.obraAtual = null;
+}
+
+// ============================================
+// STATS GERAIS
+// ============================================
+function atualizarStatsGerais() {
+    const despachadas = new Set();
+    let totalDespachado = 0;
+
+    Object.values(DespachoState.despachos).forEach(lista => {
+        lista.forEach(o => {
+            despachadas.add(o.numero);
+            totalDespachado++;
+        });
+    });
+
+    const disponiveis = DespachoState.obras.length - despachadas.size;
+    const totalItens = DespachoState.obras.reduce((acc, o) => acc + o.materiais.length, 0);
+
+    document.getElementById('statDisponiveis').textContent = disponiveis;
+    document.getElementById('statUsuarios').textContent = DespachoState.usuarios.length;
+    document.getElementById('statDespachadas').textContent = totalDespachado;
+    document.getElementById('statItens').textContent = totalItens;
+}
+
+// ============================================
+// TOAST
+// ============================================
+function mostrarToast(msg, tipo = 'info') {
+    const existing = document.querySelector('.toast-despacho');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.className = `toast-despacho toast-${tipo}`;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// ============================================
+// INICIALIZAÇÃO
+// ============================================
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('📦 Sistema de Despacho iniciado');
+
+    DespachoState.obras = parseObras(OBRAS_FICTICIAS);
+    console.log(`✅ ${DespachoState.obras.length} obras carregadas`);
+
+    await carregarUsuarios();
+
+    renderizarObras();
+    renderizarSeparadores();
+    atualizarStatsGerais();
+
+    const buscaInput = document.getElementById('buscaObra');
+    if (buscaInput) {
+        buscaInput.addEventListener('input', (e) => {
+            renderizarObras(e.target.value);
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') fecharModalObra();
+    });
+
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) fecharModalObra();
+        });
+    });
+});

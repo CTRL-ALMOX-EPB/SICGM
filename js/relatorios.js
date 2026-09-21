@@ -1,5 +1,6 @@
 // ============================================
 // RELATÓRIOS - SICGM (VERSÃO COMPLETA - COM SEPARAÇÃO)
+// CORRIGIDO: RECONHECE BOBINA_EXTERNA E BOBINA_INTERNA
 // ============================================
 
 const API_URL = 'https://noisy-snow-0359.alefe-gomes-72f.workers.dev/api';
@@ -34,6 +35,27 @@ let estoqueMinimoCache = {};
 let listaEmailsCache = [];
 
 // ============================================
+// 🔥 HELPER: RECONHECER BOBINAS (LEGADO + NOVOS TIPOS)
+// ============================================
+
+function isBobina(tipo) {
+    return tipo === 'bobina' || tipo === 'bobina_externa' || tipo === 'bobina_interna';
+}
+
+function getTipoLabel(tipo) {
+    if (tipo === 'bobina_externa') return 'Bobina Externa';
+    if (tipo === 'bobina_interna') return 'Bobina Interna';
+    if (!tipo) return 'Desconhecido';
+    return tipo.charAt(0).toUpperCase() + tipo.slice(1);
+}
+
+function getBadgeClass(tipo) {
+    if (tipo === 'bobina_externa') return 'badge-bobina-externa';
+    if (tipo === 'bobina_interna') return 'badge-bobina-interna';
+    return `badge-${tipo}`;
+}
+
+// ============================================
 // FUNÇÃO PARA OBTER DATA NO FUSO BRASIL (UTC-3)
 // ============================================
 
@@ -62,7 +84,6 @@ function getDataHoraBrasilString() {
 // ============================================
 
 function carregarDadosUsuarioRelatorio() {
-    // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
     if (typeof authService === 'undefined' || !authService) {
         console.error('❌ authService não disponível');
         window.location.href = '../login.html';
@@ -100,7 +121,6 @@ function carregarDadosUsuarioRelatorio() {
 // ============================================
 
 function redirecionarParaHome() {
-    // 🔥 USAR authService
     if (typeof authService !== 'undefined' && authService) {
         const user = authService.getUserData();
         if (user) {
@@ -527,10 +547,15 @@ function processarDados(dados, filtros) {
             });
         }
         
+        // 🔥 FILTRO POR TIPO - "bobina" agora traz os 3 tipos
         if (filtros.tipoMaterial) {
-            dadosFiltrados = dadosFiltrados.filter(item => 
-                item.tipo_material === filtros.tipoMaterial
-            );
+            const tipoFiltro = filtros.tipoMaterial;
+            dadosFiltrados = dadosFiltrados.filter(item => {
+                if (tipoFiltro === 'bobina') {
+                    return isBobina(item.tipo_material);
+                }
+                return item.tipo_material === tipoFiltro;
+            });
         }
         
         if (filtros.codigo && filtros.codigo.trim()) {
@@ -542,7 +567,8 @@ function processarDados(dados, filtros) {
     }
     
     const tiposUltimaContagem = ['concreto', 'miscelanea', 'especifico', 'laco', 'alca', 'parafuso', 'cabo', 'miscelanea1', 'miscelanea2', 'medidor'];
-    const tiposSomaTudo = ['trafo', 'bobina'];
+    // 🔥 AGORA INCLUI bobina, bobina_externa e bobina_interna (todos somam tudo)
+    const tiposSomaTudo = ['trafo', 'bobina', 'bobina_externa', 'bobina_interna'];
     
     const gruposPorCodigo = {};
     
@@ -612,7 +638,8 @@ function processarDados(dados, filtros) {
         const codigo = item.codigo;
         const tipoMaterial = item.tipo_material || 'desconhecido';
         
-        if (tipoMaterial === 'trafo' || tipoMaterial === 'bobina') {
+        // 🔥 Reconhece bobina_externa e bobina_interna
+        if (tipoMaterial === 'trafo' || isBobina(tipoMaterial)) {
             if (!mapaCodigos[codigo]) {
                 mapaCodigos[codigo] = {
                     codigo: codigo,
@@ -706,7 +733,8 @@ function processarDados(dados, filtros) {
         }
         
         const tipo = item.tipo_material;
-        if (['concreto', 'trafo', 'bobina', 'especifico', 'medidor'].includes(tipo)) {
+        // 🔥 Reconhece bobina_externa e bobina_interna como contagem diária
+        if (['concreto', 'trafo', 'especifico', 'medidor'].includes(tipo) || isBobina(tipo)) {
             item.contagem_diaria = true;
         }
         if (tipo === 'miscelanea') {
@@ -813,8 +841,9 @@ function renderizarTabela(dadosFiltrados, config) {
     let totalQtdSistemica = 0;
     
     dadosFiltrados.forEach(item => {
-        const badgeClass = `badge-${item.tipo_material}`;
-        const tipoLabel = item.tipo_material.charAt(0).toUpperCase() + item.tipo_material.slice(1);
+        // 🔥 Usa helper para tratar bobina_externa e bobina_interna
+        const badgeClass = getBadgeClass(item.tipo_material);
+        const tipoLabel = getTipoLabel(item.tipo_material);
         
         const saldoFisico = item.temRegistro ? item.quantidade_total : 0;
         const saldoSistemico = item.saldo_sistemico || 0;
@@ -984,7 +1013,8 @@ function atualizarEstatisticas(dados, dadosBrutos) {
         const elTrafos = document.getElementById('total-trafos');
         if (elTrafos) elTrafos.textContent = totalTrafos.toFixed(0);
         
-        const bobinas = ativos.filter(i => i.tipo_material === 'bobina');
+        // 🔥 Soma bobina, bobina_externa e bobina_interna
+        const bobinas = ativos.filter(i => isBobina(i.tipo_material));
         const totalBobinas = bobinas.reduce((sum, item) => sum + (parseFloat(item.qtd) || 0), 0);
         const elBobinas = document.getElementById('total-bobinas');
         if (elBobinas) elBobinas.textContent = totalBobinas.toFixed(0);
@@ -1778,22 +1808,27 @@ async function aplicarSnapshotNaTabela(snapshot) {
     if (snapshot.dados_detalhados && typeof snapshot.dados_detalhados === 'object' && Object.keys(snapshot.dados_detalhados).length > 0) {
         const dadosDetalhados = snapshot.dados_detalhados;
         
-        const dadosFormatados = Object.values(dadosDetalhados).map(item => ({
-            codigo: item.codigo || 'N/A',
-            descricao: item.descricao || item.codigo || 'N/A',
-            und: item.und || '-',
-            tipo_material: item.tipo_material || 'desconhecido',
-            quantidade_total: item.registros && item.registros.length > 0 ? (item.registros[0].qtd || 0) : 0,
-            saldo_sistemico: item.saldo_sistemico || 0,
-            valor_unitario: item.valor_unitario || 0,
-            temRegistro: item.registros && item.registros.length > 0,
-            ultimo_usuario: item.registros && item.registros.length > 0 ? (item.registros[0].nome || null) : null,
-            ultima_data: item.registros && item.registros.length > 0 ? (item.registros[0].data || null) : null,
-            contagem_diaria: ['concreto', 'trafo', 'bobina', 'especifico', 'medidor'].includes(item.tipo_material),
-            contagem_semanal: item.tipo_material === 'miscelanea',
-            contagem_rotativa: ['laco', 'alca', 'parafuso', 'cabo', 'miscelanea1', 'miscelanea2'].includes(item.tipo_material),
-            da_lista_fixa: true
-        }));
+        const dadosFormatados = Object.values(dadosDetalhados).map(item => {
+            // 🔥 Reconhece bobina_externa e bobina_interna
+            const isBobinaItem = isBobina(item.tipo_material);
+            
+            return {
+                codigo: item.codigo || 'N/A',
+                descricao: item.descricao || item.codigo || 'N/A',
+                und: item.und || '-',
+                tipo_material: item.tipo_material || 'desconhecido',
+                quantidade_total: item.registros && item.registros.length > 0 ? (item.registros[0].qtd || 0) : 0,
+                saldo_sistemico: item.saldo_sistemico || 0,
+                valor_unitario: item.valor_unitario || 0,
+                temRegistro: item.registros && item.registros.length > 0,
+                ultimo_usuario: item.registros && item.registros.length > 0 ? (item.registros[0].nome || null) : null,
+                ultima_data: item.registros && item.registros.length > 0 ? (item.registros[0].data || null) : null,
+                contagem_diaria: ['concreto', 'trafo', 'especifico', 'medidor'].includes(item.tipo_material) || isBobinaItem,
+                contagem_semanal: item.tipo_material === 'miscelanea',
+                contagem_rotativa: ['laco', 'alca', 'parafuso', 'cabo', 'miscelanea1', 'miscelanea2'].includes(item.tipo_material),
+                da_lista_fixa: true
+            };
+        });
         
         const dadosFiltradosDeposito = dadosFormatados.filter(item => {
             if (depositoAtual === '1050') return true;
@@ -2430,7 +2465,6 @@ async function monitorarEEnviarRelatorio() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    // 🔥 VERIFICAR AUTENTICAÇÃO PRIMEIRO
     const sessao = carregarDadosUsuarioRelatorio();
     if (!sessao) {
         window.location.href = '../login.html';
@@ -2526,3 +2560,6 @@ window.gerarRelatorioTextoResumido = gerarRelatorioTextoResumido;
 window.enviarRelatorioEstoque = enviarRelatorioEstoque;
 window.monitorarEEnviarRelatorio = monitorarEEnviarRelatorio;
 window.exibirItensCriticos = exibirItensCriticos;
+window.isBobina = isBobina;
+window.getTipoLabel = getTipoLabel;
+window.getBadgeClass = getBadgeClass;
