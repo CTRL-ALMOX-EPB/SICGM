@@ -1,5 +1,6 @@
 // ============================================
 // CONTROLES DCMD - PAINEL UNIFICADO
+// SOFT DELETE + AUDITORIA + LIBERAÇÃO OPERACIONAL
 // ============================================
 
 console.log('🚀 Iniciando Controles DCMD - Painel...');
@@ -49,6 +50,9 @@ const TIPOS = {
     }
 };
 
+// 🔥 PERFIS QUE PODEM EXCLUIR
+const PERFIS_COM_EXCLUSAO = ['GESTAO', 'OPERACIONAL'];
+
 // ============================================
 // LISTA DE ENCARREGADOS PARA FILTRO
 // ============================================
@@ -89,14 +93,13 @@ let abortController = null;
 let ordenacaoAtual = 'data_desc';
 
 // ============================================
-// 🔥 FUNÇÕES DE AUTENTICAÇÃO (NOVA VERSÃO)
+// FUNÇÕES DE AUTENTICAÇÃO
 // ============================================
 
 function carregarDadosUsuario() {
     console.log('🔐 Carregando dados do usuário...');
     
     try {
-        // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
         if (typeof authService === 'undefined' || !authService) {
             console.error('❌ authService não disponível');
             window.location.href = '../login.html';
@@ -125,7 +128,6 @@ function carregarDadosUsuario() {
         
         perfilUsuario = user.perfil || 'OPERACIONAL';
 
-        // Atualizar elementos da UI
         const userNameEl = document.getElementById('userName');
         const userRoleEl = document.getElementById('userRole');
         const userMatriculaEl = document.getElementById('userMatricula');
@@ -147,7 +149,7 @@ function carregarDadosUsuario() {
 }
 
 // ============================================
-// 🔥 FUNÇÃO PARA VOLTAR PARA HOME (CORRIGIDA)
+// REDIRECIONAR PARA HOME
 // ============================================
 
 function redirecionarParaHome() {
@@ -238,19 +240,15 @@ function mostrarToast(mensagem, tipo = 'info') {
 }
 
 // ============================================
-// FUNÇÃO PARA GERAR FILTROS DINÂMICOS
+// GERAR FILTROS DINÂMICOS
 // ============================================
 
 function gerarFiltrosDinamicos() {
     const container = document.getElementById('filtrosContainer');
     if (!container) return;
     
-    // Remover filtros dinâmicos existentes
     container.querySelectorAll('.filtro-dinamico').forEach(el => el.remove());
     
-    // ============================================
-    // FILTRO PARA DEVOLUÇÃO - ENCARREGADO
-    // ============================================
     if (tipoAtual === 'devolucao') {
         const div = document.createElement('div');
         div.className = 'filtro-item filtro-dinamico';
@@ -262,7 +260,6 @@ function gerarFiltrosDinamicos() {
             </select>
         `;
         
-        // Inserir após o filtro de status
         const statusFilter = container.querySelector('.filtro-item:has(#filtro-status)');
         if (statusFilter) {
             statusFilter.after(div);
@@ -271,9 +268,6 @@ function gerarFiltrosDinamicos() {
         }
     }
     
-    // ============================================
-    // FILTRO PARA MOVIMENTO - TIPO DE MOVIMENTO
-    // ============================================
     if (tipoAtual === 'movimento') {
         const div = document.createElement('div');
         div.className = 'filtro-item filtro-dinamico';
@@ -284,7 +278,6 @@ function gerarFiltrosDinamicos() {
             </select>
         `;
         
-        // Inserir após o filtro de status
         const statusFilter = container.querySelector('.filtro-item:has(#filtro-status)');
         if (statusFilter) {
             statusFilter.after(div);
@@ -332,7 +325,6 @@ function selecionarTipo(tipo) {
         paginacaoContainer.innerHTML = '';
     }
     
-    // Resetar filtros
     document.getElementById('filtro-numero').value = '';
     document.getElementById('filtro-obra').value = '';
     document.getElementById('filtro-data').value = '';
@@ -340,14 +332,12 @@ function selecionarTipo(tipo) {
     document.getElementById('filtro-ordenacao').value = 'data_desc';
     ordenacaoAtual = 'data_desc';
     
-    // Resetar filtros dinâmicos
     const filtroEncarregado = document.getElementById('filtro-encarregado');
     if (filtroEncarregado) filtroEncarregado.value = '';
     
     const filtroTipoMovimento = document.getElementById('filtro-tipo-movimento');
     if (filtroTipoMovimento) filtroTipoMovimento.value = '';
     
-    // Gerar filtros dinâmicos
     gerarFiltrosDinamicos();
     
     carregarControles(1);
@@ -425,7 +415,11 @@ async function criarNovoControle() {
         
         const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-User-Email': dadosSessao.matricula || 'desconhecido',
+                'X-User-Perfil': dadosSessao.perfil || 'desconhecido'
+            },
             body: JSON.stringify(data)
         });
         
@@ -477,7 +471,6 @@ async function carregarControles(pagina = 1) {
         paginacaoContainer.innerHTML = '';
     }
     
-    // Coletar todos os filtros
     filtrosAplicados = {
         numero: document.getElementById('filtro-numero')?.value || '',
         obra: document.getElementById('filtro-obra')?.value || '',
@@ -497,7 +490,6 @@ async function carregarControles(pagina = 1) {
     if (filtrosAplicados.data) params.append('data', filtrosAplicados.data);
     if (filtrosAplicados.status) params.append('status', filtrosAplicados.status);
     
-    // 🔥 FILTROS DINÂMICOS
     if (filtrosAplicados.encarregado) params.append('encarregado', filtrosAplicados.encarregado);
     if (filtrosAplicados.tipoMovimento) params.append('tipo_movimento', filtrosAplicados.tipoMovimento);
     
@@ -665,7 +657,9 @@ function renderizarControles(controles) {
     }
     
     const tipoInfo = TIPOS[tipoAtual];
-    const isGestao = dadosSessao?.perfil === 'GESTAO';
+    
+    // 🔥 GESTAO + OPERACIONAL podem excluir
+    const podeExcluir = PERFIS_COM_EXCLUSAO.includes(dadosSessao?.perfil);
     
     let html = '';
     controles.forEach((controle, index) => {
@@ -685,7 +679,6 @@ function renderizarControles(controles) {
             infoExtra = `<p><strong>📋 Tipo:</strong> ${tipoMap[controle.tipo_movimento] || controle.tipo_movimento}</p>`;
         }
         
-        // Mostrar encarregado para devolução
         if (tipoAtual === 'devolucao' && controle.encarregado) {
             infoExtra += `<p><strong>👤 Encarregado:</strong> ${controle.encarregado}</p>`;
         }
@@ -693,7 +686,13 @@ function renderizarControles(controles) {
         const isBranco = !controle.obra || controle.obra === '';
         const obraDisplay = isBranco ? '<span style="color: #FC8181;">⚠️ Em branco</span>' : controle.obra;
         
-        const mostrarExcluir = isGestao && !isFinalizado;
+        // 🔥 GESTAO + OPERACIONAL excluem (pendentes E finalizados)
+        const mostrarExcluir = podeExcluir;
+        
+        // 🔥 Rastreio de última ação (se houver)
+        const ultimaAcaoInfo = controle.ultima_acao_por
+            ? `<p style="font-size: 11px; color: #718096; margin-top: 4px;">✏️ Última ação: ${controle.ultima_acao_por}${controle.ultima_acao_em ? ' em ' + formatarData(controle.ultima_acao_em) : ''}</p>`
+            : '';
         
         html += `
             <div class="controle-card ${isNovo ? 'novo' : ''}" onclick="abrirControle(${controle.numero})" data-numero="${controle.numero}">
@@ -710,11 +709,12 @@ function renderizarControles(controles) {
                     <p><strong>📅 Data:</strong> ${controle.data_programacao || '-'}</p>
                     ${infoExtra}
                     ${tipoAtual !== 'movimento' && tipoAtual !== 'devolucao' ? `<p><strong>📦 Itens:</strong> ${qtdItens}</p>` : ''}
+                    ${ultimaAcaoInfo}
                 </div>
                 <div class="controle-card-footer">
                     <span class="controle-card-data">${formatarData(controle.criado_em)}</span>
                     ${mostrarExcluir ? `
-                        <button class="btn-remover" onclick="event.stopPropagation(); excluirControle(${controle.numero})" title="Excluir">
+                        <button class="btn-remover" onclick="event.stopPropagation(); excluirControle(${controle.numero})" title="${isFinalizado ? 'Desativar controle finalizado' : 'Desativar controle'}">
                             🗑️
                         </button>
                     ` : ''}
@@ -754,33 +754,53 @@ function abrirControle(numero) {
 window.abrirControle = abrirControle;
 
 // ============================================
-// EXCLUIR CONTROLE
+// EXCLUIR CONTROLE (SOFT DELETE)
 // ============================================
 
 async function excluirControle(numero) {
-    if (dadosSessao?.perfil !== 'GESTAO') {
-        mostrarToast('🔒 Apenas usuários com perfil GESTÃO podem excluir registros.', 'aviso');
+    // 🔥 GESTAO + OPERACIONAL podem excluir
+    if (!PERFIS_COM_EXCLUSAO.includes(dadosSessao?.perfil)) {
+        mostrarToast('🔒 Seu perfil não tem permissão para excluir registros.', 'aviso');
         return;
     }
     
-    if (!confirm(`⚠️ Tem certeza que deseja EXCLUIR o controle #${String(numero).padStart(4, '0')}?`)) return;
+    const numeroFormatado = String(numero).padStart(4, '0');
+    const controle = controlesCarregados.find(c => c.numero === numero);
+    const isFinalizado = controle?.status === 'FINALIZADO';
+    
+    const mensagemConfirmacao = isFinalizado
+        ? `⚠️ ATENÇÃO!\n\nO controle #${numeroFormatado} está FINALIZADO.\n\nEle será DESATIVADO do sistema (não é apagado do banco).\nO registro fica preservado pra auditoria.\n\nDeseja continuar?`
+        : `⚠️ Tem certeza que deseja DESATIVAR o controle #${numeroFormatado}?`;
+    
+    if (!confirm(mensagemConfirmacao)) return;
     
     const tipoInfo = TIPOS[tipoAtual];
     const url = `${API_URL}${tipoInfo.endpoint}/${numero}`;
     
     try {
-        const response = await fetch(url, { method: 'DELETE' });
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'X-User-Email': dadosSessao?.matricula || dadosSessao?.nome || 'desconhecido',
+                'X-User-Perfil': dadosSessao?.perfil || 'desconhecido'
+            }
+        });
         
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Erro ao excluir');
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || 'Erro ao desativar');
         }
         
-        mostrarToast('✅ Excluído com sucesso!', 'sucesso');
+        const resultado = await response.json().catch(() => ({}));
+        const linhasAfetadas = resultado.linhas_afetadas || 1;
+        
+        console.log(`🗑️ Controle #${numeroFormatado} desativado por ${dadosSessao?.perfil} (${linhasAfetadas} linha(s))`);
+        
+        mostrarToast(`✅ Controle #${numeroFormatado} desativado com sucesso!`, 'sucesso');
         carregarControles(paginaAtual);
         
     } catch (error) {
-        console.error('❌ Erro ao excluir:', error);
+        console.error('❌ Erro ao desativar:', error);
         mostrarToast('❌ ' + error.message, 'erro');
     }
 }
@@ -805,7 +825,6 @@ function limparFiltros() {
     document.getElementById('filtro-data').value = '';
     document.getElementById('filtro-status').value = '';
     
-    // Limpar filtros dinâmicos
     const filtroEncarregado = document.getElementById('filtro-encarregado');
     if (filtroEncarregado) filtroEncarregado.value = '';
     
@@ -882,7 +901,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
     
-    // Gerar filtros dinâmicos
     gerarFiltrosDinamicos();
     
     const btnNovo = document.getElementById('btnNovoControle');
