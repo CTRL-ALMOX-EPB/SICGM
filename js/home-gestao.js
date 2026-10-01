@@ -42,7 +42,6 @@ const DEPARTAMENTOS = {
                 status: 'disponivel',
                 descricao: 'Metas, orçamento e cronogramas'
             },
-            // 🔥 NOVO: Despacho de Obras (visão Gestão)
             {
                 id: 'despacho-obras-gestao',
                 nome: 'Despacho de Obras',
@@ -256,23 +255,23 @@ let departamentoAtual = 'DCMD';
 
 function selecionarDepartamento(deptoId) {
     departamentoAtual = deptoId;
-    
+
     document.querySelectorAll('.departamento-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.depto === deptoId);
     });
-    
+
     renderizarDepartamento(deptoId);
 }
 
 function renderizarDepartamento(deptoId) {
     const container = document.getElementById('deptoContent');
     const depto = DEPARTAMENTOS[deptoId];
-    
+
     if (!container) {
         console.warn('⚠️ Container deptoContent não encontrado');
         return;
     }
-    
+
     if (!depto) {
         container.innerHTML = `<div class="depto-empty"><p>Departamento não encontrado.</p></div>`;
         return;
@@ -287,13 +286,11 @@ function renderizarDepartamento(deptoId) {
     `;
 
     depto.funcoes.forEach(func => {
-        const statusClass = func.status === 'disponivel' ? 'disponivel' : 
+        const statusClass = func.status === 'disponivel' ? 'disponivel' :
                            func.status === 'desenvolvimento' ? 'desenvolvimento' : 'em-breve';
-        const statusLabel = func.status === 'disponivel' ? '✓ Disponível' : 
+        const statusLabel = func.status === 'disponivel' ? '✓ Disponível' :
                            func.status === 'desenvolvimento' ? '⚙️ Em desenvolvimento' : '📅 Em breve';
         const isDisabled = func.status !== 'disponivel';
-
-        // 🔥 NOVO: Verifica se é a função de Despacho para aplicar destaque visual
         const isDespacho = func.id && func.id.startsWith('despacho-obras');
 
         if (func.temDropdown) {
@@ -308,7 +305,7 @@ function renderizarDepartamento(deptoId) {
                     <div class="dropdown-container">
                         <div class="dropdown-menu" id="dropdownDepto_${func.id}">
             `;
-            
+
             func.dropdownItems.forEach(item => {
                 if (item.disabled) {
                     html += `
@@ -319,7 +316,7 @@ function renderizarDepartamento(deptoId) {
                         </a>
                     `;
                 } else {
-                    const link = (typeof CONFIG !== 'undefined' && CONFIG) ? 
+                    const link = (typeof CONFIG !== 'undefined' && CONFIG) ?
                         CONFIG.getPageUrl(item.link) : item.link;
                     html += `
                         <a href="${link}" class="dropdown-item">
@@ -330,7 +327,7 @@ function renderizarDepartamento(deptoId) {
                     `;
                 }
             });
-            
+
             html += `
                         </div>
                     </div>
@@ -342,8 +339,6 @@ function renderizarDepartamento(deptoId) {
                 link = CONFIG.getPageUrl(func.link);
             }
             const onclick = isDisabled ? `onclick="event.preventDefault(); mostrarEmDesenvolvimento(event)"` : '';
-            
-            // 🔥 NOVO: Aplica classe de destaque para o card de Despacho
             const extraClass = isDespacho ? 'func-card-destaque' : '';
 
             html += `
@@ -356,10 +351,7 @@ function renderizarDepartamento(deptoId) {
         }
     });
 
-    html += `
-        </div>
-    `;
-
+    html += `</div>`;
     container.innerHTML = html;
 }
 
@@ -367,13 +359,13 @@ function toggleDropdownDepto(event, funcId) {
     event.stopPropagation();
     const dropdown = document.getElementById(`dropdownDepto_${funcId}`);
     if (!dropdown) return;
-    
+
     const isOpen = dropdown.classList.contains('show');
-    
+
     document.querySelectorAll('.dropdown-menu.show').forEach(el => {
         if (el !== dropdown) el.classList.remove('show');
     });
-    
+
     if (isOpen) {
         dropdown.classList.remove('show');
     } else {
@@ -392,20 +384,18 @@ function mostrarEmDesenvolvimento(event) {
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📋 Home Gestão carregada');
-    
-    // 🔥 ESPERAR O CONTAINER EXISTIR E A PÁGINA ESTAR VISÍVEL
+
     const checkContainer = setInterval(function() {
         const container = document.getElementById('deptoContent');
         const homeContent = document.getElementById('homeContent');
-        
+
         if (container && homeContent && homeContent.style.display !== 'none') {
             console.log('✅ Container encontrado, renderizando...');
             clearInterval(checkContainer);
             renderizarDepartamento('DCMD');
         }
     }, 200);
-    
-    // 🔥 FALLBACK: Se após 3 segundos ainda não renderizou, forçar
+
     setTimeout(function() {
         const container = document.getElementById('deptoContent');
         if (container && container.innerHTML === '') {
@@ -415,7 +405,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 3000);
 });
 
-// Fecha dropdowns ao clicar fora
 document.addEventListener('click', function(event) {
     document.querySelectorAll('.dropdown-menu.show').forEach(el => {
         const card = event.target.closest('.func-card');
@@ -425,7 +414,6 @@ document.addEventListener('click', function(event) {
     });
 });
 
-// Fecha dropdowns ao pressionar ESC
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         document.querySelectorAll('.dropdown-menu.show').forEach(el => {

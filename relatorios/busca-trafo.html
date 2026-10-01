@@ -10,90 +10,6 @@
     
     <!-- CSS Busca Trafo -->
     <link rel="stylesheet" href="../css/busca-trafo.css">
-    
-    <style>
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            background: white;
-            padding: 12px 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.06);
-            border: 1px solid #E2E8F0;
-            margin-bottom: 16px;
-        }
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .header-left h1 {
-            font-size: 20px;
-            color: #2D3748;
-            margin: 0;
-        }
-        .header-left h1 small {
-            font-size: 13px;
-            color: #718096;
-            font-weight: 400;
-            display: block;
-        }
-        .header-timer {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .btn-voltar-home {
-            background: #4299E1;
-            color: white;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 12px;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .btn-voltar-home:hover {
-            background: #3182CE;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .user-details {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-        }
-        .user-name {
-            font-weight: 600;
-            color: #2D3748;
-            font-size: 13px;
-        }
-        .user-matricula {
-            color: #718096;
-            font-size: 11px;
-        }
-        .user-perfil {
-            background: #4299E1;
-            color: white;
-            padding: 2px 12px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-    </style>
 </head>
 <body>
 
@@ -140,12 +56,6 @@
                 </div>
             </div>
             <div class="header-timer">
-                <div class="session-timer-wrapper">
-                    <span class="timer-icon">⏱️</span>
-                    <span class="timer-label">Sessão:</span>
-                    <span id="sessionTimer">30:00</span>
-                    <span class="timer-status">(ativa)</span>
-                </div>
                 <div class="user-info">
                     <div class="user-details">
                         <div class="user-name" id="nomeUsuario">Carregando...</div>
@@ -298,7 +208,6 @@
     <script src="../js/config.js"></script>  
     <script src="../js/auth-service.js"></script>      
     <script src="../js/auth-helper.js"></script>  
-    <script src="../js/timer.js"></script>
     <script src="../js/script.js"></script>
     <script src="../js/auth-global.js"></script>  
     <Script src="../js/login.js"></script>      

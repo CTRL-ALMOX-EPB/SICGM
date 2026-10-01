@@ -53,32 +53,32 @@ const DADOS_FALLBACK = {
 
 function redirecionarParaHome() {
     console.log('🏠 Redirecionando para home...');
-    
+
     try {
         // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
         let perfil = 'GESTAO';
-        
+
         if (typeof authService !== 'undefined' && authService) {
             const user = authService.getUserData();
             if (user && user.perfil) {
                 perfil = user.perfil;
             }
         }
-        
+
         console.log(`📝 Perfil detectado: ${perfil}`);
-        
+
         const homeMap = {
             'OPERACIONAL': 'home-operacional.html',
             'GESTAO': 'home-gestao.html',
             'VISUALIZACAO': 'home-visualizacao.html'
         };
-        
+
         const homePage = homeMap[perfil] || 'home-gestao.html';
         const url = `../${homePage}`;
-        
+
         console.log(`🔀 Navegando para: ${url}`);
         window.location.href = url;
-        
+
     } catch (error) {
         console.error('❌ Erro ao redirecionar:', error);
         window.location.href = '../home-gestao.html';
@@ -114,7 +114,7 @@ async function carregarProcessos(depto) {
 
         linhas.forEach(line => {
             const partes = line.split('|').map(p => p.trim());
-            
+
             if (partes.length >= 2 && partes[0].match(/^P\d{3}/)) {
                 if (processoAtual) {
                     processos.push(processoAtual);
@@ -172,7 +172,7 @@ function formatarDescricao(texto) {
 function renderizarPassoAPasso(processo, index) {
     const { etapas, etapaAtual } = processo;
     const totalEtapas = etapas.length;
-    
+
     if (totalEtapas === 0) {
         return `<p style="padding: 20px; color: #A0AEC0; text-align: center;">📭 Este processo não possui etapas detalhadas.</p>`;
     }
@@ -187,7 +187,7 @@ function renderizarPassoAPasso(processo, index) {
         let bgColor = '#F7FAFC';
         let borderColor = '#E2E8F0';
         let textColor = '#A0AEC0';
-        
+
         if (idx < etapaAtual) {
             bgColor = '#48BB78';
             borderColor = '#48BB78';
@@ -197,11 +197,11 @@ function renderizarPassoAPasso(processo, index) {
             borderColor = '#ED8936';
             textColor = 'white';
         }
-        
+
         const numero = e.titulo.match(/\d+/)?.[0] || (idx + 1);
-        
+
         html += `
-            <div onclick="irParaEtapa(${index}, ${idx})" 
+            <div onclick="irParaEtapa(${index}, ${idx})"
                  style="cursor: pointer; display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 40px; position: relative; z-index: 1;">
                 <div style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; background: ${bgColor}; border: 3px solid ${borderColor}; color: ${textColor}; transition: all 0.3s; box-shadow: ${idx === etapaAtual ? '0 0 0 4px rgba(237, 137, 54, 0.2)' : 'none'};">
                     ${numero}
@@ -215,7 +215,7 @@ function renderizarPassoAPasso(processo, index) {
 
     html += `
         </div>
-        
+
         <div style="background: white; border-radius: 10px; padding: 18px; margin-top: 5px; border: 1px solid #E2E8F0; min-height: 120px;">
             <div style="font-size: 16px; font-weight: 700; color: #2D3748; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <span>${etapa.titulo}</span>
@@ -224,15 +224,15 @@ function renderizarPassoAPasso(processo, index) {
             <div style="color: #4A5568; line-height: 1.7; font-size: 14px; background: #F7FAFC; padding: 14px; border-radius: 8px; border-left: 4px solid ${etapaAtual === totalEtapas - 1 ? '#48BB78' : '#ED8936'}; max-height: 180px; overflow-y: auto;">
                 ${formatarDescricao(etapa.descricao)}
             </div>
-            
+
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid #E2E8F0; flex-wrap: wrap; gap: 8px;">
-                <button onclick="irParaEtapa(${index}, ${etapaAtual - 1})" 
+                <button onclick="irParaEtapa(${index}, ${etapaAtual - 1})"
                         ${etapaAtual === 0 ? 'disabled' : ''}
                         style="padding: 6px 16px; border: 2px solid #E2E8F0; border-radius: 6px; background: white; color: #4A5568; font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 12px; ${etapaAtual === 0 ? 'opacity: 0.4; cursor: not-allowed;' : ''}">
                     ← Anterior
                 </button>
                 <span style="color: #718096; font-size: 12px; font-weight: 500;">${etapaAtual + 1} de ${totalEtapas}</span>
-                <button onclick="irParaEtapa(${index}, ${etapaAtual + 1})" 
+                <button onclick="irParaEtapa(${index}, ${etapaAtual + 1})"
                         ${etapaAtual === totalEtapas - 1 ? 'disabled' : ''}
                         style="padding: 6px 16px; border: 2px solid #ED8936; border-radius: 6px; background: #ED8936; color: white; font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 12px; ${etapaAtual === totalEtapas - 1 ? 'opacity: 0.4; cursor: not-allowed;' : ''}">
                     Próximo →
@@ -273,7 +273,7 @@ function renderizarProcessos(depto, processos) {
     } else {
         processos.forEach((processo, index) => {
             const isExpanded = processo.expanded || false;
-            
+
             html += `
                 <div class="processo-card" data-id="${processo.id}" data-index="${index}">
                     <div class="processo-header" onclick="toggleProcesso(${index})">
@@ -286,12 +286,12 @@ function renderizarProcessos(depto, processos) {
                             <span class="arrow ${isExpanded ? 'open' : ''}">▼</span>
                         </button>
                     </div>
-                    
+
                     <div class="processo-descricao">
                         <span>${processo.descricao}</span>
                         <span class="expand-hint ${isExpanded ? 'rotated' : ''}">▼</span>
                     </div>
-                    
+
                     <div class="workflow-container ${isExpanded ? 'open' : ''}" id="workflow-${index}">
                         <div style="margin-bottom: 5px;">
                             <h4 style="color: #2D3748; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
@@ -316,13 +316,13 @@ function renderizarProcessos(depto, processos) {
 
 function toggleProcesso(index) {
     if (!window.processos || !window.processos[index]) return;
-    
+
     const processo = window.processos[index];
     processo.expanded = !processo.expanded;
-    
+
     const container = document.getElementById(`workflow-${index}`);
     if (!container) return;
-    
+
     document.querySelectorAll('.workflow-container.open').forEach(el => {
         if (el.id !== `workflow-${index}`) {
             el.classList.remove('open');
@@ -334,9 +334,9 @@ function toggleProcesso(index) {
             }
         }
     });
-    
+
     container.classList.toggle('open');
-    
+
     const btn = document.querySelector(`.processo-card[data-index="${index}"] .expand-btn`);
     if (btn) {
         if (processo.expanded) {
@@ -345,21 +345,21 @@ function toggleProcesso(index) {
             btn.innerHTML = 'Ver Passo a Passo <span class="arrow">▼</span>';
         }
     }
-    
+
     const hint = document.querySelector(`.processo-card[data-index="${index}"] .expand-hint`);
     if (hint) hint.classList.toggle('rotated');
 }
 
 function irParaEtapa(index, novaEtapa) {
     if (!window.processos || !window.processos[index]) return;
-    
+
     const processo = window.processos[index];
     const totalEtapas = processo.etapas.length;
-    
+
     if (novaEtapa < 0 || novaEtapa >= totalEtapas) return;
-    
+
     processo.etapaAtual = novaEtapa;
-    
+
     const container = document.getElementById(`workflow-${index}`);
     if (container) {
         const passoSection = container.querySelector('div[style*="margin-bottom: 5px;"]');
@@ -372,7 +372,7 @@ function irParaEtapa(index, novaEtapa) {
                 ${renderizarPassoAPasso(processo, index)}
             `;
         }
-        
+
         setTimeout(() => {
             const detail = container.querySelector('.workflow-detail');
             if (detail) {
@@ -393,56 +393,81 @@ window.carregarProcessos = carregarProcessos;
 window.renderizarProcessos = renderizarProcessos;
 
 // ============================================
-// 🔥 INICIALIZAÇÃO (CORRIGIDA)
+// 🔥 INICIALIZAÇÃO (CORRIGIDA - LIBERA TODOS OS PERFIS)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Inicializando página de processos...');
-    
-    // 🔥 VERIFICAR AUTENTICAÇÃO PRIMEIRO
+
+    // ============================================
+    // 🔥 VERIFICAR AUTENTICAÇÃO (via authService)
+    // ============================================
     if (typeof authService === 'undefined' || !authService) {
         console.error('❌ authService não disponível');
         window.location.href = '../login.html';
         return;
     }
 
-    if (!authService.isLoggedIn()) {
-        console.error('❌ Usuário não logado');
-        window.location.href = '../login.html';
-        return;
+    // 🔥 Espera o Firebase inicializar (evita falso negativo)
+    await authService.waitForInit();
+
+    // 🔥 Aguarda o Firebase restaurar usuário do IndexedDB
+    if (authService.auth) {
+        await new Promise(resolve => {
+            let done = false;
+            const finish = () => { if (!done) { done = true; resolve(); } };
+            const unsub = authService.auth.onAuthStateChanged(() => { unsub(); finish(); });
+            setTimeout(finish, 2500);
+        });
     }
 
-    const user = authService.getUserData();
+    // 🔥 Caminho rápido: token local válido
+    let user = authService.getUserData();
+
+    // 🔥 Caminho KV: token local morreu (aba fechada) → restaura do KV
     if (!user) {
-        console.error('❌ Dados do usuário não encontrados');
+        console.log('🔍 Sem token local — consultando KV...');
+        const restored = await authService.restoreSessionFromKV();
+        if (restored) user = authService.getUserData();
+    }
+
+    // Se ainda não tem usuário → login
+    if (!user) {
+        console.error('❌ Usuário não autenticado');
         window.location.href = '../login.html';
         return;
     }
 
-    if (user.perfil !== 'GESTAO') {
+    // ============================================
+    // 🔥 CORRIGIDO: LIBERA TODOS OS PERFIS
+    // (antes bloqueava quem não era GESTAO)
+    // ============================================
+    const PERFIS_PERMITIDOS = ['GESTAO', 'OPERACIONAL', 'VISUALIZACAO'];
+
+    if (!PERFIS_PERMITIDOS.includes(user.perfil)) {
         console.error(`❌ Perfil ${user.perfil} não autorizado`);
-        alert('🔒 Acesso restrito a usuários de gestão.');
+        alert('🔒 Seu perfil não tem acesso a esta página.');
         redirecionarParaHome();
         return;
     }
 
     console.log(`✅ Autenticado: ${user.nome} (${user.perfil})`);
-    
+
     const loadingOverlay = document.getElementById('loadingOverlay');
     const content = document.getElementById('processosContent');
-    
+
     loadingOverlay.style.display = 'flex';
     loadingOverlay.classList.add('active');
     content.style.display = 'none';
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     const depto = urlParams.get('depto') || 'DCMD';
 
     const processos = await carregarProcessos(depto);
     window.processos = processos;
-    
+
     renderizarProcessos(depto, processos);
-    
+
     setTimeout(() => {
         loadingOverlay.style.display = 'none';
         loadingOverlay.classList.remove('active');

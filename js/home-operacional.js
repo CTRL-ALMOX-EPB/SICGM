@@ -12,6 +12,14 @@ const DEPARTAMENTOS_OPERACIONAL = {
         descricao: 'Acesse as funções disponíveis para o perfil Operacional no DCMD.',
         funcoes: [
             {
+                id: 'processos-dcmd',
+                nome: 'Processos',
+                icone: '📚',
+                link: 'processos/index.html?depto=DCMD',
+                status: 'disponivel',
+                descricao: 'Passo a passo detalhado dos processos do DCMD'
+            },
+            {
                 id: 'contagem-diaria-dcmd',
                 nome: 'Contagem Diária',
                 icone: '📊',
@@ -66,6 +74,14 @@ const DEPARTAMENTOS_OPERACIONAL = {
         descricao: 'Acesse as funções disponíveis para o perfil Operacional no DMPC.',
         funcoes: [
             {
+                id: 'processos-dmpc',
+                nome: 'Processos',
+                icone: '📚',
+                link: 'processos/index.html?depto=DMPC',
+                status: 'disponivel',
+                descricao: 'Passo a passo detalhado dos processos do DMPC'
+            },
+            {
                 id: 'contagem-diaria-dmpc',
                 nome: 'Contagem Diária',
                 icone: '📊',
@@ -98,6 +114,14 @@ const DEPARTAMENTOS_OPERACIONAL = {
         titulo: 'Departamento de Combate a Perdas',
         descricao: 'Acesse as funções disponíveis para o perfil Operacional no DECP.',
         funcoes: [
+            {
+                id: 'processos-decp',
+                nome: 'Processos',
+                icone: '📚',
+                link: 'processos/index.html?depto=DECP',
+                status: 'disponivel',
+                descricao: 'Passo a passo detalhado dos processos do DECP'
+            },
             {
                 id: 'contagem-diaria-decp',
                 nome: 'Contagem Diária',
@@ -141,6 +165,14 @@ const DEPARTAMENTOS_OPERACIONAL = {
         titulo: 'Departamento Operacional',
         descricao: 'Acesse as funções disponíveis para o perfil Operacional no DEOP.',
         funcoes: [
+            {
+                id: 'processos-deop',
+                nome: 'Processos',
+                icone: '📚',
+                link: 'processos/index.html?depto=DEOP',
+                status: 'disponivel',
+                descricao: 'Passo a passo detalhado dos processos do DEOP'
+            },
             {
                 id: 'contagem-diaria-deop',
                 nome: 'Contagem Diária',
@@ -188,18 +220,18 @@ let departamentoAtualOperacional = 'DCMD';
 
 function selecionarDepartamentoOperacional(deptoId) {
     departamentoAtualOperacional = deptoId;
-    
+
     document.querySelectorAll('.departamento-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.depto === deptoId);
     });
-    
+
     renderizarDepartamentoOperacional(deptoId);
 }
 
 function renderizarDepartamentoOperacional(deptoId) {
     const container = document.getElementById('deptoContentOperacional');
     const depto = DEPARTAMENTOS_OPERACIONAL[deptoId];
-    
+
     if (!depto) {
         container.innerHTML = `<div class="depto-empty"><p>Departamento não encontrado.</p></div>`;
         return;
@@ -214,11 +246,11 @@ function renderizarDepartamentoOperacional(deptoId) {
     `;
 
     depto.funcoes.forEach(func => {
-        const statusClass = func.status === 'disponivel' ? 'disponivel' : 
-                           func.status === 'desenvolvimento' ? 'desenvolvimento' : 
+        const statusClass = func.status === 'disponivel' ? 'disponivel' :
+                           func.status === 'desenvolvimento' ? 'desenvolvimento' :
                            func.status === 'restrito' ? 'restrito' : 'em-breve';
-        const statusLabel = func.status === 'disponivel' ? '✓ Disponível' : 
-                           func.status === 'desenvolvimento' ? '⚙️ Em desenvolvimento' : 
+        const statusLabel = func.status === 'disponivel' ? '✓ Disponível' :
+                           func.status === 'desenvolvimento' ? '⚙️ Em desenvolvimento' :
                            func.status === 'restrito' ? '🔒 Restrito' : '📅 Em breve';
         const isDisabled = func.status !== 'disponivel';
 
@@ -234,7 +266,7 @@ function renderizarDepartamentoOperacional(deptoId) {
                     <div class="dropdown-container">
                         <div class="dropdown-menu" id="dropdownOperacional_${func.id}">
             `;
-            
+
             func.dropdownItems.forEach(item => {
                 if (item.disabled) {
                     html += `
@@ -245,8 +277,12 @@ function renderizarDepartamentoOperacional(deptoId) {
                         </a>
                     `;
                 } else {
+                    // 🔥 CORRIGIDO: aplica CONFIG.getPageUrl()
+                    const link = (typeof CONFIG !== 'undefined' && CONFIG)
+                        ? CONFIG.getPageUrl(item.link)
+                        : item.link;
                     html += `
-                        <a href="${item.link}" class="dropdown-item">
+                        <a href="${link}" class="dropdown-item">
                             <span class="item-icon">📄</span>
                             <span class="item-label">${item.nome}</span>
                             <span class="item-badge">${item.badge}</span>
@@ -254,7 +290,7 @@ function renderizarDepartamentoOperacional(deptoId) {
                     `;
                 }
             });
-            
+
             html += `
                         </div>
                     </div>
@@ -263,13 +299,18 @@ function renderizarDepartamentoOperacional(deptoId) {
         } else {
             let onclick = '';
             let link = isDisabled ? '#' : func.link;
-            
+
+            // 🔥 CORRIGIDO: aplica CONFIG.getPageUrl() também nos cards
+            if (!isDisabled && !func.isRestricted && typeof CONFIG !== 'undefined' && CONFIG) {
+                link = CONFIG.getPageUrl(func.link);
+            }
+
             if (func.isRestricted) {
                 onclick = `onclick="event.preventDefault(); alert('⚠️ Funcionalidade restrita para perfil Operacional')"`;
             } else if (isDisabled) {
                 onclick = `onclick="event.preventDefault(); mostrarEmDesenvolvimentoOperacional(event)"`;
             }
-            
+
             html += `
                 <a href="${link}" class="func-card ${isDisabled ? 'disabled' : ''}" ${onclick}>
                     <div class="func-icon">${func.icone}</div>
@@ -291,13 +332,13 @@ function toggleDropdownOperacional(event, funcId) {
     event.stopPropagation();
     const dropdown = document.getElementById(`dropdownOperacional_${funcId}`);
     if (!dropdown) return;
-    
+
     const isOpen = dropdown.classList.contains('show');
-    
+
     document.querySelectorAll('.dropdown-menu.show').forEach(el => {
         if (el !== dropdown) el.classList.remove('show');
     });
-    
+
     if (isOpen) {
         dropdown.classList.remove('show');
     } else {
@@ -316,9 +357,27 @@ function mostrarEmDesenvolvimentoOperacional(event) {
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📋 Home Operacional carregada');
-    
-    // Renderiza departamento inicial
-    renderizarDepartamentoOperacional('DCMD');
+
+    // Aguarda o container existir e a home ficar visível (pós-auth)
+    const checkContainer = setInterval(function() {
+        const container = document.getElementById('deptoContentOperacional');
+        const homeContent = document.getElementById('homeContent');
+
+        if (container && homeContent && homeContent.style.display !== 'none') {
+            console.log('✅ Container encontrado, renderizando...');
+            clearInterval(checkContainer);
+            renderizarDepartamentoOperacional('DCMD');
+        }
+    }, 200);
+
+    // Fallback: se após 3s ainda não renderizou, força
+    setTimeout(function() {
+        const container = document.getElementById('deptoContentOperacional');
+        if (container && container.innerHTML === '') {
+            console.log('⏳ Fallback: renderizando após timeout');
+            renderizarDepartamentoOperacional('DCMD');
+        }
+    }, 3000);
 });
 
 document.addEventListener('click', function(event) {

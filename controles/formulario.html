@@ -7,119 +7,6 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/controles-dcmd.css">
-    <style>
-        .radio-mgm-group {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            padding: 6px 0;
-            flex-wrap: wrap;
-        }
-        .radio-mgm-group label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            font-size: 0.85em;
-            color: #2D3748;
-        }
-        .radio-mgm-group input[type="radio"] {
-            width: 14px;
-            height: 14px;
-            min-width: 14px;
-            min-height: 14px;
-            accent-color: #4299E1;
-            cursor: pointer;
-            margin: 0;
-        }
-        .radio-mgm-group .radio-label-small {
-            font-size: 0.7em;
-            color: #718096;
-            font-weight: 400;
-        }
-        .documentos-table-header {
-            display: grid;
-            grid-template-columns: 1fr 1fr 50px;
-            gap: 10px;
-            margin-top: 10px;
-            padding: 6px 0;
-            font-weight: 600;
-            font-size: 0.75em;
-            color: #4A5568;
-            border-bottom: 2px solid #E2E8F0;
-        }
-        .linha-documento-multiplo {
-            display: grid;
-            grid-template-columns: 1fr 1fr 50px;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 6px;
-            background: white;
-            padding: 6px 10px;
-            border-radius: 6px;
-            border: 1px solid #E2E8F0;
-        }
-        .linha-documento-multiplo input {
-            padding: 5px 8px;
-            border: 2px solid #E2E8F0;
-            border-radius: 6px;
-            font-size: 0.85em;
-            width: 100%;
-            box-sizing: border-box;
-            min-height: 30px;
-        }
-        .linha-documento-multiplo input:focus {
-            border-color: #4299E1;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
-        }
-        .btn-remover-doc {
-            background: #FFF5F5;
-            color: #FC8181;
-            border: 1px solid #FED7D7;
-            border-radius: 6px;
-            padding: 3px 8px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s ease;
-            width: 100%;
-            min-height: 28px;
-            text-align: center;
-        }
-        .btn-remover-doc:hover {
-            background: #FC8181;
-            color: white;
-            border-color: #FC8181;
-        }
-        .btn-add-doc {
-            background: #48BB78;
-            color: white;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 12px;
-            transition: all 0.3s ease;
-            margin-top: 8px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .btn-add-doc:hover {
-            background: #38A169;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
-        }
-        /* Campo Data de Programação escondido para movimento */
-        #campoDataProgramacao {
-            display: block;
-        }
-        .tipo-movimento #campoDataProgramacao {
-            display: none !important;
-        }
-    </style>
 </head>
 <body>
     <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
@@ -139,12 +26,6 @@
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
                         <h1 class="title">📋 Formulário Controle DCMD</h1>
-                    </div>
-                    <div class="session-timer-wrapper">
-                        <span class="timer-icon">⏱️</span>
-                        <span class="timer-label">Sessão:</span>
-                        <span id="sessionTimer">30:00</span>
-                        <span class="timer-status">(ativa)</span>
                     </div>
                 </div>
             </div>
@@ -623,7 +504,6 @@
     <script src="../js/config.js"></script>  
     <script src="../js/auth-service.js"></script>      
     <script src="../js/auth-helper.js"></script>  
-    <script src="../js/timer.js"></script>
     <script src="../js/script.js"></script>
     <script src="../js/auth-global.js"></script>  
     <Script src="../js/login.js"></script>      

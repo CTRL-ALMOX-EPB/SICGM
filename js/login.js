@@ -1,19 +1,10 @@
 // ============================================
-// LOGIN.JS - PÁGINA DE LOGIN (CORRIGIDO - SEM LOOP)
+// LOGIN.JS - PÁGINA DE LOGIN
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Página de login carregada');
 
-    // ============================================
-    // 🔥 REMOVIDO: Verificação automática de login
-    // Isso estava causando o loop de redirecionamento
-    // O usuário deve fazer login manualmente
-    // ============================================
-
-    // ============================================
-    // ELEMENTOS DO DOM
-    // ============================================
     const form = document.getElementById('loginForm');
     const emailPrefix = document.getElementById('emailPrefix');
     const emailDomain = document.getElementById('emailDomain');
@@ -28,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateEmailPreview() {
         const prefix = emailPrefix.value.trim();
         const domain = emailDomain.value;
-        
+
         if (prefix) {
             emailPreview.innerHTML = `📧 E-mail: <strong>${prefix}@${domain}</strong>`;
         } else {
@@ -51,12 +42,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ============================================
-    // 🔥 FUNÇÃO: MONTAR SENHA COMPLETA
+    // MONTAR SENHA COMPLETA
     // ============================================
     function montarSenhaCompleta(matricula) {
-        // Remove espaços extras
         const matriculaLimpa = matricula.trim();
-        // 🔥 Adiciona "ctrl-" na frente
         return `ctrl-${matriculaLimpa}`;
     }
 
@@ -65,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
-        
+
         mensagemErro.textContent = '';
         mensagemErro.className = 'mensagem-erro';
         mensagemSucesso.style.display = 'none';
@@ -87,38 +76,26 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // 🔥 MONTAR SENHA COMPLETA
         const senhaCompleta = montarSenhaCompleta(matriculaDigitada);
         console.log(`🔐 Tentando login com matrícula: ${matriculaDigitada}`);
 
-        // 🔥 VERIFICAR SE authService ESTÁ DISPONÍVEL
         if (typeof authService === 'undefined' || !authService) {
             mensagemErro.textContent = '⚠️ Erro ao carregar o serviço de autenticação. Recarregue a página.';
             mensagemErro.className = 'mensagem-erro';
             return;
         }
 
-        // 🔥 TENTAR LOGIN COM A SENHA MONTADA
         const result = await authService.login(emailCompleto, senhaCompleta);
-        
+
         if (result.success) {
             mensagemSucesso.textContent = '✅ Login realizado! Redirecionando...';
             mensagemSucesso.style.display = 'block';
-            
+
             console.log(`✅ Usuário logado: ${result.user.nome}`);
             console.log(`📝 Perfil: ${result.user.perfil}`);
-            
-            // 🔥 VERIFICAR SE A SESSÃO FOI SALVA
-            setTimeout(() => {
-                if (authService.isLoggedIn()) {
-                    redirecionarPorPerfil(result.user.perfil);
-                } else {
-                    mensagemErro.textContent = '❌ Erro ao salvar sessão. Tente novamente.';
-                    mensagemErro.className = 'mensagem-erro';
-                    mensagemSucesso.style.display = 'none';
-                }
-            }, 1000);
-            
+
+            // O authService.login() já garantiu a sessão. Redireciona direto.
+            redirecionarPorPerfil(result.user.perfil);
         } else {
             mensagemErro.textContent = result.error || '❌ Matrícula inválida. Verifique e tente novamente.';
             mensagemErro.className = 'mensagem-erro';
@@ -146,11 +123,11 @@ document.addEventListener('DOMContentLoaded', function() {
         opacity: 0.6;
         transition: opacity 0.3s;
     `;
-    
+
     const passwordWrapper = senhaInput.parentElement;
     passwordWrapper.style.position = 'relative';
     passwordWrapper.appendChild(togglePassword);
-    
+
     togglePassword.addEventListener('click', function() {
         senhaInput.type = senhaInput.type === 'password' ? 'text' : 'password';
         this.textContent = senhaInput.type === 'password' ? '👁️' : '👁️‍🗨️';
@@ -168,9 +145,8 @@ function redirecionarPorPerfil(perfil) {
         'OPERACIONAL': 'home-operacional.html',
         'VISUALIZACAO': 'home-visualizacao.html'
     };
-    
+
     const page = pages[perfil] || 'home-operacional.html';
     console.log(`🔀 Redirecionando para: ${page}`);
-    // 🔥 Usando window.location.href em vez de replace para evitar loops
     window.location.href = page;
 }

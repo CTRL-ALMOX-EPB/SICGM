@@ -15,22 +15,20 @@
     </div>
 
     <div class="home-container" id="homeContent" style="display: none;">
-        <!-- Header com Timer -->
+        <!-- Header -->
         <div class="home-header">
             <h1>🏢 SICGM - Visualização</h1>
             <div class="user-info">
                 <div class="user-details">
                     <div class="user-name" id="nomeUsuario">Carregando...</div>
                     <div class="user-matricula" id="matriculaUsuario">Matrícula: ---</div>
-                    <div class="session-timer-wrapper">
-                        <span class="timer-icon">⏱️</span>
-                        <span class="timer-label">Sessão:</span>
-                        <span id="sessionTimer">30:00</span>
-                        <span class="timer-status">(ativa)</span>
-                    </div>
                 </div>
                 <div class="user-actions">
-                    <a href="processos/index.html" class="btn-admin-header" style="background: #718096; cursor: not-allowed; opacity: 0.6;" onclick="return false;" title="Perfil Visualização não tem acesso a Processos">
+                    <!-- 🔥 Perfil Visualização NÃO tem acesso a Processos -->
+                    <a href="#" class="btn-admin-header"
+                       style="background: #718096; cursor: not-allowed; opacity: 0.6;"
+                       onclick="event.preventDefault(); alert('⚠️ Perfil Visualização não tem acesso a Processos.');"
+                       title="Perfil Visualização não tem acesso a Processos">
                         📋 Processos
                     </a>
                     <span class="user-perfil" id="perfilUsuario">VISUALIZAÇÃO</span>
@@ -62,9 +60,7 @@
         </div>
 
         <!-- Área de Conteúdo -->
-        <div class="depto-content" id="deptoContentVisualizacao">
-            <!-- Renderizado via JavaScript -->
-        </div>
+        <div class="depto-content" id="deptoContentVisualizacao"></div>
 
         <div class="restricted-msg">
             ℹ️ Seu perfil <strong>Visualização</strong> permite apenas visualizar relatórios em cada departamento.
@@ -74,18 +70,18 @@
     <!-- 🔥 FIREBASE SDK (OBRIGATÓRIO) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    
+
     <!-- ============================================ -->
     <!-- SCRIPTS NA ORDEM CORRETA -->
     <!-- ============================================ -->
-    <script src="js/firebase-config.js"></script>   
-    <script src="js/config.js"></script>  
-    <script src="js/auth-service.js"></script>      
-    <script src="js/auth-helper.js"></script>  
-    <script src="js/timer.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/firebase-init.js"></script>   <!-- 🔥 NOVO -->
+    <script src="js/config.js"></script>
+    <script src="js/auth-service.js"></script>
+    <script src="js/auth-helper.js"></script>
     <script src="js/script.js"></script>
-    <script src="js/auth-global.js"></script>  
-    <script src="js/login.js"></script>      
+    <script src="js/auth-global.js"></script>
     <script src="js/home-visualizacao.js"></script>
+    <!-- 🔥 REMOVIDO: login.js -->
 </body>
 </html>

@@ -9,21 +9,6 @@
     <link rel="stylesheet" href="../css/gestao.css">
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <style>
-        .gestao-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .header-timer {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-    </style>
 </head>
 <body>
     <div class="gestao-container">
@@ -31,12 +16,6 @@
         <div class="gestao-header">
             <h1>📊 Indicadores Gerenciais</h1>
             <div class="header-timer">
-                <div class="session-timer-wrapper">
-                    <span class="timer-icon">⏱️</span>
-                    <span class="timer-label">Sessão:</span>
-                    <span id="sessionTimer">30:00</span>
-                    <span class="timer-status">(ativa)</span>
-                </div>
                 <button class="btn-voltar" onclick="window.location.href='../home-gestao.html'">🏠 Voltar</button>
             </div>
         </div>
@@ -283,7 +262,6 @@
     <script src="../js/firebase-config.js"></script>
     <script src="../js/auth-service.js"></script>
     <script src="../js/auth-helper.js"></script>
-    <script src="../js/timer.js"></script>
     <script src="../js/script.js"></script>
     <script src="../js/auth-global.js"></script>
     

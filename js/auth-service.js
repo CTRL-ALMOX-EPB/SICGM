@@ -1,528 +1,383 @@
 // ============================================
-// AUTH-SERVICE.JS - SERVIÇO DE AUTENTICAÇÃO
+// AUTH-SERVICE.JS - SESSÃO DURA VIA KV
+// ============================================
+// - sessionStorage como cache local (segurança)
+// - KV do Worker como fonte da verdade da sessão
+// - Firebase (LOCAL) como "quem sou eu" após fechar aba
+// - Token só morre em logout explícito
 // ============================================
 
 class AuthService {
     constructor() {
-        // 🔥 Verificar se o Firebase está disponível
-        if (typeof firebase === 'undefined') {
-            console.error('❌ Firebase não encontrado! Verifique se o SDK foi carregado.');
-            return;
-        }
-        
-        if (firebase.apps.length === 0) {
-            console.error('❌ Firebase não foi inicializado! Verifique o firebase-config.js');
-            return;
-        }
-        
-        this.auth = firebase.auth();
+        this.auth = null;
         this.currentUser = null;
         this.usersCache = new Map();
-        
-        // 🔥 SUA API URL
+        this.ready = false;
+
         this.WORKER_URL = 'https://polished-salad-1dbe.alefe-gomes-72f.workers.dev/api';
-        
-        console.log('✅ AuthService inicializado com sucesso!');
+
+        this.SESSION_DURATION = 30 * 60 * 1000; // 30 min
+        this.RENEW_THRESHOLD = 5 * 60 * 1000;   // renova 5 min antes
+
+        this.KEY_TOKEN = 'auth_token';
+        this.KEY_EXPIRY = 'session_expiry';
+
+        this._logoutInProgress = false;
+        this._initPromise = this._init();
+    }
+
+    // ============================================
+    // INICIALIZAÇÃO
+    // ============================================
+    async _init() {
+        const start = Date.now();
+        while (!window.__FIREBASE_INITIALIZED__) {
+            if (Date.now() - start > 5000) {
+                console.error('❌ Timeout esperando Firebase.');
+                return false;
+            }
+            await new Promise(r => setTimeout(r, 50));
+        }
+
+        if (typeof firebase === 'undefined' || !firebase.apps.length) {
+            console.error('❌ Firebase indisponível.');
+            return false;
+        }
+
+        this.auth = firebase.auth();
+        this.ready = true;
+
+        this.auth.onAuthStateChanged(user => {
+            this.currentUser = user;
+            if (!user && !this._logoutInProgress) {
+                console.warn('⚠️ Firebase: usuário nulo (boot inicial ou deslogado).');
+            } else if (user) {
+                console.log('🔥 Firebase ativo:', user.email);
+            }
+        });
+
+        console.log('✅ AuthService pronto.');
+        return true;
+    }
+
+    async waitForInit() {
+        await this._initPromise;
+        return this.ready;
+    }
+
+    // ============================================
+    // sessionStorage (cache local)
+    // ============================================
+    _saveLocal(payload) {
+        try {
+            sessionStorage.setItem(this.KEY_TOKEN, btoa(JSON.stringify(payload)));
+            sessionStorage.setItem(this.KEY_EXPIRY, String(payload.exp));
+            return true;
+        } catch (e) {
+            console.error('❌ Erro ao salvar sessão local:', e);
+            return false;
+        }
+    }
+
+    _readLocal() {
+        try {
+            const t = sessionStorage.getItem(this.KEY_TOKEN);
+            if (!t) return null;
+            return JSON.parse(atob(t));
+        } catch {
+            return null;
+        }
+    }
+
+    _clearLocal() {
+        sessionStorage.removeItem(this.KEY_TOKEN);
+        sessionStorage.removeItem(this.KEY_EXPIRY);
     }
 
     // ============================================
     // LOGIN
     // ============================================
     async login(email, senha) {
+        await this.waitForInit();
         try {
             this.showLoading(true);
-            
-            console.log(`🔐 Tentando login para: ${email}`);
 
-            // 1. Autenticar no Firebase
-            const userCredential = await this.auth.signInWithEmailAndPassword(email, senha);
-            this.currentUser = userCredential.user;
-            console.log('✅ Firebase autenticou');
+            const cred = await this.auth.signInWithEmailAndPassword(email, senha);
+            this.currentUser = cred.user;
 
-            // 2. Buscar dados do usuário
             const userData = await this.fetchUserData(email);
-            if (!userData) {
-                throw new Error('Dados do usuário não encontrados');
-            }
-
-            // 3. Verificar se está ativo
+            if (!userData) throw new Error('Dados do usuário não encontrados');
             if (userData.ativo === false) {
                 await this.auth.signOut();
                 throw new Error('Conta desativada. Entre em contato com o administrador.');
             }
 
-            // 4. Salvar sessão (COM VERIFICAÇÃO)
-            const sessionSaved = this.createSession(userData);
-            if (!sessionSaved) {
-                throw new Error('Erro ao salvar sessão');
-            }
-
-            // 5. Registrar sessão ativa (opcional)
+            // 1) registra no KV
             await this.registerActiveSession(userData);
 
-            console.log('✅ Login completo!');
-            return { success: true, user: userData };
+            // 2) salva local
+            this.createSession(userData);
 
+            return { success: true, user: userData };
         } catch (error) {
-            console.error('❌ Erro no login:', error);
-            return { 
-                success: false, 
-                error: this.handleError(error) 
-            };
+            console.error('❌ Login:', error);
+            return { success: false, error: this.handleError(error) };
         } finally {
             this.showLoading(false);
         }
     }
 
-    // ============================================
-    // CRIAR SESSÃO (COM RETORNO DE SUCESSO)
-    // ============================================
     createSession(userData) {
-        try {
-            const payload = {
-                email: userData.email,
-                nome: userData.nome,
-                matricula: userData.matricula,
-                perfil: userData.perfil,
-                exp: Date.now() + 1800000 // 30 minutos
-            };
-            
-            const token = btoa(JSON.stringify(payload));
-            sessionStorage.setItem('auth_token', token);
-            sessionStorage.setItem('session_expiry', Date.now() + 1800000);
-            
-            // 🔥 VERIFICAR SE FOI SALVO
-            const savedToken = sessionStorage.getItem('auth_token');
-            if (savedToken === token) {
-                console.log('✅ Sessão salva com sucesso!');
-                return true;
-            } else {
-                console.error('❌ Falha ao salvar sessão');
-                return false;
-            }
-        } catch (error) {
-            console.error('❌ Erro ao criar sessão:', error);
-            return false;
-        }
+        const payload = {
+            email: userData.email,
+            nome: userData.nome,
+            matricula: userData.matricula,
+            perfil: userData.perfil,
+            exp: Date.now() + this.SESSION_DURATION
+        };
+        return this._saveLocal(payload);
+    }
+
+    renewSession() {
+        const p = this._readLocal();
+        if (!p) return false;
+        return this._saveLocal({ ...p, exp: Date.now() + this.SESSION_DURATION });
     }
 
     // ============================================
-    // RENOVAR SESSÃO (VERSÃO SIMPLES E SEGURA - SEM LOOP)
+    // RESTAURAR A PARTIR DO KV
     // ============================================
-    async renewSession() {
-        try {
-            const token = sessionStorage.getItem('auth_token');
-            if (!token) {
-                return false;
-            }
-
-            const payload = JSON.parse(atob(token));
-            if (!payload || !payload.email) {
-                return false;
-            }
-
-            // Renovar localmente (apenas isso, sem chamadas externas)
-            const newPayload = {
-                ...payload,
-                exp: Date.now() + 1800000 // 30 minutos
-            };
-            
-            const newToken = btoa(JSON.stringify(newPayload));
-            sessionStorage.setItem('auth_token', newToken);
-            sessionStorage.setItem('session_expiry', Date.now() + 1800000);
-            
-            console.log('🔄 Sessão renovada localmente');
-            return true;
-        } catch (error) {
-            console.warn('⚠️ Erro ao renovar sessão:', error);
+    async restoreSessionFromKV() {
+        if (!this.auth || !this.auth.currentUser) {
+            console.log('ℹ️ Sem user do Firebase — impossível restaurar sem relogin.');
             return false;
         }
-    }
 
-    // ============================================
-    // BUSCAR DADOS DO USUÁRIO
-    // ============================================
-    async fetchUserData(email) {
+        const email = this.auth.currentUser.email;
+        if (!email) return false;
+
         try {
-            if (this.usersCache.has(email)) {
-                console.log('📦 Usando cache');
-                return this.usersCache.get(email);
-            }
-
-            const response = await fetch(`${this.WORKER_URL}/users`, {
+            console.log(`🔄 Consultando KV para ${email}...`);
+            const r = await fetch(`${this.WORKER_URL}/sessions/check`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
             });
 
-            if (!response.ok) {
-                if (response.status === 403) {
-                    const data = await response.json();
-                    if (data.revogado) {
-                        throw new Error('Conta desativada');
-                    }
-                }
-                throw new Error('Erro ao buscar dados');
-            }
-
-            const userData = await response.json();
-            this.usersCache.set(email, userData);
-            return userData;
-
-        } catch (error) {
-            console.error('❌ Erro ao buscar dados:', error);
-            throw error;
-        }
-    }
-
-    // ============================================
-    // VERIFICAR SE E-MAIL EXISTE NO SISTEMA
-    // ============================================
-    async emailExists(email) {
-        try {
-            // Buscar dados do usuário
-            const userData = await this.fetchUserData(email);
-            return userData !== null && userData !== undefined;
-        } catch (error) {
-            console.error('❌ Erro ao verificar e-mail:', error);
-            return false;
-        }
-    }
-
-    // ============================================
-    // REGISTRAR SESSÃO ATIVA
-    // ============================================
-    async registerActiveSession(userData) {
-        try {
-            const response = await fetch(`${this.WORKER_URL}/sessions/register`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: userData.email,
-                    nome: userData.nome,
-                    perfil: userData.perfil,
-                    exp: Date.now() + 1800000
-                })
-            });
-            
-            if (response.ok) {
-                console.log('✅ Sessão registrada no Worker');
-                return true;
-            } else {
-                console.warn('⚠️ Falha ao registrar sessão no Worker:', response.status);
+            if (!r.ok) {
+                console.warn('⚠️ /sessions/check HTTP', r.status);
                 return false;
             }
-        } catch (error) {
-            console.warn('⚠️ Não foi possível registrar sessão:', error);
+
+            const data = await r.json();
+
+            if (!data.active || !data.sessao) {
+                console.warn('⚠️ KV não reconhece sessão ativa — encerrando Firebase.');
+                try { await this.auth.signOut(); } catch {}
+                return false;
+            }
+
+            const s = data.sessao;
+
+            const payload = {
+                email: s.email || email,
+                nome: s.nome,
+                matricula: s.matricula,
+                perfil: s.perfil,
+                exp: Date.now() + this.SESSION_DURATION
+            };
+            this._saveLocal(payload);
+
+            await this.registerActiveSession(payload);
+
+            console.log('✅ Sessão restaurada do KV.');
+            return true;
+        } catch (e) {
+            console.warn('⚠️ Erro ao restaurar do KV:', e);
             return false;
         }
     }
 
     // ============================================
-    // VERIFICAR SESSÃO
+    // isLoggedIn (tolerante)
     // ============================================
     isLoggedIn() {
         try {
-            const token = sessionStorage.getItem('auth_token');
-            if (!token) {
+            const p = this._readLocal();
+
+            if (!p) return false;
+
+            if (!p.exp) return this.renewSession();
+
+            if (p.exp < Date.now()) {
+                if (this.auth && this.auth.currentUser) return this.renewSession();
                 return false;
             }
 
-            const payload = JSON.parse(atob(token));
-            
-            if (!payload || !payload.email || !payload.exp) {
-                this.clearSession();
-                return false;
-            }
-            
-            if (payload.exp < Date.now()) {
-                console.log('⏰ Sessão expirada');
-                this.clearSession();
-                return false;
-            }
+            if (p.exp - Date.now() < this.RENEW_THRESHOLD) this.renewSession();
 
             return true;
         } catch (e) {
-            console.error('❌ Erro ao verificar sessão:', e);
-            this.clearSession();
+            console.error('❌ isLoggedIn:', e);
             return false;
         }
     }
 
-    // ============================================
-    // PEGAR DADOS DO USUÁRIO
-    // ============================================
     getUserData() {
-        try {
-            if (!this.isLoggedIn()) {
-                return null;
-            }
-
-            const token = sessionStorage.getItem('auth_token');
-            if (!token) return null;
-
-            const payload = JSON.parse(atob(token));
-            return payload;
-        } catch (e) {
-            console.error('❌ Erro ao obter dados do usuário:', e);
-            return null;
-        }
+        if (!this.isLoggedIn()) return null;
+        return this._readLocal();
     }
 
-    // ============================================
-    // LIMPAR SESSÃO LOCAL
-    // ============================================
     clearSession() {
-        sessionStorage.removeItem('auth_token');
-        sessionStorage.removeItem('session_expiry');
-        console.log('🧹 Sessão limpa localmente');
+        this._clearLocal();
     }
 
     // ============================================
-    // LOGOUT - COMPLETO
+    // LOGOUT (único ponto que destrói de verdade)
     // ============================================
     async logout() {
+        this._logoutInProgress = true;
         try {
-            console.log('👋 Iniciando logout...');
-            
-            // 1. PEGAR DADOS DO USUÁRIO ANTES DE LIMPAR
-            const userData = this.getUserData();
-            
-            // 2. REMOVER DO WORKER (KV)
-            if (userData && userData.email) {
+            const p = this._readLocal();
+
+            if (p && p.email) {
                 try {
-                    const response = await fetch(`${this.WORKER_URL}/sessions/remove`, {
+                    await fetch(`${this.WORKER_URL}/sessions/remove`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ email: userData.email })
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: p.email })
                     });
-                    
-                    if (response.ok) {
-                        console.log('✅ Sessão removida do Worker (KV)');
-                    } else {
-                        console.warn('⚠️ Resposta do Worker:', response.status);
-                    }
+                    console.log('✅ Sessão removida do KV.');
                 } catch (e) {
-                    console.warn('⚠️ Erro ao remover sessão do Worker:', e);
+                    console.warn('⚠️ Erro ao remover do KV:', e);
                 }
-            } else {
-                console.log('ℹ️ Nenhum usuário logado para remover do Worker');
             }
-            
-            // 3. LIMPAR SESSIONSTORAGE
-            sessionStorage.removeItem('auth_token');
-            sessionStorage.removeItem('session_expiry');
-            console.log('🧹 sessionStorage limpo');
-            
-            // 4. DESLOGAR DO FIREBASE
-            try {
-                await this.auth.signOut();
-                console.log('✅ Firebase signOut realizado');
-            } catch (e) {
-                console.warn('⚠️ Erro no signOut do Firebase:', e);
-            }
-            
-            console.log('✅ Logout concluído!');
+
+            this._clearLocal();
+
+            try { await this.auth.signOut(); } catch {}
+
             return true;
-            
         } catch (error) {
-            console.error('❌ Erro ao sair:', error);
-            // EM CASO DE ERRO, LIMPAR MESMO ASSIM
-            sessionStorage.removeItem('auth_token');
-            sessionStorage.removeItem('session_expiry');
+            this._clearLocal();
             return false;
+        } finally {
+            this._logoutInProgress = false;
         }
     }
 
     // ============================================
-    // REDEFINIR SENHA (DESABILITADO)
+    // WORKER
     // ============================================
-    async resetPassword(email) {
-        return { 
-            success: false, 
-            error: 'ℹ️ A senha é gerada automaticamente a partir da matrícula. Entre em contato com o administrador para redefinir.' 
-        };
+    async fetchUserData(email) {
+        if (this.usersCache.has(email)) return this.usersCache.get(email);
+        const r = await fetch(`${this.WORKER_URL}/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        if (!r.ok) {
+            if (r.status === 403) {
+                const d = await r.json().catch(() => ({}));
+                if (d.revogado) throw new Error('Conta desativada');
+            }
+            throw new Error('Erro ao buscar dados');
+        }
+        const data = await r.json();
+        this.usersCache.set(email, data);
+        return data;
+    }
+
+    async emailExists(email) {
+        try { return !!(await this.fetchUserData(email)); } catch { return false; }
+    }
+
+    async registerActiveSession(userData) {
+        try {
+            const r = await fetch(`${this.WORKER_URL}/sessions/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: userData.email,
+                    nome: userData.nome,
+                    matricula: userData.matricula,
+                    perfil: userData.perfil,
+                    exp: Date.now() + this.SESSION_DURATION
+                })
+            });
+            return r.ok;
+        } catch { return false; }
     }
 
     // ============================================
-    // LISTAR USUÁRIOS (ADMIN)
+    // ADMIN
     // ============================================
+    async resetPassword() {
+        return { success: false, error: 'ℹ️ A senha é gerada automaticamente a partir da matrícula.' };
+    }
     async listUsers() {
-        try {
-            const user = this.getUserData();
-            if (!user) {
-                throw new Error('Usuário não autenticado');
-            }
-
-            const response = await fetch(`${this.WORKER_URL}/users/list`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-User-Email': user.email
-                }
-            });
-
-            if (response.status === 403) {
-                throw new Error('Acesso negado. Apenas usuários GESTAO podem listar usuários.');
-            }
-
-            if (!response.ok) {
-                throw new Error('Erro ao listar usuários');
-            }
-
-            return await response.json();
-
-        } catch (error) {
-            console.error('❌ Erro ao listar usuários:', error);
-            throw error;
-        }
+        const u = this.getUserData(); if (!u) throw new Error('Não autenticado');
+        const r = await fetch(`${this.WORKER_URL}/users/list`, {
+            headers: { 'Content-Type': 'application/json', 'X-User-Email': u.email }
+        });
+        if (!r.ok) throw new Error('Erro');
+        return r.json();
     }
-
-    // ============================================
-    // REVOGAR USUÁRIO (ADMIN)
-    // ============================================
     async revokeUser(email) {
-        try {
-            const user = this.getUserData();
-            if (!user) {
-                throw new Error('Usuário não autenticado');
-            }
-
-            const response = await fetch(`${this.WORKER_URL}/users/revoke`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-User-Email': user.email
-                },
-                body: JSON.stringify({ email })
-            });
-
-            if (response.status === 403) {
-                throw new Error('Acesso negado. Apenas usuários GESTAO podem revogar usuários.');
-            }
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Erro ao revogar usuário');
-            }
-
-            return await response.json();
-
-        } catch (error) {
-            console.error('❌ Erro ao revogar:', error);
-            throw error;
-        }
+        const u = this.getUserData(); if (!u) throw new Error('Não autenticado');
+        const r = await fetch(`${this.WORKER_URL}/users/revoke`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-User-Email': u.email },
+            body: JSON.stringify({ email })
+        });
+        if (!r.ok) { const d = await r.json().catch(()=>({})); throw new Error(d.error || 'Erro'); }
+        return r.json();
     }
-
-    // ============================================
-    // REATIVAR USUÁRIO (ADMIN)
-    // ============================================
     async reactivateUser(email) {
-        try {
-            const user = this.getUserData();
-            if (!user) {
-                throw new Error('Usuário não autenticado');
-            }
-
-            const response = await fetch(`${this.WORKER_URL}/users/reactivate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-User-Email': user.email
-                },
-                body: JSON.stringify({ email })
-            });
-
-            if (response.status === 403) {
-                throw new Error('Acesso negado. Apenas usuários GESTAO podem reativar usuários.');
-            }
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Erro ao reativar usuário');
-            }
-
-            return await response.json();
-
-        } catch (error) {
-            console.error('❌ Erro ao reativar:', error);
-            throw error;
-        }
+        const u = this.getUserData(); if (!u) throw new Error('Não autenticado');
+        const r = await fetch(`${this.WORKER_URL}/users/reactivate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-User-Email': u.email },
+            body: JSON.stringify({ email })
+        });
+        if (!r.ok) { const d = await r.json().catch(()=>({})); throw new Error(d.error || 'Erro'); }
+        return r.json();
     }
-
-    // ============================================
-    // VER SESSÕES ATIVAS (ADMIN)
-    // ============================================
     async getActiveSessions() {
-        try {
-            const user = this.getUserData();
-            if (!user) {
-                throw new Error('Usuário não autenticado');
-            }
-
-            const response = await fetch(`${this.WORKER_URL}/sessions/active`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-User-Email': user.email
-                }
-            });
-
-            if (response.status === 403) {
-                throw new Error('Acesso negado. Apenas usuários GESTAO podem ver sessões ativas.');
-            }
-
-            if (!response.ok) {
-                throw new Error('Erro ao buscar sessões ativas');
-            }
-
-            return await response.json();
-
-        } catch (error) {
-            console.error('❌ Erro ao buscar sessões:', error);
-            throw error;
-        }
+        const u = this.getUserData(); if (!u) throw new Error('Não autenticado');
+        const r = await fetch(`${this.WORKER_URL}/sessions/active`, {
+            headers: { 'Content-Type': 'application/json', 'X-User-Email': u.email }
+        });
+        if (!r.ok) throw new Error('Erro');
+        return r.json();
     }
 
     // ============================================
-    // TRATAMENTO DE ERROS
+    // ERROS / LOADING
     // ============================================
     handleError(error) {
-        const errorMap = {
+        const map = {
             'auth/user-not-found': '❌ Usuário não encontrado. Verifique seu e-mail.',
             'auth/wrong-password': '❌ Matrícula inválida. Verifique e tente novamente.',
             'auth/too-many-requests': '⚠️ Muitas tentativas. Tente em alguns minutos.',
             'auth/invalid-email': '❌ E-mail inválido.',
-            'auth/user-disabled': '❌ Conta desativada. Entre em contato com o administrador.',
-            'auth/network-request-failed': '⚠️ Erro de rede. Verifique sua conexão.',
-            'auth/email-already-in-use': '❌ E-mail já em uso.',
-            'auth/weak-password': '❌ Senha deve ter pelo menos 6 caracteres.'
+            'auth/user-disabled': '❌ Conta desativada.',
+            'auth/network-request-failed': '⚠️ Erro de rede.',
         };
-
         if (error.message === 'Conta desativada') {
             return '❌ Conta desativada. Entre em contato com o administrador.';
         }
-
-        return errorMap[error.code] || `❌ Erro: ${error.message}`;
+        return map[error.code] || `❌ Erro: ${error.message}`;
     }
 
-    // ============================================
-    // LOADING
-    // ============================================
     showLoading(show) {
-        const btnLogin = document.getElementById('btnLogin');
-        if (btnLogin) {
-            btnLogin.disabled = show;
-            btnLogin.textContent = show ? '⏳ Entrando...' : 'Entrar';
+        const btn = document.getElementById('btnLogin');
+        if (btn) {
+            btn.disabled = show;
+            btn.textContent = show ? '⏳ Entrando...' : 'Entrar';
         }
     }
 }
 
-// Criar instância global
 const authService = new AuthService();
+window.authService = authService;
