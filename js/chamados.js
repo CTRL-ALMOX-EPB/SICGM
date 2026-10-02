@@ -111,16 +111,16 @@ function ehAtendente(user) {
 }
 
 // ============================================
-// TEMPO EM ABERTO
+// SLA / TEMPO DECORRIDO
 // ============================================
-function calcularTempoDecorrido(iso) {
-    if (!iso) return null;
+function calcularTempoDecorrido(desdeIso) {
+    if (!desdeIso) return null;
     try {
         let data;
-        if (typeof iso === 'string' && iso.includes(' ') && !iso.includes('T')) {
-            data = new Date(iso.replace(' ', 'T') + 'Z');
+        if (typeof desdeIso === 'string' && desdeIso.includes(' ') && !desdeIso.includes('T')) {
+            data = new Date(desdeIso.replace(' ', 'T') + 'Z');
         } else {
-            data = new Date(iso);
+            data = new Date(desdeIso);
         }
         if (isNaN(data.getTime())) return null;
 
@@ -134,17 +134,11 @@ function calcularTempoDecorrido(iso) {
         const mes = Math.floor(dia / 30);
 
         let texto = '';
-        if (seg < 60) {
-            texto = `${seg}s`;
-        } else if (min < 60) {
-            texto = `${min}min`;
-        } else if (hr < 24) {
-            texto = `${hr}h ${min % 60}min`;
-        } else if (dia < 30) {
-            texto = `${dia}d ${hr % 24}h`;
-        } else {
-            texto = `${mes}m ${dia % 30}d`;
-        }
+        if (seg < 60) texto = `${seg}s`;
+        else if (min < 60) texto = `${min}min`;
+        else if (hr < 24) texto = `${hr}h ${min % 60}min`;
+        else if (dia < 30) texto = `${dia}d ${hr % 24}h`;
+        else texto = `${mes}m ${dia % 30}d`;
 
         return { ms: diffMs, texto, nivel: classificarTempo(diffMs) };
     } catch {
@@ -158,6 +152,29 @@ function classificarTempo(ms) {
     if (hr < 72) return 'medio';
     if (hr < 168) return 'alto';
     return 'critico';
+}
+
+// Gera HTML do badge de SLA a partir do estado e do "desde"
+function renderBadgeSLA(estado, desdeIso) {
+    if (!estado) return '';
+    const t = calcularTempoDecorrido(desdeIso);
+
+    let prefixo = '';
+    let nivel = 'ok';
+
+    if (estado.estado === 'aguardando_atendente') {
+        prefixo = '⏱️ aguardando atendente';
+        nivel = t?.nivel || 'ok';
+    } else if (estado.estado === 'aguardando_solicitante') {
+        prefixo = '⏸️ aguardando solicitante';
+        nivel = 'pausado';
+    } else if (estado.estado === 'fechado') {
+        prefixo = '🔒 fechado';
+        nivel = 'fechado';
+    }
+
+    const texto = t ? `${prefixo} há ${t.texto}` : prefixo;
+    return `<span class="tempo-aberto ${nivel}" title="${estado.estado}">${texto}</span>`;
 }
 
 // ============================================
@@ -488,17 +505,8 @@ function initPaginaListagem() {
         }
 
         container.innerHTML = lista.map(c => {
-            let badgeTempo = '';
-            if (c.status === 'aberto' || c.status === 'em_andamento') {
-                const t = calcularTempoDecorrido(c.criado_em);
-                if (t) badgeTempo = `<span class="tempo-aberto ${t.nivel}" title="Tempo desde a abertura">⏱️ aberto há ${t.texto}</span>`;
-            } else if (c.status === 'resolvido') {
-                const t = calcularTempoDecorrido(c.resolvido_em || c.atualizado_em);
-                if (t) badgeTempo = `<span class="tempo-aberto fechado" title="Resolvido em">✅ resolvido há ${t.texto}</span>`;
-            } else if (c.status === 'cancelado') {
-                const t = calcularTempoDecorrido(c.atualizado_em);
-                if (t) badgeTempo = `<span class="tempo-aberto fechado" title="Cancelado em">🚫 cancelado há ${t.texto}</span>`;
-            }
+            const est = c._estado || null;
+            const badgeTempo = renderBadgeSLA(est, est?.desde);
 
             return `
                 <div class="chamado-item" data-id="${c.id}" data-prioridade="${c.prioridade}">
@@ -524,20 +532,21 @@ function initPaginaListagem() {
             el.addEventListener('click', () => abrirModalDetalhes(parseInt(el.dataset.id)));
         });
 
+        // Atualiza apenas os badges que estão contando SLA
         if (window._timerChamadosAtualizar) clearInterval(window._timerChamadosAtualizar);
         window._timerChamadosAtualizar = setInterval(() => {
             container.querySelectorAll('.chamado-item').forEach(el => {
                 const id = parseInt(el.dataset.id);
                 const chamado = lista.find(c => c.id === id);
-                if (!chamado) return;
+                if (!chamado || !chamado._estado) return;
+                if (!chamado._estado.contandoSla) return;
+
+                const t = calcularTempoDecorrido(chamado._estado.desde);
+                if (!t) return;
                 const badge = el.querySelector('.tempo-aberto');
-                if (!badge) return;
-                if (chamado.status === 'aberto' || chamado.status === 'em_andamento') {
-                    const t = calcularTempoDecorrido(chamado.criado_em);
-                    if (t) {
-                        badge.textContent = `⏱️ aberto há ${t.texto}`;
-                        badge.className = `tempo-aberto ${t.nivel}`;
-                    }
+                if (badge) {
+                    badge.textContent = `⏱️ aguardando atendente há ${t.texto}`;
+                    badge.className = `tempo-aberto ${t.nivel}`;
                 }
             });
         }, 60000);
@@ -553,7 +562,7 @@ function initPaginaListagem() {
 
         const user = getUsuarioLogado();
         const podeEditarStatus = user.perfil === 'GESTAO';
-        const isAtendente = ehAtendente(user);
+        const isAtendenteUser = ehAtendente(user);
 
         modal.style.display = 'flex';
         corpo.innerHTML = '<div class="loading-msg">⏳ Carregando...</div>';
@@ -602,18 +611,9 @@ function initPaginaListagem() {
                 }).join('')
                 : '<div class="chat-vazio">💬 Nenhuma mensagem ainda. Seja o primeiro a comentar!</div>';
 
-            // Badge de tempo no modal
-            let tempoModal = '';
-            if (c.status === 'aberto' || c.status === 'em_andamento') {
-                const t = calcularTempoDecorrido(c.criado_em);
-                if (t) tempoModal = `⏱️ aberto há ${t.texto}`;
-            } else if (c.status === 'resolvido') {
-                const t = calcularTempoDecorrido(c.resolvido_em || c.atualizado_em);
-                if (t) tempoModal = `✅ resolvido há ${t.texto}`;
-            } else if (c.status === 'cancelado') {
-                const t = calcularTempoDecorrido(c.atualizado_em);
-                if (t) tempoModal = `🚫 encerrado há ${t.texto}`;
-            }
+            // Badge de SLA no modal
+            const est = c._estado || null;
+            const badgeSLA = renderBadgeSLA(est, est?.desde);
 
             corpo.innerHTML = `
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
@@ -636,6 +636,12 @@ function initPaginaListagem() {
                         </div>
                     </div>
                     <div class="modal-field">
+                        <div class="modal-field-label">Situação atual</div>
+                        <div class="modal-field-value">
+                            ${badgeSLA || '—'}
+                        </div>
+                    </div>
+                    <div class="modal-field">
                         <div class="modal-field-label">Solicitante</div>
                         <div class="modal-field-value">
                             ${escapeHtml(c.usuario_nome)}
@@ -648,10 +654,7 @@ function initPaginaListagem() {
                     </div>
                     <div class="modal-field">
                         <div class="modal-field-label">Criado em</div>
-                        <div class="modal-field-value">
-                            ${formatarData(c.criado_em)}
-                            ${tempoModal ? `<br><span class="tempo-aberto ${classificarTempo(calcularTempoDecorrido(c.criado_em)?.ms || 0)}" style="margin-top:6px;">${tempoModal}</span>` : ''}
-                        </div>
+                        <div class="modal-field-value">${formatarData(c.criado_em)}</div>
                     </div>
                 </div>
 
@@ -673,7 +676,7 @@ function initPaginaListagem() {
                 </div>
 
                 <div class="chat-input-area" id="chatInputArea">
-                    <textarea id="chatInput" placeholder="${isAtendente ? 'Responda como atendente...' : 'Adicione informações ao chamado...'}" maxlength="2000"></textarea>
+                    <textarea id="chatInput" placeholder="${isAtendenteUser ? 'Responda como atendente...' : 'Adicione informações ao chamado...'}" maxlength="2000"></textarea>
                     <button class="btn-chamado primary" id="btnEnviarChat">📨 Enviar</button>
                 </div>
 

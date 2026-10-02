@@ -154,7 +154,7 @@
 }
 
 /* ============================================ */
-/* TIPO (BUG / MELHORIA)                        */
+/* TIPO                                         */
 /* ============================================ */
 
 .tipo-grid {
@@ -282,7 +282,7 @@
 }
 
 /* ============================================ */
-/* UPLOAD DE ANEXOS (BOTÃO REDUZIDO)            */
+/* UPLOAD DE ANEXOS                             */
 /* ============================================ */
 
 .upload-area {
@@ -663,7 +663,7 @@
 }
 
 /* ============================================ */
-/* BADGE DE TEMPO EM ABERTO                     */
+/* BADGE DE SLA                                 */
 /* ============================================ */
 
 .tempo-aberto {
@@ -681,24 +681,22 @@
     transition: all 0.3s ease;
 }
 
+/* SLA correndo (aguardando atendente) */
 .tempo-aberto.ok {
     background: #C6F6D5;
     color: #22543D;
     border-color: #9AE6B4;
 }
-
 .tempo-aberto.medio {
     background: #FEFCBF;
     color: #744210;
     border-color: #F6E05E;
 }
-
 .tempo-aberto.alto {
     background: #FED7AA;
     color: #7B341E;
     border-color: #F6AD55;
 }
-
 .tempo-aberto.critico {
     background: #FED7D7;
     color: #822727;
@@ -711,6 +709,15 @@
     50%      { box-shadow: 0 0 0 6px rgba(229, 62, 62, 0); }
 }
 
+/* SLA pausado (aguardando solicitante) */
+.tempo-aberto.pausado {
+    background: #E9D8FD;
+    color: #553C9A;
+    border-color: #D6BCFA;
+    animation: none;
+}
+
+/* Fechados */
 .tempo-aberto.fechado {
     background: #E2E8F0;
     color: #4A5568;
