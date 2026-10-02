@@ -20,7 +20,8 @@ const filtroEstado = {
     mesesSelecionados: [],
     dataInicio: '',
     dataFim: '',
-    loginSelecionado: 'Todos'
+    loginSelecionado: 'Todos',
+    obraSelecionada: 'Todas'
 };
 
 const MESES = {
@@ -42,6 +43,20 @@ function formatarValor(valor) {
 }
 
 // ============================================
+// FORMATAR NÚMERO DA OBRA (000-00-00000)
+// ============================================
+// Entrada: "12501556" (8 dígitos) -> Saída: "001-25-01556"
+function formatarNumeroObra(numObra) {
+    if (!numObra) return 'SEM OBRA';
+    const limpo = String(numObra).replace(/\D/g, '');
+    if (limpo.length !== 8) return String(numObra);
+    const parte1 = '00' + limpo[0];          // "001"
+    const parte2 = limpo.substring(1, 3);    // "25"
+    const parte3 = limpo.substring(3, 8);    // "01556"
+    return `${parte1}-${parte2}-${parte3}`;
+}
+
+// ============================================
 // FECHAR DETALHES
 // ============================================
 function fecharDetalhes(id) {
@@ -57,47 +72,50 @@ function fecharDetalhes(id) {
 window.fecharDetalhes = fecharDetalhes;
 
 // ============================================
-// FILTRAR DETALHES (COM AGRUPAMENTO)
+// FILTRAR DETALHES (COM AGRUPAMENTO + OBRA)
 // ============================================
 function filtrarDetalhes(tipo) {
     const searchId = tipo === 'login' ? 'searchLogin' : 'searchMes';
     const conteudoId = tipo === 'login' ? 'detalhesLoginConteudo' : 'detalhesMesConteudo';
     const tituloId = tipo === 'login' ? 'detalhesLoginTitulo' : 'detalhesMesTitulo';
-    
+
     const searchInput = document.getElementById(searchId);
     const conteudo = document.getElementById(conteudoId);
     const titulo = document.getElementById(tituloId);
-    
+
     if (!searchInput || !conteudo) return;
-    
+
     const termo = searchInput.value.toLowerCase().trim();
     const itens = dadosDetalhesAtuais.itens || [];
-    
-    // Filtrar itens
+
+    // Filtrar itens (por código, descrição, obra formatada ou obra bruta)
     let itensFiltrados = itens;
     if (termo) {
         itensFiltrados = itens.filter(item => {
             const codigo = (item.codigo || '').toLowerCase();
-            const descricao = (item.descricao || item.dscmat || '').toLowerCase();
-            return codigo.includes(termo) || descricao.includes(termo);
+            const descricao = (item.dscmat || item.descricao || '').toLowerCase();
+            const obraFormatada = (item.num_obra_formatado || '').toLowerCase();
+            const obraBruta = (item.num_obra || '').toLowerCase();
+            return codigo.includes(termo)
+                || descricao.includes(termo)
+                || obraFormatada.includes(termo)
+                || obraBruta.includes(termo);
         });
     }
-    
-    // 🔥 AGRUPAR POR MATERIAL (código + descrição)
+
+    // 🔥 AGRUPAR POR MATERIAL + OBRA
     const agrupado = {};
     itensFiltrados.forEach(item => {
-        const key = item.codigo || item.dscmat || 'unknown';
+        const key = (item.codigo || item.dscmat || 'unknown') + '|' + (item.num_obra || '');
         if (!agrupado[key]) {
             agrupado[key] = {
                 codigo: item.codigo || '',
                 descricao: item.dscmat || item.descricao || '',
                 unidade: item.codund || '',
-                RMA_qtd: 0,
-                RMA_valor: 0,
-                DMA_qtd: 0,
-                DMA_valor: 0,
-                total_qtd: 0,
-                total_valor: 0
+                obra: item.num_obra_formatado || 'SEM OBRA',
+                RMA_qtd: 0, RMA_valor: 0,
+                DMA_qtd: 0, DMA_valor: 0,
+                total_qtd: 0, total_valor: 0
             };
         }
         if (item.tipo === 'RMA') {
@@ -110,24 +128,23 @@ function filtrarDetalhes(tipo) {
         agrupado[key].total_qtd = agrupado[key].RMA_qtd + agrupado[key].DMA_qtd;
         agrupado[key].total_valor = agrupado[key].RMA_valor + agrupado[key].DMA_valor;
     });
-    
+
     const itensAgrupados = Object.values(agrupado);
-    
-    // Ordenar por valor total (maior primeiro)
     itensAgrupados.sort((a, b) => b.total_valor - a.total_valor);
-    
-    // Atualizar título
+
+    // Título
     const label = dadosDetalhesAtuais.label || '';
     const tipoLabel = dadosDetalhesAtuais.tipo === 'login' ? 'Login' : 'Mês';
-    titulo.textContent = `📋 Detalhes do ${tipoLabel}: ${label} (${itensAgrupados.length} materiais)`;
-    
-    // Gerar tabela
+    const sufixoObra = (filtroEstado.obraSelecionada && filtroEstado.obraSelecionada !== 'Todas')
+        ? ` — Obra ${formatarNumeroObra(filtroEstado.obraSelecionada)}`
+        : '';
+    titulo.textContent = `📋 Detalhes do ${tipoLabel}: ${label}${sufixoObra} (${itensAgrupados.length} materiais)`;
+
     const rmaTotal = itensAgrupados.reduce((acc, d) => acc + d.RMA_valor, 0);
     const dmaTotal = itensAgrupados.reduce((acc, d) => acc + d.DMA_valor, 0);
-    
+
     let html = '';
-    
-    // Resumo
+
     html += `
         <div style="display:flex; gap:20px; margin-bottom:15px; flex-wrap:wrap;">
             <span style="color:#3B82F6; font-weight:600;">RMA: ${itensAgrupados.filter(d => d.RMA_qtd > 0).length} materiais (${formatarMoeda(rmaTotal)})</span>
@@ -136,17 +153,18 @@ function filtrarDetalhes(tipo) {
             ${termo ? `<span style="color:#F59E0B; font-weight:600;">🔍 Filtro: "${termo}"</span>` : ''}
         </div>
     `;
-    
+
     if (itensAgrupados.length === 0) {
         html += `<p style="color:#A0AEC0; text-align:center; padding:20px;">Nenhum material encontrado para "${termo}"</p>`;
         conteudo.innerHTML = html;
         return;
     }
-    
-    // Tabela de itens agrupados
+
+    // Tabela com coluna Obra
     html += `<table class="tabela-detalhes">
         <thead>
             <tr>
+                <th>🏗️ Obra</th>
                 <th>Código</th>
                 <th>Descrição</th>
                 <th>Un.</th>
@@ -159,7 +177,7 @@ function filtrarDetalhes(tipo) {
         </thead>
         <tbody>
     `;
-    
+
     itensAgrupados.forEach(item => {
         const hasRMA = item.RMA_qtd > 0;
         const hasDMA = item.DMA_qtd > 0;
@@ -167,9 +185,10 @@ function filtrarDetalhes(tipo) {
         if (hasRMA && hasDMA) rowClass = 'ambos-row';
         else if (hasRMA) rowClass = 'rma-row';
         else if (hasDMA) rowClass = 'dma-row';
-        
+
         html += `
             <tr class="${rowClass}">
+                <td><strong style="color:#F59E0B;">${item.obra}</strong></td>
                 <td><strong>${item.codigo || '-'}</strong></td>
                 <td>${item.descricao || '-'}</td>
                 <td>${item.unidade || '-'}</td>
@@ -181,9 +200,8 @@ function filtrarDetalhes(tipo) {
             </tr>
         `;
     });
-    
+
     html += `</tbody></table>`;
-    
     conteudo.innerHTML = html;
 }
 
@@ -194,7 +212,7 @@ window.filtrarDetalhes = filtrarDetalhes;
 // ============================================
 function verificarAutenticacaoGestao() {
     console.log('🔍 Verificando autenticação...');
-    
+
     if (typeof authService === 'undefined' || !authService) {
         console.error('❌ authService não disponível');
         alert('🔒 Sessão inválida. Faça login novamente.');
@@ -238,9 +256,7 @@ function voltarParaHome() {
             let perfil = 'GESTAO';
             if (typeof authService !== 'undefined' && authService) {
                 const user = authService.getUserData();
-                if (user && user.perfil) {
-                    perfil = user.perfil;
-                }
+                if (user && user.perfil) perfil = user.perfil;
             }
             const homeMap = {
                 'OPERACIONAL': '../home-operacional.html',
@@ -264,27 +280,25 @@ async function carregarPosicaoEstoque() {
     try {
         console.log('📡 Carregando posição de estoque...');
         const response = await fetch(`${WORKER_URL}/api/posicao`);
-        
+
         if (!response.ok) {
             console.warn('⚠️ Posição de estoque não encontrada, valores serão 0');
             return {};
         }
-        
+
         const texto = await response.text();
         const linhas = texto.trim().split('\n');
         const mapa = {};
-        
+
         for (let i = 1; i < linhas.length; i++) {
             const partes = linhas[i].trim().split('\t');
             if (partes.length >= 6) {
                 const codigo = partes[0].trim();
                 const vlrultCot = parseFloat(partes[4]?.trim().replace(',', '.')) || 0;
-                if (codigo && vlrultCot > 0) {
-                    mapa[codigo] = vlrultCot;
-                }
+                if (codigo && vlrultCot > 0) mapa[codigo] = vlrultCot;
             }
         }
-        
+
         console.log(`✅ ${Object.keys(mapa).length} materiais com valor carregados`);
         return mapa;
     } catch (error) {
@@ -297,13 +311,8 @@ async function buscarMovimentos() {
     try {
         const url = `${WORKER_URL}/api/movimentos`;
         console.log(`📡 Buscando movimentos: ${url}`);
-        
         const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`Erro ${response.status}: ${response.statusText}`);
-        }
-        
+        if (!response.ok) throw new Error(`Erro ${response.status}: ${response.statusText}`);
         const texto = await response.text();
         console.log(`✅ Arquivo carregado (${texto.split('\n').length} linhas)`);
         return texto;
@@ -315,14 +324,14 @@ async function buscarMovimentos() {
 
 function parseMovimentos(texto, posicaoMap) {
     const linhas = texto.trim().split('\n');
-    
+
     if (linhas.length < 2) {
         console.warn('⚠️ Arquivo vazio ou com apenas cabeçalho');
         return [];
     }
-    
+
     const cabecalho = linhas[0].split('\t').map(h => h.trim());
-    
+
     const idx = {
         orgmov: cabecalho.indexOf('orgmov'),
         numdoc_mov: cabecalho.indexOf('numdoc_mov'),
@@ -333,67 +342,48 @@ function parseMovimentos(texto, posicaoMap) {
         qtdmov: cabecalho.indexOf('qtdmov'),
         vlrmov: cabecalho.indexOf('vlrmov'),
         nummov: cabecalho.indexOf('nummov'),
-        sigla_mov_mat: cabecalho.indexOf('sigla_mov_mat')
+        sigla_mov_mat: cabecalho.indexOf('sigla_mov_mat'),
+        num_obra: cabecalho.indexOf('num_obra'),
+        codarea_mov: cabecalho.indexOf('codarea_mov'),
+        codsct_mov: cabecalho.indexOf('codsct_mov')
     };
-    
+
     console.log('📌 Índices:', idx);
-    
+
     const movimentos = [];
     let ignorados = 0;
-    
+
     for (let i = 1; i < linhas.length; i++) {
         const linha = linhas[i].trim();
-        if (!linha) {
-            ignorados++;
-            continue;
-        }
-        
+        if (!linha) { ignorados++; continue; }
+
         const partes = linha.split('\t');
-        if (partes.length < 16) {
-            ignorados++;
-            continue;
-        }
-        
+        if (partes.length < 16) { ignorados++; continue; }
+
         const qtdmov = parseFloat(partes[idx.qtdmov]?.trim().replace(',', '.')) || 0;
-        
-        if (qtdmov === 0) {
-            ignorados++;
-            continue;
-        }
-        
+        if (qtdmov === 0) { ignorados++; continue; }
+
         const datamovRaw = partes[idx.datamov]?.trim() || '';
         let dataFormatada = '';
-        
+
         if (datamovRaw) {
             const match = datamovRaw.match(/(\d{2})\/(\d{2})\/(\d{4})/);
             if (match) {
-                const dia = match[1];
-                const mes = match[2];
-                const ano = match[3];
-                dataFormatada = `${dia}-${mes}-${ano}`;
+                dataFormatada = `${match[1]}-${match[2]}-${match[3]}`;
             } else {
                 const match2 = datamovRaw.match(/(\d{4})-(\d{2})-(\d{2})/);
-                if (match2) {
-                    const ano = match2[1];
-                    const mes = match2[2];
-                    const dia = match2[3];
-                    dataFormatada = `${dia}-${mes}-${ano}`;
-                } else {
-                    dataFormatada = datamovRaw;
-                }
+                if (match2) dataFormatada = `${match2[3]}-${match2[2]}-${match2[1]}`;
+                else dataFormatada = datamovRaw;
             }
         }
-        
+
         const codmat = partes[idx.codmat_mov]?.trim() || '';
         const vlrUnitario = posicaoMap[codmat] || 0;
-        
+
         const orgmov = partes[idx.orgmov]?.trim() || '';
         const isRMA = orgmov === 'S' || orgmov === 'RMA' || orgmov.toUpperCase() === 'RMA';
-        
-        let mesNumero = '';
-        let anoNumero = '';
-        let mesAno = '';
-        
+
+        let mesNumero = '', anoNumero = '', mesAno = '';
         if (dataFormatada) {
             const partesData = dataFormatada.split('-');
             if (partesData.length === 3) {
@@ -402,7 +392,9 @@ function parseMovimentos(texto, posicaoMap) {
                 mesAno = `${anoNumero}-${mesNumero}`;
             }
         }
-        
+
+        const numObraRaw = partes[idx.num_obra]?.trim() || '';
+
         movimentos.push({
             orgmov: orgmov,
             numdoc_mov: partes[idx.numdoc_mov]?.trim() || '',
@@ -425,10 +417,15 @@ function parseMovimentos(texto, posicaoMap) {
             mes_ano: mesAno,
             descricao: partes[idx.dscmat]?.trim() || '',
             codigo: codmat,
-            unidade: partes[idx.codund]?.trim() || ''
+            unidade: partes[idx.codund]?.trim() || '',
+            num_obra: numObraRaw,
+            num_obra_formatado: formatarNumeroObra(numObraRaw),
+            obra: numObraRaw || 'SEM OBRA',
+            codarea_mov: partes[idx.codarea_mov]?.trim() || '',
+            codsct_mov: partes[idx.codsct_mov]?.trim() || ''
         });
     }
-    
+
     console.log(`✅ ${movimentos.length} movimentos processados (${ignorados} ignorados)`);
     return movimentos;
 }
@@ -441,23 +438,22 @@ async function carregarDados() {
         const posicaoEstoque = await carregarPosicaoEstoque();
         const texto = await buscarMovimentos();
         const movimentos = parseMovimentos(texto, posicaoEstoque);
-        
+
         if (!movimentos || movimentos.length === 0) {
-            document.querySelector('.graficos-top').innerHTML = 
+            document.querySelector('.graficos-top').innerHTML =
                 `<div class="erro-msg">⚠️ Nenhum movimento encontrado.</div>`;
             return;
         }
-        
+
         dadosCompletos = movimentos;
         console.log(`📊 ${dadosCompletos.length} movimentos carregados`);
-        console.log('📋 Primeiros 3:', dadosCompletos.slice(0, 3));
-        
+
         inicializarFiltros();
         aplicarFiltros();
-        
+
     } catch (erro) {
         console.error('❌ Erro ao carregar dados:', erro);
-        document.querySelector('.graficos-top').innerHTML = 
+        document.querySelector('.graficos-top').innerHTML =
             `<div class="erro-msg">❌ Erro: ${erro.message}</div>`;
     }
 }
@@ -471,27 +467,26 @@ function inicializarFiltros() {
         console.warn('⚠️ mesesContainer não encontrado');
         return;
     }
-    
+
     mesesContainer.innerHTML = '';
-    
+
     const mesesDisponiveis = [...new Set(dadosCompletos.map(d => d.mes).filter(Boolean))].sort();
     const mesesParaMostrar = mesesDisponiveis.length > 0 ? mesesDisponiveis : Object.keys(MESES);
-    
+
     mesesParaMostrar.forEach(mesNum => {
         const btn = document.createElement('button');
         btn.className = 'btn-mes';
         btn.dataset.mes = mesNum;
         btn.textContent = MESES[mesNum] || mesNum;
-        
+
         const count = dadosCompletos.filter(d => d.mes === mesNum).length;
         btn.title = `${MESES[mesNum] || mesNum}: ${count} movimentos`;
-        
+
         btn.classList.remove('active');
-        
+
         btn.addEventListener('click', function() {
             const mes = this.dataset.mes;
             const index = filtroEstado.mesesSelecionados.indexOf(mes);
-            
             if (index > -1) {
                 filtroEstado.mesesSelecionados.splice(index, 1);
                 this.classList.remove('active');
@@ -499,17 +494,16 @@ function inicializarFiltros() {
                 filtroEstado.mesesSelecionados.push(mes);
                 this.classList.add('active');
             }
-            
             aplicarFiltros();
         });
-        
+
         mesesContainer.appendChild(btn);
     });
-    
+
     // FILTRO DE LOGIN
     const logins = [...new Set(dadosCompletos.map(d => d.sigla_mov_mat).filter(Boolean))].sort();
     const selectLogin = document.getElementById('filtroLogin');
-    
+
     if (selectLogin) {
         selectLogin.innerHTML = '<option value="Todos">Todos os Logins</option>';
         logins.forEach(login => {
@@ -519,18 +513,90 @@ function inicializarFiltros() {
             selectLogin.appendChild(opt);
         });
         selectLogin.value = filtroEstado.loginSelecionado || 'Todos';
-        
+
         selectLogin.addEventListener('change', function() {
             filtroEstado.loginSelecionado = this.value;
             aplicarFiltros();
         });
     }
-    
-    // FILTRO DE PERÍODO
+
+    // ============================================
+    // FILTRO DE OBRA (com busca + formatação)
+    // ============================================
+    const mapaObras = {};
+    dadosCompletos.forEach(d => {
+        if (d.num_obra) mapaObras[d.num_obra] = d.num_obra_formatado;
+    });
+
+    const obrasUnicas = Object.keys(mapaObras).sort((a, b) =>
+        mapaObras[a].localeCompare(mapaObras[b], 'pt-BR')
+    );
+
+    const selectObra = document.getElementById('filtroObra');
+    const inputBuscaObra = document.getElementById('buscaObra');
+
+    // 🔧 Declarada no escopo da função (acessível pelo btnLimparPeriodo)
+    let popularObrasSelect = function(termo = '') {
+        if (!selectObra) return;
+
+        const termoLower = termo.toLowerCase().trim();
+        const termoLimpo = termoLower.replace(/\D/g, '');
+
+        const filtradas = termoLower
+            ? obrasUnicas.filter(o => {
+                const formatado = mapaObras[o].toLowerCase();
+                const bruto = o.toLowerCase();
+                return formatado.includes(termoLower)
+                    || bruto.includes(termoLimpo)
+                    || formatado.replace(/\D/g, '').includes(termoLimpo);
+            })
+            : obrasUnicas;
+
+        selectObra.innerHTML = '<option value="Todas">Todas as Obras</option>';
+        filtradas.forEach(bruto => {
+            const opt = document.createElement('option');
+            opt.value = bruto;
+            opt.textContent = mapaObras[bruto];
+            selectObra.appendChild(opt);
+        });
+
+        // Restaura seleção se ainda existir
+        if (filtroEstado.obraSelecionada && filtroEstado.obraSelecionada !== 'Todas') {
+            if (obrasUnicas.includes(filtroEstado.obraSelecionada)) {
+                selectObra.value = filtroEstado.obraSelecionada;
+            } else {
+                selectObra.value = 'Todas';
+                filtroEstado.obraSelecionada = 'Todas';
+            }
+        }
+    };
+
+    if (selectObra) {
+        popularObrasSelect();
+
+        // Busca com debounce
+        let timeoutBuscaObra;
+        if (inputBuscaObra) {
+            inputBuscaObra.addEventListener('input', function() {
+                clearTimeout(timeoutBuscaObra);
+                timeoutBuscaObra = setTimeout(() => popularObrasSelect(this.value), 150);
+            });
+        }
+
+        // Seleção no select
+        selectObra.addEventListener('change', function() {
+            filtroEstado.obraSelecionada = this.value;
+            aplicarFiltros();
+        });
+    }
+
+    // ============================================
+    // FILTRO DE PERÍODO + BOTÃO LIMPAR (limpa período + obra)
+    // ============================================
     const dataInicio = document.getElementById('dataInicio');
     const dataFim = document.getElementById('dataFim');
     const btnLimparPeriodo = document.getElementById('limparPeriodo');
-    
+
     if (dataInicio) {
         dataInicio.value = filtroEstado.dataInicio;
         dataInicio.addEventListener('change', function() {
@@ -538,7 +604,7 @@ function inicializarFiltros() {
             aplicarFiltros();
         });
     }
-    
+
     if (dataFim) {
         dataFim.value = filtroEstado.dataFim;
         dataFim.addEventListener('change', function() {
@@ -546,13 +612,21 @@ function inicializarFiltros() {
             aplicarFiltros();
         });
     }
-    
+
     if (btnLimparPeriodo) {
         btnLimparPeriodo.addEventListener('click', function() {
+            // 🔧 Limpa período
             filtroEstado.dataInicio = '';
             filtroEstado.dataFim = '';
             if (dataInicio) dataInicio.value = '';
             if (dataFim) dataFim.value = '';
+
+            // 🔧 Limpa também a obra
+            filtroEstado.obraSelecionada = 'Todas';
+            if (inputBuscaObra) inputBuscaObra.value = '';
+            if (selectObra) selectObra.value = 'Todas';
+            if (typeof popularObrasSelect === 'function') popularObrasSelect('');
+
             aplicarFiltros();
         });
     }
@@ -566,32 +640,32 @@ function aplicarFiltros() {
         console.warn('⚠️ Nenhum dado para filtrar');
         return;
     }
-    
+
     console.log('🔍 Aplicando filtros...');
-    console.log('📌 Meses selecionados:', filtroEstado.mesesSelecionados);
-    console.log('📌 Login:', filtroEstado.loginSelecionado);
-    console.log('📌 Período:', filtroEstado.dataInicio, 'até', filtroEstado.dataFim);
-    
+
     let dados = [...dadosCompletos];
-    
+
     const temFiltroMes = filtroEstado.mesesSelecionados.length > 0;
     const temFiltroLogin = filtroEstado.loginSelecionado && filtroEstado.loginSelecionado !== 'Todos';
     const temFiltroPeriodo = filtroEstado.dataInicio || filtroEstado.dataFim;
-    
-    filtrosAplicados = temFiltroMes || temFiltroLogin || temFiltroPeriodo;
+    const temFiltroObra = filtroEstado.obraSelecionada && filtroEstado.obraSelecionada !== 'Todas';
+
+    filtrosAplicados = temFiltroMes || temFiltroLogin || temFiltroPeriodo || temFiltroObra;
     console.log(`📌 Filtros aplicados: ${filtrosAplicados ? 'SIM' : 'NÃO'}`);
-    
+
     if (temFiltroMes) {
         dados = dados.filter(d => filtroEstado.mesesSelecionados.includes(d.mes));
-        console.log(`📊 Filtrado por ${filtroEstado.mesesSelecionados.length} meses`);
-    } else {
-        console.log('📊 Nenhum mês selecionado - mostrando todos os dados');
     }
-    
+
     if (temFiltroLogin) {
         dados = dados.filter(d => d.sigla_mov_mat === filtroEstado.loginSelecionado);
     }
-    
+
+    if (temFiltroObra) {
+        dados = dados.filter(d => d.num_obra === filtroEstado.obraSelecionada);
+        console.log(`🏗️ Filtrado por obra: ${formatarNumeroObra(filtroEstado.obraSelecionada)}`);
+    }
+
     if (filtroEstado.dataInicio) {
         const inicio = new Date(filtroEstado.dataInicio + 'T00:00:00');
         dados = dados.filter(d => {
@@ -600,7 +674,7 @@ function aplicarFiltros() {
             return new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`) >= inicio;
         });
     }
-    
+
     if (filtroEstado.dataFim) {
         const fim = new Date(filtroEstado.dataFim + 'T23:59:59');
         dados = dados.filter(d => {
@@ -609,37 +683,31 @@ function aplicarFiltros() {
             return new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`) <= fim;
         });
     }
-    
+
     dadosFiltrados = dados;
     console.log(`📊 ${dadosFiltrados.length} registros após filtros`);
-    
+
     atualizarContadores(dadosFiltrados);
-    
+
     const canvasLogin = document.getElementById('graficoLogin');
     const canvasMes = document.getElementById('graficoMes');
-    
-    if (canvasLogin) {
-        gerarGraficoLogin(dadosFiltrados);
-    } else {
-        console.error('❌ Canvas graficoLogin não encontrado!');
-    }
-    
-    if (canvasMes) {
-        gerarGraficoMes(dadosFiltrados);
-    } else {
-        console.error('❌ Canvas graficoMes não encontrado!');
-    }
+
+    if (canvasLogin) gerarGraficoLogin(dadosFiltrados);
+    else console.error('❌ Canvas graficoLogin não encontrado!');
+
+    if (canvasMes) gerarGraficoMes(dadosFiltrados);
+    else console.error('❌ Canvas graficoMes não encontrado!');
 }
 
 // ============================================
-// ATUALIZAR CONTADORES (APENAS 3 KPIs)
+// ATUALIZAR CONTADORES
 // ============================================
 function atualizarContadores(dados) {
     const totalRMA = dados.filter(d => d.tipo === 'RMA').reduce((acc, d) => acc + d.valor_total, 0);
     const totalDMA = dados.filter(d => d.tipo === 'DMA').reduce((acc, d) => acc + d.valor_total, 0);
     const totalRMAQtd = dados.filter(d => d.tipo === 'RMA').length;
     const totalDMAQtd = dados.filter(d => d.tipo === 'DMA').length;
-    
+
     document.getElementById('totalRMA').textContent = formatarMoeda(totalRMA);
     document.getElementById('totalDMA').textContent = formatarMoeda(totalDMA);
     document.getElementById('totalRegistros').textContent = formatarValor(dados.length);
@@ -655,18 +723,17 @@ function exibirDetalhes(tipo, label, dados) {
     const tituloId = tipo === 'login' ? 'detalhesLoginTitulo' : 'detalhesMesTitulo';
     const conteudoId = tipo === 'login' ? 'detalhesLoginConteudo' : 'detalhesMesConteudo';
     const searchId = tipo === 'login' ? 'searchLogin' : 'searchMes';
-    
+
     const container = document.getElementById(containerId);
     const titulo = document.getElementById(tituloId);
     const conteudo = document.getElementById(conteudoId);
     const searchInput = document.getElementById(searchId);
-    
+
     if (!container || !titulo || !conteudo) return;
-    
-    // Filtrar dados pelo label
+
     let itens = [];
     let tituloTexto = '';
-    
+
     if (tipo === 'login') {
         itens = dados.filter(d => d.sigla_mov_mat === label);
         tituloTexto = `📋 Detalhes do Login: ${label}`;
@@ -676,33 +743,24 @@ function exibirDetalhes(tipo, label, dados) {
         const mesNome = MESES[partes[1]] || partes[1];
         tituloTexto = `📋 Detalhes do Mês: ${mesNome}/${partes[0]}`;
     }
-    
-    // Armazenar dados para filtro
-    dadosDetalhesAtuais = {
-        tipo: tipo,
-        label: label,
-        itens: itens
-    };
-    
-    // Limpar busca
+
+    if (filtroEstado.obraSelecionada && filtroEstado.obraSelecionada !== 'Todas') {
+        tituloTexto += ` — Obra ${formatarNumeroObra(filtroEstado.obraSelecionada)}`;
+    }
+
+    dadosDetalhesAtuais = { tipo, label, itens };
+
     if (searchInput) searchInput.value = '';
-    
+
     if (itens.length === 0) {
         conteudo.innerHTML = '<p style="color:#A0AEC0; text-align:center; padding:20px;">Nenhum item encontrado</p>';
         container.style.display = 'block';
         return;
     }
-    
-    // Atualizar título
+
     titulo.textContent = tituloTexto;
-    
-    // Mostrar container
     container.style.display = 'block';
-    
-    // Gerar conteúdo inicial (agrupado)
     filtrarDetalhes(tipo);
-    
-    // Scroll para os detalhes
     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -715,44 +773,42 @@ function gerarGraficoLogin(dados) {
         console.error('❌ Canvas graficoLogin não encontrado');
         return;
     }
-    
+
     if (!dados || dados.length === 0) {
         canvas.parentElement.innerHTML = '<div class="sem-dados">Sem dados para exibir</div>';
         return;
     }
-    
+
     const agrupado = {};
     dados.forEach(d => {
         const login = d.sigla_mov_mat;
         if (!login) return;
-        if (!agrupado[login]) {
-            agrupado[login] = { RMA: 0, DMA: 0, total: 0 };
-        }
+        if (!agrupado[login]) agrupado[login] = { RMA: 0, DMA: 0, total: 0 };
         if (d.tipo === 'RMA') agrupado[login].RMA += d.valor_total;
         else agrupado[login].DMA += d.valor_total;
         agrupado[login].total = agrupado[login].RMA + agrupado[login].DMA;
     });
-    
-    const sorted = Object.entries(agrupado)
-        .sort((a, b) => b[1].total - a[1].total);
-    
+
+    const sorted = Object.entries(agrupado).sort((a, b) => b[1].total - a[1].total);
+
     let dadosGrafico = sorted;
     let labelSufixo = '';
-    
+
     if (!filtrosAplicados) {
         dadosGrafico = sorted.slice(0, 10);
         labelSufixo = ' (Top 10)';
-        console.log('📊 Sem filtros - mostrando Top 10 logins');
-    } else {
-        console.log('📊 Com filtros - mostrando todos os logins');
     }
-    
+
+    const sufixoObra = (filtroEstado.obraSelecionada && filtroEstado.obraSelecionada !== 'Todas')
+        ? ` — Obra ${formatarNumeroObra(filtroEstado.obraSelecionada)}`
+        : '';
+
     const labels = dadosGrafico.map(item => item[0]);
     const rmaValues = dadosGrafico.map(item => item[1].RMA);
     const dmaValues = dadosGrafico.map(item => item[1].DMA);
-    
+
     if (graficoLogin) graficoLogin.destroy();
-    
+
     graficoLogin = new Chart(canvas, {
         type: 'bar',
         data: {
@@ -782,15 +838,11 @@ function gerarGraficoLogin(dados) {
             plugins: {
                 legend: {
                     position: 'top',
-                    labels: {
-                        color: '#94A3B8',
-                        font: { size: 12, weight: 'bold' },
-                        padding: 20
-                    }
+                    labels: { color: '#94A3B8', font: { size: 12, weight: 'bold' }, padding: 20 }
                 },
                 title: {
                     display: true,
-                    text: `Valor por Login${labelSufixo}`,
+                    text: `Valor por Login${labelSufixo}${sufixoObra}`,
                     color: '#A0AEC0',
                     font: { size: 14, weight: 'normal' }
                 },
@@ -805,19 +857,11 @@ function gerarGraficoLogin(dados) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        callback: (v) => formatarMoeda(v),
-                        color: '#94A3B8'
-                    },
+                    ticks: { callback: (v) => formatarMoeda(v), color: '#94A3B8' },
                     grid: { color: 'rgba(148, 163, 184, 0.1)' }
                 },
                 x: {
-                    ticks: {
-                        color: '#94A3B8',
-                        maxRotation: 45,
-                        minRotation: 0,
-                        font: { size: 11 }
-                    },
+                    ticks: { color: '#94A3B8', maxRotation: 45, minRotation: 0, font: { size: 11 } },
                     grid: { color: 'rgba(148, 163, 184, 0.05)' }
                 }
             },
@@ -825,14 +869,11 @@ function gerarGraficoLogin(dados) {
                 if (elements.length > 0) {
                     const index = elements[0].index;
                     const label = this.data.labels[index];
-                    console.log(`🖱️ Clicou em: ${label}`);
                     exibirDetalhes('login', label, dados);
                 }
             }
         }
     });
-    
-    console.log(`✅ Gráfico de Login gerado${labelSufixo}`);
 }
 
 // ============================================
@@ -844,36 +885,36 @@ function gerarGraficoMes(dados) {
         console.error('❌ Canvas graficoMes não encontrado');
         return;
     }
-    
+
     if (!dados || dados.length === 0) {
         canvas.parentElement.innerHTML = '<div class="sem-dados">Sem dados para exibir</div>';
         return;
     }
-    
+
     const agrupado = {};
     dados.forEach(d => {
         if (!d.mes_ano) return;
-        if (!agrupado[d.mes_ano]) {
-            agrupado[d.mes_ano] = { RMA: 0, DMA: 0, mes: d.mes, ano: d.ano };
-        }
+        if (!agrupado[d.mes_ano]) agrupado[d.mes_ano] = { RMA: 0, DMA: 0, mes: d.mes, ano: d.ano };
         if (d.tipo === 'RMA') agrupado[d.mes_ano].RMA += d.valor_total;
         else agrupado[d.mes_ano].DMA += d.valor_total;
     });
-    
+
     const labels = Object.keys(agrupado).sort();
     const rmaValues = labels.map(l => agrupado[l].RMA);
     const dmaValues = labels.map(l => agrupado[l].DMA);
-    
+
     const labelsDisplay = labels.map(l => {
         const partes = l.split('-');
-        if (partes.length === 2) {
-            return `${MESES[partes[1]] || partes[1]}/${partes[0]}`;
-        }
+        if (partes.length === 2) return `${MESES[partes[1]] || partes[1]}/${partes[0]}`;
         return l;
     });
-    
+
+    const sufixoObra = (filtroEstado.obraSelecionada && filtroEstado.obraSelecionada !== 'Todas')
+        ? ` — Obra ${formatarNumeroObra(filtroEstado.obraSelecionada)}`
+        : '';
+
     if (graficoMes) graficoMes.destroy();
-    
+
     graficoMes = new Chart(canvas, {
         type: 'bar',
         data: {
@@ -903,15 +944,11 @@ function gerarGraficoMes(dados) {
             plugins: {
                 legend: {
                     position: 'top',
-                    labels: {
-                        color: '#94A3B8',
-                        font: { size: 12, weight: 'bold' },
-                        padding: 20
-                    }
+                    labels: { color: '#94A3B8', font: { size: 12, weight: 'bold' }, padding: 20 }
                 },
                 title: {
                     display: true,
-                    text: 'Evolução Mensal',
+                    text: `Evolução Mensal${sufixoObra}`,
                     color: '#A0AEC0',
                     font: { size: 14, weight: 'normal' }
                 },
@@ -926,18 +963,11 @@ function gerarGraficoMes(dados) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        callback: (v) => formatarMoeda(v),
-                        color: '#94A3B8'
-                    },
+                    ticks: { callback: (v) => formatarMoeda(v), color: '#94A3B8' },
                     grid: { color: 'rgba(148, 163, 184, 0.1)' }
                 },
                 x: {
-                    ticks: {
-                        color: '#94A3B8',
-                        maxRotation: 0,
-                        font: { size: 12, weight: 'bold' }
-                    },
+                    ticks: { color: '#94A3B8', maxRotation: 0, font: { size: 12, weight: 'bold' } },
                     grid: { color: 'rgba(148, 163, 184, 0.05)' }
                 }
             },
@@ -945,14 +975,11 @@ function gerarGraficoMes(dados) {
                 if (elements.length > 0) {
                     const index = elements[0].index;
                     const label = labels[index];
-                    console.log(`🖱️ Clicou em: ${label}`);
                     exibirDetalhes('mes', label, dados);
                 }
             }
         }
     });
-    
-    console.log('✅ Gráfico Mensal gerado com sucesso!');
 }
 
 // ============================================
@@ -966,3 +993,4 @@ document.addEventListener('DOMContentLoaded', function() {
 
 window.aplicarFiltros = aplicarFiltros;
 window.voltarParaHome = voltarParaHome;
+window.formatarNumeroObra = formatarNumeroObra;

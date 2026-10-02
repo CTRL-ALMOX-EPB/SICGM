@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abrir Chamado - SICGM</title>
+
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/chamados.css">
+</head>
+<body>
+    <div class="chamados-container">
+        <div class="chamados-header">
+            <div>
+                <h1>🐞 Abrir Chamado</h1>
+                <p class="chamados-subtitulo">Reporte bugs ou sugira melhorias no SICGM</p>
+            </div>
+            <button class="btn-chamado secondary" onclick="history.back()">← Voltar</button>
+        </div>
+
+        <div class="chamado-info-tela">
+            <div>
+                <div class="label">Usuário</div>
+                <div class="valor" id="infoUsuario" style="font-family:inherit;">—</div>
+            </div>
+            <div style="flex:1; min-width:180px;">
+                <div class="label">URL</div>
+                <div class="valor" id="infoUrl" title="">—</div>
+            </div>
+        </div>
+
+        <form id="formChamado" class="chamado-card">
+            <div class="chamado-form-group">
+                <label>Tipo do Chamado <span class="obrigatorio">*</span></label>
+                <div class="tipo-grid">
+                    <label class="tipo-opcao" data-tipo="bug">
+                        <input type="radio" name="tipo" value="bug" required>
+                        <span class="icone">🐞</span>
+                        <span>
+                            <span class="titulo">BUG</span>
+                            <span class="descricao">Algo está quebrado ou errado</span>
+                        </span>
+                    </label>
+                    <label class="tipo-opcao" data-tipo="melhoria">
+                        <input type="radio" name="tipo" value="melhoria" required>
+                        <span class="icone">💡</span>
+                        <span>
+                            <span class="titulo">MELHORIA</span>
+                            <span class="descricao">Nova ideia ou sugestão</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="chamado-form-group">
+                <label for="selectTela">Página / Tela com problema <span class="obrigatorio">*</span></label>
+                <select id="selectTela" required>
+                    <option value="">— Selecione a página —</option>
+                </select>
+                <small style="color:#718096; font-size:12px;">
+                    Pré-preenchido com a tela de origem, mas você pode trocar
+                </small>
+            </div>
+
+            <div class="chamado-form-group">
+                <label for="inputTitulo">Título do Chamado <span class="obrigatorio">*</span></label>
+                <input type="text" id="inputTitulo" maxlength="120"
+                       placeholder="Resumo curto (ex: 'Botão de exportar não funciona')" required>
+            </div>
+
+            <div class="chamado-form-group">
+                <label for="inputDescricao">Descrição detalhada <span class="obrigatorio">*</span></label>
+                <textarea id="inputDescricao" maxlength="2000"
+                          placeholder="Descreva o que aconteceu, o que você esperava, e os passos para reproduzir o problema..."
+                          required></textarea>
+            </div>
+
+            <div class="chamado-form-group">
+                <label>Prioridade <span class="obrigatorio">*</span></label>
+                <div class="prioridade-grid">
+                    <label class="prioridade-opcao" data-prioridade="nao_urgente">
+                        <input type="radio" name="prioridade" value="nao_urgente" required>
+                        <span class="icone">🟢</span>
+                        <span>
+                            <span class="titulo">Não urgente</span>
+                            <span class="descricao">Melhoria / sugestão</span>
+                        </span>
+                    </label>
+                    <label class="prioridade-opcao" data-prioridade="importante">
+                        <input type="radio" name="prioridade" value="importante" required>
+                        <span class="icone">🟡</span>
+                        <span>
+                            <span class="titulo">Importante</span>
+                            <span class="descricao">Impacta a operação</span>
+                        </span>
+                    </label>
+                    <label class="prioridade-opcao" data-prioridade="urgente">
+                        <input type="radio" name="prioridade" value="urgente" required>
+                        <span class="icone">🔴</span>
+                        <span>
+                            <span class="titulo">Urgente</span>
+                            <span class="descricao">Sistema parado / crítico</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="chamado-form-group">
+                <label>Anexos (fotos, prints, documentos)</label>
+                <div class="upload-area" id="uploadArea">
+                    <span class="icone">📎</span>
+                    <span class="titulo">Anexar arquivos</span>
+                </div>
+                <input type="file" id="inputAnexos" multiple
+                       accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                       style="display:none;">
+                <div class="upload-lista" id="listaAnexos"></div>
+            </div>
+
+            <div class="chamado-acoes">
+                <button type="button" class="btn-chamado secondary" onclick="history.back()">Cancelar</button>
+                <button type="submit" class="btn-chamado primary" id="btnEnviar">📨 Enviar Chamado</button>
+            </div>
+        </form>
+
+        <div id="chamadoSucesso" class="chamado-card" style="display:none; text-align:center;">
+            <div style="font-size:60px; margin-bottom:15px;">✅</div>
+            <h2 style="color:#276749;">Chamado criado com sucesso!</h2>
+            <p style="color:#4A5568; margin:15px 0;">Seu protocolo é:</p>
+            <div class="protocolo" id="protocoloSucesso" style="font-size:22px; padding:14px 28px; display:inline-block;">
+                CHM-XXXX-XXXXXX
+            </div>
+            <p style="color:#718096; margin-top:20px; font-size:14px;">
+                Guarde este número para acompanhar o andamento.
+            </p>
+            <div style="margin-top:25px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                <a href="../chamados/index.html" class="btn-chamado primary">📋 Ver todos os chamados</a>
+                <button class="btn-chamado secondary" onclick="history.back()">← Voltar para a tela</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/firebase-init.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/auth-service.js"></script>
+    <script src="../js/auth-helper.js"></script>
+    <script src="../js/script.js"></script>
+    <script src="../js/auth-global.js"></script>
+    <script src="../js/chamados.js" defer></script>
+</body>
+</html>

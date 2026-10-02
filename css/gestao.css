@@ -209,6 +209,65 @@
 }
 
 /* ============================================ */
+/* FILTRO DE OBRA (integrado aos filtros)       */
+/* ============================================ */
+
+.filtro-obra-item {
+    flex: 1.4 1 320px;       /* ocupa mais espaço que os outros filtros */
+    min-width: 300px;
+}
+
+.filtro-obra-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+/* Input de busca — segue o padrão de .filtro-item input */
+.filtro-obra-wrap input#buscaObra {
+    background: white;
+    color: #2D3748;
+    border: 2px solid #E2E8F0;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.filtro-obra-wrap input#buscaObra:focus {
+    border-color: #4299E1;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.filtro-obra-wrap input#buscaObra::placeholder {
+    color: #A0AEC0;
+}
+
+/* Select de obras — segue o padrão de .filtro-item select */
+.filtro-obra-wrap select#filtroObra {
+    background: white;
+    color: #2D3748;
+    border: 2px solid #E2E8F0;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    width: 100%;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.filtro-obra-wrap select#filtroObra:focus {
+    border-color: #4299E1;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+/* ============================================ */
 /* INDICADORES (KPIs) - 3 COLUNAS              */
 /* ============================================ */
 
@@ -932,7 +991,7 @@
         font-size: 12px;
         table-layout: auto;
     }
-    
+
     .tabela-obras-detalhes th:first-child,
     .tabela-obras-detalhes td:first-child {
         width: auto;
@@ -941,21 +1000,21 @@
         white-space: nowrap;
         overflow: visible;
     }
-    
+
     .tabela-obras-detalhes th:nth-child(2),
     .tabela-obras-detalhes td:nth-child(2) {
         width: auto;
         min-width: 80px;
         max-width: 140px;
     }
-    
+
     .tabela-obras-detalhes th:nth-child(3),
     .tabela-obras-detalhes td:nth-child(3) {
         width: auto;
         min-width: 35px;
         max-width: 50px;
     }
-    
+
     .tabela-obras-detalhes th:nth-child(4),
     .tabela-obras-detalhes td:nth-child(4) {
         width: auto;
@@ -980,7 +1039,7 @@
         font-size: 11px;
         table-layout: auto;
     }
-    
+
     .tabela-obras-detalhes th,
     .tabela-obras-detalhes td {
         padding: 4px 6px;
@@ -994,21 +1053,21 @@
         white-space: nowrap;
         overflow: visible;
     }
-    
+
     .tabela-obras-detalhes th:nth-child(2),
     .tabela-obras-detalhes td:nth-child(2) {
         min-width: 55px;
         max-width: 90px;
         font-size: 10px;
     }
-    
+
     .tabela-obras-detalhes th:nth-child(3),
     .tabela-obras-detalhes td:nth-child(3) {
         min-width: 25px;
         max-width: 35px;
         font-size: 10px;
     }
-    
+
     .tabela-obras-detalhes th:nth-child(4),
     .tabela-obras-detalhes td:nth-child(4) {
         min-width: 50px;
@@ -1096,6 +1155,11 @@
     .graficos-obras-grid {
         grid-template-columns: 1fr;
     }
+
+    .filtro-obra-item {
+        flex: 1 1 100%;
+        min-width: 100%;
+    }
 }
 
 @media (max-width: 768px) {
@@ -1125,6 +1189,11 @@
 
     .filtro-item {
         min-width: unset;
+    }
+
+    .filtro-obra-item {
+        flex: 1 1 100%;
+        min-width: 100%;
     }
 
     .btn-limpar,
@@ -1503,6 +1572,12 @@
     .sem-dados {
         font-size: 14px;
         min-height: 200px;
+    }
+
+    .filtro-obra-wrap input#buscaObra,
+    .filtro-obra-wrap select#filtroObra {
+        padding: 8px 12px;
+        font-size: 13px;
     }
 }
 

@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indicadores - Gestão</title>
-    
+
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/gestao.css">
-    
+    <link rel="stylesheet" href="../css/chamados.css">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -33,7 +34,7 @@
         </div>
 
         <!-- ============================================ -->
-        <!-- ABA 1: VALORES EMPENHADOS (Original)        -->
+        <!-- ABA 1: VALORES EMPENHADOS                   -->
         <!-- ============================================ -->
         <div id="tab-valores" class="tab-content active">
             <!-- FILTROS DE MÊS -->
@@ -45,7 +46,9 @@
                 <div class="meses-container" id="mesesContainer"></div>
             </div>
 
-            <!-- FILTROS -->
+            <!-- ============================================ -->
+            <!-- FILTROS (Login | Data Início | Data Fim | Obra | Ações) -->
+            <!-- ============================================ -->
             <div class="filtros-box">
                 <div class="filtro-item">
                     <label>👤 Login:</label>
@@ -59,6 +62,20 @@
                     <label>📅 Data Fim:</label>
                     <input type="date" id="dataFim">
                 </div>
+
+                <!-- 🏗️ FILTRO DE OBRA AO LADO DE DATA FIM -->
+                <div class="filtro-item filtro-obra-item">
+                    <label>🏗️ Obra:</label>
+                    <div class="filtro-obra-wrap">
+                        <input type="text" id="buscaObra"
+                               placeholder="🔍 Buscar obra (ex: 12501556 ou 001-25-01556)"
+                               autocomplete="off">
+                        <select id="filtroObra">
+                            <option value="Todas">Todas as Obras</option>
+                        </select>
+                    </div>
+                </div>
+
                 <button class="btn-limpar" id="limparPeriodo">🔄 Limpar</button>
                 <button class="btn-aplicar-filtros" onclick="aplicarFiltros()">📊 Aplicar</button>
             </div>
@@ -101,7 +118,7 @@
                             <button class="btn-fechar-detalhes" onclick="fecharDetalhes('detalhesLogin')">✕</button>
                         </div>
                         <div class="detalhes-busca">
-                            <input type="text" id="searchLogin" placeholder="🔍 Filtrar por código ou descrição..." oninput="filtrarDetalhes('login')">
+                            <input type="text" id="searchLogin" placeholder="🔍 Filtrar por código, descrição ou obra..." oninput="filtrarDetalhes('login')">
                             <button class="btn-limpar-busca" onclick="document.getElementById('searchLogin').value='';filtrarDetalhes('login')">✕</button>
                         </div>
                         <div class="detalhes-conteudo" id="detalhesLoginConteudo"></div>
@@ -124,7 +141,7 @@
                             <button class="btn-fechar-detalhes" onclick="fecharDetalhes('detalhesMes')">✕</button>
                         </div>
                         <div class="detalhes-busca">
-                            <input type="text" id="searchMes" placeholder="🔍 Filtrar por código ou descrição..." oninput="filtrarDetalhes('mes')">
+                            <input type="text" id="searchMes" placeholder="🔍 Filtrar por código, descrição ou obra..." oninput="filtrarDetalhes('mes')">
                             <button class="btn-limpar-busca" onclick="document.getElementById('searchMes').value='';filtrarDetalhes('mes')">✕</button>
                         </div>
                         <div class="detalhes-conteudo" id="detalhesMesConteudo"></div>
@@ -146,9 +163,7 @@
                 <div class="meses-container" id="mesesContainerObras"></div>
             </div>
 
-            <!-- ============================================ -->
-            <!-- INDICADORES - 5 COLUNAS                     -->
-            <!-- ============================================ -->
+            <!-- INDICADORES - 5 COLUNAS -->
             <div class="indicadores-obras-grid">
                 <div class="card-indicador-obras card-obras-total">
                     <div class="card-indicador-icon">📋</div>
@@ -182,11 +197,8 @@
                 </div>
             </div>
 
-            <!-- ============================================ -->
-            <!-- GRÁFICOS - 2 COLUNAS                        -->
-            <!-- ============================================ -->
+            <!-- GRÁFICOS - 2 COLUNAS -->
             <div class="graficos-obras-grid">
-                <!-- Gráfico 1: Obras por Mês -->
                 <div class="obras-mensais-container">
                     <div class="obras-mensais-header">
                         <h3>📊 Obras por Mês</h3>
@@ -208,7 +220,6 @@
                     </div>
                 </div>
 
-                <!-- Gráfico 2: Situação das Obras (Donut) -->
                 <div class="obras-mensais-container">
                     <div class="obras-mensais-header">
                         <h3>📊 Situação das Obras</h3>
@@ -231,9 +242,7 @@
                 </div>
             </div>
 
-            <!-- ============================================ -->
-            <!-- GRÁFICO 3: COMPARATIVO GERAL               -->
-            <!-- ============================================ -->
+            <!-- GRÁFICO 3: COMPARATIVO GERAL -->
             <div class="graficos-obras-grid">
                 <div class="obras-mensais-container" style="grid-column: 1 / -1;">
                     <div class="obras-mensais-header">
@@ -264,7 +273,8 @@
     <script src="../js/auth-helper.js"></script>
     <script src="../js/script.js"></script>
     <script src="../js/auth-global.js"></script>
-    
+    <script src="../js/chamados.js" defer></script>
+
     <script src="../js/gestao-indicadores.js"></script>
     <script src="../js/gestao-indicadores-obras.js"></script>
 </body>

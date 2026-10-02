@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Central de Chamados - SICGM</title>
+
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/chamados.css">
+</head>
+<body>
+    <div class="chamados-container">
+
+        <div class="chamados-header">
+            <div>
+                <h1>📋 Central de Chamados</h1>
+                <p class="chamados-subtitulo">Acompanhe, filtre e gerencie todos os chamados do SICGM</p>
+                <p class="chamados-usuario-logado" id="usuarioLogadoPainel"></p>
+            </div>
+            <div class="chamados-header-acoes">
+                <button class="btn-chamado primary" onclick="window.location.href='abrir.html'">
+                    ➕ Novo Chamado
+                </button>
+                <button class="btn-chamado secondary" onclick="redirecionarParaHome()">
+                    🏠 Home
+                </button>
+            </div>
+        </div>
+
+        <div class="chamados-kpis" id="chamadosKpis">
+            <div class="kpi-card kpi-total">
+                <div class="kpi-icon">📋</div>
+                <div class="kpi-info">
+                    <div class="kpi-label">Total</div>
+                    <div class="kpi-valor" id="kpiTotal">—</div>
+                </div>
+            </div>
+            <div class="kpi-card kpi-aberto">
+                <div class="kpi-icon">🆕</div>
+                <div class="kpi-info">
+                    <div class="kpi-label">Abertos</div>
+                    <div class="kpi-valor" id="kpiAbertos">—</div>
+                </div>
+            </div>
+            <div class="kpi-card kpi-andamento">
+                <div class="kpi-icon">🔧</div>
+                <div class="kpi-info">
+                    <div class="kpi-label">Em andamento</div>
+                    <div class="kpi-valor" id="kpiAndamento">—</div>
+                </div>
+            </div>
+            <div class="kpi-card kpi-resolvido">
+                <div class="kpi-icon">✅</div>
+                <div class="kpi-info">
+                    <div class="kpi-label">Resolvidos</div>
+                    <div class="kpi-valor" id="kpiResolvidos">—</div>
+                </div>
+            </div>
+            <div class="kpi-card kpi-urgente">
+                <div class="kpi-icon">🔴</div>
+                <div class="kpi-info">
+                    <div class="kpi-label">Urgentes</div>
+                    <div class="kpi-valor" id="kpiUrgentes">—</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chamados-filtros">
+            <div class="chamado-form-group">
+                <label>Tipo</label>
+                <select id="filtroTipo">
+                    <option value="">Todos</option>
+                    <option value="bug">🐞 BUG</option>
+                    <option value="melhoria">💡 MELHORIA</option>
+                </select>
+            </div>
+            <div class="chamado-form-group">
+                <label>Status</label>
+                <select id="filtroStatus">
+                    <option value="">Todos</option>
+                    <option value="aberto">🆕 Aberto</option>
+                    <option value="em_andamento">🔧 Em andamento</option>
+                    <option value="resolvido">✅ Resolvido</option>
+                    <option value="cancelado">❌ Cancelado</option>
+                </select>
+            </div>
+            <div class="chamado-form-group">
+                <label>Prioridade</label>
+                <select id="filtroPrioridade">
+                    <option value="">Todas</option>
+                    <option value="urgente">🔴 Urgente</option>
+                    <option value="importante">🟡 Importante</option>
+                    <option value="nao_urgente">🟢 Não urgente</option>
+                </select>
+            </div>
+            <div class="chamado-form-group" style="flex:2;">
+                <label>Buscar</label>
+                <input type="text" id="filtroBusca" placeholder="🔍 Título, descrição ou protocolo...">
+            </div>
+            <button class="btn-chamado secondary" id="btnLimparFiltros">🔄 Limpar</button>
+        </div>
+
+        <div id="listaChamados" class="chamados-lista"></div>
+    </div>
+
+    <div class="chamado-modal-overlay" id="modalDetalhes" style="display:none;">
+        <div class="chamado-modal">
+            <div class="chamado-modal-header">
+                <h2 id="modalTitulo">Detalhes do Chamado</h2>
+                <button class="btn-fechar-modal" onclick="fecharModal()">✕</button>
+            </div>
+            <div class="chamado-modal-body" id="modalCorpo">
+                <div class="loading-msg">⏳ Carregando...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/firebase-init.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/auth-service.js"></script>
+    <script src="../js/auth-helper.js"></script>
+    <script src="../js/script.js"></script>
+    <script src="../js/auth-global.js"></script>
+    <script src="../js/chamados.js" defer></script>
+</body>
+</html>
