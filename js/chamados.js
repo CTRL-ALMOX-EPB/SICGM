@@ -33,11 +33,34 @@ const ATENDENTE_MATRICULA = '171309';
 const ATENDENTE_EMAIL = 'alefe.gomes@gpssa.com.br';
 
 // ============================================
-// HELPERS
+// BASE PATH ROBUSTO (detecta /SICGM/ ou raiz)
 // ============================================
 function getBasePath() {
-    const depth = window.location.pathname.split('/').filter(Boolean).length - 1;
-    return depth <= 0 ? './' : '../'.repeat(depth);
+    // Descobre a base a partir do <script src=".../js/chamados.js">
+    const scripts = document.getElementsByTagName('script');
+    let scriptUrl = null;
+    for (const s of scripts) {
+        if (s.src && s.src.includes('/js/chamados.js')) {
+            scriptUrl = s.src;
+            break;
+        }
+    }
+
+    if (scriptUrl) {
+        const idx = scriptUrl.indexOf('/js/chamados.js');
+        if (idx !== -1) {
+            return scriptUrl.substring(0, idx + 1);
+        }
+    }
+
+    // Fallback: GitHub Pages com repositório em subpasta
+    const partes = window.location.pathname.split('/').filter(Boolean);
+    if (window.location.hostname.includes('github.io') && partes.length > 0) {
+        return `${window.location.origin}/${partes[0]}/`;
+    }
+
+    // Dev local / raiz
+    return `${window.location.origin}/`;
 }
 
 function isPaginaHome() {
@@ -154,7 +177,6 @@ function classificarTempo(ms) {
     return 'critico';
 }
 
-// Gera HTML do badge de SLA a partir do estado e do "desde"
 function renderBadgeSLA(estado, desdeIso) {
     if (!estado) return '';
     const t = calcularTempoDecorrido(desdeIso);
@@ -232,7 +254,7 @@ function initPaginaAbrir() {
 
     if (typeof authService === 'undefined' || !authService || !authService.isLoggedIn()) {
         alert('🔒 Sessão inválida. Faça login novamente.');
-        window.location.href = '../login.html';
+        window.location.href = getBasePath() + 'login.html';
         return;
     }
 
@@ -450,7 +472,7 @@ function initPaginaListagem() {
 
     if (typeof authService === 'undefined' || !authService || !authService.isLoggedIn()) {
         alert('🔒 Sessão expirada. Faça login novamente.');
-        window.location.href = '../login.html';
+        window.location.href = getBasePath() + 'login.html';
         return;
     }
 
@@ -532,7 +554,6 @@ function initPaginaListagem() {
             el.addEventListener('click', () => abrirModalDetalhes(parseInt(el.dataset.id)));
         });
 
-        // Atualiza apenas os badges que estão contando SLA
         if (window._timerChamadosAtualizar) clearInterval(window._timerChamadosAtualizar);
         window._timerChamadosAtualizar = setInterval(() => {
             container.querySelectorAll('.chamado-item').forEach(el => {
@@ -611,7 +632,6 @@ function initPaginaListagem() {
                 }).join('')
                 : '<div class="chat-vazio">💬 Nenhuma mensagem ainda. Seja o primeiro a comentar!</div>';
 
-            // Badge de SLA no modal
             const est = c._estado || null;
             const badgeSLA = renderBadgeSLA(est, est?.desde);
 
@@ -833,17 +853,18 @@ document.addEventListener('keydown', e => {
 });
 
 function redirecionarParaHome() {
+    const base = getBasePath();
     let perfil = 'GESTAO';
     if (typeof authService !== 'undefined' && authService) {
         const user = authService.getUserData();
         if (user && user.perfil) perfil = user.perfil;
     }
     const homeMap = {
-        'OPERACIONAL': '../home-operacional.html',
-        'GESTAO': '../home-gestao.html',
-        'VISUALIZACAO': '../home-visualizacao.html'
+        'OPERACIONAL': 'home-operacional.html',
+        'GESTAO': 'home-gestao.html',
+        'VISUALIZACAO': 'home-visualizacao.html'
     };
-    window.location.href = homeMap[perfil] || '../home-gestao.html';
+    window.location.href = base + (homeMap[perfil] || 'home-gestao.html');
 }
 
 window.redirecionarParaHome = redirecionarParaHome;
