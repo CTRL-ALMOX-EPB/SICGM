@@ -420,7 +420,7 @@
 .btn-chamado-flutuante {
     position: fixed;
     bottom: 18px;
-    right: 18px;
+    left: 18px;
     z-index: 9999;
     background: linear-gradient(135deg, #E53E3E 0%, #C53030 100%);
     color: white;
@@ -438,13 +438,13 @@
 }
 
 .btn-chamado-flutuante:hover {
-    transform: scale(1.08) rotate(6deg);
+    transform: scale(1.08) rotate(-6deg);
     box-shadow: 0 6px 20px rgba(229, 62, 62, 0.5);
 }
 
 .btn-chamado-flutuante .tooltip {
     position: absolute;
-    right: 56px;
+    left: 56px;
     top: 50%;
     transform: translateY(-50%);
     background: #1A202C;
