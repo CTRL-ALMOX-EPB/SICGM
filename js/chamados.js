@@ -36,7 +36,6 @@ const ATENDENTE_EMAIL = 'alefe.gomes@gpssa.com.br';
 // BASE PATH ROBUSTO (detecta /SICGM/ ou raiz)
 // ============================================
 function getBasePath() {
-    // Descobre a base a partir do <script src=".../js/chamados.js">
     const scripts = document.getElementsByTagName('script');
     let scriptUrl = null;
     for (const s of scripts) {
@@ -53,13 +52,11 @@ function getBasePath() {
         }
     }
 
-    // Fallback: GitHub Pages com repositório em subpasta
     const partes = window.location.pathname.split('/').filter(Boolean);
     if (window.location.hostname.includes('github.io') && partes.length > 0) {
         return `${window.location.origin}/${partes[0]}/`;
     }
 
-    // Dev local / raiz
     return `${window.location.origin}/`;
 }
 
@@ -197,6 +194,96 @@ function renderBadgeSLA(estado, desdeIso) {
 
     const texto = t ? `${prefixo} há ${t.texto}` : prefixo;
     return `<span class="tempo-aberto ${nivel}" title="${estado.estado}">${texto}</span>`;
+}
+
+// ============================================
+// FORMATAÇÃO DE DURAÇÃO EM ms
+// ============================================
+function formatarDuracaoMs(ms) {
+    if (ms == null || ms < 0) return '—';
+    const seg = Math.floor(ms / 1000);
+    const min = Math.floor(seg / 60);
+    const hr  = Math.floor(min / 60);
+    const dia = Math.floor(hr / 24);
+    const mes = Math.floor(dia / 30);
+
+    if (seg < 60) return `${seg}s`;
+    if (min < 60) return `${min}min`;
+    if (hr < 24) return `${hr}h ${min % 60}min`;
+    if (dia < 30) return `${dia}d ${hr % 24}h`;
+    return `${mes}m ${dia % 30}d`;
+}
+
+// ============================================
+// RESUMO DE SLA (card)
+// ============================================
+function renderResumoSLA(sla) {
+    if (!sla) return '';
+    const atend = formatarDuracaoMs(sla.sla_atendente_ms);
+    const sol   = formatarDuracaoMs(sla.sla_solicitante_ms);
+    return `
+        <div class="sla-resumo">
+            <span class="sla-item sla-atendente" title="Soma dos tempos em que a bola estava com o atendente">
+                🛠️ Atendente: <strong>${atend}</strong>
+            </span>
+            <span class="sla-item sla-solicitante" title="Soma dos tempos em que a bola estava com o solicitante">
+                👤 Solicitante: <strong>${sol}</strong>
+            </span>
+        </div>
+    `;
+}
+
+// ============================================
+// TIMELINE DE SLA (modal)
+// ============================================
+function renderTimelineSLA(ciclos) {
+    if (!ciclos || !ciclos.length) {
+        return '<div class="sla-timeline-vazia">Nenhum ciclo registrado ainda.</div>';
+    }
+
+    return `<div class="sla-timeline">${
+        ciclos.map((c, i) => {
+            const ehAtendente = c.com === 'atendente';
+            const cor = ehAtendente ? 'atendente' : 'solicitante';
+            const icone = ehAtendente ? '🛠️' : '👤';
+            const rotulo = ehAtendente ? 'Atendente' : 'Solicitante';
+            const inicio = formatarData(c.inicio);
+            const fim = c.fim ? formatarData(c.fim) : null;
+            const duracao = formatarDuracaoMs(c.duracao_ms);
+
+            const gatilhos = {
+                criado: 'Chamado criado',
+                resposta_solicitante: 'Solicitante respondeu',
+                resposta_atendente: 'Atendente respondeu',
+                resolvido: 'Chamado resolvido',
+                cancelado: 'Chamado cancelado'
+            };
+
+            const motivoInicio = gatilhos[c.gatilho_inicio] || c.gatilho_inicio;
+            const motivoFim = c.em_curso ? 'Em andamento' : (gatilhos[c.gatilho_fim] || c.gatilho_fim || '—');
+
+            return `
+                <div class="sla-ciclo ${cor} ${c.em_curso ? 'em-curso' : ''}">
+                    <div class="sla-ciclo-header">
+                        <span class="sla-ciclo-numero">#${i + 1}</span>
+                        <span class="sla-ciclo-icone">${icone}</span>
+                        <strong>${rotulo}</strong>
+                        <span class="sla-ciclo-duracao">${duracao}${c.em_curso ? ' ⏳' : ''}</span>
+                    </div>
+                    <div class="sla-ciclo-detalhes">
+                        <div class="sla-ciclo-linha">
+                            <span class="sla-ciclo-label">Início:</span>
+                            <span>${inicio} — <em>${motivoInicio}</em></span>
+                        </div>
+                        <div class="sla-ciclo-linha">
+                            <span class="sla-ciclo-label">${c.em_curso ? 'Status:' : 'Fim:'}</span>
+                            <span>${c.em_curso ? 'Aguardando resposta' : `${fim} — <em>${motivoFim}</em>`}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('')
+    }</div>`;
 }
 
 // ============================================
@@ -529,6 +616,7 @@ function initPaginaListagem() {
         container.innerHTML = lista.map(c => {
             const est = c._estado || null;
             const badgeTempo = renderBadgeSLA(est, est?.desde);
+            const resumoSLA = c._sla ? renderResumoSLA(c._sla) : '';
 
             return `
                 <div class="chamado-item" data-id="${c.id}" data-prioridade="${c.prioridade}">
@@ -546,6 +634,7 @@ function initPaginaListagem() {
                         <span>📱 ${escapeHtml(c.tela_titulo || c.tela_origem)}</span>
                         <span>🕒 aberto em ${formatarData(c.criado_em)}</span>
                     </div>
+                    ${resumoSLA}
                 </div>
             `;
         }).join('');
@@ -635,6 +724,25 @@ function initPaginaListagem() {
             const est = c._estado || null;
             const badgeSLA = renderBadgeSLA(est, est?.desde);
 
+            const slaCompleto = c._sla || null;
+            const timelineHtml = slaCompleto?.ciclos ? renderTimelineSLA(slaCompleto.ciclos) : '';
+            const resumoSLACompleto = slaCompleto ? `
+                <div class="modal-sla-resumo">
+                    <div class="sla-total-card">
+                        <div class="sla-total-label">🛠️ SLA total do atendente</div>
+                        <div class="sla-total-valor">${formatarDuracaoMs(slaCompleto.sla_atendente_ms)}</div>
+                    </div>
+                    <div class="sla-total-card">
+                        <div class="sla-total-label">👤 SLA total do solicitante</div>
+                        <div class="sla-total-valor">${formatarDuracaoMs(slaCompleto.sla_solicitante_ms)}</div>
+                    </div>
+                    <div class="sla-total-card">
+                        <div class="sla-total-label">🔄 Ciclos registrados</div>
+                        <div class="sla-total-valor">${slaCompleto.ciclos?.length || 0}</div>
+                    </div>
+                </div>
+            ` : '';
+
             corpo.innerHTML = `
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                     <div class="modal-field">
@@ -686,6 +794,16 @@ function initPaginaListagem() {
                 <div class="modal-field">
                     <div class="modal-field-label">Anexos (${(data.anexos || []).length})</div>
                     ${anexosHtml}
+                </div>
+
+                <div class="modal-field">
+                    <div class="modal-field-label">📊 Resumo de SLA</div>
+                    ${resumoSLACompleto}
+                </div>
+
+                <div class="modal-field">
+                    <div class="modal-field-label">📈 Histórico de SLA por ciclo</div>
+                    ${timelineHtml}
                 </div>
 
                 <div class="modal-field">

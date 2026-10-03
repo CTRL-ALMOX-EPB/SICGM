@@ -58,7 +58,7 @@
 }
 
 /* ============================================ */
-/* FORMULÁRIO DE ABERTURA                      */
+/* FORMULÁRIO                                   */
 /* ============================================ */
 
 .chamado-card {
@@ -282,7 +282,7 @@
 }
 
 /* ============================================ */
-/* UPLOAD DE ANEXOS                             */
+/* UPLOAD                                       */
 /* ============================================ */
 
 .upload-area {
@@ -306,24 +306,9 @@
     background: #EBF8FF;
 }
 
-.upload-area .icone {
-    font-size: 22px;
-    margin-bottom: 0;
-    line-height: 1;
-}
-
-.upload-area .titulo {
-    font-size: 13px;
-    font-weight: 600;
-    color: #4A5568;
-    margin-bottom: 0;
-}
-
-.upload-area .info {
-    font-size: 11px;
-    color: #A0AEC0;
-    display: none;
-}
+.upload-area .icone { font-size: 22px; line-height: 1; }
+.upload-area .titulo { font-size: 13px; font-weight: 600; color: #4A5568; }
+.upload-area .info { font-size: 11px; color: #A0AEC0; display: none; }
 
 .upload-lista {
     margin-top: 12px;
@@ -681,7 +666,6 @@
     transition: all 0.3s ease;
 }
 
-/* SLA correndo (aguardando atendente) */
 .tempo-aberto.ok {
     background: #C6F6D5;
     color: #22543D;
@@ -709,7 +693,6 @@
     50%      { box-shadow: 0 0 0 6px rgba(229, 62, 62, 0); }
 }
 
-/* SLA pausado (aguardando solicitante) */
 .tempo-aberto.pausado {
     background: #E9D8FD;
     color: #553C9A;
@@ -717,7 +700,6 @@
     animation: none;
 }
 
-/* Fechados */
 .tempo-aberto.fechado {
     background: #E2E8F0;
     color: #4A5568;
@@ -728,6 +710,206 @@
 .chamado-modal-body .tempo-aberto {
     font-size: 12px;
     padding: 5px 12px;
+}
+
+/* ============================================ */
+/* RESUMO DE SLA NO CARD                        */
+/* ============================================ */
+
+.sla-resumo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed #E2E8F0;
+    font-size: 12px;
+}
+
+.sla-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.sla-item strong {
+    font-weight: 800;
+    font-family: 'Courier New', monospace;
+}
+
+.sla-atendente {
+    background: #F0FFF4;
+    color: #276749;
+    border: 1px solid #9AE6B4;
+}
+
+.sla-solicitante {
+    background: #EBF8FF;
+    color: #2A4365;
+    border: 1px solid #90CDF4;
+}
+
+/* ============================================ */
+/* RESUMO DE SLA NO MODAL                       */
+/* ============================================ */
+
+.modal-sla-resumo {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.sla-total-card {
+    background: #F7FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    text-align: center;
+}
+
+.sla-total-label {
+    font-size: 11px;
+    color: #718096;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 6px;
+}
+
+.sla-total-valor {
+    font-size: 20px;
+    font-weight: 800;
+    color: #1A202C;
+    font-family: 'Courier New', monospace;
+}
+
+/* ============================================ */
+/* TIMELINE DE SLA                              */
+/* ============================================ */
+
+.sla-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.sla-timeline::-webkit-scrollbar { width: 6px; }
+.sla-timeline::-webkit-scrollbar-track { background: #EDF2F7; border-radius: 3px; }
+.sla-timeline::-webkit-scrollbar-thumb { background: #CBD5E0; border-radius: 3px; }
+
+.sla-timeline-vazia {
+    color: #A0AEC0;
+    font-size: 13px;
+    font-style: italic;
+    text-align: center;
+    padding: 16px;
+}
+
+.sla-ciclo {
+    background: #F7FAFC;
+    border: 1px solid #E2E8F0;
+    border-left: 4px solid #CBD5E0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    transition: all 0.2s ease;
+}
+
+.sla-ciclo.atendente {
+    border-left-color: #48BB78;
+    background: #F0FFF4;
+}
+
+.sla-ciclo.solicitante {
+    border-left-color: #4299E1;
+    background: #EBF8FF;
+}
+
+.sla-ciclo.em-curso {
+    box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.15);
+    animation: slaPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes slaPulse {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.15); }
+    50%      { box-shadow: 0 0 0 6px rgba(66, 153, 225, 0); }
+}
+
+.sla-ciclo-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+    font-size: 13px;
+}
+
+.sla-ciclo-numero {
+    background: #CBD5E0;
+    color: #2D3748;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+}
+
+.sla-ciclo.atendente .sla-ciclo-numero {
+    background: #9AE6B4;
+    color: #22543D;
+}
+
+.sla-ciclo.solicitante .sla-ciclo-numero {
+    background: #90CDF4;
+    color: #2A4365;
+}
+
+.sla-ciclo-icone { font-size: 15px; }
+
+.sla-ciclo-duracao {
+    margin-left: auto;
+    font-family: 'Courier New', monospace;
+    font-weight: 800;
+    color: #2D3748;
+    background: white;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid #E2E8F0;
+    font-size: 12px;
+}
+
+.sla-ciclo-detalhes {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: #4A5568;
+    padding-left: 4px;
+}
+
+.sla-ciclo-linha {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.sla-ciclo-label {
+    font-weight: 700;
+    color: #718096;
+    min-width: 55px;
+}
+
+.sla-ciclo-linha em {
+    color: #A0AEC0;
+    font-style: normal;
+    font-size: 11px;
 }
 
 /* ============================================ */
@@ -883,7 +1065,7 @@
 }
 
 /* ============================================ */
-/* CHAT DO CHAMADO                              */
+/* CHAT                                         */
 /* ============================================ */
 
 .chat-container {
@@ -917,7 +1099,6 @@
     background: white;
     border: 1px solid #E2E8F0;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    position: relative;
     word-wrap: break-word;
 }
 
@@ -927,9 +1108,7 @@
     border-color: #90CDF4;
 }
 
-.chat-msg.other {
-    align-self: flex-start;
-}
+.chat-msg.other { align-self: flex-start; }
 
 .chat-msg.atendente {
     background: #F0FFF4;
@@ -1070,6 +1249,10 @@
     .chat-msg { max-width: 95%; }
     .chat-input-area { flex-direction: column; }
     .chat-input-area .btn-chamado { width: 100%; justify-content: center; }
+    .modal-sla-resumo { grid-template-columns: 1fr; }
+    .sla-total-valor { font-size: 18px; }
+    .sla-resumo { font-size: 11px; }
+    .sla-item { padding: 3px 8px; }
 }
 
 @media (max-width: 480px) {
