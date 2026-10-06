@@ -33,7 +33,7 @@ const ATENDENTE_MATRICULA = '171309';
 const ATENDENTE_EMAIL = 'alefe.gomes@gpssa.com.br';
 
 // ============================================
-// BASE PATH ROBUSTO (detecta /SICGM/ ou raiz)
+// BASE PATH ROBUSTO
 // ============================================
 function getBasePath() {
     const scripts = document.getElementsByTagName('script');
@@ -131,7 +131,7 @@ function ehAtendente(user) {
 }
 
 // ============================================
-// SLA / TEMPO DECORRIDO
+// SLA
 // ============================================
 function calcularTempoDecorrido(desdeIso) {
     if (!desdeIso) return null;
@@ -196,9 +196,6 @@ function renderBadgeSLA(estado, desdeIso) {
     return `<span class="tempo-aberto ${nivel}" title="${estado.estado}">${texto}</span>`;
 }
 
-// ============================================
-// FORMATAÇÃO DE DURAÇÃO EM ms
-// ============================================
 function formatarDuracaoMs(ms) {
     if (ms == null || ms < 0) return '—';
     const seg = Math.floor(ms / 1000);
@@ -214,9 +211,6 @@ function formatarDuracaoMs(ms) {
     return `${mes}m ${dia % 30}d`;
 }
 
-// ============================================
-// RESUMO DE SLA (card)
-// ============================================
 function renderResumoSLA(sla) {
     if (!sla) return '';
     const atend = formatarDuracaoMs(sla.sla_atendente_ms);
@@ -233,9 +227,6 @@ function renderResumoSLA(sla) {
     `;
 }
 
-// ============================================
-// TIMELINE DE SLA (modal)
-// ============================================
 function renderTimelineSLA(ciclos) {
     if (!ciclos || !ciclos.length) {
         return '<div class="sla-timeline-vazia">Nenhum ciclo registrado ainda.</div>';
@@ -331,13 +322,11 @@ window.irParaAbrirChamado = irParaAbrirChamado;
 window.getIdentificacaoTela = getIdentificacaoTela;
 
 // ============================================
-// PÁGINA: ABRIR (abrir.html)
+// PÁGINA: ABRIR
 // ============================================
 function initPaginaAbrir() {
     const form = document.getElementById('formChamado');
     if (!form) return;
-
-    console.log('📋 Inicializando formulário de chamado...');
 
     if (typeof authService === 'undefined' || !authService || !authService.isLoggedIn()) {
         alert('🔒 Sessão inválida. Faça login novamente.');
@@ -346,7 +335,6 @@ function initPaginaAbrir() {
     }
 
     const usuario = getUsuarioLogado();
-    console.log(`✅ Usuário: ${usuario.nome} | Matrícula: ${usuario.matricula} | Perfil: ${usuario.perfil}`);
 
     const params = new URLSearchParams(window.location.search);
     const telaArquivo = params.get('tela') || '';
@@ -549,13 +537,11 @@ function initPaginaAbrir() {
 }
 
 // ============================================
-// PÁGINA: LISTAGEM (index.html)
+// PÁGINA: LISTAGEM
 // ============================================
 function initPaginaListagem() {
     const container = document.getElementById('listaChamados');
     if (!container) return;
-
-    console.log('📋 Inicializando painel de chamados...');
 
     if (typeof authService === 'undefined' || !authService || !authService.isLoggedIn()) {
         alert('🔒 Sessão expirada. Faça login novamente.');
@@ -564,11 +550,13 @@ function initPaginaListagem() {
     }
 
     const usuarioLogado = getUsuarioLogado();
-    console.log(`✅ Painel acessado por: ${usuarioLogado.nome} (${usuarioLogado.perfil})`);
 
     const elUserLogado = document.getElementById('usuarioLogadoPainel');
     if (elUserLogado) {
-        elUserLogado.textContent = `👤 Logado como: ${usuarioLogado.nome}${usuarioLogado.matricula ? ` (${usuarioLogado.matricula})` : ''} · ${usuarioLogado.perfil}`;
+        const visao = usuarioLogado.perfil === 'GESTAO'
+            ? '· 🛠️ Visão de gestão (todos os chamados)'
+            : '· 👤 Visão pessoal (apenas seus chamados)';
+        elUserLogado.textContent = `👤 Logado como: ${usuarioLogado.nome}${usuarioLogado.matricula ? ` (${usuarioLogado.matricula})` : ''} · ${usuarioLogado.perfil} ${visao}`;
     }
 
     async function carregarChamados() {
@@ -586,7 +574,12 @@ function initPaginaListagem() {
         container.innerHTML = '<div class="loading-msg">⏳ Carregando chamados...</div>';
 
         try {
-            const resp = await fetch(`${CHAMADOS_WORKER_URL}/api/chamados?${params}`);
+            const resp = await fetch(`${CHAMADOS_WORKER_URL}/api/chamados?${params}`, {
+                headers: {
+                    'X-User-Matricula': usuarioLogado.matricula || '',
+                    'X-User-Perfil': usuarioLogado.perfil || ''
+                }
+            });
             const data = await resp.json();
             if (!data.success) throw new Error(data.error || 'Erro desconhecido');
 
@@ -679,7 +672,12 @@ function initPaginaListagem() {
         titulo.textContent = 'Detalhes do Chamado';
 
         try {
-            const resp = await fetch(`${CHAMADOS_WORKER_URL}/api/chamados/${id}`);
+            const resp = await fetch(`${CHAMADOS_WORKER_URL}/api/chamados/${id}`, {
+                headers: {
+                    'X-User-Matricula': user.matricula || '',
+                    'X-User-Perfil': user.perfil || ''
+                }
+            });
             const data = await resp.json();
             if (!data.success) throw new Error(data.error);
 
@@ -708,6 +706,25 @@ function initPaginaListagem() {
                     const isMe = (cm.autor_matricula && cm.autor_matricula === user.matricula) ||
                                  (cm.autor_email && cm.autor_email.toLowerCase() === (user.email || '').toLowerCase());
                     const lado = isMe ? 'me' : 'other';
+
+                    const anexosCm = Array.isArray(cm.anexos) ? cm.anexos : [];
+                    const anexosHtmlMsg = anexosCm.length
+                        ? `<div class="chat-msg-anexos">${
+                            anexosCm.map(a => {
+                                const isImg = (a.tipo_mime || '').startsWith('image/');
+                                const src = a.url_publica;
+                                return `
+                                    <a class="chat-anexo-thumb" href="${src}" target="_blank" rel="noopener" title="${escapeHtml(a.nome_original)}">
+                                        ${isImg
+                                            ? `<img src="${src}" alt="${escapeHtml(a.nome_original)}" loading="lazy">`
+                                            : `<div class="placeholder">📄</div>`}
+                                        <div class="nome">${escapeHtml(a.nome_original)}</div>
+                                    </a>
+                                `;
+                            }).join('')
+                        }</div>`
+                        : '';
+
                     return `
                         <div class="chat-msg ${lado} ${isAtend ? 'atendente' : 'solicitante'}">
                             <div class="chat-msg-header">
@@ -716,6 +733,7 @@ function initPaginaListagem() {
                                 <span class="chat-msg-data">${formatarData(cm.criado_em)}</span>
                             </div>
                             <div class="chat-msg-texto">${escapeHtml(cm.mensagem).replace(/\n/g, '<br>')}</div>
+                            ${anexosHtmlMsg}
                         </div>
                     `;
                 }).join('')
@@ -813,9 +831,20 @@ function initPaginaListagem() {
                     </div>
                 </div>
 
-                <div class="chat-input-area" id="chatInputArea">
-                    <textarea id="chatInput" placeholder="${isAtendenteUser ? 'Responda como atendente...' : 'Adicione informações ao chamado...'}" maxlength="2000"></textarea>
-                    <button class="btn-chamado primary" id="btnEnviarChat">📨 Enviar</button>
+                <div class="chat-input-area">
+                    <div class="chat-input-wrapper">
+                        <textarea id="chatInput" placeholder="${isAtendenteUser ? 'Responda como atendente...' : 'Adicione informações ao chamado...'}" maxlength="2000"></textarea>
+                        <div class="chat-anexos-lista" id="chatAnexosLista"></div>
+                    </div>
+                    <div class="chat-input-acoes">
+                        <button type="button" class="btn-chat-anexo" id="btnChatAnexo" title="Anexar arquivo">
+                            📎
+                        </button>
+                        <input type="file" id="chatInputFile" multiple
+                               accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                               style="display:none;">
+                        <button class="btn-chamado primary" id="btnEnviarChat">📨 Enviar</button>
+                    </div>
                 </div>
 
                 <div class="modal-actions" id="modalAcoes">
@@ -845,13 +874,90 @@ function initPaginaListagem() {
                 });
             }
 
+            // ========== CHAT: ENVIO ==========
             const btnEnviarChat = document.getElementById('btnEnviarChat');
             const inputChat = document.getElementById('chatInput');
-            btnEnviarChat.addEventListener('click', () => enviarComentario(id, inputChat, btnEnviarChat, user));
+            const btnChatAnexo = document.getElementById('btnChatAnexo');
+            const chatInputFile = document.getElementById('chatInputFile');
+            const chatAnexosLista = document.getElementById('chatAnexosLista');
+
+            let anexosChatProntos = [];
+
+            btnChatAnexo.addEventListener('click', () => chatInputFile.click());
+
+            chatInputFile.addEventListener('change', async (e) => {
+                const files = Array.from(e.target.files || []);
+                chatInputFile.value = '';
+
+                for (const file of files) {
+                    if (anexosChatProntos.length >= 5) {
+                        alert('Máximo de 5 anexos por mensagem.');
+                        break;
+                    }
+                    if (file.size > 10 * 1024 * 1024) {
+                        alert(`Arquivo "${file.name}" é maior que 10 MB.`);
+                        continue;
+                    }
+                    await enviarAnexoChat(file);
+                }
+            });
+
+            async function enviarAnexoChat(file) {
+                const itemId = 'chat_anx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+                const chip = document.createElement('div');
+                chip.className = 'chat-anexo-chip enviando';
+                chip.id = itemId;
+                chip.innerHTML = `
+                    <span class="chip-icon">📎</span>
+                    <span class="chip-nome" title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</span>
+                    <span class="chip-status">⏳</span>
+                    <button type="button" class="chip-remover" title="Remover">✕</button>
+                `;
+                chatAnexosLista.appendChild(chip);
+
+                const statusEl = chip.querySelector('.chip-status');
+                const btnRemover = chip.querySelector('.chip-remover');
+
+                btnRemover.addEventListener('click', () => {
+                    chip.remove();
+                    anexosChatProntos = anexosChatProntos.filter(a => a._itemId !== itemId);
+                });
+
+                try {
+                    const fd = new FormData();
+                    fd.append('arquivo', file);
+                    fd.append('chamado_id', id);
+                    const resp = await fetch(`${CHAMADOS_WORKER_URL}/api/upload`, { method: 'POST', body: fd });
+                    if (!resp.ok) {
+                        const err = await resp.json().catch(() => ({}));
+                        throw new Error(err.error || `Erro ${resp.status}`);
+                    }
+                    const data = await resp.json();
+                    data._itemId = itemId;
+                    anexosChatProntos.push(data);
+                    chip.classList.remove('enviando');
+                    chip.classList.add('ok');
+                    statusEl.textContent = '✅';
+                } catch (e) {
+                    console.error('❌ Erro upload chat:', e);
+                    chip.classList.remove('enviando');
+                    chip.classList.add('erro');
+                    statusEl.textContent = '❌';
+                    btnRemover.title = e.message;
+                }
+            }
+
+            btnEnviarChat.addEventListener('click', async () => {
+                await enviarComentario(id, inputChat, btnEnviarChat, user, anexosChatProntos);
+                anexosChatProntos = [];
+                chatAnexosLista.innerHTML = '';
+            });
+
             inputChat.addEventListener('keydown', e => {
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                     e.preventDefault();
-                    enviarComentario(id, inputChat, btnEnviarChat, user);
+                    btnEnviarChat.click();
                 }
             });
 
@@ -917,9 +1023,12 @@ async function alterarChamado(id, mudancas, user) {
 }
 window.alterarChamado = alterarChamado;
 
-async function enviarComentario(chamadoId, inputEl, btnEl, user) {
+async function enviarComentario(chamadoId, inputEl, btnEl, user, anexosProntos = []) {
     const mensagem = inputEl.value.trim();
-    if (!mensagem) return;
+    if (!mensagem && anexosProntos.length === 0) {
+        alert('Digite uma mensagem ou anexe um arquivo.');
+        return;
+    }
 
     btnEl.disabled = true;
     btnEl.textContent = '⏳ Enviando...';
@@ -937,7 +1046,14 @@ async function enviarComentario(chamadoId, inputEl, btnEl, user) {
                 autor_matricula: user.matricula,
                 autor_perfil: user.perfil,
                 autor_email: user.email || '',
-                mensagem
+                mensagem,
+                anexos: anexosProntos.map(a => ({
+                    nome_original: a.nome_original,
+                    chave_r2: a.chave_r2,
+                    url_publica: a.url_publica,
+                    tipo_mime: a.tipo_mime,
+                    tamanho_bytes: a.tamanho_bytes
+                }))
             })
         });
         const data = await resp.json();
