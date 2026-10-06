@@ -5,7 +5,7 @@
 console.log('🚀 dashboards-pendencia-requisicao.js carregado!');
 
 // ============================================
-// 🔥 GET SESSÃO (NOVA VERSÃO - USANDO authService)
+// 🔥 GET SESSÃO
 // ============================================
 
 function getSessao() {
@@ -55,15 +55,17 @@ function redirecionarParaHome() {
     }
 }
 
-// URLs R2 - Usando binding do Worker (via proxy)
+// URLs R2 - via Worker
 const ARQUIVOS_R2 = {
     movimentosSiago: `${API_URL}/proxy/movimentos-siago`,
-    devolucaoCompilada: `${API_URL}/proxy/devolucao-compilada`
+    devolucaoCompilada: `${API_URL}/proxy/devolucao-compilada`,
+    programacaoSiago: `${API_URL}/proxy/programacao-siago`
 };
 
 console.log('📡 URLs R2 configuradas:');
 console.log(`   📄 Movimentos Siago: ${ARQUIVOS_R2.movimentosSiago}`);
 console.log(`   📄 Devolução Compilada: ${ARQUIVOS_R2.devolucaoCompilada}`);
+console.log(`   📄 Programação Siago: ${ARQUIVOS_R2.programacaoSiago}`);
 
 // ============================================
 // VARIÁVEIS GLOBAIS - DASHBOARD ANTIGO (SEPARAÇÃO)
@@ -94,13 +96,36 @@ let itemSelecionadoMGM = null;
 let dadosCarregadosMGM = false;
 
 // ============================================
-// VARIÁVEIS PARA PROGRAMAÇÃO SIAGO
+// VARIÁVEIS PARA FILTRO DE ETAPAS
 // ============================================
 
-// As variáveis são gerenciadas pelo programacao-siago.js via window.__*
-// Não redeclarar para evitar conflito
+let filtroEtapasMinimo = 0;
 
-// Criar alias local para acesso fácil
+// ============================================
+// VARIÁVEL: ITENS REPRESADOS
+// ============================================
+
+let itensRepresados = {
+    total: 0,
+    itens: []
+};
+
+// ============================================
+// 🔥 FILTRO FRONT-END: OBRAS INICIADAS A PARTIR DE 2026-07-01
+// ============================================
+
+const DATA_CORTE_INICIO_OBRA = '2026-07-01'; // julho/2026
+
+// Set com as obras (normalizadas) que passam no filtro
+let obrasPermitidas = null; // null = filtro ainda não aplicado
+
+// Cache: obraNorm -> 'YYYY-MM-DD' | null
+const __cacheInicioObra = {};
+
+// ============================================
+// PROGRAMAÇÃO SIAGO - CARREGAMENTO E PARSE
+// ============================================
+
 function getDadosProgramacaoSiago() {
     return window.__dadosProgramacaoSiago || {};
 }
@@ -113,20 +138,303 @@ function isProgramacaoSiagoCarregado() {
     return window.__dadosProgramacaoSiagoCarregados || false;
 }
 
+/**
+ * Converte as datas do SIAGO ("20/02/2024 09:00") para "YYYY-MM-DD".
+ * Ignora a hora. Retorna null se inválido.
+ */
+function parseDataSiago(str) {
+    if (!str) return null;
+    const s = String(str).trim();
+
+    // Formato dd/mm/yyyy (com ou sem hora)
+    let m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (m) {
+        const [, dia, mes, ano] = m;
+        return `${ano}-${mes}-${dia}`;
+    }
+
+    // Formato yyyy-mm-dd
+    m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) {
+        const [, ano, mes, dia] = m;
+        return `${ano}-${mes}-${dia}`;
+    }
+
+    return null;
+}
+
+/**
+ * Parseia o TSV de programacao_siago.txt.
+ * Retorna um mapa: obraNorm -> { etapas_raw, etapas, etapas_detalhes, total_etapas, etapas_validas, etapas_reprovadas }
+ */
+function parsearProgramacaoSiago(texto) {
+    console.log('🔄 Parseando programacao_siago.txt...');
+    const linhas = texto.trim().split('\n');
+
+    if (linhas.length < 2) {
+        console.warn('⚠️ Arquivo vazio ou apenas cabeçalho');
+        return {};
+    }
+
+    const cabecalho = linhas[0].split('\t').map(h => h.trim());
+
+    const idx = {
+        num_obra: cabecalho.indexOf('num_obra'),
+        etapa: cabecalho.indexOf('etapa'),
+        dth_programacao_inicial: cabecalho.indexOf('dth_programacao_inicial'),
+        dsc_situacao_programacao_obra: cabecalho.indexOf('dsc_situacao_programacao_obra'),
+        cod_situacao_programacao_obra: cabecalho.indexOf('cod_situacao_programacao_obra'),
+        dsc_etapa: cabecalho.indexOf('dsc_etapa'),
+        idt_programacao_obra: cabecalho.indexOf('idt_programacao_obra')
+    };
+
+    console.log('📋 Índices mapeados:', idx);
+
+    const etapasPorObra = {};
+
+    for (let i = 1; i < linhas.length; i++) {
+        const linha = linhas[i];
+        if (!linha.trim()) continue;
+
+        const partes = linha.split('\t');
+
+        const numObra = (partes[idx.num_obra] || '').trim();
+        if (!numObra) continue;
+
+        const obraNorm = normalizarObra(numObra);
+
+        if (!etapasPorObra[obraNorm]) {
+            etapasPorObra[obraNorm] = {
+                obra: obraNorm,
+                etapas_raw: [],
+                etapas: [],
+                etapas_detalhes: {},
+                total_etapas: 0,
+                etapas_validas: 0,
+                etapas_reprovadas: 0
+            };
+        }
+
+        const etapaNum = parseInt(partes[idx.etapa] || '0');
+        const dth = (partes[idx.dth_programacao_inicial] || '').trim();
+        const situacao = (partes[idx.dsc_situacao_programacao_obra] || '').trim();
+        const codSituacao = parseInt(partes[idx.cod_situacao_programacao_obra] || '0');
+        const dscEtapa = (partes[idx.dsc_etapa] || '').trim();
+        const idtProg = (partes[idx.idt_programacao_obra] || '').trim();
+
+        const registro = {
+            etapa: etapaNum,
+            dth_programacao_inicial: dth,
+            data_programacao_inicial: parseDataSiago(dth), // "YYYY-MM-DD"
+            dsc_situacao_programacao_obra: situacao,
+            cod_situacao_programacao_obra: codSituacao,
+            dsc_etapa: dscEtapa,
+            idt_programacao_obra: idtProg
+        };
+
+        etapasPorObra[obraNorm].etapas_raw.push(registro);
+        etapasPorObra[obraNorm].etapas.push(etapaNum);
+        etapasPorObra[obraNorm].etapas_detalhes[String(etapaNum)] = registro;
+    }
+
+    // Calcular contadores por obra
+    Object.keys(etapasPorObra).forEach(obraNorm => {
+        const info = etapasPorObra[obraNorm];
+        const etapasUnicas = [...new Set(info.etapas)].sort((a, b) => a - b);
+        info.etapas = etapasUnicas;
+        info.total_etapas = etapasUnicas.length;
+
+        let validas = 0;
+        let reprovadas = 0;
+        etapasUnicas.forEach(n => {
+            const det = info.etapas_detalhes[String(n)];
+            if (!det) return;
+            const s = (det.dsc_situacao_programacao_obra || '').toUpperCase();
+            if (s.includes('CANCELADA') || s.includes('REPROVADA')) {
+                reprovadas++;
+            } else {
+                validas++;
+            }
+        });
+        info.etapas_validas = validas;
+        info.etapas_reprovadas = reprovadas;
+    });
+
+    console.log(`✅ ${Object.keys(etapasPorObra).length} obras parseadas`);
+    return etapasPorObra;
+}
+
+/**
+ * Carrega o programacao_siago.txt via R2 e popula window.__etapasPorObra.
+ * Substitui a função órfã que dependia do arquivo programacao-siago.js (inexistente).
+ */
+async function carregarProgramacaoSiago() {
+    console.log('📥 Carregando programacao_siago...');
+    try {
+        const response = await fetch(ARQUIVOS_R2.programacaoSiago);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const texto = await response.text();
+        console.log(`✅ programacao_siago.txt carregado (${texto.split('\n').length} linhas)`);
+
+        const etapasPorObra = parsearProgramacaoSiago(texto);
+
+        window.__etapasPorObra = etapasPorObra;
+        window.__dadosProgramacaoSiago = etapasPorObra;
+        window.__dadosProgramacaoSiagoCarregados = true;
+
+        console.log(`✅ Programação siago pronta: ${Object.keys(etapasPorObra).length} obras`);
+        return etapasPorObra;
+    } catch (error) {
+        console.error('❌ Erro ao carregar programação siago:', error);
+        window.__etapasPorObra = {};
+        window.__dadosProgramacaoSiago = {};
+        window.__dadosProgramacaoSiagoCarregados = false;
+        return null;
+    }
+}
+
 // ============================================
-// VARIÁVEIS PARA FILTRO DE ETAPAS
+// FILTRO DE INÍCIO DE OBRA (FRONT-END)
 // ============================================
 
-let filtroEtapasMinimo = 0;
+/**
+ * Considera etapa válida se a situação NÃO for CANCELADA nem REPROVADA.
+ */
+function etapaEhValida(det) {
+    if (!det) return false;
+    const s = String(det.dsc_situacao_programacao_obra || '').toUpperCase();
+    if (s.includes('CANCELADA')) return false;
+    if (s.includes('REPROVADA')) return false;
+    return true;
+}
 
-// ============================================
-// NOVA VARIÁVEL: ITENS REPRESADOS
-// ============================================
+/**
+ * Retorna o registro da primeira etapa válida da obra (por número de etapa).
+ * Pula canceladas/reprovadas. Retorna null se não achar.
+ */
+function getPrimeiraEtapaValida(obraNorm) {
+    const etapasPorObra = getEtapasPorObraData();
+    const info = etapasPorObra[obraNorm];
+    if (!info || !info.etapas_raw || info.etapas_raw.length === 0) return null;
 
-let itensRepresados = {
-    total: 0,
-    itens: []
-};
+    const linhas = [...info.etapas_raw].sort((a, b) => (a.etapa || 0) - (b.etapa || 0));
+
+    for (const linha of linhas) {
+        if (etapaEhValida(linha) && linha.data_programacao_inicial) {
+            return linha;
+        }
+    }
+    return null;
+}
+
+/**
+ * Retorna "YYYY-MM-DD" da primeira etapa válida da obra, ou null.
+ */
+function getDataInicioObra(obraNorm) {
+    if (!obraNorm) return null;
+    if (__cacheInicioObra[obraNorm] !== undefined) return __cacheInicioObra[obraNorm];
+
+    const primeira = getPrimeiraEtapaValida(obraNorm);
+    const resultado = primeira ? primeira.data_programacao_inicial : null;
+    __cacheInicioObra[obraNorm] = resultado;
+    return resultado;
+}
+
+/**
+ * Classifica a obra:
+ *   'valida'          -> tem etapa válida com data >= corte
+ *   'sem_programacao' -> não está no programacao_siago.txt (ou sem etapas)
+ *   'invalida'        -> primeira etapa válida < corte, ou sem etapa válida
+ */
+function classificarObra(obraNorm) {
+    const etapasPorObra = getEtapasPorObraData();
+    const info = etapasPorObra[obraNorm];
+
+    if (!info || !info.etapas_raw || info.etapas_raw.length === 0) {
+        return { status: 'sem_programacao', dataInicio: null };
+    }
+
+    const dataInicio = getDataInicioObra(obraNorm);
+
+    if (!dataInicio) {
+        return { status: 'invalida', dataInicio: null };
+    }
+
+    if (dataInicio >= DATA_CORTE_INICIO_OBRA) {
+        return { status: 'valida', dataInicio };
+    }
+
+    return { status: 'invalida', dataInicio };
+}
+
+/**
+ * Monta o Set de obras permitidas (válidas).
+ * Obras fora do programacao_siago.txt NÃO entram.
+ */
+function construirObrasPermitidas() {
+    console.log(`🔎 Montando filtro de obras iniciadas a partir de ${DATA_CORTE_INICIO_OBRA}...`);
+
+    const todasObras = new Set();
+    pendenciasConsolidadas.forEach(p => todasObras.add(normalizarObra(p.obra)));
+    dadosCompletos.forEach(p => todasObras.add(normalizarObra(p.obra)));
+
+    const permitidas = new Set();
+    let semProgramacao = 0;
+    let cortadas = 0;
+
+    todasObras.forEach(obraNorm => {
+        if (!obraNorm) return;
+        const cls = classificarObra(obraNorm);
+        if (cls.status === 'valida') {
+            permitidas.add(obraNorm);
+        } else if (cls.status === 'sem_programacao') {
+            semProgramacao++;
+        } else {
+            cortadas++;
+        }
+    });
+
+    console.log(`✅ ${permitidas.size} obras permitidas | ${cortadas} cortadas por data | ${semProgramacao} sem programação (escondidas)`);
+    return permitidas;
+}
+
+/**
+ * Aplica o filtro em pendenciasConsolidadas (MGM) e dadosCompletos (Separação).
+ */
+function aplicarFiltroInicioObraFrontEnd() {
+    obrasPermitidas = construirObrasPermitidas();
+
+    const antesMGM = pendenciasConsolidadas.length;
+    pendenciasConsolidadas = pendenciasConsolidadas.filter(p =>
+        obrasPermitidas.has(normalizarObra(p.obra))
+    );
+    console.log(`🚫 MGM: ${antesMGM - pendenciasConsolidadas.length} pendências removidas`);
+
+    const antesSep = dadosCompletos.length;
+    dadosCompletos = dadosCompletos.filter(p =>
+        obrasPermitidas.has(normalizarObra(p.obra))
+    );
+    console.log(`🚫 Separação: ${antesSep - dadosCompletos.length} pendências removidas`);
+
+    dadosFiltradosMGM = [...pendenciasConsolidadas];
+    dadosFiltrados = [...dadosCompletos];
+    dadosExibidos = [...dadosCompletos];
+}
+
+/**
+ * Verifica se existe alguma etapa (válida ou não) da obra cuja data
+ * bate com a data de programação da pendência (formato "YYYY-MM-DD").
+ * Usado pra decidir se mostra a tag 📭 na seção "Datas de Programação".
+ */
+function temEtapaNaData(obraNorm, dataYMD) {
+    if (!obraNorm || !dataYMD) return false;
+    const etapasPorObra = getEtapasPorObraData();
+    const info = etapasPorObra[obraNorm];
+    if (!info || !info.etapas_raw) return false;
+
+    return info.etapas_raw.some(e => e.data_programacao_inicial === dataYMD);
+}
 
 // ============================================
 // FUNÇÃO: MOSTRAR TOAST
@@ -149,7 +457,7 @@ function mostrarToast(mensagem, tipo = 'info') {
 }
 
 // ============================================
-// FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO
+// FUNÇÕES UTILITÁRIAS
 // ============================================
 
 function formatarObraParaExibicao(obra) {
@@ -182,10 +490,6 @@ function formatarObra(obra) {
            limpo.substring(5, 10);
 }
 
-// ============================================
-// FUNÇÃO: OBTER MÊS DA DATA
-// ============================================
-
 function getMesAno(dataString) {
     if (!dataString) return null;
     try {
@@ -198,10 +502,6 @@ function getMesAno(dataString) {
     }
 }
 
-// ============================================
-// FUNÇÃO: FORMATAR MÊS PARA EXIBIÇÃO
-// ============================================
-
 function formatarMesAno(mesAno) {
     if (!mesAno) return '';
     const [ano, mes] = mesAno.split('-');
@@ -209,18 +509,10 @@ function formatarMesAno(mesAno) {
     return `${meses[parseInt(mes) - 1]} ${ano}`;
 }
 
-// ============================================
-// FUNÇÃO: FORMATAR VALOR PARA MOEDA
-// ============================================
-
 function formatarValor(valor) {
     if (!valor || valor === 0) return 'R$ 0,00';
     return 'R$ ' + valor.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
-
-// ============================================
-// FUNÇÃO: FORMATAR DATA
-// ============================================
 
 function formatarData(dataString) {
     if (!dataString) return '-';
@@ -260,7 +552,7 @@ async function buscarPendenciasBaixa() {
 }
 
 // ============================================
-// FUNÇÕES PARA O DASHBOARD MGM (NOVO)
+// FUNÇÕES PARA O DASHBOARD MGM
 // ============================================
 
 async function buscarMovimentosDoBanco() {
@@ -294,16 +586,6 @@ async function buscarMovimentosDoBanco() {
         });
         
         console.log(`🔀 MULTIPLOS identificados: ${multiplosContados}`);
-        
-        const multiplos = movimentosDoBanco.filter(m => m.tipo_mgm === 'MULTIPLO');
-        if (multiplos.length > 0) {
-            console.log('📋 MULTIPLOS encontrados:');
-            multiplos.forEach(m => {
-                const datas = m.datas_programacao ? m.datas_programacao.join(', ') : 'N/A';
-                console.log(`   📌 ${m.cod_movimentacao} | Obra: ${m.obra} | ${m.qtd_linhas || 0} linhas | Datas: ${datas}`);
-            });
-        }
-        
         return movimentosDoBanco;
     } catch (error) {
         console.error('❌ Erro ao buscar movimentos:', error);
@@ -438,7 +720,6 @@ function parsearDevolucaoCompilada(texto) {
     
     const itens = [];
     let linhasProcessadas = 0;
-    let datasInvalidas = 0;
     
     for (let i = 1; i < linhas.length; i++) {
         const linha = linhas[i].trim();
@@ -480,16 +761,6 @@ function parsearDevolucaoCompilada(texto) {
                     let ano = regexMatch[3];
                     if (ano.length === 2) ano = '20' + ano;
                     dataConvertida = `${ano}-${mes}-${dia}`;
-                } else {
-                    try {
-                        const testDate = new Date(dataOriginal);
-                        if (!isNaN(testDate)) {
-                            const dia = String(testDate.getUTCDate()).padStart(2, '0');
-                            const mes = String(testDate.getUTCMonth() + 1).padStart(2, '0');
-                            const ano = testDate.getUTCFullYear();
-                            dataConvertida = `${ano}-${mes}-${dia}`;
-                        }
-                    } catch (e) {}
                 }
             }
         }
@@ -511,7 +782,7 @@ function parsearDevolucaoCompilada(texto) {
         }
     }
     
-    console.log(`✅ ${linhasProcessadas} itens processados (${datasInvalidas} datas inválidas corrigidas)`);
+    console.log(`✅ ${linhasProcessadas} itens processados`);
     return itens;
 }
 
@@ -537,8 +808,7 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
     const documentosMultiplos = new Set();
     const documentosPorObraDocumento = {};
     
-    console.log('🔍 IDENTIFICANDO DOCUMENTOS MÚLTIPLOS NA CONSOLIDAÇÃO...');
-    console.log(`📊 Total de movimentosBanco: ${movimentosBanco.length}`);
+    console.log('🔍 IDENTIFICANDO DOCUMENTOS MÚLTIPLOS...');
     
     movimentosBanco.forEach(m => {
         const obraNorm = normalizarObra(m.obra);
@@ -569,7 +839,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
         
         Object.keys(gruposPorCodigo).forEach(chave => {
             if (gruposPorCodigo[chave].length > 1) {
-                console.log(`🔀 Documento ${chave} tem ${gruposPorCodigo[chave].length} linhas`);
                 gruposPorCodigo[chave].forEach(m => {
                     const obraNorm = normalizarObra(m.obra);
                     const codMov = m.cod_movimentacao;
@@ -587,9 +856,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
     }
     
     console.log(`✅ Documentos MULTIPLOS identificados: ${documentosMultiplos.size}`);
-    if (documentosMultiplos.size > 0) {
-        console.log(`📋 Códigos: ${Array.from(documentosMultiplos).join(', ')}`);
-    }
     
     const movimentosPorDocumento = {};
     const movimentosPorObraData = {};
@@ -646,22 +912,15 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
         });
     });
     
-    console.log(`📊 ${Object.keys(aditivosPorDocumento).length} documentos com aditivos`);
-    
     const gruposMultiplos = {};
     const gruposUnicos = {};
-    
-    console.log('📊 Agrupando itens com QTD. APLICADA > 0...');
     
     itensComAplicada.forEach(item => {
         const obraNorm = normalizarObra(item.obra);
         const documento = item.arquivo;
         const qtdAplicada = parseFloat(item.qtdAplicada) || 0;
-        const qtdEsperada = qtdAplicada;
         
-        if (qtdAplicada === 0) {
-            return;
-        }
+        if (qtdAplicada === 0) return;
         
         const isMultiplo = documentosMultiplos.has(documento) || documentosMultiplos.has(item.codigo);
         
@@ -682,7 +941,7 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
             }
             
             const grupo = gruposMultiplos[chave];
-            grupo.qtdEsperada += qtdEsperada;
+            grupo.qtdEsperada += qtdAplicada;
             grupo.itens.push(item);
             
             if (item.data && !grupo.datas.includes(item.data)) {
@@ -704,7 +963,7 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
             }
             
             const grupo = gruposUnicos[chave];
-            grupo.qtdEsperada += qtdEsperada;
+            grupo.qtdEsperada += qtdAplicada;
             grupo.itens.push(item);
             
             if (documento && !grupo.documentos.includes(documento)) {
@@ -713,65 +972,15 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
         }
     });
     
-    console.log(`📊 ${Object.keys(gruposMultiplos).length} grupos para MGM MÚLTIPLA`);
-    console.log(`📊 ${Object.keys(gruposUnicos).length} grupos para MGM ÚNICA`);
-    
-    if (Object.keys(gruposMultiplos).length === 0 && documentosMultiplos.size > 0) {
-        console.log('⚠️ Grupos múltiplos vazio, mas documentos múltiplos existem. Criando grupos...');
-        
-        documentosMultiplos.forEach(doc => {
-            const movimentos = documentosPorObraDocumento[Object.keys(documentosPorObraDocumento).find(k => k.includes(doc))] || [];
-            
-            if (movimentos.length === 0) {
-                console.log(`   ⚠️ Documento ${doc} não tem movimentos associados`);
-                return;
-            }
-            
-            const obraNorm = normalizarObra(movimentos[0].obra);
-            
-            const itensDoc = itensComAplicada.filter(item => item.arquivo === doc);
-            
-            if (itensDoc.length === 0) {
-                console.log(`   ⚠️ Documento ${doc} não tem itens com QTD. APLICADA > 0`);
-                return;
-            }
-            
-            itensDoc.forEach(item => {
-                const chave = `${doc}|${obraNorm}|${item.codigo}`;
-                if (!gruposMultiplos[chave]) {
-                    gruposMultiplos[chave] = {
-                        documento: doc,
-                        obra: obraNorm,
-                        codigo: item.codigo,
-                        descricao: item.descricao,
-                        qtdEsperada: parseFloat(item.qtdAplicada) || 0,
-                        datas: [item.data],
-                        itens: [item],
-                        movimentos: [movimentos[0]]
-                    };
-                    console.log(`   ✅ Grupo criado: ${chave}`);
-                }
-            });
-        });
-        
-        console.log(`✅ ${Object.keys(gruposMultiplos).length} grupos criados a partir de documentos múltiplos`);
-    }
-    
     const pendencias = [];
     const itensRepresadosTemp = [];
     let totalRepresados = 0;
-    let gruposProcessados = 0;
     let gruposUnicosAtendidos = 0;
     let gruposMultiplosAtendidos = 0;
     
     for (const chave in gruposUnicos) {
         const grupo = gruposUnicos[chave];
         const { obra, data, codigo, descricao, qtdEsperada, documentos } = grupo;
-        
-        gruposProcessados++;
-        if (gruposProcessados % 500 === 0) {
-            console.log(`📊 Processando grupo ${gruposProcessados}/${Object.keys(gruposUnicos).length + Object.keys(gruposMultiplos).length}...`);
-        }
         
         const chaveObraData = `${obra}|${data}`;
         let movimentosEncontrados = movimentosPorObraData[chaveObraData] || [];
@@ -970,9 +1179,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
         const grupo = gruposMultiplos[chave];
         const { documento, obra, codigo, descricao, qtdEsperada, datas, movimentos } = grupo;
         
-        gruposProcessados++;
-        console.log(`🔀 Processando MÚLTIPLA: ${documento} | ${codigo} | ${qtdEsperada} esperada | ${movimentos.length} datas`);
-        
         const movimentoSiago = movimentosSiago[documento];
         let qtdRMA = 0;
         let qtdDMA = 0;
@@ -1000,17 +1206,11 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
                 if (isRMA) {
                     qtdRMA = qtdItem;
                     docsRMA.push(documento);
-                    console.log(`   📦 RMA: ${qtdRMA} unidades`);
                 } else {
                     qtdDMA = qtdItem;
                     docsDMA.push(documento);
-                    console.log(`   📦 DMA: ${qtdDMA} unidades`);
                 }
-            } else {
-                console.log(`   ⚠️ Item ${codigo} não encontrado no Siago para ${documento}`);
             }
-        } else {
-            console.log(`   ⚠️ Documento ${documento} não encontrado no Siago`);
         }
         
         const pendenciasExistentes = pendencias.filter(p => 
@@ -1024,9 +1224,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
             pendenciaRMA += p.pendenciaRMA || 0;
             pendenciaDMA += p.pendenciaDMA || 0;
         });
-        
-        console.log(`   📊 Pendências existentes: RMA=${pendenciaRMA}, DMA=${pendenciaDMA}`);
-        console.log(`   📊 Saldo Múltipla: RMA=${qtdRMA}, DMA=${qtdDMA}`);
         
         let saldoRMA = qtdRMA;
         let saldoDMA = qtdDMA;
@@ -1044,7 +1241,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
             rmaUsado = usado;
             pendenciaRMAFinal = pendenciaRMA - usado;
             saldoRMA -= usado;
-            console.log(`   🔄 RMA da múltipla usado para cobrir pendência RMA: ${usado}`);
         }
         
         if (pendenciaDMA > 0 && saldoDMA > 0) {
@@ -1052,7 +1248,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
             dmaUsado = usado;
             pendenciaDMAFinal = pendenciaDMA - usado;
             saldoDMA -= usado;
-            console.log(`   🔄 DMA da múltipla usado para cobrir pendência DMA: ${usado}`);
         }
         
         if (saldoRMA > 0) {
@@ -1067,7 +1262,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
                 tipo: 'RMA',
                 motivo: 'Excedente de RMA após corrigir pendências'
             });
-            console.log(`   📌 ${saldoRMA} unidades de RMA REPRESADAS`);
         }
         
         if (saldoDMA > 0) {
@@ -1082,7 +1276,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
                 tipo: 'DMA',
                 motivo: 'Excedente de DMA após corrigir pendências'
             });
-            console.log(`   📌 ${saldoDMA} unidades de DMA REPRESADAS`);
         }
         
         if (pendenciaRMAFinal === 0 && pendenciaDMAFinal === 0) {
@@ -1164,10 +1357,6 @@ function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanc
     };
     
     console.log(`✅ ${pendencias.length} pendências MGM consolidadas`);
-    console.log(`📊 ${gruposUnicosAtendidos} grupos ÚNICOS atendidos`);
-    console.log(`📊 ${gruposMultiplosAtendidos} grupos MÚLTIPLOS que corrigiram pendências`);
-    console.log(`📊 Represados: ${totalRepresados.toFixed(2)} unidades`);
-    console.log(`📊 ${itensRepresadosTemp.length} itens represados`);
     
     return pendencias;
 }
@@ -1205,18 +1394,22 @@ async function carregarDadosMGM() {
         dadosCarregadosMGM = true;
         
         console.log(`📊 Dados MGM carregados:`);
-        console.log(`   - Movimentos Siago: ${Object.keys(dadosMovimentosSiago).length}`);
-        console.log(`   - Itens Devolução: ${dadosDevolucaoCompilada.length}`);
-        console.log(`   - Movimentos Banco: ${movimentosDoBanco.length}`);
-        console.log(`   - Aditivos Sistêmicos: ${aditivosSistemicos.length}`);
         console.log(`   - Pendências Consolidadas: ${pendenciasConsolidadas.length}`);
-        console.log(`   - Itens Represados: ${itensRepresados.total.toFixed(2)} unidades`);
+        
+        // 🔥 Se o filtro já foi montado, reaplica
+        if (obrasPermitidas) {
+            const antes = pendenciasConsolidadas.length;
+            pendenciasConsolidadas = pendenciasConsolidadas.filter(p =>
+                obrasPermitidas.has(normalizarObra(p.obra))
+            );
+            console.log(`🔁 Reaplicando filtro de início: ${antes - pendenciasConsolidadas.length} removidas`);
+            dadosFiltradosMGM = [...pendenciasConsolidadas];
+        }
         
         const loadingElement = document.getElementById('loadingMGM');
         if (loadingElement) loadingElement.style.display = 'none';
         
         renderizarDashboardMGM();
-        
         return true;
         
     } catch (error) {
@@ -1263,7 +1456,6 @@ function aplicarFiltroStatusMGM(status) {
     }
     
     itemSelecionadoMGM = null;
-    
     renderizarDashboardMGM();
 }
 
@@ -1311,8 +1503,6 @@ function renderizarDashboardMGM() {
             `;
         }
     }
-    
-    console.log(`✅ Dashboard MGM atualizado com ${dadosExibir.length} registros`);
 }
 
 function renderizarKPIsMGM(pendencias) {
@@ -1438,9 +1628,6 @@ function renderizarListaObrasMGM(pendencias) {
         return;
     }
     
-    // ============================================
-    // APLICAR FILTRO POR ETAPAS (EXATO)
-    // ============================================
     let pendenciasFiltradas = pendencias;
     
     if (filtroEtapasMinimo > 0) {
@@ -1463,9 +1650,6 @@ function renderizarListaObrasMGM(pendencias) {
         return;
     }
     
-    // ============================================
-    // AGRUPAR OBJETOS
-    // ============================================
     const grupos = {};
     pendenciasFiltradas.forEach(p => {
         const obra = p.obra;
@@ -1523,9 +1707,6 @@ function renderizarListaObrasMGM(pendencias) {
         }
     });
     
-    // ============================================
-    // RENDERIZAR LISTA
-    // ============================================
     let html = `
         <div class="list-header" style="display: grid; grid-template-columns: 80px 1fr 40px 50px 50px 60px 50px 45px; gap: 4px; padding: 6px 10px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 10px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
@@ -1544,7 +1725,6 @@ function renderizarListaObrasMGM(pendencias) {
         const isActive = itemSelecionadoMGM && 
             itemSelecionadoMGM.obra === grupo.obra;
         
-        const totalPend = grupo.totalPendentes + grupo.totalParciais + grupo.totalSobras + grupo.totalRepresados;
         const totalItens = grupo.itens.length;
         const temSobra = grupo.totalSobraQtd > 0;
         const temFalta = grupo.totalFaltaQtd > 0;
@@ -1566,7 +1746,7 @@ function renderizarListaObrasMGM(pendencias) {
         } else if (temFalta) {
             statusBadge = `🔴 ${grupo.totalFaltaQtd.toFixed(0)}`;
             statusClass = 'status-falta';
-        } else if (totalPend > 0) {
+        } else if (totalItens > 0) {
             statusBadge = '⏳ Pendente';
             statusClass = 'status-pendente';
         } else {
@@ -1582,9 +1762,6 @@ function renderizarListaObrasMGM(pendencias) {
         const multiplasInfo = temMultiplas ? `🔀${grupo.multiplasMGM}` : '';
         const infoExtra = [docsInfo, aditivoInfo, multiplasInfo].filter(Boolean).join(' ');
         
-        // ============================================
-        // INDICADOR DE ETAPAS NA LISTA DE OBRAS
-        // ============================================
         const obraNorm = normalizarObra(grupo.obra);
         const etapasInfo = getEtapasPorObra(obraNorm);
         let etapasIndicator = '';
@@ -1628,7 +1805,6 @@ function renderizarListaObrasMGM(pendencias) {
     
     container.innerHTML = html;
     
-    // Atualizar o valor do input
     const inputEtapas = document.getElementById('filtroEtapas');
     if (inputEtapas) {
         inputEtapas.value = filtroEtapasMinimo > 0 ? filtroEtapasMinimo : '';
@@ -1813,6 +1989,7 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
     
     const obra = itemSelecionado.obra;
     const dataSelecionada = itemSelecionado.dataSelecionada;
+    const obraNorm = normalizarObra(obra);
     
     let todosItens = dadosFiltradosMGM.filter(p => p.obra === obra);
     
@@ -1914,10 +2091,9 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
     });
     
     // ============================================
-    // ADICIONAR ETAPAS DA PROGRAMAÇÃO SIAGO
+    // ETAPAS DA PROGRAMAÇÃO SIAGO
     // ============================================
     
-    const obraNorm = normalizarObra(obra);
     const etapasInfo = getEtapasPorObra(obraNorm);
     let etapasHTML = '';
     
@@ -1949,7 +2125,7 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
                     <div class="etapas-resumo">
                         <span class="etapas-total">📊 ${total} etapas</span>
                         <span class="etapas-validas" style="color: ${validas > 0 ? '#48BB78' : '#718096'};">✅ ${validas} válidas</span>
-                        <span class="etapas-reprovadas" style="color: ${reprovadas > 0 ? '#FC8181' : '#718096'};">🔴 ${reprovadas} reprovadas</span>
+                        <span class="etapas-reprovadas" style="color: ${reprovadas > 0 ? '#FC8181' : '#718096'};">🔴 ${reprovadas} reprovadas/canceladas</span>
                         <span class="etapas-percentual">${percentual}% válidas</span>
                     </div>
                     <div class="etapas-badges">
@@ -2043,6 +2219,13 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         const temDocumentos = info.totalDocumentos > 0;
         const temMultiplas = info.multiplasMGM > 0;
         
+        // 🔥 NOVO: verifica se a data bate com alguma etapa do programacao_siago
+        const dataYMD = data !== 'sem_data' ? data : null;
+        const temEtapa = dataYMD ? temEtapaNaData(obraNorm, dataYMD) : false;
+        const semEtapaTag = (!temEtapa && dataYMD)
+            ? `<span class="data-sem-etapa" title="Nenhuma etapa da programação SIAGO nessa data">📭 Sem etapas</span>`
+            : '';
+        
         let statusBadge = '';
         let badgeClass = '';
         if (info.totalRepresadosQtd > 0) {
@@ -2074,6 +2257,7 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
                 <span class="data-label">📅 ${info.dataFormatada}</span>
                 <span class="data-badge">${info.itens.length} itens${aditivoInfo}${docInfo}${multiplasInfo}</span>
                 <span class="data-status ${badgeClass}">${statusBadge}</span>
+                ${semEtapaTag}
             </div>
         `;
     });
@@ -2151,7 +2335,30 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
 }
 
 // ============================================
-// FUNÇÃO: APLICAR FILTRO POR ETAPAS (CORRIGIDA - INPUT NUMÉRICO EXATO)
+// FUNÇÃO AUXILIAR: getEtapasPorObra
+// (wrapper compatível com o código legado que já existe no arquivo)
+// ============================================
+
+function getEtapasPorObra(obraNorm) {
+    const etapasPorObra = getEtapasPorObraData();
+    const info = etapasPorObra[obraNorm];
+    if (!info) return null;
+
+    // Compatibilidade: retorna no formato antigo
+    return {
+        total_etapas: info.total_etapas,
+        etapas_validas: info.etapas_validas,
+        etapas_reprovadas: info.etapas_reprovadas,
+        etapas: info.etapas,
+        etapas_detalhes: info.etapas_detalhes,
+        // Adiciona "situacao" achatada pra compatibilidade com renderizarDetalhesObraMGM
+        // (o código antigo esperava .situacao, .etapa, etc.)
+        _raw: info.etapas_raw
+    };
+}
+
+// ============================================
+// FUNÇÕES EXISTENTES DE FILTRO DE ETAPAS (mantidas)
 // ============================================
 
 function aplicarFiltroEtapas() {
@@ -2159,20 +2366,16 @@ function aplicarFiltroEtapas() {
     if (!input) return;
     
     const valor = parseInt(input.value);
-    // Se for NaN, vazio ou negativo, considerar como 0 (todas)
     filtroEtapasMinimo = isNaN(valor) || valor < 0 ? 0 : valor;
     
     console.log(`🔍 Filtrando obras com exatamente ${filtroEtapasMinimo} etapa(s) (0 = todas)`);
     
-    // Aplicar o filtro sobre os dados já filtrados por status/busca
     let filtrados = [...pendenciasConsolidadas];
     
-    // Aplicar filtros de status se houver
     if (filtroStatusMGMAtivo) {
         filtrados = filtrados.filter(p => p.status === filtroStatusMGMAtivo);
     }
     
-    // Aplicar filtro de busca se houver
     const buscaTexto = document.getElementById('filterBuscaMGM')?.value?.toLowerCase() || '';
     if (buscaTexto) {
         filtrados = filtrados.filter(p => 
@@ -2181,7 +2384,6 @@ function aplicarFiltroEtapas() {
         );
     }
     
-    // Aplicar filtro de obra se houver
     const buscaObra = document.getElementById('filterObraMGM')?.value || '';
     if (buscaObra) {
         const obraNorm = normalizarObra(buscaObra);
@@ -2191,7 +2393,6 @@ function aplicarFiltroEtapas() {
         );
     }
     
-    // 🔥 APLICAR FILTRO DE ETAPAS (EXATO)
     if (filtroEtapasMinimo > 0) {
         filtrados = filtrados.filter(p => {
             const obraNorm = normalizarObra(p.obra);
@@ -2220,7 +2421,6 @@ function aplicarFiltrosMGM() {
     const buscaTexto = document.getElementById('filterBuscaMGM')?.value?.toLowerCase() || '';
     const buscaObra = document.getElementById('filterObraMGM')?.value || '';
     
-    // 🔥 PEGAR O VALOR ATUAL DO INPUT DE ETAPAS
     const inputEtapas = document.getElementById('filtroEtapas');
     const valorEtapas = inputEtapas ? parseInt(inputEtapas.value) : 0;
     filtroEtapasMinimo = isNaN(valorEtapas) || valorEtapas < 0 ? 0 : valorEtapas;
@@ -2249,7 +2449,6 @@ function aplicarFiltrosMGM() {
         );
     }
     
-    // 🔥 APLICAR FILTRO DE ETAPAS (EXATO)
     if (filtroEtapasMinimo > 0) {
         filtrados = filtrados.filter(p => {
             const obraNorm = normalizarObra(p.obra);
@@ -2276,7 +2475,6 @@ function limparFiltrosMGM() {
     document.getElementById('filterBuscaMGM').value = '';
     document.getElementById('filterObraMGM').value = '';
     
-    // 🔥 RESETAR FILTRO DE ETAPAS
     const inputEtapas = document.getElementById('filtroEtapas');
     if (inputEtapas) {
         inputEtapas.value = '';
@@ -2885,47 +3083,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('userPerfil').textContent = sessao.perfil || 'GESTÃO';
     
     try {
-        console.log('📡 Iniciando busca de dados (Pendência de Baixa)...');
-        
+        // 1) Buscar pendências de baixa (Separação)
+        console.log('📡 Buscando pendências de baixa (Separação)...');
         dadosCompletos = await buscarPendenciasBaixa();
+        console.log(`✅ ${dadosCompletos.length} pendências (Separação) carregadas`);
         
-        console.log(`✅ ${dadosCompletos.length} pendências carregadas`);
+        // 2) Carregar programação siago (necessária pro filtro)
+        await carregarProgramacaoSiago();
         
-        let totalItens = 0;
-        dadosCompletos.forEach(p => {
-            if (p.itens) {
-                totalItens += p.itens.length;
-            }
-        });
-        console.log(`📦 Total de itens encontrados: ${totalItens}`);
+        // 3) Carregar dados MGM
+        await carregarDadosMGM();
         
-        if (dadosCompletos.length === 0) {
-            console.warn('⚠️ Nenhuma pendência de requisição encontrada');
-            mostrarToast('⚠️ Nenhuma pendência de requisição encontrada', 'warning');
-        }
+        // 4) Aplicar filtro de início de obra
+        aplicarFiltroInicioObraFrontEnd();
         
+        // 5) Renderizar Separação
         criarMeses();
         aplicarFiltros();
         
+        // 6) Renderizar MGM (já com dados filtrados)
+        renderizarDashboardMGM();
+        
+        // Aba inicial
         trocarAbaPrincipal('separacao');
-        
-        // ============================================
-        // CARREGAR PROGRAMAÇÃO SIAGO
-        // ============================================
-        try {
-            console.log('📡 Carregando programação siago...');
-            const programacaoData = await carregarProgramacaoSiago();
-            if (programacaoData) {
-                // Os dados já estão em window.__dadosProgramacaoSiago e window.__etapasPorObra
-                console.log(`✅ Programação siago carregada: ${Object.keys(window.__etapasPorObra || {}).length} obras`);
-            }
-        } catch (error) {
-            console.warn('⚠️ Erro ao carregar programação siago:', error);
-        }
-        
-        setTimeout(() => {
-            carregarDadosMGM();
-        }, 500);
         
         loadingOverlay.classList.remove('active');
         dashboardContent.style.display = 'block';
