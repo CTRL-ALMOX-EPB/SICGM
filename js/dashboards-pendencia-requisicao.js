@@ -116,10 +116,7 @@ let itensRepresados = {
 
 const DATA_CORTE_INICIO_OBRA = '2026-07-01'; // julho/2026
 
-// Set com as obras (normalizadas) que passam no filtro
-let obrasPermitidas = null; // null = filtro ainda não aplicado
-
-// Cache: obraNorm -> 'YYYY-MM-DD' | null
+let obrasPermitidas = null;
 const __cacheInicioObra = {};
 
 // ============================================
@@ -139,21 +136,19 @@ function isProgramacaoSiagoCarregado() {
 }
 
 /**
- * Converte as datas do SIAGO ("20/02/2024 09:00") para "YYYY-MM-DD".
- * Ignora a hora. Retorna null se inválido.
+ * Converte datas do SIAGO ("20/02/2024 09:00") para "YYYY-MM-DD" (sem hora).
+ * Retorna null se inválido.
  */
 function parseDataSiago(str) {
     if (!str) return null;
     const s = String(str).trim();
 
-    // Formato dd/mm/yyyy (com ou sem hora)
     let m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
     if (m) {
         const [, dia, mes, ano] = m;
         return `${ano}-${mes}-${dia}`;
     }
 
-    // Formato yyyy-mm-dd
     m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (m) {
         const [, ano, mes, dia] = m;
@@ -163,10 +158,6 @@ function parseDataSiago(str) {
     return null;
 }
 
-/**
- * Parseia o TSV de programacao_siago.txt.
- * Retorna um mapa: obraNorm -> { etapas_raw, etapas, etapas_detalhes, total_etapas, etapas_validas, etapas_reprovadas }
- */
 function parsearProgramacaoSiago(texto) {
     console.log('🔄 Parseando programacao_siago.txt...');
     const linhas = texto.trim().split('\n');
@@ -225,7 +216,7 @@ function parsearProgramacaoSiago(texto) {
         const registro = {
             etapa: etapaNum,
             dth_programacao_inicial: dth,
-            data_programacao_inicial: parseDataSiago(dth), // "YYYY-MM-DD"
+            data_programacao_inicial: parseDataSiago(dth),
             dsc_situacao_programacao_obra: situacao,
             cod_situacao_programacao_obra: codSituacao,
             dsc_etapa: dscEtapa,
@@ -237,7 +228,6 @@ function parsearProgramacaoSiago(texto) {
         etapasPorObra[obraNorm].etapas_detalhes[String(etapaNum)] = registro;
     }
 
-    // Calcular contadores por obra
     Object.keys(etapasPorObra).forEach(obraNorm => {
         const info = etapasPorObra[obraNorm];
         const etapasUnicas = [...new Set(info.etapas)].sort((a, b) => a - b);
@@ -264,10 +254,6 @@ function parsearProgramacaoSiago(texto) {
     return etapasPorObra;
 }
 
-/**
- * Carrega o programacao_siago.txt via R2 e popula window.__etapasPorObra.
- * Substitui a função órfã que dependia do arquivo programacao-siago.js (inexistente).
- */
 async function carregarProgramacaoSiago() {
     console.log('📥 Carregando programacao_siago...');
     try {
@@ -298,9 +284,6 @@ async function carregarProgramacaoSiago() {
 // FILTRO DE INÍCIO DE OBRA (FRONT-END)
 // ============================================
 
-/**
- * Considera etapa válida se a situação NÃO for CANCELADA nem REPROVADA.
- */
 function etapaEhValida(det) {
     if (!det) return false;
     const s = String(det.dsc_situacao_programacao_obra || '').toUpperCase();
@@ -309,10 +292,6 @@ function etapaEhValida(det) {
     return true;
 }
 
-/**
- * Retorna o registro da primeira etapa válida da obra (por número de etapa).
- * Pula canceladas/reprovadas. Retorna null se não achar.
- */
 function getPrimeiraEtapaValida(obraNorm) {
     const etapasPorObra = getEtapasPorObraData();
     const info = etapasPorObra[obraNorm];
@@ -328,9 +307,6 @@ function getPrimeiraEtapaValida(obraNorm) {
     return null;
 }
 
-/**
- * Retorna "YYYY-MM-DD" da primeira etapa válida da obra, ou null.
- */
 function getDataInicioObra(obraNorm) {
     if (!obraNorm) return null;
     if (__cacheInicioObra[obraNorm] !== undefined) return __cacheInicioObra[obraNorm];
@@ -341,12 +317,6 @@ function getDataInicioObra(obraNorm) {
     return resultado;
 }
 
-/**
- * Classifica a obra:
- *   'valida'          -> tem etapa válida com data >= corte
- *   'sem_programacao' -> não está no programacao_siago.txt (ou sem etapas)
- *   'invalida'        -> primeira etapa válida < corte, ou sem etapa válida
- */
 function classificarObra(obraNorm) {
     const etapasPorObra = getEtapasPorObraData();
     const info = etapasPorObra[obraNorm];
@@ -368,10 +338,6 @@ function classificarObra(obraNorm) {
     return { status: 'invalida', dataInicio };
 }
 
-/**
- * Monta o Set de obras permitidas (válidas).
- * Obras fora do programacao_siago.txt NÃO entram.
- */
 function construirObrasPermitidas() {
     console.log(`🔎 Montando filtro de obras iniciadas a partir de ${DATA_CORTE_INICIO_OBRA}...`);
 
@@ -399,9 +365,6 @@ function construirObrasPermitidas() {
     return permitidas;
 }
 
-/**
- * Aplica o filtro em pendenciasConsolidadas (MGM) e dadosCompletos (Separação).
- */
 function aplicarFiltroInicioObraFrontEnd() {
     obrasPermitidas = construirObrasPermitidas();
 
@@ -420,20 +383,6 @@ function aplicarFiltroInicioObraFrontEnd() {
     dadosFiltradosMGM = [...pendenciasConsolidadas];
     dadosFiltrados = [...dadosCompletos];
     dadosExibidos = [...dadosCompletos];
-}
-
-/**
- * Verifica se existe alguma etapa (válida ou não) da obra cuja data
- * bate com a data de programação da pendência (formato "YYYY-MM-DD").
- * Usado pra decidir se mostra a tag 📭 na seção "Datas de Programação".
- */
-function temEtapaNaData(obraNorm, dataYMD) {
-    if (!obraNorm || !dataYMD) return false;
-    const etapasPorObra = getEtapasPorObraData();
-    const info = etapasPorObra[obraNorm];
-    if (!info || !info.etapas_raw) return false;
-
-    return info.etapas_raw.some(e => e.data_programacao_inicial === dataYMD);
 }
 
 // ============================================
@@ -492,14 +441,11 @@ function formatarObra(obra) {
 
 function getMesAno(dataString) {
     if (!dataString) return null;
-    try {
-        const data = new Date(dataString);
-        const ano = data.getUTCFullYear();
-        const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
-        return `${ano}-${mes}`;
-    } catch {
-        return null;
-    }
+    // dataString está em "YYYY-MM-DD" — não precisa de Date
+    const s = String(dataString).trim();
+    const m = s.match(/^(\d{4})-(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}`;
+    return null;
 }
 
 function formatarMesAno(mesAno) {
@@ -514,20 +460,37 @@ function formatarValor(valor) {
     return 'R$ ' + valor.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
+/**
+ * Formata data SEM usar Date (evita problemas de timezone/hora).
+ * Aceita "YYYY-MM-DD", "DD.MM.YYYY" ou "DD/MM/YYYY".
+ * Retorna "DD.MM.YYYY".
+ */
 function formatarData(dataString) {
     if (!dataString) return '-';
-    try {
-        const data = new Date(dataString);
-        if (!isNaN(data)) {
-            const dia = String(data.getUTCDate()).padStart(2, '0');
-            const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
-            const ano = data.getUTCFullYear();
-            return `${dia}.${mes}.${ano}`;
-        }
-    } catch {
-        return dataString;
+    
+    const s = String(dataString).trim();
+    
+    // "YYYY-MM-DD" (formato padrão interno)
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) {
+        const [, ano, mes, dia] = m;
+        return `${dia}.${mes}.${ano}`;
     }
-    return dataString;
+    
+    // "DD.MM.YYYY" (já está certo)
+    const m2 = s.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+    if (m2) {
+        return s.substring(0, 10);
+    }
+    
+    // "DD/MM/YYYY"
+    const m3 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (m3) {
+        const [, dia, mes, ano] = m3;
+        return `${dia}.${mes}.${ano}`;
+    }
+    
+    return s.substring(0, 10);
 }
 
 // ============================================
@@ -694,6 +657,10 @@ function parsearMovimentosSiago(texto) {
     return movimentos;
 }
 
+/**
+ * Parseia a devolucao_compilada.txt.
+ * Datas são convertidas SEM Date — direto pra "YYYY-MM-DD".
+ */
 function parsearDevolucaoCompilada(texto) {
     console.log('🔄 Parseando devolucao_compilada.txt...');
     const linhas = texto.trim().split('\n');
@@ -731,36 +698,35 @@ function parsearDevolucaoCompilada(texto) {
         let dataOriginal = partes[indices.data]?.trim() || '';
         let dataConvertida = dataOriginal;
         
+        // 🔥 Conversão SEM Date — só manipulação de string
         if (dataOriginal) {
             dataOriginal = dataOriginal.trim();
             
-            if (dataOriginal.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
-                const partesData = dataOriginal.split('.');
-                const dia = partesData[0].padStart(2, '0');
-                const mes = partesData[1].padStart(2, '0');
-                const ano = partesData[2];
-                const anoCompleto = ano.length === 2 ? '20' + ano : ano;
-                dataConvertida = `${anoCompleto}-${mes}-${dia}`;
-            }
-            else if (dataOriginal.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-                const partesData = dataOriginal.split('/');
-                const dia = partesData[0].padStart(2, '0');
-                const mes = partesData[1].padStart(2, '0');
-                const ano = partesData[2];
-                const anoCompleto = ano.length === 2 ? '20' + ano : ano;
-                dataConvertida = `${anoCompleto}-${mes}-${dia}`;
-            }
-            else if (dataOriginal.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                dataConvertida = dataOriginal;
-            }
-            else {
-                const regexMatch = dataOriginal.match(/(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})/);
-                if (regexMatch) {
-                    const dia = regexMatch[1].padStart(2, '0');
-                    const mes = regexMatch[2].padStart(2, '0');
-                    let ano = regexMatch[3];
-                    if (ano.length === 2) ano = '20' + ano;
-                    dataConvertida = `${ano}-${mes}-${dia}`;
+            // DD.MM.YYYY
+            let m = dataOriginal.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+            if (m) {
+                dataConvertida = `${m[3]}-${m[2]}-${m[1]}`;
+            } else {
+                // DD/MM/YYYY
+                m = dataOriginal.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+                if (m) {
+                    dataConvertida = `${m[3]}-${m[2]}-${m[1]}`;
+                } else {
+                    // YYYY-MM-DD (já está certo)
+                    m = dataOriginal.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    if (m) {
+                        dataConvertida = `${m[1]}-${m[2]}-${m[3]}`;
+                    } else {
+                        // Último recurso: regex genérica
+                        const regexMatch = dataOriginal.match(/(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})/);
+                        if (regexMatch) {
+                            const dia = regexMatch[1].padStart(2, '0');
+                            const mes = regexMatch[2].padStart(2, '0');
+                            let ano = regexMatch[3];
+                            if (ano.length === 2) ano = '20' + ano;
+                            dataConvertida = `${ano}-${mes}-${dia}`;
+                        }
+                    }
                 }
             }
         }
@@ -1396,7 +1362,6 @@ async function carregarDadosMGM() {
         console.log(`📊 Dados MGM carregados:`);
         console.log(`   - Pendências Consolidadas: ${pendenciasConsolidadas.length}`);
         
-        // 🔥 Se o filtro já foi montado, reaplica
         if (obrasPermitidas) {
             const antes = pendenciasConsolidadas.length;
             pendenciasConsolidadas = pendenciasConsolidadas.filter(p =>
@@ -2090,10 +2055,6 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         valorTotal += p.qtdEsperada * (p.valor_unitario || 0);
     });
     
-    // ============================================
-    // ETAPAS DA PROGRAMAÇÃO SIAGO
-    // ============================================
-    
     const etapasInfo = getEtapasPorObra(obraNorm);
     let etapasHTML = '';
     
@@ -2106,10 +2067,16 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         let badgesHTML = '';
         etapasInfo.etapas.forEach(etapa => {
             const detalhe = etapasInfo.etapas_detalhes[etapa] || {};
-            const situacao = detalhe.situacao || 'Desconhecida';
-            const isReprovada = situacao === 'ETAPA REPROVADA';
-            const icon = isReprovada ? '🔴' : (situacao === 'ETAPA CONCLUÍDA' ? '✅' : '⏳');
-            const classe = isReprovada ? 'etapa-reprovada' : (situacao === 'ETAPA CONCLUÍDA' ? 'etapa-concluida' : 'etapa-pendente');
+            const situacao = detalhe.dsc_situacao_programacao_obra || 'Desconhecida';
+            const isReprovada = situacao.toUpperCase().includes('REPROVADA');
+            const isCancelada = situacao.toUpperCase().includes('CANCELADA');
+            const isConcluida = situacao.toUpperCase().includes('CONCLUÍDA');
+            
+            let icon = '⏳';
+            let classe = 'etapa-pendente';
+            if (isReprovada) { icon = '🔴'; classe = 'etapa-reprovada'; }
+            else if (isCancelada) { icon = '🚫'; classe = 'etapa-reprovada'; }
+            else if (isConcluida) { icon = '✅'; classe = 'etapa-concluida'; }
             
             badgesHTML += `
                 <span class="etapa-badge ${classe}" title="${situacao}">
@@ -2219,13 +2186,6 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         const temDocumentos = info.totalDocumentos > 0;
         const temMultiplas = info.multiplasMGM > 0;
         
-        // 🔥 NOVO: verifica se a data bate com alguma etapa do programacao_siago
-        const dataYMD = data !== 'sem_data' ? data : null;
-        const temEtapa = dataYMD ? temEtapaNaData(obraNorm, dataYMD) : false;
-        const semEtapaTag = (!temEtapa && dataYMD)
-            ? `<span class="data-sem-etapa" title="Nenhuma etapa da programação SIAGO nessa data">📭 Sem etapas</span>`
-            : '';
-        
         let statusBadge = '';
         let badgeClass = '';
         if (info.totalRepresadosQtd > 0) {
@@ -2257,7 +2217,6 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
                 <span class="data-label">📅 ${info.dataFormatada}</span>
                 <span class="data-badge">${info.itens.length} itens${aditivoInfo}${docInfo}${multiplasInfo}</span>
                 <span class="data-status ${badgeClass}">${statusBadge}</span>
-                ${semEtapaTag}
             </div>
         `;
     });
@@ -2336,7 +2295,6 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
 
 // ============================================
 // FUNÇÃO AUXILIAR: getEtapasPorObra
-// (wrapper compatível com o código legado que já existe no arquivo)
 // ============================================
 
 function getEtapasPorObra(obraNorm) {
@@ -2344,21 +2302,18 @@ function getEtapasPorObra(obraNorm) {
     const info = etapasPorObra[obraNorm];
     if (!info) return null;
 
-    // Compatibilidade: retorna no formato antigo
     return {
         total_etapas: info.total_etapas,
         etapas_validas: info.etapas_validas,
         etapas_reprovadas: info.etapas_reprovadas,
         etapas: info.etapas,
         etapas_detalhes: info.etapas_detalhes,
-        // Adiciona "situacao" achatada pra compatibilidade com renderizarDetalhesObraMGM
-        // (o código antigo esperava .situacao, .etapa, etc.)
         _raw: info.etapas_raw
     };
 }
 
 // ============================================
-// FUNÇÕES EXISTENTES DE FILTRO DE ETAPAS (mantidas)
+// FUNÇÕES DE FILTRO DE ETAPAS
 // ============================================
 
 function aplicarFiltroEtapas() {
@@ -3083,28 +3038,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('userPerfil').textContent = sessao.perfil || 'GESTÃO';
     
     try {
-        // 1) Buscar pendências de baixa (Separação)
         console.log('📡 Buscando pendências de baixa (Separação)...');
         dadosCompletos = await buscarPendenciasBaixa();
         console.log(`✅ ${dadosCompletos.length} pendências (Separação) carregadas`);
         
-        // 2) Carregar programação siago (necessária pro filtro)
         await carregarProgramacaoSiago();
-        
-        // 3) Carregar dados MGM
         await carregarDadosMGM();
-        
-        // 4) Aplicar filtro de início de obra
         aplicarFiltroInicioObraFrontEnd();
         
-        // 5) Renderizar Separação
         criarMeses();
         aplicarFiltros();
-        
-        // 6) Renderizar MGM (já com dados filtrados)
         renderizarDashboardMGM();
         
-        // Aba inicial
         trocarAbaPrincipal('separacao');
         
         loadingOverlay.classList.remove('active');

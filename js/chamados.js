@@ -96,7 +96,12 @@ function escapeHtml(str) {
     }[m]));
 }
 
-function formatarData(iso) {
+// ============================================
+// 🔥 RENOMEADA: formatarDataHora
+// (antes era formatarData, que sobrescrevia o window.formatarData
+//  do dashboards-common.js e do dashboards-pendencia-requisicao.js)
+// ============================================
+function formatarDataHora(iso) {
     try {
         return new Date(iso).toLocaleString('pt-BR', {
             day: '2-digit', month: '2-digit', year: 'numeric',
@@ -238,8 +243,8 @@ function renderTimelineSLA(ciclos) {
             const cor = ehAtendente ? 'atendente' : 'solicitante';
             const icone = ehAtendente ? '🛠️' : '👤';
             const rotulo = ehAtendente ? 'Atendente' : 'Solicitante';
-            const inicio = formatarData(c.inicio);
-            const fim = c.fim ? formatarData(c.fim) : null;
+            const inicio = formatarDataHora(c.inicio);
+            const fim = c.fim ? formatarDataHora(c.fim) : null;
             const duracao = formatarDuracaoMs(c.duracao_ms);
 
             const gatilhos = {
@@ -625,7 +630,7 @@ function initPaginaListagem() {
                     <div class="chamado-item-meta">
                         <span>👤 ${escapeHtml(c.usuario_nome)}</span>
                         <span>📱 ${escapeHtml(c.tela_titulo || c.tela_origem)}</span>
-                        <span>🕒 aberto em ${formatarData(c.criado_em)}</span>
+                        <span>🕒 aberto em ${formatarDataHora(c.criado_em)}</span>
                     </div>
                     ${resumoSLA}
                 </div>
@@ -730,7 +735,7 @@ function initPaginaListagem() {
                             <div class="chat-msg-header">
                                 <strong>${escapeHtml(cm.autor_nome)}</strong>
                                 ${isAtend ? '<span class="chat-badge-atendente">🛠️ Atendente</span>' : ''}
-                                <span class="chat-msg-data">${formatarData(cm.criado_em)}</span>
+                                <span class="chat-msg-data">${formatarDataHora(cm.criado_em)}</span>
                             </div>
                             <div class="chat-msg-texto">${escapeHtml(cm.mensagem).replace(/\n/g, '<br>')}</div>
                             ${anexosHtmlMsg}
@@ -800,7 +805,7 @@ function initPaginaListagem() {
                     </div>
                     <div class="modal-field">
                         <div class="modal-field-label">Criado em</div>
-                        <div class="modal-field-value">${formatarData(c.criado_em)}</div>
+                        <div class="modal-field-value">${formatarDataHora(c.criado_em)}</div>
                     </div>
                 </div>
 

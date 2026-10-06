@@ -32,16 +32,22 @@ function mostrarToast(mensagem, tipo = 'info') {
 
 function formatarData(dataString) {
     if (!dataString) return '-';
-    try {
-        const data = new Date(dataString);
-        return data.toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-    } catch {
-        return dataString;
-    }
+    
+    const s = String(dataString).trim();
+    
+    // "YYYY-MM-DD" → "DD.MM.YYYY"
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[3]}.${m[2]}.${m[1]}`;
+    
+    // "DD.MM.YYYY" → mantém
+    const m2 = s.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+    if (m2) return `${m2[1]}.${m2[2]}.${m2[3]}`;
+    
+    // "DD/MM/YYYY" → "DD.MM.YYYY"
+    const m3 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (m3) return `${m3[1]}.${m3[2]}.${m3[3]}`;
+    
+    return s.substring(0, 10);
 }
 
 // ============================================
