@@ -837,3 +837,32 @@
         min-width: 35px;
     }
 }
+
+/* ============================================ */
+/* BOTÃO EXPORTAR EXCEL                         */
+/* ============================================ */
+
+.btn-filter.exportar {
+    background: #48BB78;
+    color: white;
+    border: none;
+    padding: 6px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-filter.exportar:hover {
+    background: #38A169;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(72, 187, 120, 0.3);
+}
+
+.btn-filter.exportar:disabled {
+    background: #A0AEC0;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}

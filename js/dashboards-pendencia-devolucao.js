@@ -818,6 +818,227 @@ function renderizarGraficos(pendencias) {
 }
 
 // ============================================
+// EXPORTAR EXCEL (XLSX com 2 abas - ExcelJS)
+// ============================================
+
+async function exportarExcel() {
+    // Verifica se as libs carregaram
+    if (typeof ExcelJS === 'undefined') {
+        mostrarToast('❌ Biblioteca ExcelJS não carregou. Recarregue a página.', 'erro');
+        console.error('❌ ExcelJS não disponível. Verifique se o script foi adicionado ao HTML.');
+        return;
+    }
+    if (typeof saveAs === 'undefined') {
+        mostrarToast('❌ Biblioteca FileSaver não carregou. Recarregue a página.', 'erro');
+        console.error('❌ FileSaver não disponível. Verifique se o script foi adicionado ao HTML.');
+        return;
+    }
+
+    // Fonte: dados filtrados OU dados completos
+    const base = dadosFiltrados && dadosFiltrados.length > 0 ? dadosFiltrados : dadosCompletos;
+
+    if (!base || base.length === 0) {
+        mostrarToast('⚠️ Nenhum dado para exportar', 'aviso');
+        return;
+    }
+
+    // 🔥 Só pendências (excluir devolvidas)
+    const pendentes = base.filter(p => p.status !== 'FINALIZADO');
+
+    if (pendentes.length === 0) {
+        mostrarToast('⚠️ Nenhuma pendência para exportar (todas já foram devolvidas)', 'aviso');
+        return;
+    }
+
+    // Desabilita o botão enquanto gera
+    const btn = document.querySelector('.btn-filter.exportar');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Gerando...';
+    }
+
+    try {
+        console.log(`📥 Gerando Excel com ${pendentes.length} pendências...`);
+        const inicio = Date.now();
+
+        // ============================================
+        // MONTA O WORKBOOK
+        // ============================================
+
+        const wb = new ExcelJS.Workbook();
+        wb.creator = 'SICGM';
+        wb.created = new Date();
+
+        // ============================================
+        // ABA 1: PENDÊNCIAS (uma linha por pendência)
+        // ============================================
+
+        const ws1 = wb.addWorksheet('Pendências', {
+            views: [{ state: 'frozen', ySplit: 1 }] // congela cabeçalho
+        });
+
+        ws1.columns = [
+            { header: 'Obra',                key: 'obra',        width: 16 },
+            { header: 'Data Programação',    key: 'data',        width: 16 },
+            { header: 'Encarregado',         key: 'encarregado', width: 20 },
+            { header: 'Motivo da Pendência', key: 'motivo',      width: 50 }
+        ];
+
+        // Ordena: obra A-Z, depois data desc (mais recente primeiro)
+        const pendentesOrdenadas = [...pendentes].sort((a, b) => {
+            const cmpObra = (a.obra || '').localeCompare(b.obra || '');
+            if (cmpObra !== 0) return cmpObra;
+            return (b.data_programacao || '').localeCompare(a.data_programacao || '');
+        });
+
+        pendentesOrdenadas.forEach(p => {
+            ws1.addRow({
+                obra: formatarObraParaExibicao(p.obra) || '-',
+                data: p.data_programacao ? formatarData(p.data_programacao) : '-',
+                encarregado: p.encarregado || 'NÃO INFORMADO',
+                motivo: p.motivo_pendencia || 'Sem motivo'
+            });
+        });
+
+        // Estiliza cabeçalho da aba 1
+        estilizarCabecalho(ws1);
+        ws1.autoFilter = {
+            from: { row: 1, column: 1 },
+            to:   { row: 1, column: 4 }
+        };
+
+        // Estiliza corpo (bordas + alinhamento)
+        estilizarCorpo(ws1, 4);
+
+        // ============================================
+        // ABA 2: POR ENCARREGADO
+        // ============================================
+
+        const encarregadosMap = {};
+        pendentes.forEach(p => {
+            const enc = p.encarregado || 'NÃO INFORMADO';
+            if (!encarregadosMap[enc]) {
+                encarregadosMap[enc] = {
+                    nome: enc,
+                    obras: new Set(),
+                    total: 0,
+                    ultimaData: null
+                };
+            }
+            encarregadosMap[enc].total++;
+            if (p.obra) encarregadosMap[enc].obras.add(p.obra);
+            if (p.data_programacao) {
+                if (!encarregadosMap[enc].ultimaData || p.data_programacao > encarregadosMap[enc].ultimaData) {
+                    encarregadosMap[enc].ultimaData = p.data_programacao;
+                }
+            }
+        });
+
+        const encarregadosOrdenados = Object.values(encarregadosMap)
+            .sort((a, b) => b.total - a.total);
+
+        const ws2 = wb.addWorksheet('Por Encarregado', {
+            views: [{ state: 'frozen', ySplit: 1 }]
+        });
+
+        ws2.columns = [
+            { header: 'Encarregado',     key: 'nome',  width: 25 },
+            { header: 'Qtd. Obras',      key: 'obras', width: 14 },
+            { header: 'Qtd. Pendências', key: 'total', width: 18 },
+            { header: 'Última Data',     key: 'data',  width: 16 }
+        ];
+
+        encarregadosOrdenados.forEach(e => {
+            ws2.addRow({
+                nome: e.nome,
+                obras: e.obras.size,
+                total: e.total,
+                data: e.ultimaData ? formatarData(e.ultimaData) : '-'
+            });
+        });
+
+        estilizarCabecalho(ws2);
+        ws2.autoFilter = {
+            from: { row: 1, column: 1 },
+            to:   { row: 1, column: 4 }
+        };
+        estilizarCorpo(ws2, 4);
+
+        // ============================================
+        // GERA O ARQUIVO E BAIXA
+        // ============================================
+
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+
+        const hoje = new Date();
+        const ano = hoje.getFullYear();
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        const nomeArquivo = `pendencia-devolucao-${ano}-${mes}-${dia}.xlsx`;
+
+        saveAs(blob, nomeArquivo);
+
+        const tempo = Date.now() - inicio;
+        console.log(`✅ Excel gerado em ${tempo}ms: ${nomeArquivo} (${pendentes.length} pendências, ${encarregadosOrdenados.length} encarregados)`);
+        mostrarToast(`✅ Excel exportado: ${pendentes.length} pendências`, 'sucesso');
+
+    } catch (error) {
+        console.error('❌ Erro ao exportar Excel:', error);
+        mostrarToast('❌ Erro ao gerar Excel: ' + error.message, 'erro');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '📥 Exportar Excel';
+        }
+    }
+}
+
+// ============================================
+// HELPERS DE ESTILO (ExcelJS)
+// ============================================
+
+function estilizarCabecalho(ws) {
+    const header = ws.getRow(1);
+    header.height = 22;
+    header.eachCell(cell => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+        cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF2D3748' } // cinza escuro
+        };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.border = {
+            top:    { style: 'thin', color: { argb: 'FF1A202C' } },
+            left:   { style: 'thin', color: { argb: 'FF1A202C' } },
+            bottom: { style: 'thin', color: { argb: 'FF1A202C' } },
+            right:  { style: 'thin', color: { argb: 'FF1A202C' } }
+        };
+    });
+}
+
+function estilizarCorpo(ws, numColunas) {
+    // Aplica borda + alinhamento às linhas de dados (a partir da linha 2)
+    for (let i = 2; i <= ws.rowCount; i++) {
+        const row = ws.getRow(i);
+        row.height = 18;
+        for (let c = 1; c <= numColunas; c++) {
+            const cell = row.getCell(c);
+            cell.border = {
+                top:    { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                left:   { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                right:  { style: 'thin', color: { argb: 'FFE2E8F0' } }
+            };
+            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        }
+    }
+}
+
+// ============================================
 // EXPORTAR
 // ============================================
 
@@ -828,5 +1049,6 @@ window.selecionarObra = selecionarObra;
 window.selecionarEncarregado = selecionarEncarregado;
 window.renderizarDashboard = renderizarDashboard;
 window.filtrarPorMes = filtrarPorMes;
+window.exportarExcel = exportarExcel;
 
 console.log('✅ dashboards-pendencia-devolucao.js inicializado!');
