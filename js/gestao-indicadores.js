@@ -307,11 +307,15 @@ async function carregarPosicaoEstoque() {
     }
 }
 
+// ============================================
+// 🔥 BUSCAR MOVIMENTOS (com cache buster)
+// ============================================
 async function buscarMovimentos() {
     try {
-        const url = `${WORKER_URL}/api/movimentos`;
+        // 🔥 Cache buster: força o Worker (e o cache do browser) a servir versão nova
+        const url = `${WORKER_URL}/api/movimentos?t=${Date.now()}`;
         console.log(`📡 Buscando movimentos: ${url}`);
-        const response = await fetch(url);
+        const response = await fetch(url, { cache: 'no-store' });
         if (!response.ok) throw new Error(`Erro ${response.status}: ${response.statusText}`);
         const texto = await response.text();
         console.log(`✅ Arquivo carregado (${texto.split('\n').length} linhas)`);
@@ -322,6 +326,9 @@ async function buscarMovimentos() {
     }
 }
 
+// ============================================
+// 🔥 PARSER DE MOVIMENTOS (robusto + ISO)
+// ============================================
 function parseMovimentos(texto, posicaoMap) {
     const linhas = texto.trim().split('\n');
 
@@ -350,31 +357,49 @@ function parseMovimentos(texto, posicaoMap) {
 
     console.log('📌 Índices:', idx);
 
+    // 🔥 Mínimo de colunas realmente necessárias (não exige 16 fixo)
+    const colunasNecessarias = Math.max(
+        idx.orgmov, idx.numdoc_mov, idx.datamov, idx.codmat_mov,
+        idx.qtdmov, idx.num_obra
+    ) + 1;
+
+    console.log(`📏 Colunas mínimas necessárias: ${colunasNecessarias}`);
+
     const movimentos = [];
-    let ignorados = 0;
+    let ignoradosVazios = 0;
+    let ignoradosQtdZero = 0;
+    let ignoradosDataInvalida = 0;
 
     for (let i = 1; i < linhas.length; i++) {
-        const linha = linhas[i].trim();
-        if (!linha) { ignorados++; continue; }
+        const linha = linhas[i];
+        if (!linha || !linha.trim()) { ignoradosVazios++; continue; }
 
         const partes = linha.split('\t');
-        if (partes.length < 16) { ignorados++; continue; }
+        if (partes.length < colunasNecessarias) { ignoradosVazios++; continue; }
 
         const qtdmov = parseFloat(partes[idx.qtdmov]?.trim().replace(',', '.')) || 0;
-        if (qtdmov === 0) { ignorados++; continue; }
+        if (qtdmov === 0) { ignoradosQtdZero++; continue; }
 
         const datamovRaw = partes[idx.datamov]?.trim() || '';
         let dataFormatada = '';
 
         if (datamovRaw) {
-            const match = datamovRaw.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+            // Formato SIAGO: "02/09/2026 16:09:32" ou "02/09/2026"
+            const match = datamovRaw.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
             if (match) {
-                dataFormatada = `${match[1]}-${match[2]}-${match[3]}`;
+                // 🔥 Padroniza em ISO: aaaa-mm-dd
+                dataFormatada = `${match[3]}-${match[2]}-${match[1]}`;
             } else {
-                const match2 = datamovRaw.match(/(\d{4})-(\d{2})-(\d{2})/);
-                if (match2) dataFormatada = `${match2[3]}-${match2[2]}-${match2[1]}`;
-                else dataFormatada = datamovRaw;
+                const match2 = datamovRaw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (match2) {
+                    dataFormatada = `${match2[1]}-${match2[2]}-${match2[3]}`;
+                }
             }
+        }
+
+        if (!dataFormatada) {
+            ignoradosDataInvalida++;
+            continue;
         }
 
         const codmat = partes[idx.codmat_mov]?.trim() || '';
@@ -383,15 +408,11 @@ function parseMovimentos(texto, posicaoMap) {
         const orgmov = partes[idx.orgmov]?.trim() || '';
         const isRMA = orgmov === 'S' || orgmov === 'RMA' || orgmov.toUpperCase() === 'RMA';
 
-        let mesNumero = '', anoNumero = '', mesAno = '';
-        if (dataFormatada) {
-            const partesData = dataFormatada.split('-');
-            if (partesData.length === 3) {
-                mesNumero = partesData[1];
-                anoNumero = partesData[2];
-                mesAno = `${anoNumero}-${mesNumero}`;
-            }
-        }
+        // 🔥 Data em ISO: [0]=ano, [1]=mês, [2]=dia
+        const partesData = dataFormatada.split('-');
+        const anoNumero = partesData[0];
+        const mesNumero = partesData[1];
+        const mesAno = `${anoNumero}-${mesNumero}`;
 
         const numObraRaw = partes[idx.num_obra]?.trim() || '';
 
@@ -426,7 +447,19 @@ function parseMovimentos(texto, posicaoMap) {
         });
     }
 
-    console.log(`✅ ${movimentos.length} movimentos processados (${ignorados} ignorados)`);
+    console.log(`✅ ${movimentos.length} movimentos processados`);
+    console.log(`   ⚠️ Ignorados — vazios/curtos: ${ignoradosVazios}`);
+    console.log(`   ⚠️ Ignorados — qtd=0: ${ignoradosQtdZero}`);
+    console.log(`   ⚠️ Ignorados — data inválida: ${ignoradosDataInvalida}`);
+
+    const datas = movimentos.map(d => d.datamov).filter(Boolean).sort();
+    if (datas.length > 0) {
+        console.log(`📅 Primeira data: ${datas[0]}`);
+        console.log(`📅 Última data: ${datas[datas.length - 1]}`);
+    }
+    const meses = [...new Set(movimentos.map(d => d.mes_ano).filter(Boolean))].sort();
+    console.log(`📆 Meses disponíveis: ${meses.join(', ')}`);
+
     return movimentos;
 }
 
@@ -666,21 +699,20 @@ function aplicarFiltros() {
         console.log(`🏗️ Filtrado por obra: ${formatarNumeroObra(filtroEstado.obraSelecionada)}`);
     }
 
+    // 🔥 datamov agora está em ISO (aaaa-mm-dd) — sem inversão
     if (filtroEstado.dataInicio) {
         const inicio = new Date(filtroEstado.dataInicio + 'T00:00:00');
         dados = dados.filter(d => {
-            const partes = d.datamov?.split('-') || [];
-            if (partes.length !== 3) return false;
-            return new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`) >= inicio;
+            if (!d.datamov) return false;
+            return new Date(d.datamov + 'T00:00:00') >= inicio;
         });
     }
 
     if (filtroEstado.dataFim) {
         const fim = new Date(filtroEstado.dataFim + 'T23:59:59');
         dados = dados.filter(d => {
-            const partes = d.datamov?.split('-') || [];
-            if (partes.length !== 3) return false;
-            return new Date(`${partes[2]}-${partes[1]}-${partes[0]}T00:00:00`) <= fim;
+            if (!d.datamov) return false;
+            return new Date(d.datamov + 'T00:00:00') <= fim;
         });
     }
 
