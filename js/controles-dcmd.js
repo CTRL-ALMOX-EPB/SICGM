@@ -1,6 +1,7 @@
 // ============================================
 // CONTROLES DCMD - PAINEL UNIFICADO
 // SOFT DELETE + AUDITORIA + LIBERAÇÃO OPERACIONAL
+// SEM "PENDÊNCIA DE BAIXA" (removida do sistema)
 // ============================================
 
 console.log('🚀 Iniciando Controles DCMD - Painel...');
@@ -8,16 +9,10 @@ console.log('🚀 Iniciando Controles DCMD - Painel...');
 const API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
 
 // ============================================
-// MAPEAMENTO DOS TIPOS (6 opções)
+// MAPEAMENTO DOS TIPOS (5 opções — sem pendência de baixa)
 // ============================================
 
 const TIPOS = {
-    'pendencia': {
-        label: 'Pendência de Baixa',
-        icon: '📌',
-        endpoint: '/pendencia-baixa',
-        tabela: 'pendencia_baixa'
-    },
     'aditivo': {
         label: 'Aditivo Sistêmico',
         icon: '📝',
@@ -82,7 +77,7 @@ const TIPOS_MOVIMENTO = [
 
 let perfilUsuario = 'OPERACIONAL';
 let dadosSessao = null;
-let tipoAtual = 'pendencia';
+let tipoAtual = 'aditivo';
 let controlesCarregados = [];
 let paginaAtual = 1;
 let totalPaginas = 1;
@@ -93,10 +88,9 @@ let ordenacaoAtual = 'data_desc';
 let timerFiltroData = null;
 
 // ============================================
-// 🔥 MÁSCARA E CONVERSÃO DE DATA BR
+// MÁSCARA E CONVERSÃO DE DATA BR
 // ============================================
 
-// Máscara automática DD/MM/AAAA
 function mascararData(input) {
     let v = input.value.replace(/\D/g, '');
     if (v.length > 8) v = v.slice(0, 8);
@@ -110,7 +104,6 @@ function mascararData(input) {
 
 window.mascararData = mascararData;
 
-// Converte DD/MM/AAAA → YYYY-MM-DD
 function converterDataBRParaISO(valor) {
     if (!valor) return '';
     const m = valor.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -118,7 +111,6 @@ function converterDataBRParaISO(valor) {
     return `${m[3]}-${m[2]}-${m[1]}`;
 }
 
-// Debounce do filtro de data (400ms após parar de digitar)
 function agendarFiltroData() {
     if (timerFiltroData) clearTimeout(timerFiltroData);
     timerFiltroData = setTimeout(() => {
@@ -126,18 +118,8 @@ function agendarFiltroData() {
         if (!input) return;
         
         const valor = input.value.trim();
-        
-        // Se vazio → recarrega sem filtro de data
-        if (!valor) {
-            aplicarFiltros();
-            return;
-        }
-        
-        // Se completo DD/MM/AAAA → aplica
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(valor)) {
-            aplicarFiltros();
-        }
-        // Se incompleto → NÃO faz nada (evita bug)
+        if (!valor) { aplicarFiltros(); return; }
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(valor)) { aplicarFiltros(); }
     }, 400);
 }
 
@@ -199,10 +181,6 @@ function carregarDadosUsuario() {
     }
 }
 
-// ============================================
-// REDIRECIONAR PARA HOME
-// ============================================
-
 function redirecionarParaHome() {
     console.log('🏠 Redirecionando para home...');
     
@@ -216,8 +194,6 @@ function redirecionarParaHome() {
             }
         }
         
-        console.log(`📝 Perfil detectado: ${perfil}`);
-        
         const homeMap = {
             'OPERACIONAL': '../home-operacional.html',
             'GESTAO': '../home-gestao.html',
@@ -225,8 +201,6 @@ function redirecionarParaHome() {
         };
         
         const homePage = homeMap[perfil] || '../home-gestao.html';
-        
-        console.log(`🔀 Navegando para: ${homePage}`);
         window.location.href = homePage;
         
     } catch (error) {
@@ -312,11 +286,8 @@ function gerarFiltrosDinamicos() {
         `;
         
         const statusFilter = container.querySelector('.filtro-item:has(#filtro-status)');
-        if (statusFilter) {
-            statusFilter.after(div);
-        } else {
-            container.appendChild(div);
-        }
+        if (statusFilter) statusFilter.after(div);
+        else container.appendChild(div);
     }
     
     if (tipoAtual === 'movimento') {
@@ -330,11 +301,8 @@ function gerarFiltrosDinamicos() {
         `;
         
         const statusFilter = container.querySelector('.filtro-item:has(#filtro-status)');
-        if (statusFilter) {
-            statusFilter.after(div);
-        } else {
-            container.appendChild(div);
-        }
+        if (statusFilter) statusFilter.after(div);
+        else container.appendChild(div);
     }
 }
 
@@ -345,10 +313,14 @@ function gerarFiltrosDinamicos() {
 function selecionarTipo(tipo) {
     console.log(`🔄 Selecionando tipo: ${tipo}`);
     
+    if (!TIPOS[tipo]) {
+        console.warn(`⚠️ Tipo inválido: ${tipo} — usando 'aditivo' como padrão`);
+        tipo = 'aditivo';
+    }
+    
     if (abortController) {
         abortController.abort();
         abortController = null;
-        console.log('⛔ Requisição anterior cancelada');
     }
     
     tipoAtual = tipo;
@@ -372,9 +344,7 @@ function selecionarTipo(tipo) {
     }
     
     const paginacaoContainer = document.getElementById('paginacao-container');
-    if (paginacaoContainer) {
-        paginacaoContainer.innerHTML = '';
-    }
+    if (paginacaoContainer) paginacaoContainer.innerHTML = '';
     
     document.getElementById('filtro-numero').value = '';
     document.getElementById('filtro-obra').value = '';
@@ -390,7 +360,6 @@ function selecionarTipo(tipo) {
     if (filtroTipoMovimento) filtroTipoMovimento.value = '';
     
     gerarFiltrosDinamicos();
-    
     carregarControles(1);
 }
 
@@ -421,6 +390,11 @@ async function criarNovoControle() {
     }
     
     const tipoInfo = TIPOS[tipoAtual];
+    if (!tipoInfo) {
+        mostrarToast('❌ Tipo de controle inválido', 'erro');
+        return;
+    }
+    
     console.log(`📝 Criando novo controle do tipo: ${tipoInfo.label}`);
     
     try {
@@ -504,13 +478,17 @@ async function carregarControles(pagina = 1) {
     if (abortController) {
         abortController.abort();
         abortController = null;
-        console.log('⛔ Requisição anterior cancelada');
     }
     
     abortController = new AbortController();
     const signal = abortController.signal;
     
     const tipoInfo = TIPOS[tipoAtual];
+    if (!tipoInfo) {
+        console.error(`❌ Tipo inválido: ${tipoAtual}`);
+        return;
+    }
+    
     console.log(`📋 Carregando controles do tipo: ${tipoInfo.label} - Página ${pagina} - Ordenação: ${ordenacaoAtual}`);
     const container = document.getElementById('controlesList');
     if (!container) return;
@@ -518,19 +496,13 @@ async function carregarControles(pagina = 1) {
     container.innerHTML = '<div class="controles-list-loading"><div class="spinner"></div><p>⏳ Carregando controles...</p></div>';
     
     const paginacaoContainer = document.getElementById('paginacao-container');
-    if (paginacaoContainer) {
-        paginacaoContainer.innerHTML = '';
-    }
+    if (paginacaoContainer) paginacaoContainer.innerHTML = '';
     
-    // 🔥 Converte data BR → ISO antes de enviar
     const dataInput = document.getElementById('filtro-data');
     const dataValor = dataInput?.value || '';
     let dataISO = '';
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dataValor)) {
-        dataISO = dataValor; // já é ISO (retrocompatível)
-    } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dataValor)) {
-        dataISO = converterDataBRParaISO(dataValor);
-    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dataValor)) dataISO = dataValor;
+    else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dataValor)) dataISO = converterDataBRParaISO(dataValor);
     
     filtrosAplicados = {
         numero: document.getElementById('filtro-numero')?.value || '',
@@ -552,7 +524,6 @@ async function carregarControles(pagina = 1) {
     if (filtrosAplicados.obra) params.append('obra', filtrosAplicados.obra);
     if (filtrosAplicados.data) params.append('data', filtrosAplicados.data);
     if (filtrosAplicados.status) params.append('status', filtrosAplicados.status);
-    
     if (filtrosAplicados.encarregado) params.append('encarregado', filtrosAplicados.encarregado);
     if (filtrosAplicados.tipoMovimento) params.append('tipo_movimento', filtrosAplicados.tipoMovimento);
     
@@ -561,21 +532,11 @@ async function carregarControles(pagina = 1) {
     try {
         const response = await fetch(url, { signal });
         
-        if (signal.aborted) {
-            console.log('⛔ Requisição abortada');
-            return;
-        }
-        
-        if (!response.ok) {
-            throw new Error('Erro ao carregar controles');
-        }
+        if (signal.aborted) return;
+        if (!response.ok) throw new Error('Erro ao carregar controles');
         
         const result = await response.json();
-        
-        if (signal.aborted) {
-            console.log('⛔ Requisição abortada durante processamento');
-            return;
-        }
+        if (signal.aborted) return;
         
         let data = [];
         let pagination = { page: 1, limit: 20, total: 0, totalPages: 1 };
@@ -604,15 +565,10 @@ async function carregarControles(pagina = 1) {
         renderizarPaginacao();
         
         const contador = document.getElementById('filtro-contador');
-        if (contador) {
-            contador.textContent = `Mostrando ${data.length} de ${totalRegistros} registros`;
-        }
+        if (contador) contador.textContent = `Mostrando ${data.length} de ${totalRegistros} registros`;
         
     } catch (error) {
-        if (error.name === 'AbortError' || signal.aborted) {
-            console.log('⛔ Requisição cancelada');
-            return;
-        }
+        if (error.name === 'AbortError' || signal.aborted) return;
         
         console.error('❌ Erro ao carregar controles:', error);
         container.innerHTML = `
@@ -624,7 +580,7 @@ async function carregarControles(pagina = 1) {
                 </button>
             </div>
         `;
-        document.getElementById('paginacao-container').innerHTML = '';
+        if (paginacaoContainer) paginacaoContainer.innerHTML = '';
     }
 }
 
@@ -646,12 +602,8 @@ function renderizarPaginacao() {
             <span>Mostrando ${(paginaAtual - 1) * 20 + 1} - ${Math.min(paginaAtual * 20, totalRegistros)} de ${totalRegistros} registros</span>
         </div>
         <div class="paginacao-buttons">
-            <button class="btn-paginacao" onclick="carregarControles(1)" ${paginaAtual <= 1 ? 'disabled' : ''}>
-                ⏮
-            </button>
-            <button class="btn-paginacao" onclick="carregarControles(${paginaAtual - 1})" ${paginaAtual <= 1 ? 'disabled' : ''}>
-                ◀
-            </button>
+            <button class="btn-paginacao" onclick="carregarControles(1)" ${paginaAtual <= 1 ? 'disabled' : ''}>⏮</button>
+            <button class="btn-paginacao" onclick="carregarControles(${paginaAtual - 1})" ${paginaAtual <= 1 ? 'disabled' : ''}>◀</button>
     `;
     
     let startPage = Math.max(1, paginaAtual - 2);
@@ -663,11 +615,7 @@ function renderizarPaginacao() {
     }
     
     for (let i = startPage; i <= endPage; i++) {
-        html += `
-            <button class="btn-paginacao ${i === paginaAtual ? 'active' : ''}" onclick="carregarControles(${i})">
-                ${i}
-            </button>
-        `;
+        html += `<button class="btn-paginacao ${i === paginaAtual ? 'active' : ''}" onclick="carregarControles(${i})">${i}</button>`;
     }
     
     if (endPage < totalPaginas) {
@@ -676,12 +624,8 @@ function renderizarPaginacao() {
     }
     
     html += `
-            <button class="btn-paginacao" onclick="carregarControles(${paginaAtual + 1})" ${paginaAtual >= totalPaginas ? 'disabled' : ''}>
-                ▶
-            </button>
-            <button class="btn-paginacao" onclick="carregarControles(${totalPaginas})" ${paginaAtual >= totalPaginas ? 'disabled' : ''}>
-                ⏭
-            </button>
+            <button class="btn-paginacao" onclick="carregarControles(${paginaAtual + 1})" ${paginaAtual >= totalPaginas ? 'disabled' : ''}>▶</button>
+            <button class="btn-paginacao" onclick="carregarControles(${totalPaginas})" ${paginaAtual >= totalPaginas ? 'disabled' : ''}>⏭</button>
         </div>
     `;
     
@@ -697,7 +641,6 @@ function renderizarControles(controles) {
     if (!container) return;
     
     if (!Array.isArray(controles)) {
-        console.warn('⚠️ controles não é um array:', controles);
         container.innerHTML = `
             <div class="empty-state">
                 <p style="font-size: 48px;">⚠️</p>
@@ -731,8 +674,6 @@ function renderizarControles(controles) {
         const isNovo = index === 0 && controles.length > 0;
         
         let infoExtra = '';
-        
-        // 🔥 MOVIMENTO: mostrar tipo + nº do documento (cod_movimentacao)
         if (tipoAtual === 'movimento') {
             if (controle.tipo_movimento) {
                 const tipoMap = { 'RMA': 'RMA', 'DMA': 'DMA', 'DMA_SUCATA': 'SUCATA' };
@@ -757,8 +698,6 @@ function renderizarControles(controles) {
         const isBranco = !controle.obra || controle.obra === '';
         const obraDisplay = isBranco ? '<span style="color: #FC8181;">⚠️ Em branco</span>' : controle.obra;
         
-        const mostrarExcluir = podeExcluir;
-        
         const ultimaAcaoInfo = controle.ultima_acao_por
             ? `<p style="font-size: 11px; color: #718096; margin-top: 4px;">✏️ Última ação: ${controle.ultima_acao_por}${controle.ultima_acao_em ? ' em ' + formatarData(controle.ultima_acao_em) : ''}</p>`
             : '';
@@ -782,7 +721,7 @@ function renderizarControles(controles) {
                 </div>
                 <div class="controle-card-footer">
                     <span class="controle-card-data">${formatarData(controle.criado_em)}</span>
-                    ${mostrarExcluir ? `
+                    ${podeExcluir ? `
                         <button class="btn-remover" onclick="event.stopPropagation(); excluirControle(${controle.numero})" title="${isFinalizado ? 'Desativar controle finalizado' : 'Desativar controle'}">
                             🗑️
                         </button>
@@ -795,17 +734,12 @@ function renderizarControles(controles) {
     container.innerHTML = html;
     
     setTimeout(() => {
-        const badges = document.querySelectorAll('.card-badge-novo');
-        badges.forEach(badge => {
+        document.querySelectorAll('.card-badge-novo').forEach(badge => {
             badge.style.transition = 'opacity 0.5s ease';
             badge.style.opacity = '0';
-            setTimeout(() => {
-                badge.style.display = 'none';
-            }, 500);
+            setTimeout(() => { badge.style.display = 'none'; }, 500);
         });
-        
-        const cards = document.querySelectorAll('.controle-card.novo');
-        cards.forEach(card => {
+        document.querySelectorAll('.controle-card.novo').forEach(card => {
             card.classList.remove('novo');
         });
     }, 3000);
@@ -859,11 +793,6 @@ async function excluirControle(numero) {
             throw new Error(error.error || 'Erro ao desativar');
         }
         
-        const resultado = await response.json().catch(() => ({}));
-        const linhasAfetadas = resultado.linhas_afetadas || 1;
-        
-        console.log(`🗑️ Controle #${numeroFormatado} desativado por ${dadosSessao?.perfil} (${linhasAfetadas} linha(s))`);
-        
         mostrarToast(`✅ Controle #${numeroFormatado} desativado com sucesso!`, 'sucesso');
         carregarControles(paginaAtual);
         
@@ -887,7 +816,6 @@ function aplicarFiltros() {
 window.aplicarFiltros = aplicarFiltros;
 
 function limparFiltros() {
-    console.log('🧹 Limpando filtros...');
     document.getElementById('filtro-numero').value = '';
     document.getElementById('filtro-obra').value = '';
     document.getElementById('filtro-data').value = '';
@@ -964,17 +892,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     if (tipoURL && TIPOS[tipoURL]) {
         tipoAtual = tipoURL;
-        document.querySelectorAll('.tipo-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tipo === tipoURL);
-        });
     }
+    
+    document.querySelectorAll('.tipo-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tipo === tipoAtual);
+    });
     
     gerarFiltrosDinamicos();
     
     const btnNovo = document.getElementById('btnNovoControle');
-    if (btnNovo) {
-        btnNovo.onclick = criarNovoControle;
-    }
+    if (btnNovo) btnNovo.onclick = criarNovoControle;
     
     await carregarControles(1);
     

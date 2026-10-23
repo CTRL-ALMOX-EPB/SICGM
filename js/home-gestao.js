@@ -68,7 +68,7 @@ const DEPARTAMENTOS = {
             {
                 id: 'contagem-diaria-dcmd',
                 nome: 'Contagem Diária',
-                icone: '📊',
+                icone: '🧮',                            // 🔄 era 📊 — contagem = ábaco
                 link: 'contagem-diaria/index.html',
                 status: 'disponivel',
                 descricao: 'Registre e visualize as contagens diárias'
@@ -82,17 +82,25 @@ const DEPARTAMENTOS = {
                 descricao: 'Gerencie a lista de materiais MGM'
             },
             {
+                id: 'indicadores-dcmd',
+                nome: 'Indicadores',
+                icone: '📈',                            // 🔄 era 📊 — BI = tendência
+                link: 'power-bi/index.html',
+                status: 'disponivel',
+                descricao: 'Business Intelligence com os principais indicadores do setor'
+            },
+            {
                 id: 'painel-controles',
                 nome: 'Painel de Controles',
                 icone: '🖥️',
                 link: 'controles/index.html',
                 status: 'disponivel',
-                descricao: 'Gerencie pendências de baixa, aditivos, farol de obras e movimentações'
+                descricao: 'Gerencie aditivos, farol de obras e movimentações'
             },
             {
                 id: 'dashboards',
                 nome: 'Dashboards',
-                icone: '📊',
+                icone: '🎛️',                            // 🔄 era 📊 — vários painéis
                 link: 'dashboards/index.html',
                 status: 'disponivel',
                 descricao: 'Acesse todos os dashboards do sistema'
@@ -100,7 +108,7 @@ const DEPARTAMENTOS = {
             {
                 id: 'relatorios-dcmd',
                 nome: 'Relatórios',
-                icone: '📈',
+                icone: '📄',
                 link: '#',
                 status: 'disponivel',
                 descricao: 'Relatórios de contagem e busca trafo',

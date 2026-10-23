@@ -48,7 +48,6 @@
     </style>
 </head>
 <body>
-    <!-- Botões de navegação -->
     <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
         <span class="btn-navegacao-icone">⬆</span>
         <span class="btn-navegacao-texto">Topo</span>
@@ -60,7 +59,6 @@
 
     <div class="container">
         <div class="form-card">
-            <!-- Logo e Título com Timer -->
             <div class="header-container">
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 12px;">
@@ -70,12 +68,10 @@
                 </div>
             </div>
             
-            <!-- Botão Voltar -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <button onclick="redirecionarParaHome()" class="btn-voltar-home">🏠 Voltar ao Início</button>
             </div>
 
-            <!-- Header do Usuário -->
             <div class="user-header" id="userHeader">
                 <div class="user-info">
                     <div class="avatar" id="userAvatar">U</div>
@@ -90,12 +86,9 @@
                 </div>
             </div>
 
-            <!-- Seletor de Tipo (6 opções) -->
+            <!-- Seletor de Tipo (5 opções — sem Pendência de Baixa) -->
             <div class="tipo-selector">
-                <button class="tipo-btn active" data-tipo="pendencia" onclick="selecionarTipo('pendencia')">
-                    📌 Pendência de Requisição
-                </button>
-                <button class="tipo-btn" data-tipo="aditivo" onclick="selecionarTipo('aditivo')">
+                <button class="tipo-btn active" data-tipo="aditivo" onclick="selecionarTipo('aditivo')">
                     📝 Aditivo Sistêmico
                 </button>
                 <button class="tipo-btn" data-tipo="aditivo-fisico" onclick="selecionarTipo('aditivo-fisico')">
@@ -169,14 +162,10 @@
                         <p>⏳ Carregando controles...</p>
                     </div>
                 </div>
-                <!-- Paginação -->
-                <div class="paginacao-container" id="paginacao-container">
-                    <!-- Renderizado via JavaScript -->
-                </div>
+                <div class="paginacao-container" id="paginacao-container"></div>
             </div>
         </div>
         
-        <!-- Rodapé -->
         <div style="text-align: center; margin-top: 1rem;">
             <button onclick="redirecionarParaHome()" style="background: transparent; color: #4299E1; border: none; cursor: pointer; font-weight: 500; font-size: 14px; text-decoration: underline;">
                 ← Voltar para Home
@@ -184,15 +173,11 @@
         </div>
     </div>
 
-    <!-- ============================================ -->
-    <!-- FIREBASE SDK                                 -->
-    <!-- ============================================ -->
+    <!-- FIREBASE SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-    <!-- ============================================ -->
-    <!-- CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!)    -->
-    <!-- ============================================ -->
+    <!-- CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
     <script src="../js/firebase-config.js"></script>
     <script src="../js/firebase-init.js"></script>
     <script src="../js/config.js"></script>

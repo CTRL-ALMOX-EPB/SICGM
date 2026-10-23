@@ -22,7 +22,7 @@ const DEPARTAMENTOS_OPERACIONAL = {
             {
                 id: 'contagem-diaria-dcmd',
                 nome: 'Contagem Diária',
-                icone: '📊',
+                icone: '🧮',                             // 🔄 era 📊
                 link: 'contagem-diaria/index.html',
                 status: 'disponivel',
                 descricao: 'Registre e visualize as contagens diárias'
@@ -37,6 +37,14 @@ const DEPARTAMENTOS_OPERACIONAL = {
                 isRestricted: true
             },
             {
+                id: 'indicadores-dcmd',                  // 🆕 NOVO
+                nome: 'Indicadores',
+                icone: '📈',
+                link: 'power-bi/index.html',
+                status: 'disponivel',
+                descricao: 'Business Intelligence com os principais indicadores do setor'
+            },
+            {
                 id: 'painel-controles',
                 nome: 'Painel de Controles',
                 icone: '🖥️',
@@ -47,7 +55,7 @@ const DEPARTAMENTOS_OPERACIONAL = {
             {
                 id: 'dashboards-operacional',
                 nome: 'Dashboards',
-                icone: '📊',
+                icone: '🎛️',                             // 🔄 era 📊
                 link: 'dashboards/index.html',
                 status: 'disponivel',
                 descricao: 'Acesse os dashboards do sistema'
@@ -277,7 +285,6 @@ function renderizarDepartamentoOperacional(deptoId) {
                         </a>
                     `;
                 } else {
-                    // 🔥 CORRIGIDO: aplica CONFIG.getPageUrl()
                     const link = (typeof CONFIG !== 'undefined' && CONFIG)
                         ? CONFIG.getPageUrl(item.link)
                         : item.link;
@@ -300,7 +307,6 @@ function renderizarDepartamentoOperacional(deptoId) {
             let onclick = '';
             let link = isDisabled ? '#' : func.link;
 
-            // 🔥 CORRIGIDO: aplica CONFIG.getPageUrl() também nos cards
             if (!isDisabled && !func.isRestricted && typeof CONFIG !== 'undefined' && CONFIG) {
                 link = CONFIG.getPageUrl(func.link);
             }
@@ -321,9 +327,7 @@ function renderizarDepartamentoOperacional(deptoId) {
         }
     });
 
-    html += `
-        </div>
-    `;
+    html += `</div>`;
 
     container.innerHTML = html;
 }
@@ -358,7 +362,6 @@ function mostrarEmDesenvolvimentoOperacional(event) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📋 Home Operacional carregada');
 
-    // Aguarda o container existir e a home ficar visível (pós-auth)
     const checkContainer = setInterval(function() {
         const container = document.getElementById('deptoContentOperacional');
         const homeContent = document.getElementById('homeContent');
@@ -370,7 +373,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 200);
 
-    // Fallback: se após 3s ainda não renderizou, força
     setTimeout(function() {
         const container = document.getElementById('deptoContentOperacional');
         if (container && container.innerHTML === '') {
