@@ -8,6 +8,44 @@
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/controles-dcmd.css">
     <link rel="stylesheet" href="../css/chamados.css">
+    <style>
+        /* ============================================ */
+        /* AJUSTE VISUAL DO FILTRO DE DATA (TEXT)       */
+        /* Garante paridade com os demais filtros       */
+        /* ============================================ */
+        #filtro-data {
+            padding: 10px 14px;
+            border: 2px solid #E2E8F0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: white;
+            min-height: 44px;
+            width: 100%;
+            box-sizing: border-box;
+            color: #2D3748;
+            font-family: inherit;
+            letter-spacing: 0.5px;
+        }
+
+        #filtro-data:focus {
+            border-color: #4299E1;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        #filtro-data::placeholder {
+            color: #A0AEC0;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 768px) {
+            #filtro-data {
+                min-height: 44px;
+                font-size: 16px; /* evita zoom no iOS */
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Botões de navegação -->
@@ -86,7 +124,15 @@
                 </div>
                 <div class="filtro-item">
                     <label>📅 Data</label>
-                    <input type="date" id="filtro-data" onchange="aplicarFiltros()">
+                    <input type="text" 
+                           id="filtro-data" 
+                           placeholder="DD/MM/AAAA" 
+                           maxlength="10" 
+                           inputmode="numeric"
+                           autocomplete="off"
+                           title="Digite no formato DD/MM/AAAA"
+                           oninput="mascararData(this)"
+                           onchange="agendarFiltroData()">
                 </div>
                 <div class="filtro-item">
                     <label>📌 Status</label>

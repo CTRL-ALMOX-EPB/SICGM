@@ -50,7 +50,6 @@ const TIPOS = {
     }
 };
 
-// 🔥 PERFIS QUE PODEM EXCLUIR
 const PERFIS_COM_EXCLUSAO = ['GESTAO', 'OPERACIONAL'];
 
 // ============================================
@@ -91,6 +90,58 @@ let totalRegistros = 0;
 let filtrosAplicados = {};
 let abortController = null;
 let ordenacaoAtual = 'data_desc';
+let timerFiltroData = null;
+
+// ============================================
+// 🔥 MÁSCARA E CONVERSÃO DE DATA BR
+// ============================================
+
+// Máscara automática DD/MM/AAAA
+function mascararData(input) {
+    let v = input.value.replace(/\D/g, '');
+    if (v.length > 8) v = v.slice(0, 8);
+    
+    let formatado = v;
+    if (v.length >= 3) formatado = v.slice(0, 2) + '/' + v.slice(2);
+    if (v.length >= 5) formatado = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
+    
+    input.value = formatado;
+}
+
+window.mascararData = mascararData;
+
+// Converte DD/MM/AAAA → YYYY-MM-DD
+function converterDataBRParaISO(valor) {
+    if (!valor) return '';
+    const m = valor.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!m) return '';
+    return `${m[3]}-${m[2]}-${m[1]}`;
+}
+
+// Debounce do filtro de data (400ms após parar de digitar)
+function agendarFiltroData() {
+    if (timerFiltroData) clearTimeout(timerFiltroData);
+    timerFiltroData = setTimeout(() => {
+        const input = document.getElementById('filtro-data');
+        if (!input) return;
+        
+        const valor = input.value.trim();
+        
+        // Se vazio → recarrega sem filtro de data
+        if (!valor) {
+            aplicarFiltros();
+            return;
+        }
+        
+        // Se completo DD/MM/AAAA → aplica
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(valor)) {
+            aplicarFiltros();
+        }
+        // Se incompleto → NÃO faz nada (evita bug)
+    }, 400);
+}
+
+window.agendarFiltroData = agendarFiltroData;
 
 // ============================================
 // FUNÇÕES DE AUTENTICAÇÃO
@@ -471,14 +522,26 @@ async function carregarControles(pagina = 1) {
         paginacaoContainer.innerHTML = '';
     }
     
+    // 🔥 Converte data BR → ISO antes de enviar
+    const dataInput = document.getElementById('filtro-data');
+    const dataValor = dataInput?.value || '';
+    let dataISO = '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dataValor)) {
+        dataISO = dataValor; // já é ISO (retrocompatível)
+    } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dataValor)) {
+        dataISO = converterDataBRParaISO(dataValor);
+    }
+    
     filtrosAplicados = {
         numero: document.getElementById('filtro-numero')?.value || '',
         obra: document.getElementById('filtro-obra')?.value || '',
-        data: document.getElementById('filtro-data')?.value || '',
+        data: dataISO,
         status: document.getElementById('filtro-status')?.value || '',
         encarregado: document.getElementById('filtro-encarregado')?.value || '',
         tipoMovimento: document.getElementById('filtro-tipo-movimento')?.value || ''
     };
+    
+    console.log('🔍 Filtros aplicados:', filtrosAplicados);
     
     const params = new URLSearchParams();
     params.append('page', pagina);
@@ -657,8 +720,6 @@ function renderizarControles(controles) {
     }
     
     const tipoInfo = TIPOS[tipoAtual];
-    
-    // 🔥 GESTAO + OPERACIONAL podem excluir
     const podeExcluir = PERFIS_COM_EXCLUSAO.includes(dadosSessao?.perfil);
     
     let html = '';
@@ -670,13 +731,23 @@ function renderizarControles(controles) {
         const isNovo = index === 0 && controles.length > 0;
         
         let infoExtra = '';
-        if (tipoAtual === 'movimento' && controle.tipo_movimento) {
-            const tipoMap = {
-                'RMA': 'RMA',
-                'DMA': 'DMA',
-                'DMA_SUCATA': 'SUCATA'
-            };
-            infoExtra = `<p><strong>📋 Tipo:</strong> ${tipoMap[controle.tipo_movimento] || controle.tipo_movimento}</p>`;
+        
+        // 🔥 MOVIMENTO: mostrar tipo + nº do documento (cod_movimentacao)
+        if (tipoAtual === 'movimento') {
+            if (controle.tipo_movimento) {
+                const tipoMap = { 'RMA': 'RMA', 'DMA': 'DMA', 'DMA_SUCATA': 'SUCATA' };
+                infoExtra += `<p><strong>📋 Tipo:</strong> ${tipoMap[controle.tipo_movimento] || controle.tipo_movimento}</p>`;
+            }
+            
+            const docs = controle.documentos_lista || [];
+            if (docs.length === 0) {
+                infoExtra += `<p><strong>📄 Nº Doc:</strong> <span style="color:#A0AEC0;">—</span></p>`;
+            } else if (docs.length <= 3) {
+                infoExtra += `<p><strong>📄 Nº Doc:</strong> <span style="color:#2B6CB0; font-weight:700;">${docs.join(' | ')}</span></p>`;
+            } else {
+                const exibir = docs.slice(0, 3).join(' | ');
+                infoExtra += `<p><strong>📄 Nº Doc:</strong> <span style="color:#2B6CB0; font-weight:700;" title="${docs.join(', ')}">${exibir} <span style="color:#718096; font-weight:400;">+${docs.length - 3}</span></span></p>`;
+            }
         }
         
         if (tipoAtual === 'devolucao' && controle.encarregado) {
@@ -686,10 +757,8 @@ function renderizarControles(controles) {
         const isBranco = !controle.obra || controle.obra === '';
         const obraDisplay = isBranco ? '<span style="color: #FC8181;">⚠️ Em branco</span>' : controle.obra;
         
-        // 🔥 GESTAO + OPERACIONAL excluem (pendentes E finalizados)
         const mostrarExcluir = podeExcluir;
         
-        // 🔥 Rastreio de última ação (se houver)
         const ultimaAcaoInfo = controle.ultima_acao_por
             ? `<p style="font-size: 11px; color: #718096; margin-top: 4px;">✏️ Última ação: ${controle.ultima_acao_por}${controle.ultima_acao_em ? ' em ' + formatarData(controle.ultima_acao_em) : ''}</p>`
             : '';
@@ -758,7 +827,6 @@ window.abrirControle = abrirControle;
 // ============================================
 
 async function excluirControle(numero) {
-    // 🔥 GESTAO + OPERACIONAL podem excluir
     if (!PERFIS_COM_EXCLUSAO.includes(dadosSessao?.perfil)) {
         mostrarToast('🔒 Seu perfil não tem permissão para excluir registros.', 'aviso');
         return;
@@ -935,3 +1003,5 @@ window.excluirControle = excluirControle;
 window.abrirControle = abrirControle;
 window.aplicarOrdenacao = aplicarOrdenacao;
 window.gerarFiltrosDinamicos = gerarFiltrosDinamicos;
+window.mascararData = mascararData;
+window.agendarFiltroData = agendarFiltroData;
