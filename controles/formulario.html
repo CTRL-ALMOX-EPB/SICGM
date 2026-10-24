@@ -8,8 +8,65 @@
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/controles-dcmd.css">
     <link rel="stylesheet" href="../css/chamados.css">
+    <style>
+        /* Overlay de loading do formulário (evita flash de "form errado") */
+        #loadingFormulario {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(247, 250, 252, 0.95);
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            transition: opacity 0.3s ease;
+        }
+        #loadingFormulario.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #loadingFormulario .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #E2E8F0;
+            border-top-color: #4299E1;
+            border-radius: 50%;
+            animation: spinLoad 0.8s linear infinite;
+        }
+        @keyframes spinLoad {
+            to { transform: rotate(360deg); }
+        }
+        #loadingFormulario p {
+            margin: 0;
+            color: #4A5568;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        #loadingFormulario .loading-sub {
+            color: #718096;
+            font-size: 13px;
+            font-weight: 400;
+        }
+        #controleForm {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #controleForm.pronto {
+            opacity: 1;
+        }
+    </style>
 </head>
 <body>
+    <div id="loadingFormulario">
+        <div class="spinner"></div>
+        <p>⏳ Carregando formulário...</p>
+        <p class="loading-sub" id="loadingSub">Aguarde...</p>
+    </div>
+
     <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
         <span class="btn-navegacao-icone">⬆</span>
         <span class="btn-navegacao-texto">Topo</span>
@@ -21,7 +78,6 @@
 
     <div class="container">
         <div class="form-card">
-            <!-- Logo e Título com Timer -->
             <div class="header-container">
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 12px;">
@@ -31,8 +87,15 @@
                 </div>
             </div>
             
-            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <button onclick="voltarParaPainel()" class="btn-voltar-home">⬅ Voltar ao Painel</button>
+                
+                <div id="btnImportarExcelContainer" style="display: none;">
+                    <input type="file" id="inputArquivoExcel" accept=".xlsx,.xls,.csv" style="display: none;" onchange="handleArquivoExcel(event)">
+                    <button type="button" class="btn-importar-excel" onclick="document.getElementById('inputArquivoExcel').click()">
+                        📥 Importar Excel
+                    </button>
+                </div>
             </div>
 
             <div class="user-header" id="userHeader">
@@ -58,7 +121,6 @@
                 </div>
 
                 <div class="controle-form-body">
-                    <!-- TRÊS CAMPOS LADO A LADO -->
                     <div class="form-row form-row-3col">
                         <div class="form-group">
                             <label>📋 Tipo de Controle</label>
@@ -73,6 +135,40 @@
                         <div class="form-group" id="campoDataProgramacao">
                             <label for="formDataProgramacao">📅 Data de Programação <span style="color:#FC8181;">*</span></label>
                             <input type="date" id="formDataProgramacao">
+                        </div>
+                    </div>
+
+                    <div id="camposMGM" style="display:none;">
+                        <hr>
+                        <h3>📋 Dados da MGM</h3>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formSeparadorMGM">👤 Separador</label>
+                                <input type="text" id="formSeparadorMGM" placeholder="Nome do separador">
+                            </div>
+                            <div class="form-group">
+                                <label for="formDataSeparacaoMGM">📅 Data de Separação</label>
+                                <input type="date" id="formDataSeparacaoMGM">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formEncarregadoMGM">👔 Encarregado</label>
+                                <input type="text" id="formEncarregadoMGM" placeholder="Nome do encarregado">
+                            </div>
+                            <div class="form-group">
+                                <label for="formCaminhao">🚚 Caminhão</label>
+                                <input type="text" id="formCaminhao" placeholder="Placa ou identificação">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="formObservacaoMGM">📝 Observação (Conferido / Expedição / Outros)</label>
+                                <textarea id="formObservacaoMGM" rows="2" placeholder="Ex: Conferido por: João / Expedição: Maria"></textarea>
+                            </div>
                         </div>
                     </div>
 
@@ -138,8 +234,8 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="formDataSeparacao">📅 Data de Separação</label>
-                                <input type="date" id="formDataSeparacao">
+                                <label for="formDataSeparacaoFarol">📅 Data de Separação</label>
+                                <input type="date" id="formDataSeparacaoFarol">
                             </div>
                         </div>
                         <div class="form-row">
@@ -338,130 +434,35 @@
                                         <th style="width:7%;">Código</th>
                                         <th style="width:12%;">Descrição</th>
                                         <th style="width:4%;">UND</th>
-                                        <th style="width:6%;">QTD</th>
-                                        <th style="width:9%;" id="thDataBaixa" style="display:none;">Data Baixa</th>
-                                        <th style="width:7%;" id="thBaixado" style="display:none;">Baixado?</th>
-                                        <th style="width:10%;" id="thMotivo" style="display:none;">Motivo</th>
-                                        <th style="width:9%;" id="thColaboradorItem" style="display:none;">Colaborador</th>
-                                        <th style="width:12%;" id="thObservacaoItem" style="display:none;">Observação</th>
-                                        <th style="width:8%;" id="thStatusAditivo" style="display:none;">Status</th>
-                                        <th style="width:9%;" id="thNumDoc" style="display:none;">Nº Documento</th>
-                                        <th style="width:7%;" id="thUsuario" style="display:none;">Usuário</th>
-                                        <th style="width:10%;" id="thObservacao" style="display:none;">Observação</th>
-                                        <th style="width:7%;" id="thAplicado" style="display:none;">Aplicado</th>
-                                        <th style="width:9%;" id="thColaborador" style="display:none;">Solicitante</th>
-                                        <th style="width:9%;" id="thEncarregado" style="display:none;">Encarregado</th>
+                                        <th style="width:6%;" id="thQuantidade">QTD</th>
+                                        
+                                        <th style="width:7%; display:none;" class="col-mgm" id="thAditivoSaida">Aditivo Saída</th>
+                                        <th style="width:7%; display:none;" class="col-mgm" id="thAditivoCampo">Aditivo Campo</th>
+                                        <th style="width:7%; display:none;" class="col-mgm" id="thRma">RMA</th>
+                                        <th style="width:7%; display:none;" class="col-mgm" id="thSeparada">Separada</th>
+                                        <th style="width:7%; display:none;" class="col-mgm" id="thAplicada">Aplicada</th>
+                                        <th style="width:7%; display:none;" class="col-mgm" id="thDma">DMA</th>
+                                        <th style="width:7%; display:none;" class="col-mgm" id="thPendente">Pendente</th>
+                                        
+                                        <th style="width:9%; display:none;" id="thDataBaixa">Data Baixa</th>
+                                        <th style="width:7%; display:none;" id="thBaixado">Baixado?</th>
+                                        <th style="width:10%; display:none;" id="thMotivo">Motivo</th>
+                                        <th style="width:9%; display:none;" id="thColaboradorItem">Colaborador</th>
+                                        <th style="width:12%; display:none;" id="thObservacaoItem">Observação</th>
+                                        
+                                        <th style="width:8%; display:none;" id="thStatusAditivo">Status</th>
+                                        <th style="width:9%; display:none;" id="thNumDoc">Nº Documento</th>
+                                        <th style="width:7%; display:none;" id="thUsuario">Usuário</th>
+                                        <th style="width:10%; display:none;" id="thObservacao">Observação</th>
+                                        
+                                        <th style="width:7%; display:none;" id="thAplicado">Aplicado</th>
+                                        <th style="width:9%; display:none;" id="thColaborador">Solicitante</th>
+                                        <th style="width:9%; display:none;" id="thEncarregado">Encarregado</th>
+                                        
                                         <th style="width:6%;">Ações</th>
                                     </tr>
                                 </thead>
-                                <tbody id="itemsBody">
-                                    <tr>
-                                        <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código"></td>
-                                        <td><input type="text" class="item-descricao input-descricao" readonly placeholder="Descrição"></td>
-                                        <td><input type="text" class="item-unidade" readonly placeholder="Unid."></td>
-                                        <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0"></td>
-                                        <td class="col-pendente-aditivo" style="display:none;">
-                                            <select class="item-pendente-aditivo">
-                                                <option value="">-</option>
-                                                <option value="SIM">SIM</option>
-                                                <option value="NÃO">NÃO</option>
-                                            </select>
-                                        </td>
-                                        <td class="col-data-baixa" style="display:none;">
-                                            <input type="date" class="item-data-baixa">
-                                        </td>
-                                        <td class="col-baixado" style="display:none;">
-                                            <select class="item-baixado">
-                                                <option value="NÃO">NÃO</option>
-                                                <option value="SIM">SIM</option>
-                                            </select>
-                                        </td>
-                                        <td class="col-motivo" style="display:none;">
-                                            <input type="text" class="item-motivo" placeholder="Motivo">
-                                        </td>
-                                        <td class="col-colaborador-item" style="display:none;">
-                                            <input type="text" class="item-colaborador-item" placeholder="Colaborador">
-                                        </td>
-                                        <td class="col-observacao-item" style="display:none;">
-                                            <input type="text" class="item-observacao-item" placeholder="Observação">
-                                        </td>
-                                        <td class="col-status-aditivo" style="display:none;">
-                                            <select class="item-status-aditivo">
-                                                <option value="ANALISE">📊 Análise</option>
-                                                <option value="APROVADO">✅ Aprovado</option>
-                                                <option value="REPROVADO">❌ Reprovado</option>
-                                                <option value="S/ SOLICITAÇÃO">📋 Sem Solicitação</option>
-                                            </select>
-                                        </td>
-                                        <td class="col-num-doc" style="display:none;">
-                                            <input type="text" class="item-num-doc" placeholder="Nº Documento">
-                                        </td>
-                                        <td class="col-usuario" style="display:none;">
-                                            <input type="text" class="item-usuario" placeholder="Usuário">
-                                        </td>
-                                        <td class="col-observacao" style="display:none;">
-                                            <input type="text" class="item-observacao" placeholder="Observação">
-                                        </td>
-                                        <td class="col-aplicado" style="display:none;">
-                                            <select class="item-aplicado">
-                                                <option value="NÃO">NÃO</option>
-                                                <option value="SIM">SIM</option>
-                                                <option value="PARCIAL">PARCIAL</option>
-                                                <option value="PENDENTE">PENDENTE</option>
-                                            </select>
-                                        </td>
-                                        <td class="col-colaborador" style="display:none;">
-                                            <select class="item-colaborador">
-                                                <option value="">Selecione...</option>
-                                                <option value="MATEUS SANTANA">MATEUS SANTANA</option>
-                                                <option value="SALES JUNIOR">SALES JUNIOR</option>
-                                                <option value="VALENTIM">VALENTIM</option>
-                                                <option value="SIVANILDO">SIVANILDO</option>
-                                                <option value="ERICK VEGA">ERICK VEGA</option>
-                                                <option value="JOSÉ JORDAN">JOSÉ JORDAN</option>
-                                                <option value="ALCIDES">ALCIDES</option>
-                                                <option value="FRANCINALDO (DEDÉ)">FRANCINALDO (DEDÉ)</option>
-                                                <option value="ROMARIO">ROMARIO</option>
-                                                <option value="BRENO">BRENO</option>
-                                                <option value="MAYKE">MAYKE</option>
-                                                <option value="MARIO J.">MARIO J.</option>
-                                                <option value="MEYDSON">MEYDSON</option>
-                                            </select>
-                                        </td>
-                                        <td class="col-encarregado" style="display:none;">
-                                            <select class="item-encarregado">
-                                                <option value="">Selecione...</option>
-                                                <option value="ROMARIO">ROMARIO</option>
-                                                <option value="ERIVANIO">ERIVANIO</option>
-                                                <option value="RIUSTON">RIUSTON</option>
-                                                <option value="E. MARCELO">E. MARCELO</option>
-                                                <option value="BRENO M.">BRENO M.</option>
-                                                <option value="FRANCINALDO(DEDÉ)">FRANCINALDO(DEDÉ)</option>
-                                                <option value="WALISSON">WALISSON</option>
-                                                <option value="VALENTIM">VALENTIM</option>
-                                                <option value="LUCIANO">LUCIANO</option>
-                                                <option value="MEYDSON">MEYDSON</option>
-                                                <option value="PAULÃO">PAULÃO</option>
-                                                <option value="DAMIÃO(MIMA)">DAMIÃO(MIMA)</option>
-                                                <option value="DEMILSON(PIM)">DEMILSON(PIM)</option>
-                                                <option value="JOSÉ JORDAN">JOSÉ JORDAN</option>
-                                                <option value="ALCIDES">ALCIDES</option>
-                                                <option value="EDILSON">EDILSON</option>
-                                                <option value="ANTONIO">ANTONIO</option>
-                                                <option value="JUNIOR C.">JUNIOR C.</option>
-                                                <option value="MARCOS">MARCOS</option>
-                                                <option value="ANTONIO D.">ANTONIO D.</option>
-                                                <option value="ANDERSON">ANDERSON</option>
-                                                <option value="LEANDRO">LEANDRO</option>
-                                                <option value="ROBSON">ROBSON</option>
-                                                <option value="MANOEL C.">MANOEL C.</option>
-                                                <option value="GUTEMBERG">GUTEMBERG</option>
-                                                <option value="REGINALDO">REGINALDO</option>
-                                            </select>
-                                        </td>
-                                        <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
-                                    </tr>
-                                </tbody>
+                                <tbody id="itemsBody"></tbody>
                             </table>
                         </div>
                         <button type="button" class="add-item-btn" onclick="adicionarLinhaItem()">➕ Adicionar Item</button>
@@ -492,22 +493,21 @@
     <div id="descricao-popup" class="descricao-popup"></div>
     <div id="popup-overlay" class="popup-overlay"></div>
 
-    <!-- ============================================ -->
-    <!-- 🔥 FIREBASE SDK                              -->
-    <!-- ============================================ -->
+    <!-- SheetJS -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+    <!-- FIREBASE SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-    <!-- ============================================ -->
-    <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
-    <!-- ============================================ -->
+    <!-- CONFIGURAÇÕES DO SISTEMA (ORDEM ORIGINAL PRESERVADA) -->
     <script src="../js/firebase-config.js"></script>   
     <script src="../js/config.js"></script>  
     <script src="../js/auth-service.js"></script>      
     <script src="../js/auth-helper.js"></script>  
     <script src="../js/script.js"></script>
     <script src="../js/auth-global.js"></script>  
-    <Script src="../js/login.js"></script>      
+    <script src="../js/login.js"></script>
     <script src="../js/controles-dcmd-form.js"></script>
     <script src="../js/chamados.js" defer></script>
 </body>

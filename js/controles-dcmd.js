@@ -1,7 +1,7 @@
 // ============================================
 // CONTROLES DCMD - PAINEL UNIFICADO
 // SOFT DELETE + AUDITORIA + LIBERAÇÃO OPERACIONAL
-// SEM "PENDÊNCIA DE BAIXA" (removida do sistema)
+// INCLUI MGM ONLINE
 // ============================================
 
 console.log('🚀 Iniciando Controles DCMD - Painel...');
@@ -9,7 +9,7 @@ console.log('🚀 Iniciando Controles DCMD - Painel...');
 const API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
 
 // ============================================
-// MAPEAMENTO DOS TIPOS (5 opções — sem pendência de baixa)
+// MAPEAMENTO DOS TIPOS (6 opções)
 // ============================================
 
 const TIPOS = {
@@ -42,6 +42,12 @@ const TIPOS = {
         icon: '📄',
         endpoint: '/movimento',
         tabela: 'movimento'
+    },
+    'mgm': {
+        label: 'MGM Online',
+        icon: '📋',
+        endpoint: '/mgm-online',
+        tabela: 'mgm_online'
     }
 };
 
@@ -436,6 +442,14 @@ async function criarNovoControle() {
             data.cod_movimentacao = '';
         }
         
+        if (tipoAtual === 'mgm') {
+            data.separador = '';
+            data.data_separacao = '';
+            data.encarregado = '';
+            data.caminhao = '';
+            data.observacao = '';
+        }
+        
         const url = `${API_URL}${tipoInfo.endpoint}`;
         
         const response = await fetch(url, {
@@ -674,6 +688,7 @@ function renderizarControles(controles) {
         const isNovo = index === 0 && controles.length > 0;
         
         let infoExtra = '';
+        
         if (tipoAtual === 'movimento') {
             if (controle.tipo_movimento) {
                 const tipoMap = { 'RMA': 'RMA', 'DMA': 'DMA', 'DMA_SUCATA': 'SUCATA' };
@@ -693,6 +708,18 @@ function renderizarControles(controles) {
         
         if (tipoAtual === 'devolucao' && controle.encarregado) {
             infoExtra += `<p><strong>👤 Encarregado:</strong> ${controle.encarregado}</p>`;
+        }
+        
+        if (tipoAtual === 'mgm') {
+            if (controle.separador) {
+                infoExtra += `<p><strong>👤 Separador:</strong> ${controle.separador}</p>`;
+            }
+            if (controle.encarregado) {
+                infoExtra += `<p><strong>👔 Encarregado:</strong> ${controle.encarregado}</p>`;
+            }
+            if (controle.caminhao) {
+                infoExtra += `<p><strong>🚚 Caminhão:</strong> ${controle.caminhao}</p>`;
+            }
         }
         
         const isBranco = !controle.obra || controle.obra === '';

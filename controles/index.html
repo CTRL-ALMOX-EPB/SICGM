@@ -9,10 +9,6 @@
     <link rel="stylesheet" href="../css/controles-dcmd.css">
     <link rel="stylesheet" href="../css/chamados.css">
     <style>
-        /* ============================================ */
-        /* AJUSTE VISUAL DO FILTRO DE DATA (TEXT)       */
-        /* Garante paridade com os demais filtros       */
-        /* ============================================ */
         #filtro-data {
             padding: 10px 14px;
             border: 2px solid #E2E8F0;
@@ -27,22 +23,19 @@
             font-family: inherit;
             letter-spacing: 0.5px;
         }
-
         #filtro-data:focus {
             border-color: #4299E1;
             outline: none;
             box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
         }
-
         #filtro-data::placeholder {
             color: #A0AEC0;
             letter-spacing: 0.5px;
         }
-
         @media (max-width: 768px) {
             #filtro-data {
                 min-height: 44px;
-                font-size: 16px; /* evita zoom no iOS */
+                font-size: 16px;
             }
         }
     </style>
@@ -86,7 +79,7 @@
                 </div>
             </div>
 
-            <!-- Seletor de Tipo (5 opções — sem Pendência de Baixa) -->
+            <!-- Seletor de Tipo (6 opções) -->
             <div class="tipo-selector">
                 <button class="tipo-btn active" data-tipo="aditivo" onclick="selecionarTipo('aditivo')">
                     📝 Aditivo Sistêmico
@@ -103,9 +96,11 @@
                 <button class="tipo-btn" data-tipo="movimento" onclick="selecionarTipo('movimento')">
                     📄 Controle de Movimentações
                 </button>
+                <button class="tipo-btn" data-tipo="mgm" onclick="selecionarTipo('mgm')">
+                    📋 MGM Online
+                </button>
             </div>
 
-            <!-- Filtros -->
             <div class="filtros-container" id="filtrosContainer">
                 <div class="filtro-item">
                     <label>🔢 Nº</label>
@@ -154,7 +149,6 @@
                 </div>
             </div>
 
-            <!-- Lista de Controles -->
             <div class="controles-list-container">
                 <div id="controlesList">
                     <div class="controles-list-loading">
@@ -173,11 +167,9 @@
         </div>
     </div>
 
-    <!-- FIREBASE SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-    <!-- CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
     <script src="../js/firebase-config.js"></script>
     <script src="../js/firebase-init.js"></script>
     <script src="../js/config.js"></script>
