@@ -1331,3 +1331,223 @@
     .upload-area .titulo { font-size: 12px; }
     .chat-msg-anexos { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
 }
+
+/* ============================================ */
+/* 🔔 SINO DE NOTIFICAÇÕES (in-app)             */
+/* ============================================ */
+
+.sino-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin-right: 8px;
+}
+
+.sino-btn {
+    position: relative;
+    background: rgba(255,255,255,0.15);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.25);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+    font-family: inherit;
+}
+
+.sino-btn:hover {
+    background: rgba(255,255,255,0.3);
+    transform: scale(1.05);
+}
+
+.sino-icone { line-height: 1; display: block; }
+
+.sino-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background: #E53E3E;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.9);
+    line-height: 1;
+}
+
+.sino-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 380px;
+    max-width: 90vw;
+    background: #FFFFFF;
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+    border: 1px solid #E2E8F0;
+    overflow: hidden;
+    z-index: 99999;
+    animation: sinoFadeIn 0.2s ease;
+}
+
+@keyframes sinoFadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.sino-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #1a237e, #0d47a1);
+    color: white;
+}
+
+.sino-header h3 { margin: 0; font-size: 15px; font-weight: 700; }
+
+.sino-btn-link {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.sino-btn-link:hover { background: rgba(255,255,255,0.3); }
+
+.sino-lista {
+    max-height: 420px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sino-lista::-webkit-scrollbar { width: 6px; }
+.sino-lista::-webkit-scrollbar-track { background: #F7FAFC; }
+.sino-lista::-webkit-scrollbar-thumb { background: #CBD5E0; border-radius: 3px; }
+
+.sino-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #EDF2F7;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.sino-item:last-child { border-bottom: none; }
+.sino-item:hover { background: #F7FAFC; }
+
+.sino-item.nao-lida {
+    background: #EBF8FF;
+    border-left: 3px solid #4299E1;
+}
+
+.sino-item.nao-lida:hover { background: #DBEAFE; }
+.sino-item.lida { opacity: 0.7; }
+
+.sino-item-icone {
+    font-size: 22px;
+    flex-shrink: 0;
+    line-height: 1;
+    margin-top: 2px;
+}
+
+.sino-item-conteudo { flex: 1; min-width: 0; }
+
+.sino-item-titulo {
+    font-size: 13px;
+    font-weight: 700;
+    color: #2D3748;
+    margin-bottom: 3px;
+    word-wrap: break-word;
+}
+
+.sino-item-msg {
+    font-size: 12px;
+    color: #4A5568;
+    line-height: 1.4;
+    margin-bottom: 5px;
+    word-wrap: break-word;
+}
+
+.sino-item-tempo {
+    font-size: 10px;
+    color: #A0AEC0;
+    font-weight: 500;
+}
+
+.sino-item-btn-lida {
+    background: #48BB78;
+    color: white;
+    border: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    padding: 0;
+    line-height: 1;
+}
+
+.sino-item-btn-lida:hover { background: #38A169; transform: scale(1.1); }
+
+.sino-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #A0AEC0;
+}
+
+.sino-empty p { margin: 8px 0; font-size: 14px; font-weight: 600; }
+.sino-empty small { font-size: 12px; }
+
+.sino-footer {
+    padding: 10px 18px;
+    background: #F7FAFC;
+    border-top: 1px solid #E2E8F0;
+    font-size: 12px;
+    color: #718096;
+    text-align: center;
+    font-weight: 600;
+}
+
+.sino-error {
+    padding: 20px;
+    text-align: center;
+    color: #C53030;
+    font-size: 13px;
+}
+
+@media (max-width: 480px) {
+    .sino-dropdown {
+        width: calc(100vw - 30px);
+        right: -10px;
+    }
+    .sino-item { padding: 10px 12px; gap: 8px; }
+    .sino-item-titulo { font-size: 12px; }
+}

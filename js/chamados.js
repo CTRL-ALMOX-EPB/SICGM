@@ -96,11 +96,6 @@ function escapeHtml(str) {
     }[m]));
 }
 
-// ============================================
-// 🔥 RENOMEADA: formatarDataHora
-// (antes era formatarData, que sobrescrevia o window.formatarData
-//  do dashboards-common.js e do dashboards-pendencia-requisicao.js)
-// ============================================
 function formatarDataHora(iso) {
     try {
         return new Date(iso).toLocaleString('pt-BR', {
@@ -283,6 +278,257 @@ function renderTimelineSLA(ciclos) {
 }
 
 // ============================================
+// 🔔 SINO DE NOTIFICAÇÕES
+// ============================================
+let _notifInterval = null;
+let _notifDropdownAberto = false;
+let _notifCache = [];
+
+function _getHeadersNotif() {
+    const user = getUsuarioLogado();
+    return {
+        'Content-Type': 'application/json',
+        'X-User-Matricula': user.matricula || '',
+        'X-User-Perfil': user.perfil || ''
+    };
+}
+
+function _formatarTempoRelativo(dataStr) {
+    if (!dataStr) return '';
+    try {
+        const data = new Date(dataStr.includes(' ') && !dataStr.includes('T')
+            ? dataStr.replace(' ', 'T') + 'Z'
+            : dataStr);
+        const diff = (Date.now() - data.getTime()) / 1000;
+        if (diff < 60) return 'agora';
+        if (diff < 3600) return `${Math.floor(diff / 60)}min`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+        if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+        return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    } catch { return ''; }
+}
+
+function _iconeNotif(tipo) {
+    return {
+        'CHAMADO_ABERTO': '🎫',
+        'CHAMADO_RESPONDIDO': '💬',
+        'CHAMADO_FECHADO': '✅',
+        'INFO': 'ℹ️'
+    }[tipo] || '🔔';
+}
+
+function _injetarSino() {
+    if (document.getElementById('sinoNotificacoes')) return;
+    if (window.location.pathname.includes('/chamados/abrir.html')) return;
+
+    const user = getUsuarioLogado();
+    if (!user.matricula) return;
+
+    let container = null;
+    const seletores = [
+        '.user-actions',
+        '.header-actions',
+        '.chamados-header-acoes',
+        '.user-info',
+        'header'
+    ];
+    for (const sel of seletores) {
+        container = document.querySelector(sel);
+        if (container) break;
+    }
+
+    const sino = document.createElement('div');
+    sino.id = 'sinoNotificacoes';
+    sino.className = 'sino-container';
+    sino.innerHTML = `
+        <button class="sino-btn" id="sinoBtn" title="Notificações" type="button">
+            <span class="sino-icone">🔔</span>
+            <span class="sino-badge" id="sinoBadge" style="display:none;">0</span>
+        </button>
+        <div class="sino-dropdown" id="sinoDropdown" style="display:none;">
+            <div class="sino-header">
+                <h3>🔔 Notificações</h3>
+                <button class="sino-btn-link" id="sinoMarcarTodas" type="button" title="Marcar todas como lidas">
+                    ✓ Marcar todas
+                </button>
+            </div>
+            <div class="sino-lista" id="sinoLista">
+                <div class="sino-empty">Carregando...</div>
+            </div>
+            <div class="sino-footer">
+                <span id="sinoInfo">0 notificações</span>
+            </div>
+        </div>
+    `;
+
+    if (container) {
+        container.appendChild(sino);
+    } else {
+        sino.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;';
+        document.body.appendChild(sino);
+    }
+
+    document.getElementById('sinoBtn').addEventListener('click', _toggleSino);
+    document.getElementById('sinoMarcarTodas').addEventListener('click', _marcarTodasNotif);
+
+    document.addEventListener('click', (e) => {
+        const el = document.getElementById('sinoNotificacoes');
+        if (el && !el.contains(e.target)) _fecharSino();
+    });
+}
+
+function _toggleSino(e) {
+    e.stopPropagation();
+    const dd = document.getElementById('sinoDropdown');
+    if (!dd) return;
+    if (dd.style.display === 'block') _fecharSino();
+    else _abrirSino();
+}
+
+function _abrirSino() {
+    const dd = document.getElementById('sinoDropdown');
+    if (!dd) return;
+    dd.style.display = 'block';
+    _notifDropdownAberto = true;
+    _carregarNotif(true);
+}
+
+function _fecharSino() {
+    const dd = document.getElementById('sinoDropdown');
+    if (dd) dd.style.display = 'none';
+    _notifDropdownAberto = false;
+}
+
+async function _contarNotif() {
+    const user = getUsuarioLogado();
+    if (!user.matricula) return;
+    try {
+        const r = await fetch(`${CHAMADOS_WORKER_URL}/api/notificacoes/contar`, {
+            headers: _getHeadersNotif()
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        _atualizarBadge(data.nao_lidas || 0);
+    } catch (e) {}
+}
+
+async function _carregarNotif(forcar = false) {
+    const user = getUsuarioLogado();
+    if (!user.matricula) return;
+    if (!forcar && _notifCache.length > 0) {
+        _renderizarListaNotif(_notifCache);
+        return;
+    }
+    try {
+        const r = await fetch(`${CHAMADOS_WORKER_URL}/api/notificacoes?limit=30`, {
+            headers: _getHeadersNotif()
+        });
+        if (!r.ok) throw new Error('Erro');
+        const data = await r.json();
+        _notifCache = data.data || [];
+        _renderizarListaNotif(_notifCache);
+    } catch (e) {
+        const lista = document.getElementById('sinoLista');
+        if (lista) lista.innerHTML = '<div class="sino-error">❌ Erro ao carregar</div>';
+    }
+}
+
+async function _marcarUmaLida(id, e) {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
+    try {
+        await fetch(`${CHAMADOS_WORKER_URL}/api/notificacoes/${id}/ler`, {
+            method: 'PUT',
+            headers: _getHeadersNotif()
+        });
+        const n = _notifCache.find(x => x.id === id);
+        if (n) n.lida = 1;
+        _renderizarListaNotif(_notifCache);
+        _contarNotif();
+    } catch (e) {}
+}
+
+async function _marcarTodasNotif(e) {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
+    try {
+        await fetch(`${CHAMADOS_WORKER_URL}/api/notificacoes/ler-todas`, {
+            method: 'PUT',
+            headers: _getHeadersNotif()
+        });
+        _notifCache.forEach(n => n.lida = 1);
+        _renderizarListaNotif(_notifCache);
+        _contarNotif();
+    } catch (e) {}
+}
+
+async function _clicarNotif(id, protocolo, e) {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
+    await _marcarUmaLida(id);
+    if (protocolo) {
+        const base = getBasePath();
+        window.location.href = `${base}chamados/index.html?busca=${encodeURIComponent(protocolo)}`;
+    }
+}
+
+function _atualizarBadge(naoLidas) {
+    const badge = document.getElementById('sinoBadge');
+    if (!badge) return;
+    if (naoLidas > 0) {
+        badge.textContent = naoLidas > 99 ? '99+' : naoLidas;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function _renderizarListaNotif(lista) {
+    const container = document.getElementById('sinoLista');
+    if (!container) return;
+
+    const info = document.getElementById('sinoInfo');
+    const naoLidas = lista.filter(n => !n.lida).length;
+    if (info) info.textContent = `${lista.length} notif. • ${naoLidas} não lida${naoLidas !== 1 ? 's' : ''}`;
+
+    if (!lista || lista.length === 0) {
+        container.innerHTML = `
+            <div class="sino-empty">
+                <div style="font-size:48px;margin-bottom:10px;">🔔</div>
+                <p>Nenhuma notificação</p>
+                <small>Tudo em dia!</small>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = lista.map(n => `
+        <div class="sino-item ${n.lida ? 'lida' : 'nao-lida'}"
+             onclick="_clicarNotif(${n.id}, '${(n.chamado_protocolo || '').replace(/'/g, "\\'")}', event)"
+             data-id="${n.id}">
+            <div class="sino-item-icone">${_iconeNotif(n.tipo)}</div>
+            <div class="sino-item-conteudo">
+                <div class="sino-item-titulo">${escapeHtml(n.titulo || '(sem título)')}</div>
+                <div class="sino-item-msg">${escapeHtml(n.mensagem || '')}</div>
+                <div class="sino-item-tempo">${_formatarTempoRelativo(n.criado_em)}</div>
+            </div>
+            ${n.lida ? '' : `<button class="sino-item-btn-lida"
+                                    onclick="_marcarUmaLida(${n.id}, event)"
+                                    title="Marcar como lida">✓</button>`}
+        </div>
+    `).join('');
+}
+
+function _iniciarPollingNotif() {
+    if (_notifInterval) clearInterval(_notifInterval);
+    _contarNotif();
+    _notifInterval = setInterval(() => {
+        _contarNotif();
+        if (_notifDropdownAberto) _carregarNotif(true);
+    }, 30000);
+}
+
+window._clicarNotif = _clicarNotif;
+window._marcarUmaLida = _marcarUmaLida;
+window._marcarTodasNotif = _marcarTodasNotif;
+
+// ============================================
 // BOTÃO FLUTUANTE
 // ============================================
 function irParaAbrirChamado() {
@@ -318,16 +564,22 @@ function criarBotaoFlutuante() {
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', criarBotaoFlutuante);
+    document.addEventListener('DOMContentLoaded', () => {
+        criarBotaoFlutuante();
+        _injetarSino();
+        _iniciarPollingNotif();
+    });
 } else {
     criarBotaoFlutuante();
+    _injetarSino();
+    _iniciarPollingNotif();
 }
 
 window.irParaAbrirChamado = irParaAbrirChamado;
 window.getIdentificacaoTela = getIdentificacaoTela;
 
 // ============================================
-// PÁGINA: ABRIR
+// PÁGINA: ABRIR (mantido igual)
 // ============================================
 function initPaginaAbrir() {
     const form = document.getElementById('formChamado');
@@ -542,7 +794,7 @@ function initPaginaAbrir() {
 }
 
 // ============================================
-// PÁGINA: LISTAGEM
+// PÁGINA: LISTAGEM (mantido igual)
 // ============================================
 function initPaginaListagem() {
     const container = document.getElementById('listaChamados');
@@ -873,13 +1125,15 @@ function initPaginaListagem() {
                     btn.addEventListener('click', async () => {
                         if (!confirm(`Alterar status para "${b.label}"?`)) return;
                         const ok = await alterarChamado(c.id, { status: b.s }, user);
-                        if (ok) abrirModalDetalhes(id);
+                        if (ok) {
+                            await _contarNotif();
+                            abrirModalDetalhes(id);
+                        }
                     });
                     acoes.insertBefore(btn, acoes.firstChild);
                 });
             }
 
-            // ========== CHAT: ENVIO ==========
             const btnEnviarChat = document.getElementById('btnEnviarChat');
             const inputChat = document.getElementById('chatInput');
             const btnChatAnexo = document.getElementById('btnChatAnexo');
@@ -957,6 +1211,7 @@ function initPaginaListagem() {
                 await enviarComentario(id, inputChat, btnEnviarChat, user, anexosChatProntos);
                 anexosChatProntos = [];
                 chatAnexosLista.innerHTML = '';
+                await _contarNotif();
             });
 
             inputChat.addEventListener('keydown', e => {
@@ -992,6 +1247,14 @@ function initPaginaListagem() {
         });
         carregarChamados();
     });
+
+    // Suporte a ?busca=PROTOCOLO (usado pelo clique na notificação)
+    const params = new URLSearchParams(window.location.search);
+    const buscaParam = params.get('busca');
+    if (buscaParam) {
+        const input = document.getElementById('filtroBusca');
+        if (input) input.value = buscaParam;
+    }
 
     carregarChamados();
 }
