@@ -1,10 +1,10 @@
 // ============================================
 // CONTROLES DCMD - FORMULÁRIO UNIFICADO
 // Inclui MGM Online + Importação Excel
-// v3 — com loading overlay + parser Excel robusto
+// v6 — data US + bloqueio de cabeçalho + validação setSe
 // ============================================
 
-console.log('🚀 Iniciando Controles DCMD - Formulário... (v3)');
+console.log('🚀 Iniciando Controles DCMD - Formulário... (v6)');
 
 const API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
 const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
@@ -230,9 +230,6 @@ function carregarDadosUsuario() {
 
 async function carregarMateriais() {
     try {
-        const params = new URLSearchParams(window.location.search);
-        const tipo = params.get('tipo') || 'pendencia';
-        
         console.log(`🔄 Carregando materiais do R2 para depósito 1050...`);
         
         const response = await fetch(`${R2_URL}/posicacao-de-estoque/posicao-de-estoque-1050.txt`);
@@ -379,8 +376,15 @@ function formatarData(valor) {
     return valor;
 }
 
+// ============================================
+// NORMALIZA DATA DO EXCEL — v6
+// Aceita: YYYY-MM-DD, DD/MM/YYYY, MM/DD/YY (US),
+// "Oct 28 2026", serial number, Date object
+// ============================================
 function normalizarDataExcel(valor) {
     if (!valor) return '';
+    
+    // Date object
     if (valor instanceof Date && !isNaN(valor)) {
         const y = valor.getFullYear();
         const m = String(valor.getMonth() + 1).padStart(2, '0');
@@ -391,25 +395,48 @@ function normalizarDataExcel(valor) {
     const s = String(valor).trim();
     if (!s) return '';
     
+    // Já é ISO YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
     
-    const m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
-    if (m1) {
-        const dia = m1[1].padStart(2, '0');
-        const mes = m1[2].padStart(2, '0');
-        let ano = m1[3];
-        if (ano.length === 2) ano = '20' + ano;
-        return `${ano}-${mes}-${dia}`;
+    // Tenta por data nativa (resolve "10/28/26", "Oct 28 2026", "2026-10-28 00:00:00")
+    // ⚠️ Só aceita se o ano ficar entre 2000 e 2099 (evita 1926 por causa do 26)
+    const d = new Date(s);
+    if (!isNaN(d.getTime()) && d.getFullYear() >= 2000 && d.getFullYear() <= 2099) {
+        const y = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${y}-${mo}-${dd}`;
     }
     
+    // Fallback: parser manual DD/MM vs MM/DD
+    const m1 = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+    if (m1) {
+        let a = parseInt(m1[1], 10);
+        let b = parseInt(m1[2], 10);
+        let c = m1[3];
+        if (c.length === 2) c = '20' + c;
+        
+        // Se a > 12, 'a' é dia (DD/MM)
+        // Se b > 12, 'a' é mês (MM/DD)
+        // Senão, assume DD/MM (BR)
+        if (a > 12) {
+            return `${c}-${String(b).padStart(2, '0')}-${String(a).padStart(2, '0')}`;
+        } else if (b > 12) {
+            return `${c}-${String(a).padStart(2, '0')}-${String(b).padStart(2, '0')}`;
+        } else {
+            return `${c}-${String(b).padStart(2, '0')}-${String(a).padStart(2, '0')}`;
+        }
+    }
+    
+    // Serial number do Excel
     const n = parseFloat(s);
     if (!isNaN(n) && n > 0 && n < 100000) {
         const epoch = new Date(1899, 11, 30);
-        const d = new Date(epoch.getTime() + n * 86400000);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${dd}`;
+        const dNum = new Date(epoch.getTime() + n * 86400000);
+        const y = dNum.getFullYear();
+        const mo = String(dNum.getMonth() + 1).padStart(2, '0');
+        const dd = String(dNum.getDate()).padStart(2, '0');
+        return `${y}-${mo}-${dd}`;
     }
     
     return '';
@@ -423,13 +450,6 @@ function parseNumeroExcel(valor) {
     return isNaN(n) ? 0 : n;
 }
 
-/**
- * Normaliza um cabeçalho de coluna:
- * - Maiúsculas
- * - Remove acentos
- * - Remove \n, \t, <br>, pontos, hífens, barras, parênteses
- * - Remove espaços extras
- */
 function normalizarCabecalho(txt) {
     if (!txt) return '';
     return String(txt)
@@ -1042,7 +1062,7 @@ function configurarPopupDescricao() {
 }
 
 // ============================================
-// NAVEGAÇÃO POR TECLADO NO FORMULÁRIO
+// NAVEGAÇÃO POR TECLADO
 // ============================================
 
 function configurarNavegacaoTeclado() {
@@ -1059,7 +1079,8 @@ function handleTeclado(e) {
     if (!isCampoEditavel(target)) return;
     const isInTable = target.closest('table');
     const isSelect = target.tagName === 'SELECT';
-    
+    const isNumberInput = target.tagName === 'INPUT' && target.type === 'number';
+
     if (isSelect && /^[1-9]$/.test(key)) {
         e.preventDefault();
         e.stopPropagation();
@@ -1072,7 +1093,23 @@ function handleTeclado(e) {
         }
         return;
     }
-    
+
+    if (isInTable && (key === 'ArrowLeft' || key === 'ArrowRight')) {
+        if (!isNumberInput) {
+            try {
+                const start = target.selectionStart;
+                const end = target.selectionEnd;
+                const len = (target.value || '').length;
+                if (key === 'ArrowLeft' && start > 0) return;
+                if (key === 'ArrowRight' && end < len) return;
+            } catch (_) {}
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        navegarHorizontalTabela(target, key === 'ArrowRight' ? 1 : -1);
+        return;
+    }
+
     if (key === 'Enter') {
         if (target.tagName === 'TEXTAREA' && e.shiftKey) return;
         e.preventDefault();
@@ -1092,8 +1129,9 @@ function handleTeclado(e) {
         navegarVerticalFormulario(target, 1);
         return;
     }
-    
+
     if (key === 'ArrowDown' || key === 'ArrowUp') {
+        if (isSelect) return;
         e.preventDefault();
         const dir = key === 'ArrowDown' ? 1 : -1;
         if (isInTable) navegarVerticalTabela(target, dir);
@@ -1171,8 +1209,32 @@ function navegarVerticalTabela(element, direcao) {
     if (target && isCampoEditavel(target)) { target.focus(); if (target.type === 'text') target.select(); }
 }
 
+function navegarHorizontalTabela(element, direcao) {
+    const row = element.closest('tr');
+    if (!row) return;
+    const celulasEditaveis = [];
+    const cells = Array.from(row.querySelectorAll('td'));
+    cells.forEach((cell) => {
+        const inputs = cell.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+        inputs.forEach(inp => {
+            if (isCampoEditavel(inp)) celulasEditaveis.push(inp);
+        });
+    });
+    let currentIndex = celulasEditaveis.indexOf(element);
+    if (currentIndex === -1) return;
+    const targetIndex = currentIndex + direcao;
+    if (targetIndex < 0 || targetIndex >= celulasEditaveis.length) return;
+    const next = celulasEditaveis[targetIndex];
+    if (next && isCampoEditavel(next)) {
+        next.focus();
+        if (next.tagName === 'INPUT' && (next.type === 'text' || next.type === 'number')) {
+            try { next.select(); } catch (_) {}
+        }
+    }
+}
+
 // ============================================
-// BULK PASTE (COLEÇÃO EM MASSA)
+// BULK PASTE
 // ============================================
 
 function configurarPasteEmMassa() {
@@ -1304,7 +1366,7 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
 }
 
 // ============================================
-// AÇÕES EM MASSA (BOTÕES DE BULK)
+// AÇÕES EM MASSA
 // ============================================
 
 function criarSeparadorPequeno() {
@@ -1938,7 +2000,7 @@ function getItensFormulario() {
 }
 
 // ============================================
-// CARREGAR CONTROLE NO FORMULÁRIO (NOVA VERSÃO COM LOADING OVERLAY)
+// CARREGAR CONTROLE NO FORMULÁRIO
 // ============================================
 
 async function carregarControleFormulario() {
@@ -1958,9 +2020,6 @@ async function carregarControleFormulario() {
     
     const tipoInfo = TIPOS[tipoAtual];
     
-    // ============================================
-    // 1. CONFIGURA O TIPO **ANTES** DO FETCH
-    // ============================================
     const tituloEl = document.getElementById('formTitulo');
     if (tituloEl) tituloEl.textContent = `${tipoInfo.icon} ${tipoInfo.label}`;
     
@@ -1973,7 +2032,6 @@ async function carregarControleFormulario() {
     const isMGM = tipoAtual === 'mgm';
     const temItens = tipoInfo.temItens;
     
-    // Mostra/esconde BLOCOS
     const camposMGM = document.getElementById('camposMGM');
     if (camposMGM) camposMGM.style.display = isMGM ? '' : 'none';
     
@@ -2010,7 +2068,6 @@ async function carregarControleFormulario() {
         else tituloItens.textContent = '📦 Itens';
     }
     
-    // Mostra/esconde COLUNAS (via classe)
     document.querySelectorAll('.col-mgm').forEach(el => { if (el) el.style.display = isMGM ? '' : 'none'; });
     document.querySelectorAll('.col-status-aditivo').forEach(el => { if (el) el.style.display = isAditivo ? '' : 'none'; });
     document.querySelectorAll('.col-num-doc').forEach(el => { if (el) el.style.display = isAditivo ? '' : 'none'; });
@@ -2025,7 +2082,6 @@ async function carregarControleFormulario() {
     document.querySelectorAll('.col-colaborador-item').forEach(el => { if (el) el.style.display = isPendencia ? '' : 'none'; });
     document.querySelectorAll('.col-observacao-item').forEach(el => { if (el) el.style.display = isPendencia ? '' : 'none'; });
     
-    // Cabeçalhos (via ID — necessário porque o CSS as esconde por default)
     const thQuantidade = document.getElementById('thQuantidade');
     if (thQuantidade) thQuantidade.textContent = isMGM ? 'QTD (Base)' : 'QTD';
     
@@ -2072,9 +2128,6 @@ async function carregarControleFormulario() {
     const formTipo = document.getElementById('formTipo');
     if (formTipo) formTipo.value = tipoInfo.label;
     
-    // ============================================
-    // 2. BUSCA OS DADOS NO WORKER
-    // ============================================
     try {
         mostrarLoadingFormulario(`Buscando controle #${String(numero).padStart(4, '0')}...`);
         
@@ -2089,9 +2142,6 @@ async function carregarControleFormulario() {
         
         console.log('📋 Controle carregado:', data);
         
-        // ============================================
-        // 3. PREENCHE CABEÇALHO
-        // ============================================
         mostrarLoadingFormulario('Preenchendo dados...');
         
         const controleNumero = document.getElementById('controleNumero');
@@ -2265,9 +2315,6 @@ async function carregarControleFormulario() {
             toggleTipoMgm();
         }
         
-        // ============================================
-        // 4. SE FINALIZADO, DESABILITA
-        // ============================================
         if (data.status === 'FINALIZADO') {
             document.querySelectorAll('#controleForm input, #controleForm select, #controleForm textarea').forEach(el => { if (el) el.disabled = true; });
             const addItemBtn = document.querySelector('.add-item-btn');
@@ -2279,9 +2326,6 @@ async function carregarControleFormulario() {
             if (btnFinalizar) btnFinalizar.style.display = 'none';
         }
         
-        // ============================================
-        // 5. CARREGA ITENS
-        // ============================================
         mostrarLoadingFormulario('Carregando itens...');
         
         if (temItens) {
@@ -2291,9 +2335,6 @@ async function carregarControleFormulario() {
             if (tbody) tbody.innerHTML = '';
         }
         
-        // ============================================
-        // 6. CONFIGURA INTERAÇÕES
-        // ============================================
         configurarPopupDescricao();
         configurarNavegacaoTeclado();
         configurarPasteEmMassa();
@@ -2301,9 +2342,6 @@ async function carregarControleFormulario() {
         setTimeout(configurarValidacaoDuplicados, 200);
         setTimeout(verificarECorrigirDuplicados, 250);
         
-        // ============================================
-        // 7. ESCONDE O LOADING (só agora!)
-        // ============================================
         setTimeout(() => {
             esconderLoadingFormulario();
             if (!isMovimento) focarCampoObra();
@@ -2685,7 +2723,7 @@ async function finalizarControle() {
 window.finalizarControle = finalizarControle;
 
 // ============================================
-// IMPORTAÇÃO DE EXCEL (PARSER ROBUSTO)
+// IMPORTAÇÃO DE EXCEL — v6
 // ============================================
 
 async function handleArquivoExcel(event) {
@@ -2711,7 +2749,6 @@ async function handleArquivoExcel(event) {
         
         console.log('📚 Abas disponíveis:', workbook.SheetNames);
         
-        // Localiza a aba "FORMULÁRIO MGM"
         let sheetName = workbook.SheetNames.find(n => 
             normalizarCabecalho(n).includes('FORMUL') && normalizarCabecalho(n).includes('MGM')
         );
@@ -2723,7 +2760,7 @@ async function handleArquivoExcel(event) {
         console.log(`📄 Aba selecionada: "${sheetName}"`);
         const sheet = workbook.Sheets[sheetName];
         
-        const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: true });
+        const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
         console.log(`📊 Total de linhas na aba: ${raw.length}`);
         
         if (!raw || raw.length < 5) {
@@ -2731,7 +2768,136 @@ async function handleArquivoExcel(event) {
             return;
         }
         
-        // Localiza cabeçalho
+        // ============================================
+        // 1. CABEÇALHO MGM — leitura POSICIONAL v6
+        // ============================================
+        const cabecalho = {
+            obra: '', data_programacao: '', separador: '', data_separacao: '', encarregado: '', caminhao: ''
+        };
+        
+        const valorCelula = (row, col) => {
+            if (!row || col < 0 || col >= row.length) return '';
+            const v = row[col];
+            if (v === undefined || v === null) return '';
+            return String(v).trim();
+        };
+        
+        const extrairValor = (raw, linha, col, rotulo) => {
+            const isRotulo = (val) => {
+                const norm = normalizarCabecalho(val);
+                return /SEPARADOR|ENCARREGADO|CAMINHAO|PROGRAMACAO|OBRA|MATRICULA|DATASEP|CHECAGEM|CONFERIDO|EXPEDICAO/.test(norm);
+            };
+            
+            const isCabecalhoTabela = (val) => {
+                const norm = normalizarCabecalho(val);
+                return /^ITEM$/.test(norm) || /^CODIGO$/.test(norm) || /^DESCRICAO$/.test(norm) ||
+                       /^UNIDADE/.test(norm) || /^ADITIVO/.test(norm) || /^QTDRMA$/.test(norm) ||
+                       /^QTDSEPARADA$/.test(norm) || /^QTDAPLICADA$/.test(norm) || /^QTDDMA$/.test(norm) ||
+                       /^QTDPENDENTE$/.test(norm);
+            };
+            
+            // 1. Ao lado (mesma linha)
+            const aoLado = valorCelula(raw[linha], col + 1);
+            if (aoLado && !isRotulo(aoLado) && !isCabecalhoTabela(aoLado) && normalizarCabecalho(aoLado) !== '') {
+                console.log(`   ✅ ${rotulo} → "${aoLado}" (ao lado, ${String.fromCharCode(65 + col + 1)}${linha + 1})`);
+                return aoLado;
+            }
+            
+            // 2. 2 à direita
+            const duasDireita = valorCelula(raw[linha], col + 2);
+            if (duasDireita && !isRotulo(duasDireita) && !isCabecalhoTabela(duasDireita) && normalizarCabecalho(duasDireita) !== '') {
+                console.log(`   ✅ ${rotulo} → "${duasDireita}" (2 à direita, ${String.fromCharCode(65 + col + 2)}${linha + 1})`);
+                return duasDireita;
+            }
+            
+            // 3. Abaixo (mesma coluna) — não pega cabeçalho de tabela
+            const abaixo = valorCelula(raw[linha + 1], col);
+            if (abaixo && !isRotulo(abaixo) && !isCabecalhoTabela(abaixo) && normalizarCabecalho(abaixo) !== '') {
+                console.log(`   ✅ ${rotulo} → "${abaixo}" (abaixo, ${String.fromCharCode(65 + col)}${linha + 2})`);
+                return abaixo;
+            }
+            
+            // 4. 2 abaixo
+            const doisAbaixo = valorCelula(raw[linha + 2], col);
+            if (doisAbaixo && !isRotulo(doisAbaixo) && !isCabecalhoTabela(doisAbaixo) && normalizarCabecalho(doisAbaixo) !== '') {
+                console.log(`   ✅ ${rotulo} → "${doisAbaixo}" (2 abaixo, ${String.fromCharCode(65 + col)}${linha + 3})`);
+                return doisAbaixo;
+            }
+            
+            return '';
+        };
+        
+        const MAPA_CABECALHO = [
+            { rotulo: 'PROGRAMAÇÃO', campo: 'data_programacao', linha: 0, col: 7, isData: true },
+            { rotulo: 'SEPARADOR', campo: 'separador', linha: 1, col: 0, isData: false },
+            { rotulo: 'Nº OBRA', campo: 'obra', linha: 1, col: 3, isData: false },
+            { rotulo: 'ENCARREGADO', campo: 'encarregado', linha: 1, col: 5, isData: false },
+            { rotulo: 'DATA SEP.', campo: 'data_separacao', linha: 3, col: 0, isData: true },
+            { rotulo: 'CAMINHÃO', campo: 'caminhao', linha: 3, col: 5, isData: false }
+        ];
+        
+        console.log('🔎 Lendo cabeçalho por mapa posicional...');
+        
+        for (const item of MAPA_CABECALHO) {
+            const celulaOriginal = valorCelula(raw[item.linha], item.col);
+            const celulaNorm = normalizarCabecalho(celulaOriginal);
+            const rotuloNorm = normalizarCabecalho(item.rotulo);
+            
+            let usarPosicao = celulaNorm.includes(rotuloNorm.replace(/[^A-Z]/g, '').substring(0, 5)) ||
+                              celulaNorm.includes(rotuloNorm.substring(0, 5));
+            
+            if (!usarPosicao) {
+                for (let l = 0; l < Math.min(4, raw.length); l++) {
+                    const row = raw[l] || [];
+                    for (let c = 0; c < row.length; c++) {
+                        const cellNorm = normalizarCabecalho(valorCelula(row, c));
+                        if (cellNorm.includes(rotuloNorm.replace(/[^A-Z]/g, '').substring(0, 5))) {
+                            item.linha = l;
+                            item.col = c;
+                            usarPosicao = true;
+                            break;
+                        }
+                    }
+                    if (usarPosicao) break;
+                }
+            }
+            
+            if (!usarPosicao) {
+                console.log(`   ⚠️ ${item.rotulo} não encontrado nas primeiras 4 linhas`);
+                continue;
+            }
+            
+            const valor = extrairValor(raw, item.linha, item.col, item.rotulo);
+            if (valor) {
+                if (item.isData) {
+                    cabecalho[item.campo] = normalizarDataExcel(valor);
+                } else {
+                    cabecalho[item.campo] = valor;
+                }
+            }
+        }
+        
+        // Fallback: Nº OBRA pela regex (se não achou pelo mapa)
+        if (!cabecalho.obra) {
+            for (let i = 0; i < Math.min(4, raw.length); i++) {
+                const row = raw[i] || [];
+                for (let c = 0; c < row.length; c++) {
+                    const cell = valorCelula(row, c);
+                    if (/^\d{8,12}$/.test(cell)) {
+                        cabecalho.obra = cell;
+                        console.log(`   ✅ Nº OBRA (fallback regex) → "${cell}" (${String.fromCharCode(65 + c)}${i + 1})`);
+                        break;
+                    }
+                }
+                if (cabecalho.obra) break;
+            }
+        }
+        
+        console.log('📋 Cabeçalho MGM extraído:', cabecalho);
+        
+        // ============================================
+        // 2. LOCALIZA CABEÇALHO DA TABELA
+        // ============================================
         let headerRowIdx = -1;
         let headerRowNorm = [];
         
@@ -2741,18 +2907,16 @@ async function handleArquivoExcel(event) {
             if (rowNorm.some(h => h === 'CODIGO' || h.startsWith('CODIGO'))) {
                 headerRowIdx = i;
                 headerRowNorm = rowNorm;
-                console.log(`📌 Cabeçalho na linha ${i + 1}:`, row);
+                console.log(`📌 Cabeçalho da tabela na linha ${i + 1}`);
                 break;
             }
         }
         
         if (headerRowIdx === -1) {
-            mostrarToast('❌ Não encontrei a linha de cabeçalho (CÓDIGO)', 'erro');
-            console.error('❌ Cabeçalho não encontrado. Primeiras 3 linhas:', raw.slice(0, 3));
+            mostrarToast('❌ Não encontrei o cabeçalho da tabela (CÓDIGO)', 'erro');
             return;
         }
         
-        // Mapeia colunas
         function findCol(preds) {
             for (const p of preds) {
                 const idx = headerRowNorm.findIndex(h => p(h));
@@ -2775,64 +2939,16 @@ async function handleArquivoExcel(event) {
             pendente: findCol([h => h.includes('PENDENTE')])
         };
         
-        console.log('📋 Índices mapeados:', colIdx);
-        console.log('📋 Cabeçalho normalizado:', headerRowNorm);
+        console.log('📋 Índices da tabela:', colIdx);
         
-        // Fallback para código
         if (colIdx.codigo === -1) {
             console.warn('⚠️ CÓDIGO não encontrado — usando coluna B (idx 1)');
             colIdx.codigo = 1;
         }
         
-        // Cabeçalho da MGM
-        const cabecalho = {
-            obra: '', data_programacao: '', separador: '', data_separacao: '', encarregado: '', caminhao: ''
-        };
-        
-        for (let i = 0; i < headerRowIdx; i++) {
-            const row = raw[i] || [];
-            for (let c = 0; c < row.length; c++) {
-                const cell = String(row[c] || '').trim();
-                const cellNorm = normalizarCabecalho(cell);
-                
-                if (cellNorm.includes('PROGRAMACAO')) {
-                    const match = cell.match(/:\s*(.+)/);
-                    if (match) cabecalho.data_programacao = normalizarDataExcel(match[1].trim());
-                    else if (row[c + 1]) cabecalho.data_programacao = normalizarDataExcel(String(row[c + 1]));
-                }
-                if (cellNorm === 'NOBRA' || cellNorm === 'NOOBRA' || cellNorm === 'NUMEROOBRA' || cellNorm === 'OBRA') {
-                    if (row[c + 1]) cabecalho.obra = String(row[c + 1]).trim();
-                }
-                if (cellNorm === 'SEPARADOR' || cellNorm.startsWith('SEPARADOR')) {
-                    if (row[c + 1]) cabecalho.separador = String(row[c + 1]).trim();
-                }
-                if (cellNorm === 'ENCARREGADO' || cellNorm.startsWith('ENCARREGADO')) {
-                    if (row[c + 1]) cabecalho.encarregado = String(row[c + 1]).trim();
-                }
-                if (cellNorm === 'CAMINHAO' || cellNorm.startsWith('CAMINHAO')) {
-                    if (row[c + 1]) cabecalho.caminhao = String(row[c + 1]).trim();
-                }
-                if (cellNorm === 'DATASEP' || cellNorm === 'DATASEPARACAO') {
-                    if (row[c + 1]) cabecalho.data_separacao = normalizarDataExcel(String(row[c + 1]));
-                }
-            }
-        }
-        
-        // Fallback: número de obra pelo padrão
-        if (!cabecalho.obra) {
-            for (let i = 0; i < Math.min(headerRowIdx, 10); i++) {
-                const row = raw[i] || [];
-                for (let c = 0; c < row.length; c++) {
-                    const cell = String(row[c] || '').trim();
-                    if (/^\d{8,12}$/.test(cell)) { cabecalho.obra = cell; break; }
-                }
-                if (cabecalho.obra) break;
-            }
-        }
-        
-        console.log('📋 Cabeçalho MGM:', cabecalho);
-        
-        // Lê itens
+        // ============================================
+        // 3. LÊ OS ITENS
+        // ============================================
         const itens = [];
         
         for (let i = headerRowIdx + 1; i < raw.length; i++) {
@@ -2869,15 +2985,35 @@ async function handleArquivoExcel(event) {
             return;
         }
         
-        // Preenche cabeçalho
-        if (cabecalho.obra) document.getElementById('formObra').value = cabecalho.obra;
-        if (cabecalho.data_programacao) document.getElementById('formDataProgramacao').value = cabecalho.data_programacao;
-        if (cabecalho.separador) document.getElementById('formSeparadorMGM').value = cabecalho.separador;
-        if (cabecalho.data_separacao) document.getElementById('formDataSeparacaoMGM').value = cabecalho.data_separacao;
-        if (cabecalho.encarregado) document.getElementById('formEncarregadoMGM').value = cabecalho.encarregado;
-        if (cabecalho.caminhao) document.getElementById('formCaminhao').value = cabecalho.caminhao;
+        // ============================================
+        // 4. PREENCHE O FORMULÁRIO — v6 (setSe com validação)
+        // ============================================
+        const setSe = (id, val) => {
+            const el = document.getElementById(id);
+            if (!el || val === undefined || val === null || val === '') return;
+            
+            // Se for input[type=date], valida YYYY-MM-DD antes
+            if (el.type === 'date') {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+                    try { el.value = val; } catch (e) {
+                        console.warn(`⚠️ Valor "${val}" inválido para input date ${id}`);
+                    }
+                } else {
+                    console.warn(`⚠️ Valor "${val}" não é YYYY-MM-DD para input date ${id}`);
+                }
+                return;
+            }
+            
+            el.value = val;
+        };
         
-        // Preenche itens
+        setSe('formObra', cabecalho.obra);
+        setSe('formDataProgramacao', cabecalho.data_programacao);
+        setSe('formSeparadorMGM', cabecalho.separador);
+        setSe('formDataSeparacaoMGM', cabecalho.data_separacao);
+        setSe('formEncarregadoMGM', cabecalho.encarregado);
+        setSe('formCaminhao', cabecalho.caminhao);
+        
         const tbody = document.getElementById('itemsBody');
         tbody.innerHTML = '';
         
@@ -2925,7 +3061,7 @@ window.handleArquivoExcel = handleArquivoExcel;
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 Inicializando Controles DCMD - Formulário (v3)...');
+    console.log('🚀 Inicializando Controles DCMD - Formulário (v6)...');
     
     const sessao = carregarDadosUsuario();
     if (!sessao) return;
