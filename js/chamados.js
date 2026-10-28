@@ -1,39 +1,39 @@
 const CHAMADOS_WORKER_URL = 'https://chamados.alefe-gomes-72f.workers.dev';
 
 const TELAS_SISTEMA = [
-    { arquivo: 'index.htm',                            titulo: 'Página Inicial' },
-    { arquivo: 'login.html',                           titulo: 'Login' },
-    { arquivo: 'home-gestao.html',                     titulo: 'Home - Gestão' },
-    { arquivo: 'home-operacional.html',                titulo: 'Home - Operacional' },
-    { arquivo: 'home-visualizacao.html',               titulo: 'Home - Visualização' },
-    { arquivo: 'contagem-diaria/index.html',           titulo: 'Contagem Diária' },
-    { arquivo: 'contagem-diaria/contagem-dmpc.html',   titulo: 'Contagem Diária DMPC' },
-    { arquivo: 'controles/index.html',                 titulo: 'Controles - Listagem' },
-    { arquivo: 'controles/formulario.html',            titulo: 'Controles - Formulário' },
-    { arquivo: 'dashboards/index.html',                titulo: 'Dashboards - Início' },
-    { arquivo: 'dashboards/aditivos-fisicos.html',     titulo: 'Dashboard - Aditivos Físicos' },
-    { arquivo: 'dashboards/aditivos-sistemicos.html',  titulo: 'Dashboard - Aditivos Sistêmicos' },
-    { arquivo: 'dashboards/farol-obras.html',          titulo: 'Dashboard - Farol de Obras' },
-    { arquivo: 'dashboards/pendencia-devolucao.html',  titulo: 'Dashboard - Pendência Devolução' },
+    { arquivo: 'index.htm', titulo: 'Página Inicial' },
+    { arquivo: 'login.html', titulo: 'Login' },
+    { arquivo: 'home-gestao.html', titulo: 'Home - Gestão' },
+    { arquivo: 'home-operacional.html', titulo: 'Home - Operacional' },
+    { arquivo: 'home-visualizacao.html', titulo: 'Home - Visualização' },
+    { arquivo: 'contagem-diaria/index.html', titulo: 'Contagem Diária' },
+    { arquivo: 'contagem-diaria/contagem-dmpc.html', titulo: 'Contagem Diária DMPC' },
+    { arquivo: 'controles/index.html', titulo: 'Controles - Listagem' },
+    { arquivo: 'controles/formulario.html', titulo: 'Controles - Formulário' },
+    { arquivo: 'dashboards/index.html', titulo: 'Dashboards - Início' },
+    { arquivo: 'dashboards/aditivos-fisicos.html', titulo: 'Dashboard - Aditivos Físicos' },
+    { arquivo: 'dashboards/aditivos-sistemicos.html', titulo: 'Dashboard - Aditivos Sistêmicos' },
+    { arquivo: 'dashboards/farol-obras.html', titulo: 'Dashboard - Farol de Obras' },
+    { arquivo: 'dashboards/pendencia-devolucao.html', titulo: 'Dashboard - Pendência Devolução' },
     { arquivo: 'dashboards/pendencia-requisicao.html', titulo: 'Dashboard - Pendência Requisição' },
-    { arquivo: 'gestão/admin.html',                    titulo: 'Gestão - Admin' },
-    { arquivo: 'gestão/estrutura-setor.html',          titulo: 'Gestão - Estrutura Setor' },
-    { arquivo: 'gestão/indicadores.html',              titulo: 'Gestão - Indicadores' },
-    { arquivo: 'gestão/planejamento.html',             titulo: 'Gestão - Planejamento' },
-    { arquivo: 'mgm-list/index.html',                  titulo: 'MGM List' },
-    { arquivo: 'processos/index.html',                 titulo: 'Processos' },
-    { arquivo: 'relatorios/relatorio-contagem.html',   titulo: 'Relatório - Contagem' },
-    { arquivo: 'relatorios/busca-trafo.html',          titulo: 'Relatório - Busca Trafo' },
-    { arquivo: 'sa-emergencial/index.html',            titulo: 'SA Emergencial - Início' },
-    { arquivo: 'sa-emergencial/assinar.html',          titulo: 'SA Emergencial - Assinar' },
-    { arquivo: 'sa-emergencial/formulario.html',       titulo: 'SA Emergencial - Formulário' }
+    { arquivo: 'gestão/admin.html', titulo: 'Gestão - Admin' },
+    { arquivo: 'gestão/estrutura-setor.html', titulo: 'Gestão - Estrutura Setor' },
+    { arquivo: 'gestão/indicadores.html', titulo: 'Gestão - Indicadores' },
+    { arquivo: 'gestão/planejamento.html', titulo: 'Gestão - Planejamento' },
+    { arquivo: 'mgm-list/index.html', titulo: 'MGM List' },
+    { arquivo: 'processos/index.html', titulo: 'Processos' },
+    { arquivo: 'relatorios/relatorio-contagem.html', titulo: 'Relatório - Contagem' },
+    { arquivo: 'relatorios/busca-trafo.html', titulo: 'Relatório - Busca Trafo' },
+    { arquivo: 'sa-emergencial/index.html', titulo: 'SA Emergencial - Início' },
+    { arquivo: 'sa-emergencial/assinar.html', titulo: 'SA Emergencial - Assinar' },
+    { arquivo: 'sa-emergencial/formulario.html', titulo: 'SA Emergencial - Formulário' }
 ];
 
 const ATENDENTE_MATRICULA = '171309';
 const ATENDENTE_EMAIL = 'alefe.gomes@gpssa.com.br';
 
 // ============================================
-// BASE PATH ROBUSTO
+// BASE PATH
 // ============================================
 function getBasePath() {
     const scripts = document.getElementsByTagName('script');
@@ -47,9 +47,7 @@ function getBasePath() {
 
     if (scriptUrl) {
         const idx = scriptUrl.indexOf('/js/chamados.js');
-        if (idx !== -1) {
-            return scriptUrl.substring(0, idx + 1);
-        }
+        if (idx !== -1) return scriptUrl.substring(0, idx + 1);
     }
 
     const partes = window.location.pathname.split('/').filter(Boolean);
@@ -325,13 +323,7 @@ function _injetarSino() {
     if (!user.matricula) return;
 
     let container = null;
-    const seletores = [
-        '.user-actions',
-        '.header-actions',
-        '.chamados-header-acoes',
-        '.user-info',
-        'header'
-    ];
+    const seletores = ['.user-actions', '.header-actions', '.chamados-header-acoes', '.user-info', 'header'];
     for (const sel of seletores) {
         container = document.querySelector(sel);
         if (container) break;
@@ -361,16 +353,11 @@ function _injetarSino() {
         </div>
     `;
 
-    if (container) {
-        container.appendChild(sino);
-    } else {
-        sino.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;';
-        document.body.appendChild(sino);
-    }
+    if (container) container.appendChild(sino);
+    else { sino.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;'; document.body.appendChild(sino); }
 
     document.getElementById('sinoBtn').addEventListener('click', _toggleSino);
     document.getElementById('sinoMarcarTodas').addEventListener('click', _marcarTodasNotif);
-
     document.addEventListener('click', (e) => {
         const el = document.getElementById('sinoNotificacoes');
         if (el && !el.contains(e.target)) _fecharSino();
@@ -403,9 +390,7 @@ async function _contarNotif() {
     const user = getUsuarioLogado();
     if (!user.matricula) return;
     try {
-        const r = await fetch(`${CHAMADOS_WORKER_URL}/api/notificacoes/contar`, {
-            headers: _getHeadersNotif()
-        });
+        const r = await fetch(`${CHAMADOS_WORKER_URL}/api/notificacoes/contar`, { headers: _getHeadersNotif() });
         if (!r.ok) return;
         const data = await r.json();
         _atualizarBadge(data.nao_lidas || 0);
@@ -420,9 +405,7 @@ async function _carregarNotif(forcar = false) {
         return;
     }
     try {
-        const r = await fetch(`${CHAMADOS_WORKER_URL}/api/notificacoes?limit=30`, {
-            headers: _getHeadersNotif()
-        });
+        const r = await fetch(`${CHAMADOS_WORKER_URL}/api/notificacoes?limit=30`, { headers: _getHeadersNotif() });
         if (!r.ok) throw new Error('Erro');
         const data = await r.json();
         _notifCache = data.data || [];
@@ -533,16 +516,12 @@ window._marcarTodasNotif = _marcarTodasNotif;
 // ============================================
 function irParaAbrirChamado() {
     const base = getBasePath();
-
     if (isPaginaHome() && !window.location.pathname.includes('/chamados/')) {
         window.location.href = `${base}chamados/index.html`;
         return;
     }
-
     const tela = getIdentificacaoTela();
-    const params = new URLSearchParams({
-        tela: tela.arquivo, titulo: tela.titulo, url: window.location.href
-    });
+    const params = new URLSearchParams({ tela: tela.arquivo, titulo: tela.titulo, url: window.location.href });
     window.location.href = `${base}chamados/abrir.html?${params.toString()}`;
 }
 
@@ -579,7 +558,7 @@ window.irParaAbrirChamado = irParaAbrirChamado;
 window.getIdentificacaoTela = getIdentificacaoTela;
 
 // ============================================
-// PÁGINA: ABRIR (mantido igual)
+// PÁGINA: ABRIR
 // ============================================
 function initPaginaAbrir() {
     const form = document.getElementById('formChamado');
@@ -606,9 +585,8 @@ function initPaginaAbrir() {
             opt.textContent = t.titulo;
             selectTela.appendChild(opt);
         });
-        if (telaArquivo && TELAS_SISTEMA.some(t => t.arquivo === telaArquivo)) {
-            selectTela.value = telaArquivo;
-        } else if (telaArquivo) {
+        if (telaArquivo && TELAS_SISTEMA.some(t => t.arquivo === telaArquivo)) selectTela.value = telaArquivo;
+        else if (telaArquivo) {
             const opt = document.createElement('option');
             opt.value = telaArquivo;
             opt.textContent = `${telaArquivo} (tela atual)`;
@@ -625,9 +603,7 @@ function initPaginaAbrir() {
 
     const elUsuario = document.getElementById('infoUsuario');
     if (elUsuario) {
-        elUsuario.textContent = usuario.matricula
-            ? `${usuario.nome} (${usuario.matricula})`
-            : usuario.nome;
+        elUsuario.textContent = usuario.matricula ? `${usuario.nome} (${usuario.matricula})` : usuario.nome;
     }
 
     document.querySelectorAll('.tipo-opcao').forEach(opcao => {
@@ -794,7 +770,7 @@ function initPaginaAbrir() {
 }
 
 // ============================================
-// PÁGINA: LISTAGEM (mantido igual)
+// PÁGINA: LISTAGEM
 // ============================================
 function initPaginaListagem() {
     const container = document.getElementById('listaChamados');
@@ -868,6 +844,12 @@ function initPaginaListagem() {
             const badgeTempo = renderBadgeSLA(est, est?.desde);
             const resumoSLA = c._sla ? renderResumoSLA(c._sla) : '';
 
+            // ⭐ Badges
+            const badgeReaberto = (c.reaberto_count && c.reaberto_count > 0)
+                ? `<span class="badge-reaberto" title="Reaberto ${c.reaberto_count}x">🔄 Reaberto</span>` : '';
+            const badgeAvaliado = (c.avaliacao_nota)
+                ? `<span class="badge-avaliado" title="Avaliado com ${c.avaliacao_nota}★">⭐ ${c.avaliacao_nota}/5</span>` : '';
+
             return `
                 <div class="chamado-item" data-id="${c.id}" data-prioridade="${c.prioridade}">
                     <div class="chamado-item-header">
@@ -875,6 +857,8 @@ function initPaginaListagem() {
                         ${c.tipo ? `<span class="tipo ${c.tipo}">${TIPO_LABEL[c.tipo] || c.tipo}</span>` : ''}
                         <span class="prioridade ${c.prioridade}">${PRIO_LABEL[c.prioridade] || c.prioridade}</span>
                         <span class="status ${c.status}">${STATUS_LABEL[c.status] || c.status}</span>
+                        ${badgeReaberto}
+                        ${badgeAvaliado}
                         ${badgeTempo}
                     </div>
                     <h3 class="chamado-item-titulo">${escapeHtml(c.titulo)}</h3>
@@ -1018,6 +1002,71 @@ function initPaginaListagem() {
                 </div>
             ` : '';
 
+            // ⭐ Avaliação / Reabrir
+            const isDonoDoChamado = (c.usuario_email && c.usuario_email === user.matricula);
+            const chamadoResolvido = (c.status === 'resolvido');
+            const jaAvaliado = !!(c.avaliacao_nota);
+            const podeAvaliar = isDonoDoChamado && chamadoResolvido && !jaAvaliado;
+            const podeReabrir = isDonoDoChamado && chamadoResolvido;
+
+            let blocoAvaliacaoFeita = '';
+            if (jaAvaliado) {
+                const nota = parseInt(c.avaliacao_nota) || 0;
+                let estrelasHtml = '';
+                for (let i = 1; i <= 5; i++) {
+                    estrelasHtml += `<span class="estrela ${i <= nota ? '' : 'vazia'}">★</span>`;
+                }
+                blocoAvaliacaoFeita = `
+                    <div class="avaliacao-feita">
+                        <div class="label">⭐ Avaliação do solicitante</div>
+                        <div class="estrelas-display">${estrelasHtml}</div>
+                        ${c.avaliacao_comentario ? `<div class="comentario">"${escapeHtml(c.avaliacao_comentario)}"</div>` : ''}
+                        ${c.avaliacao_em ? `<div class="meta">Avaliado em ${formatarDataHora(c.avaliacao_em)}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            let blocoAvaliar = '';
+            if (podeAvaliar) {
+                blocoAvaliar = `
+                    <div class="avaliacao-container" id="avaliacaoContainer">
+                        <div class="avaliacao-header">
+                            <h3>⭐ Avalie o atendimento</h3>
+                            <span class="avaliacao-info">Chamado resolvido!</span>
+                        </div>
+                        <div class="avaliacao-estrelas" id="avaliacaoEstrelas">
+                            <button type="button" class="estrela-btn" data-nota="1" title="Muito ruim">★</button>
+                            <button type="button" class="estrela-btn" data-nota="2" title="Ruim">★</button>
+                            <button type="button" class="estrela-btn" data-nota="3" title="Regular">★</button>
+                            <button type="button" class="estrela-btn" data-nota="4" title="Bom">★</button>
+                            <button type="button" class="estrela-btn" data-nota="5" title="Excelente">★</button>
+                        </div>
+                        <div class="estrela-label" id="avaliacaoLabel">Clique nas estrelas para avaliar</div>
+                        <textarea class="avaliacao-textarea" id="avaliacaoComentario" placeholder="Conte-nos o que achou do atendimento (opcional)..." maxlength="500"></textarea>
+                        <div class="avaliacao-acoes">
+                            <button class="btn-avaliar" id="btnEnviarAvaliacao" disabled>⭐ Enviar Avaliação</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            let blocoReabrir = '';
+            if (podeReabrir) {
+                blocoReabrir = `
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 2px dashed #E2E8F0;">
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <strong style="color: #DD6B20; font-size: 14px;">🔄 Problema voltou?</strong>
+                                <p style="margin: 4px 0 0; font-size: 12px; color: #718096;">
+                                    Se o problema não foi resolvido de fato, você pode reabrir o chamado.
+                                </p>
+                            </div>
+                            <button class="btn-reabrir-chamado" id="btnReabrirChamado">🔄 Reabrir Chamado</button>
+                        </div>
+                    </div>
+                `;
+            }
+
             corpo.innerHTML = `
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                     <div class="modal-field">
@@ -1040,9 +1089,7 @@ function initPaginaListagem() {
                     </div>
                     <div class="modal-field">
                         <div class="modal-field-label">Situação atual</div>
-                        <div class="modal-field-value">
-                            ${badgeSLA || '—'}
-                        </div>
+                        <div class="modal-field-value">${badgeSLA || '—'}</div>
                     </div>
                     <div class="modal-field">
                         <div class="modal-field-label">Solicitante</div>
@@ -1081,12 +1128,15 @@ function initPaginaListagem() {
                     ${timelineHtml}
                 </div>
 
+                ${blocoAvaliacaoFeita}
+                ${blocoAvaliar}
+
                 <div class="modal-field">
                     <div class="modal-field-label">💬 Conversa</div>
-                    <div class="chat-container" id="chatContainer">
-                        ${chatHtml}
-                    </div>
+                    <div class="chat-container" id="chatContainer">${chatHtml}</div>
                 </div>
+
+                ${blocoReabrir}
 
                 <div class="chat-input-area">
                     <div class="chat-input-wrapper">
@@ -1094,12 +1144,8 @@ function initPaginaListagem() {
                         <div class="chat-anexos-lista" id="chatAnexosLista"></div>
                     </div>
                     <div class="chat-input-acoes">
-                        <button type="button" class="btn-chat-anexo" id="btnChatAnexo" title="Anexar arquivo">
-                            📎
-                        </button>
-                        <input type="file" id="chatInputFile" multiple
-                               accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-                               style="display:none;">
+                        <button type="button" class="btn-chat-anexo" id="btnChatAnexo" title="Anexar arquivo">📎</button>
+                        <input type="file" id="chatInputFile" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" style="display:none;">
                         <button class="btn-chamado primary" id="btnEnviarChat">📨 Enviar</button>
                     </div>
                 </div>
@@ -1112,10 +1158,10 @@ function initPaginaListagem() {
             const acoes = document.getElementById('modalAcoes');
             if (podeEditarStatus) {
                 const statusBtns = [
-                    { s: 'aberto',       label: '🆕 Reabrir',       cor: 'secondary' },
-                    { s: 'em_andamento', label: '🔧 Em andamento',  cor: 'primary' },
-                    { s: 'resolvido',    label: '✅ Resolvido',     cor: 'success' },
-                    { s: 'cancelado',    label: '❌ Cancelar',      cor: 'secondary' }
+                    { s: 'aberto', label: '🆕 Reabrir', cor: 'secondary' },
+                    { s: 'em_andamento', label: '🔧 Em andamento', cor: 'primary' },
+                    { s: 'resolvido', label: '✅ Resolvido', cor: 'success' },
+                    { s: 'cancelado', label: '❌ Cancelar', cor: 'secondary' }
                 ];
                 statusBtns.forEach(b => {
                     if (b.s === c.status) return;
@@ -1134,6 +1180,92 @@ function initPaginaListagem() {
                 });
             }
 
+            // ⭐ LISTENERS DA AVALIAÇÃO
+            if (podeAvaliar) {
+                const estrelasBtns = document.querySelectorAll('.estrela-btn');
+                const label = document.getElementById('avaliacaoLabel');
+                const btnEnviarAvaliacao = document.getElementById('btnEnviarAvaliacao');
+                let notaSelecionada = 0;
+                const labelsNotas = { 1: '😞 Muito ruim', 2: '😕 Ruim', 3: '😐 Regular', 4: '😊 Bom', 5: '🤩 Excelente!' };
+
+                estrelasBtns.forEach(btn => {
+                    const nota = parseInt(btn.dataset.nota);
+                    btn.addEventListener('mouseenter', () => {
+                        estrelasBtns.forEach((b, i) => b.classList.toggle('hover', i < nota));
+                        if (notaSelecionada === 0) label.textContent = labelsNotas[nota] || '';
+                    });
+                    btn.addEventListener('mouseleave', () => {
+                        estrelasBtns.forEach((b, i) => b.classList.toggle('hover', i < notaSelecionada));
+                        label.textContent = notaSelecionada > 0 ? labelsNotas[notaSelecionada] : 'Clique nas estrelas para avaliar';
+                    });
+                    btn.addEventListener('click', () => {
+                        notaSelecionada = nota;
+                        estrelasBtns.forEach((b, i) => b.classList.toggle('selecionada', i < nota));
+                        label.textContent = labelsNotas[nota] || '';
+                        btnEnviarAvaliacao.disabled = false;
+                    });
+                });
+
+                btnEnviarAvaliacao.addEventListener('click', async () => {
+                    if (notaSelecionada < 1) return;
+                    const comentario = document.getElementById('avaliacaoComentario').value.trim();
+                    btnEnviarAvaliacao.disabled = true;
+                    btnEnviarAvaliacao.textContent = '⏳ Enviando...';
+
+                    try {
+                        const resp = await fetch(`${CHAMADOS_WORKER_URL}/api/chamados/${c.id}/avaliar`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-User-Matricula': user.matricula,
+                                'X-User-Perfil': user.perfil
+                            },
+                            body: JSON.stringify({ nota: notaSelecionada, comentario, usuario_avaliacao: user.nome })
+                        });
+                        const data = await resp.json();
+                        if (!data.success) throw new Error(data.error || 'Erro ao avaliar');
+                        alert(`⭐ Obrigado pela avaliação! Você deu ${notaSelecionada} estrela${notaSelecionada !== 1 ? 's' : ''}.`);
+                        abrirModalDetalhes(c.id);
+                    } catch (e) {
+                        console.error('❌ Erro ao avaliar:', e);
+                        alert('Erro ao avaliar: ' + e.message);
+                        btnEnviarAvaliacao.disabled = false;
+                        btnEnviarAvaliacao.innerHTML = '⭐ Enviar Avaliação';
+                    }
+                });
+            }
+
+            // 🔄 LISTENER REABRIR
+            if (podeReabrir) {
+                const btnReabrir = document.getElementById('btnReabrirChamado');
+                if (btnReabrir) {
+                    btnReabrir.addEventListener('click', async () => {
+                        if (!confirm('⚠️ Deseja realmente reabrir este chamado?\n\nEle voltará para o status "Aberto".')) return;
+                        btnReabrir.disabled = true;
+                        btnReabrir.textContent = '⏳ Reabrindo...';
+
+                        try {
+                            const ok = await alterarChamado(c.id, { status: 'aberto' }, user);
+                            if (ok) {
+                                alert('✅ Chamado reaberto com sucesso!');
+                                abrirModalDetalhes(c.id);
+                                if (typeof carregarChamados === 'function') carregarChamados();
+                                else window.dispatchEvent(new Event('chamados:reload'));
+                            } else {
+                                btnReabrir.disabled = false;
+                                btnReabrir.innerHTML = '🔄 Reabrir Chamado';
+                            }
+                        } catch (e) {
+                            console.error('❌ Erro ao reabrir:', e);
+                            alert('Erro ao reabrir: ' + e.message);
+                            btnReabrir.disabled = false;
+                            btnReabrir.innerHTML = '🔄 Reabrir Chamado';
+                        }
+                    });
+                }
+            }
+
+            // ========== CHAT: ENVIO ==========
             const btnEnviarChat = document.getElementById('btnEnviarChat');
             const inputChat = document.getElementById('chatInput');
             const btnChatAnexo = document.getElementById('btnChatAnexo');
@@ -1147,23 +1279,15 @@ function initPaginaListagem() {
             chatInputFile.addEventListener('change', async (e) => {
                 const files = Array.from(e.target.files || []);
                 chatInputFile.value = '';
-
                 for (const file of files) {
-                    if (anexosChatProntos.length >= 5) {
-                        alert('Máximo de 5 anexos por mensagem.');
-                        break;
-                    }
-                    if (file.size > 10 * 1024 * 1024) {
-                        alert(`Arquivo "${file.name}" é maior que 10 MB.`);
-                        continue;
-                    }
+                    if (anexosChatProntos.length >= 5) { alert('Máximo de 5 anexos por mensagem.'); break; }
+                    if (file.size > 10 * 1024 * 1024) { alert(`Arquivo "${file.name}" é maior que 10 MB.`); continue; }
                     await enviarAnexoChat(file);
                 }
             });
 
             async function enviarAnexoChat(file) {
                 const itemId = 'chat_anx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-
                 const chip = document.createElement('div');
                 chip.className = 'chat-anexo-chip enviando';
                 chip.id = itemId;
@@ -1177,7 +1301,6 @@ function initPaginaListagem() {
 
                 const statusEl = chip.querySelector('.chip-status');
                 const btnRemover = chip.querySelector('.chip-remover');
-
                 btnRemover.addEventListener('click', () => {
                     chip.remove();
                     anexosChatProntos = anexosChatProntos.filter(a => a._itemId !== itemId);
@@ -1248,7 +1371,6 @@ function initPaginaListagem() {
         carregarChamados();
     });
 
-    // Suporte a ?busca=PROTOCOLO (usado pelo clique na notificação)
     const params = new URLSearchParams(window.location.search);
     const buscaParam = params.get('busca');
     if (buscaParam) {
@@ -1269,7 +1391,6 @@ async function alterarChamado(id, mudancas, user) {
             usuario_alteracao: user.nome || 'Usuário',
             perfil_alteracao: user.perfil || ''
         };
-
         const resp = await fetch(`${CHAMADOS_WORKER_URL}/api/chamados/${id}`, {
             method: 'PATCH',
             headers: {
@@ -1281,7 +1402,6 @@ async function alterarChamado(id, mudancas, user) {
         });
         const data = await resp.json();
         if (!data.success) throw new Error(data.error || 'Erro ao atualizar');
-
         window.dispatchEvent(new Event('chamados:reload'));
         return true;
     } catch (e) {
@@ -1345,9 +1465,7 @@ window.fecharModal = function () {
 
 document.addEventListener('click', e => {
     const modal = document.getElementById('modalDetalhes');
-    if (modal && modal.style.display === 'flex' && e.target === modal) {
-        window.fecharModal();
-    }
+    if (modal && modal.style.display === 'flex' && e.target === modal) window.fecharModal();
 });
 
 document.addEventListener('keydown', e => {

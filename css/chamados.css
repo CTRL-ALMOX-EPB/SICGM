@@ -1067,7 +1067,7 @@
 .chat-msg-texto { font-size: 13px; color: #2D3748; line-height: 1.5; }
 
 /* ============================================ */
-/* CHAT — INPUT REFORMULADO                     */
+/* CHAT — INPUT                                 */
 /* ============================================ */
 
 .chat-input-area {
@@ -1129,13 +1129,10 @@
     justify-content: center;
 }
 
-.btn-chat-anexo:hover {
-    background: #E2E8F0;
-    border-color: #CBD5E0;
-}
+.btn-chat-anexo:hover { background: #E2E8F0; border-color: #CBD5E0; }
 
 /* ============================================ */
-/* CHIPS DE ANEXO NA CAIXA DE INPUT             */
+/* CHIPS DE ANEXO                               */
 /* ============================================ */
 
 .chat-anexos-lista {
@@ -1189,7 +1186,7 @@
 .chat-anexo-chip .chip-remover:hover { background: #FED7D7; }
 
 /* ============================================ */
-/* ANEXOS DENTRO DAS MENSAGENS DO CHAT          */
+/* ANEXOS DENTRO DAS MENSAGENS                  */
 /* ============================================ */
 
 .chat-msg-anexos {
@@ -1330,6 +1327,274 @@
     .upload-area .icone { font-size: 18px; }
     .upload-area .titulo { font-size: 12px; }
     .chat-msg-anexos { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+}
+
+/* ============================================ */
+/* ⭐ AVALIAÇÃO POR ESTRELAS                    */
+/* ============================================ */
+
+.avaliacao-container {
+    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+    border: 2px solid #F6E05E;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 20px 0;
+}
+
+.avaliacao-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.avaliacao-header h3 {
+    margin: 0;
+    color: #744210;
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.avaliacao-header .avaliacao-info {
+    font-size: 12px;
+    color: #975A16;
+    font-weight: 600;
+    background: #FEFCBF;
+    padding: 4px 10px;
+    border-radius: 12px;
+    border: 1px solid #F6E05E;
+}
+
+.avaliacao-estrelas {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.estrela-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 38px;
+    padding: 0;
+    line-height: 1;
+    transition: all 0.2s ease;
+    color: #CBD5E0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    filter: grayscale(1);
+}
+
+.estrela-btn:hover,
+.estrela-btn.hover,
+.estrela-btn.selecionada {
+    color: #F59E0B;
+    filter: grayscale(0);
+    transform: scale(1.15);
+    text-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+}
+
+.estrela-btn.selecionada {
+    animation: popEstrela 0.3s ease;
+}
+
+@keyframes popEstrela {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1.15); }
+}
+
+.estrela-label {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #975A16;
+    margin-bottom: 12px;
+    min-height: 20px;
+}
+
+.avaliacao-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #F6E05E;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 70px;
+    background: white;
+    color: #2D3748;
+    box-sizing: border-box;
+    margin-bottom: 12px;
+}
+
+.avaliacao-textarea:focus {
+    outline: none;
+    border-color: #D69E2E;
+    box-shadow: 0 0 0 3px rgba(214, 158, 46, 0.15);
+}
+
+.avaliacao-acoes {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.avaliacao-acoes .btn-avaliar {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+}
+
+.avaliacao-acoes .btn-avaliar:hover:not(:disabled) {
+    background: linear-gradient(135deg, #D97706, #B45309);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(217, 119, 6, 0.35);
+}
+
+.avaliacao-acoes .btn-avaliar:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.avaliacao-feita {
+    background: linear-gradient(135deg, #F0FFF4 0%, #C6F6D5 100%);
+    border: 2px solid #9AE6B4;
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 20px 0;
+}
+
+.avaliacao-feita .label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #276749;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.avaliacao-feita .estrelas-display {
+    display: flex;
+    gap: 4px;
+    font-size: 26px;
+    margin-bottom: 8px;
+}
+
+.avaliacao-feita .estrela {
+    color: #F59E0B;
+    text-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+}
+
+.avaliacao-feita .estrela.vazia {
+    color: #CBD5E0;
+    text-shadow: none;
+}
+
+.avaliacao-feita .comentario {
+    background: white;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #2D3748;
+    line-height: 1.5;
+    border-left: 3px solid #48BB78;
+    margin-top: 8px;
+    font-style: italic;
+}
+
+.avaliacao-feita .meta {
+    font-size: 11px;
+    color: #718096;
+    margin-top: 8px;
+}
+
+/* ============================================ */
+/* 🔄 BOTÃO REABRIR                             */
+/* ============================================ */
+
+.btn-reabrir-chamado {
+    background: linear-gradient(135deg, #ED8936, #DD6B20);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+}
+
+.btn-reabrir-chamado:hover:not(:disabled) {
+    background: linear-gradient(135deg, #DD6B20, #C05621);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(221, 107, 32, 0.35);
+}
+
+.btn-reabrir-chamado:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* ---------- Badges nos cards ---------- */
+
+.badge-reaberto {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #FED7AA;
+    color: #7B341E;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 10px;
+    border: 1px solid #F6AD55;
+    text-transform: uppercase;
+    margin-left: 4px;
+}
+
+.badge-avaliado {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #FEF3C7;
+    color: #744210;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 10px;
+    border: 1px solid #F6E05E;
+    margin-left: 4px;
+}
+
+@media (max-width: 480px) {
+    .estrela-btn { font-size: 32px; }
+    .avaliacao-header { flex-direction: column; align-items: flex-start; }
+    .avaliacao-acoes { flex-direction: column; }
+    .avaliacao-acoes .btn-avaliar { width: 100%; justify-content: center; }
 }
 
 /* ============================================ */
