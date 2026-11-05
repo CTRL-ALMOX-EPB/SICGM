@@ -10,7 +10,7 @@ console.log('🚀 dashboards-pendencia-devolucao.js carregado!');
 
 function getSessao() {
     console.log('🔍 Verificando autenticação...');
-    
+
     if (typeof authService === 'undefined' || !authService) {
         console.error('❌ authService não disponível');
         window.location.href = '../login.html';
@@ -69,8 +69,8 @@ function formatarObraParaExibicao(obra) {
     if (!obra) return '';
     let limpo = obra.trim().replace(/[^0-9]/g, '');
     if (limpo.length !== 10) return obra;
-    return limpo.substring(0, 3) + '-' + 
-           limpo.substring(3, 5) + '-' + 
+    return limpo.substring(0, 3) + '-' +
+           limpo.substring(3, 5) + '-' +
            limpo.substring(5, 10);
 }
 
@@ -100,60 +100,101 @@ function formatarMesAno(mesAno) {
 }
 
 // ============================================
+// FUNÇÃO: CONVERTER STRING DE DATA EM Date NATIVO
+// (para o Excel reconhecer como data de verdade)
+// ============================================
+function parseDataParaExcel(dataString) {
+    if (!dataString) return null;
+
+    // Já é Date?
+    if (dataString instanceof Date) {
+        return isNaN(dataString.getTime()) ? null : dataString;
+    }
+
+    const s = String(dataString).trim();
+    if (!s) return null;
+
+    // Formato ISO com T (ex.: "2026-10-01T00:00:00Z" ou "2026-10-01T03:00:00.000Z")
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    // Formato ISO curto "2026-10-01"
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        const [ano, mes, dia] = s.split('-').map(Number);
+        return new Date(ano, mes - 1, dia);
+    }
+
+    // Formato brasileiro "01/10/2026" ou "01.10.2026" ou "01-10-2026"
+    const m = s.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{4})$/);
+    if (m) {
+        const dia = Number(m[1]);
+        const mes = Number(m[2]) - 1;
+        const ano = Number(m[3]);
+        return new Date(ano, mes, dia);
+    }
+
+    // Fallback: tenta Date.parse
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+// ============================================
 // INICIALIZAÇÃO
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('📋 DOM carregado, iniciando dashboard Pendência de Devolução...');
-    
+
     const loadingOverlay = document.getElementById('loadingOverlay');
     const dashboardContent = document.getElementById('dashboardContent');
-    
+
     if (!loadingOverlay || !dashboardContent) {
         console.error('❌ Elementos não encontrados!');
         return;
     }
-    
+
     const sessao = getSessao();
     if (!sessao) {
         console.log('❌ Sessão inválida');
         return;
     }
-    
+
     console.log('👤 Usuário:', sessao.nome, '- Perfil:', sessao.perfil);
-    
+
     document.getElementById('userName').textContent = sessao.nome || 'Usuário';
     document.getElementById('userMatricula').textContent = `Matrícula: ${sessao.matricula || '---'}`;
     document.getElementById('userPerfil').textContent = sessao.perfil || 'GESTÃO';
-    
+
     try {
         console.log('📡 Iniciando busca de dados...');
-        
+
         const startTime = Date.now();
         dadosCompletos = await buscarPendenciasDevolucao();
         const elapsed = Date.now() - startTime;
-        
+
         console.log(`✅ ${dadosCompletos.length} pendências de devolução carregadas em ${elapsed}ms`);
-        
+
         if (dadosCompletos.length === 0) {
             console.warn('⚠️ Nenhuma pendência de devolução encontrada');
             mostrarToast('⚠️ Nenhuma pendência de devolução encontrada', 'warning');
         }
-        
+
         criarAbas();
         criarMeses();
         aplicarFiltros();
-        
+
         loadingOverlay.classList.remove('active');
         dashboardContent.style.display = 'block';
         console.log('✅ Dashboard renderizado com sucesso!');
-        
+
     } catch (error) {
         console.error('❌ Erro ao carregar dados:', error);
         mostrarToast(`❌ Erro ao carregar dados: ${error.message}`, 'error');
         loadingOverlay.classList.remove('active');
         dashboardContent.style.display = 'block';
-        
+
         document.getElementById('itemList').innerHTML = `
             <div class="empty-state-dashboard">
                 <div class="icon">❌</div>
@@ -174,26 +215,26 @@ document.addEventListener('DOMContentLoaded', async function() {
 function criarMeses() {
     const container = document.getElementById('mesesContainer');
     if (!container) return;
-    
+
     const mesesSet = new Set();
     dadosCompletos.forEach(item => {
         const mes = getMesAno(item.data_programacao);
         if (mes) mesesSet.add(mes);
     });
-    
+
     const meses = Array.from(mesesSet).sort();
-    
+
     if (meses.length === 0) {
         container.innerHTML = `<span style="font-size: 12px; color: #A0AEC0;">Nenhum mês disponível</span>`;
         return;
     }
-    
+
     let html = `
         <button class="btn-mes active" data-mes="todos" onclick="filtrarPorMes('todos')" style="padding: 4px 12px; border: 2px solid #E2E8F0; border-radius: 6px; background: #ED8936; color: white; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; border-color: #ED8936;">
             📅 Todos
         </button>
     `;
-    
+
     meses.forEach(mes => {
         const label = formatarMesAno(mes);
         html += `
@@ -202,7 +243,7 @@ function criarMeses() {
             </button>
         `;
     });
-    
+
     container.innerHTML = html;
     container.style.display = 'flex';
     container.style.gap = '8px';
@@ -217,7 +258,7 @@ function criarMeses() {
 
 function filtrarPorMes(mes) {
     mesSelecionado = mes === 'todos' ? null : mes;
-    
+
     document.querySelectorAll('.btn-mes').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.mes === mes);
         if (btn.dataset.mes === mes) {
@@ -230,7 +271,7 @@ function filtrarPorMes(mes) {
             btn.style.borderColor = '#E2E8F0';
         }
     });
-    
+
     aplicarFiltros();
 }
 
@@ -241,10 +282,10 @@ function filtrarPorMes(mes) {
 function criarAbas() {
     const mainContainer = document.querySelector('.dashboard-main');
     if (!mainContainer) return;
-    
+
     const existingAbas = document.querySelector('.abas-container');
     if (existingAbas) existingAbas.remove();
-    
+
     const abaContainer = document.createElement('div');
     abaContainer.className = 'abas-container';
     abaContainer.innerHTML = `
@@ -255,7 +296,7 @@ function criarAbas() {
             👤 Encarregados
         </button>
     `;
-    
+
     mainContainer.parentNode.insertBefore(abaContainer, mainContainer);
 }
 
@@ -267,11 +308,11 @@ function trocarAba(aba) {
     abaAtual = aba;
     itemSelecionado = null;
     mesSelecionado = null;
-    
+
     document.querySelectorAll('.btn-aba').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.aba === aba);
     });
-    
+
     const listTitle = document.getElementById('listTitle');
     if (listTitle) {
         const titles = {
@@ -280,7 +321,7 @@ function trocarAba(aba) {
         };
         listTitle.textContent = titles[aba] || '🏗️ Lista de Obras';
     }
-    
+
     renderizarDashboard(dadosFiltrados);
 }
 
@@ -294,9 +335,9 @@ function aplicarFiltros() {
     const dataFim = document.getElementById('filterDataFim')?.value || '';
     const buscaTexto = document.getElementById('filterBusca')?.value?.toLowerCase() || '';
     const filtroStatus = document.getElementById('filterStatus')?.value || 'todos';
-    
+
     let filtrados = [...dadosCompletos];
-    
+
     if (mesSelecionado) {
         filtrados = filtrados.filter(item => {
             const mes = getMesAno(item.data_programacao);
@@ -304,7 +345,7 @@ function aplicarFiltros() {
         });
         console.log(`📅 Após filtro de mês: ${filtrados.length} pendências`);
     }
-    
+
     if (dataInicio || dataFim) {
         filtrados = filtrados.filter(item => {
             const dataItem = new Date(item.data_programacao);
@@ -314,12 +355,12 @@ function aplicarFiltros() {
         });
         console.log(`📅 Após filtro de período: ${filtrados.length} pendências`);
     }
-    
+
     if (filtroStatus !== 'todos') {
         filtrados = filtrados.filter(item => item.status === filtroStatus);
         console.log(`📊 Após filtro de status: ${filtrados.length} pendências`);
     }
-    
+
     if (buscaTexto) {
         filtrados = filtrados.filter(item => {
             const obra = (item.obra || '').toLowerCase();
@@ -328,14 +369,14 @@ function aplicarFiltros() {
         });
         console.log(`🔍 Após filtro de busca: ${filtrados.length} pendências`);
     }
-    
+
     dadosFiltrados = filtrados;
-    
+
     const totalRegistros = document.getElementById('totalRegistros');
     if (totalRegistros) {
         totalRegistros.textContent = `${filtrados.length} pendências`;
     }
-    
+
     renderizarDashboard(filtrados);
 }
 
@@ -346,14 +387,14 @@ function limparFiltros() {
     document.getElementById('filterBusca').value = '';
     document.getElementById('filterStatus').value = 'todos';
     mesSelecionado = null;
-    
+
     document.querySelectorAll('.btn-mes').forEach(btn => {
         btn.classList.remove('active');
         btn.style.background = '#F7FAFC';
         btn.style.color = '#4A5568';
         btn.style.borderColor = '#E2E8F0';
     });
-    
+
     aplicarFiltros();
 }
 
@@ -379,10 +420,10 @@ function renderizarDashboard(pendencias) {
         `;
         return;
     }
-    
+
     renderizarKPIs(pendencias);
     renderizarGraficos(pendencias);
-    
+
     if (abaAtual === 'obras') {
         renderizarListaObras(pendencias);
         if (itemSelecionado && itemSelecionado.tipo === 'obra') {
@@ -409,16 +450,16 @@ function renderizarDashboard(pendencias) {
 function renderizarKPIs(pendencias) {
     const container = document.getElementById('kpiGrid');
     if (!container) return;
-    
+
     const pendentes = pendencias.filter(p => p.status !== 'FINALIZADO');
     const finalizadas = pendencias.filter(p => p.status === 'FINALIZADO');
-    
+
     const total = pendencias.length;
     const totalPendentes = pendentes.length;
     const totalFinalizadas = finalizadas.length;
     const totalObras = new Set(pendencias.map(p => p.obra)).size;
     const totalEncarregados = new Set(pendencias.map(p => p.encarregado).filter(e => e)).size;
-    
+
     container.innerHTML = `
         <div class="kpi-card status-total">
             <div class="kpi-icon">📦</div>
@@ -455,7 +496,7 @@ function renderizarKPIs(pendencias) {
 function renderizarListaObras(pendencias) {
     const container = document.getElementById('itemList');
     if (!container) return;
-    
+
     const obrasMap = {};
     pendencias.forEach(p => {
         const obra = p.obra || 'SEM OBRA';
@@ -476,9 +517,9 @@ function renderizarListaObras(pendencias) {
             obrasMap[obra].pendentes++;
         }
     });
-    
+
     const obrasOrdenadas = Object.values(obrasMap).sort((a, b) => a.obra.localeCompare(b.obra));
-    
+
     let html = `
         <div class="list-header" style="display: grid; grid-template-columns: 1fr 60px 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Obra</span>
@@ -486,7 +527,7 @@ function renderizarListaObras(pendencias) {
             <span style="text-align: right;">✅</span>
         </div>
     `;
-    
+
     obrasOrdenadas.forEach(item => {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'obra' && itemSelecionado.obra === item.obra;
         const obraFormatada = formatarObraParaExibicao(item.obra);
@@ -498,7 +539,7 @@ function renderizarListaObras(pendencias) {
             </div>
         `;
     });
-    
+
     container.innerHTML = html;
 }
 
@@ -509,7 +550,7 @@ function renderizarListaObras(pendencias) {
 function renderizarListaEncarregados(pendencias) {
     const container = document.getElementById('itemList');
     if (!container) return;
-    
+
     const encarregadosMap = {};
     pendencias.forEach(p => {
         const nome = p.encarregado || 'NÃO INFORMADO';
@@ -530,10 +571,10 @@ function renderizarListaEncarregados(pendencias) {
             encarregadosMap[nome].pendentes++;
         }
     });
-    
+
     const encarregadosOrdenados = Object.values(encarregadosMap)
         .sort((a, b) => b.count - a.count);
-    
+
     let html = `
         <div class="list-header" style="display: grid; grid-template-columns: 1fr 60px 60px; gap: 8px; padding: 8px 12px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 12px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
             <span>Encarregado</span>
@@ -541,7 +582,7 @@ function renderizarListaEncarregados(pendencias) {
             <span style="text-align: right;">✅</span>
         </div>
     `;
-    
+
     encarregadosOrdenados.forEach(item => {
         const isActive = itemSelecionado && itemSelecionado.tipo === 'encarregado' && itemSelecionado.nome === item.nome;
         html += `
@@ -552,7 +593,7 @@ function renderizarListaEncarregados(pendencias) {
             </div>
         `;
     });
-    
+
     container.innerHTML = html;
 }
 
@@ -591,10 +632,10 @@ function selecionarEncarregado(nome) {
 function renderizarDetalhesObra(pendencias) {
     const container = document.getElementById('itemDetails');
     if (!container) return;
-    
+
     const obraFormatada = formatarObraParaExibicao(pendencias[0].obra);
     const total = pendencias.length;
-    
+
     const saidasMap = {};
     pendencias.forEach(p => {
         const data = p.data_programacao || 'SEM DATA';
@@ -606,10 +647,10 @@ function renderizarDetalhesObra(pendencias) {
         }
         saidasMap[data].pendencias.push(p);
     });
-    
+
     const saidasOrdenadas = Object.values(saidasMap)
         .sort((a, b) => a.data.localeCompare(b.data));
-    
+
     let html = `
         <div class="detail-title">🏗️ ${obraFormatada}</div>
         <div class="detail-row">
@@ -623,7 +664,7 @@ function renderizarDetalhesObra(pendencias) {
         <div class="detail-section-title">📅 Saídas com Pendência:</div>
         <div class="detail-list">
     `;
-    
+
     saidasOrdenadas.forEach(saida => {
         const dataFormatada = formatarData(saida.data);
         const pendenteCount = saida.pendencias.length;
@@ -636,12 +677,12 @@ function renderizarDetalhesObra(pendencias) {
             </div>
         `;
     });
-    
+
     html += `</div>`;
-    
+
     html += `<div class="detail-section-title">📋 Detalhes das Pendências:</div>
     <div class="detail-list">`;
-    
+
     pendencias.forEach(p => {
         const dataFormatada = formatarData(p.data_programacao);
         const motivo = p.motivo_pendencia || 'Sem motivo';
@@ -653,9 +694,9 @@ function renderizarDetalhesObra(pendencias) {
             </div>
         `;
     });
-    
+
     html += `</div>`;
-    
+
     container.innerHTML = html;
 }
 
@@ -666,10 +707,10 @@ function renderizarDetalhesObra(pendencias) {
 function renderizarDetalhesEncarregado(pendencias) {
     const container = document.getElementById('itemDetails');
     if (!container) return;
-    
+
     const nome = pendencias[0].encarregado || 'NÃO INFORMADO';
     const total = pendencias.length;
-    
+
     const obrasMap = {};
     pendencias.forEach(p => {
         const obra = p.obra || 'SEM OBRA';
@@ -683,10 +724,10 @@ function renderizarDetalhesEncarregado(pendencias) {
         obrasMap[obra].pendencias.push(p);
         obrasMap[obra].saidas.add(p.data_programacao);
     });
-    
+
     const obrasOrdenadas = Object.values(obrasMap)
         .sort((a, b) => a.obra.localeCompare(b.obra));
-    
+
     let html = `
         <div class="detail-title">👤 ${nome}</div>
         <div class="detail-row">
@@ -700,7 +741,7 @@ function renderizarDetalhesEncarregado(pendencias) {
         <div class="detail-section-title">🏗️ Obras com Pendência:</div>
         <div class="detail-list">
     `;
-    
+
     obrasOrdenadas.forEach(obra => {
         const obraFormatada = formatarObraParaExibicao(obra.obra);
         const count = obra.pendencias.length;
@@ -714,12 +755,12 @@ function renderizarDetalhesEncarregado(pendencias) {
             </div>
         `;
     });
-    
+
     html += `</div>`;
-    
+
     html += `<div class="detail-section-title">📋 Detalhes das Pendências:</div>
     <div class="detail-list">`;
-    
+
     pendencias.forEach(p => {
         const obraFormatada = formatarObraParaExibicao(p.obra);
         const dataFormatada = formatarData(p.data_programacao);
@@ -732,9 +773,9 @@ function renderizarDetalhesEncarregado(pendencias) {
             </div>
         `;
     });
-    
+
     html += `</div>`;
-    
+
     container.innerHTML = html;
 }
 
@@ -744,11 +785,11 @@ function renderizarDetalhesEncarregado(pendencias) {
 
 function renderizarGraficos(pendencias) {
     console.log('📊 Renderizando gráficos...');
-    
+
     const pendentes = pendencias.filter(p => p.status !== 'FINALIZADO');
     const finalizadas = pendencias.filter(p => p.status === 'FINALIZADO');
     const total = pendencias.length || 1;
-    
+
     let htmlStatus = `
         <div class="chart-bar-indicator">
             <span class="label">⏳ Pendentes</span>
@@ -778,22 +819,22 @@ function renderizarGraficos(pendencias) {
             <span class="percent" style="font-weight: 700;">100%</span>
         </div>
     `;
-    
+
     document.getElementById('statusChart').innerHTML = htmlStatus;
-    
+
     const encarregadosCount = {};
     pendencias.forEach(p => {
         const nome = p.encarregado || 'NÃO INFORMADO';
         if (!encarregadosCount[nome]) encarregadosCount[nome] = 0;
         encarregadosCount[nome]++;
     });
-    
+
     const sorted = Object.entries(encarregadosCount)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10);
-    
+
     const maxCount = sorted.length > 0 ? Math.max(...sorted.map(s => s[1])) : 1;
-    
+
     let htmlEncarregado = '';
     sorted.forEach(([nome, count]) => {
         const percentual = (count / maxCount) * 100;
@@ -809,11 +850,11 @@ function renderizarGraficos(pendencias) {
             </div>
         `;
     });
-    
+
     if (sorted.length === 0) {
         htmlEncarregado = `<div class="empty-state-dashboard"><p>Nenhum encarregado encontrado</p></div>`;
     }
-    
+
     document.getElementById('topSkusChart').innerHTML = htmlEncarregado;
 }
 
@@ -894,7 +935,7 @@ async function exportarExcel() {
         pendentesOrdenadas.forEach(p => {
             ws1.addRow({
                 obra: formatarObraParaExibicao(p.obra) || '-',
-                data: p.data_programacao ? formatarData(p.data_programacao) : '-',
+                data: parseDataParaExcel(p.data_programacao),   // ⭐ Date nativo (ou null)
                 encarregado: p.encarregado || 'NÃO INFORMADO',
                 motivo: p.motivo_pendencia || 'Sem motivo'
             });
@@ -909,6 +950,9 @@ async function exportarExcel() {
 
         // Estiliza corpo (bordas + alinhamento)
         estilizarCorpo(ws1, 4);
+
+        // ⭐ Formata coluna Data como dd/mm/yyyy
+        ws1.getColumn(2).numFmt = 'dd/mm/yyyy';
 
         // ============================================
         // ABA 2: POR ENCARREGADO
@@ -953,7 +997,7 @@ async function exportarExcel() {
                 nome: e.nome,
                 obras: e.obras.size,
                 total: e.total,
-                data: e.ultimaData ? formatarData(e.ultimaData) : '-'
+                data: parseDataParaExcel(e.ultimaData)          // ⭐ Date nativo (ou null)
             });
         });
 
@@ -963,6 +1007,9 @@ async function exportarExcel() {
             to:   { row: 1, column: 4 }
         };
         estilizarCorpo(ws2, 4);
+
+        // ⭐ Formata coluna Data como dd/mm/yyyy
+        ws2.getColumn(4).numFmt = 'dd/mm/yyyy';
 
         // ============================================
         // GERA O ARQUIVO E BAIXA
@@ -1033,7 +1080,12 @@ function estilizarCorpo(ws, numColunas) {
                 bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
                 right:  { style: 'thin', color: { argb: 'FFE2E8F0' } }
             };
-            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+            // ⭐ Data (tipo Date) centralizada; texto à esquerda
+            if (cell.value instanceof Date) {
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            } else {
+                cell.alignment = { vertical: 'middle', horizontal: 'left' };
+            }
         }
     }
 }
