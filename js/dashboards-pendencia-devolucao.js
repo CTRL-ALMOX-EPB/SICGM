@@ -62,7 +62,7 @@ let abaAtual = 'obras';
 let mesSelecionado = null;
 
 // ============================================
-// FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO
+// FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO (com hífens)
 // ============================================
 
 function formatarObraParaExibicao(obra) {
@@ -72,6 +72,15 @@ function formatarObraParaExibicao(obra) {
     return limpo.substring(0, 3) + '-' +
            limpo.substring(3, 5) + '-' +
            limpo.substring(5, 10);
+}
+
+// ============================================
+// FUNÇÃO: OBTER APENAS OS DÍGITOS DA OBRA
+// (para exportar no Excel sem hífens)
+// ============================================
+function obraSomenteDigitos(obra) {
+    if (!obra) return '';
+    return String(obra).trim().replace(/[^0-9]/g, '');
 }
 
 // ============================================
@@ -934,7 +943,7 @@ async function exportarExcel() {
 
         pendentesOrdenadas.forEach(p => {
             ws1.addRow({
-                obra: formatarObraParaExibicao(p.obra) || '-',
+                obra: obraSomenteDigitos(p.obra) || '-',
                 data: parseDataParaExcel(p.data_programacao),   // ⭐ Date nativo (ou null)
                 encarregado: p.encarregado || 'NÃO INFORMADO',
                 motivo: p.motivo_pendencia || 'Sem motivo'
