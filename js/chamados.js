@@ -773,8 +773,8 @@ function initPaginaAbrir() {
 // PÁGINA: LISTAGEM
 // ============================================
 function initPaginaListagem() {
-    const container = document.getElementById('listaChamados');
-    if (!container) return;
+    const wrapper = document.querySelector('.chamados-listas-wrapper');
+    if (!wrapper) return;
 
     if (typeof authService === 'undefined' || !authService || !authService.isLoggedIn()) {
         alert('🔒 Sessão expirada. Faça login novamente.');
@@ -794,17 +794,18 @@ function initPaginaListagem() {
 
     async function carregarChamados() {
         const filtroTipo = document.getElementById('filtroTipo')?.value || '';
-        const filtroStatus = document.getElementById('filtroStatus')?.value || '';
         const filtroPrioridade = document.getElementById('filtroPrioridade')?.value || '';
         const busca = document.getElementById('filtroBusca')?.value || '';
 
         const params = new URLSearchParams();
         if (filtroTipo) params.set('tipo', filtroTipo);
-        if (filtroStatus) params.set('status', filtroStatus);
         if (filtroPrioridade) params.set('prioridade', filtroPrioridade);
         if (busca) params.set('busca', busca);
 
-        container.innerHTML = '<div class="loading-msg">⏳ Carregando chamados...</div>';
+        ['listaAberto', 'listaAndamento', 'listaResolvido', 'listaCancelado'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '<div class="loading-msg">⏳ Carregando...</div>';
+        });
 
         try {
             const resp = await fetch(`${CHAMADOS_WORKER_URL}/api/chamados?${params}`, {
@@ -820,7 +821,11 @@ function initPaginaListagem() {
             renderizarChamados(data.chamados || []);
         } catch (e) {
             console.error(e);
-            container.innerHTML = `<div class="erro-msg">❌ Erro ao carregar: ${escapeHtml(e.message)}</div>`;
+            const erroHtml = `<div class="erro-msg">❌ Erro ao carregar: ${escapeHtml(e.message)}</div>`;
+            ['listaAberto', 'listaAndamento', 'listaResolvido', 'listaCancelado'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = erroHtml;
+            });
         }
     }
 
@@ -833,53 +838,103 @@ function initPaginaListagem() {
         set('kpiUrgentes', stats.urgentes);
     }
 
+    function renderCardChamado(c) {
+        const est = c._estado || null;
+        const badgeTempo = renderBadgeSLA(est, est?.desde);
+        const resumoSLA = c._sla ? renderResumoSLA(c._sla) : '';
+
+        const badgeReaberto = (c.reaberto_count && c.reaberto_count > 0)
+            ? `<span class="badge-reaberto" title="Reaberto ${c.reaberto_count}x">🔄 Reaberto</span>` : '';
+        const badgeAvaliado = (c.avaliacao_nota)
+            ? `<span class="badge-avaliado" title="Avaliado com ${c.avaliacao_nota}★">⭐ ${c.avaliacao_nota}/5</span>` : '';
+
+        return `
+            <div class="chamado-item" data-id="${c.id}" data-prioridade="${c.prioridade}">
+                <div class="chamado-item-header">
+                    <span class="protocolo">${escapeHtml(c.protocolo)}</span>
+                    ${c.tipo ? `<span class="tipo ${c.tipo}">${TIPO_LABEL[c.tipo] || c.tipo}</span>` : ''}
+                    <span class="prioridade ${c.prioridade}">${PRIO_LABEL[c.prioridade] || c.prioridade}</span>
+                    <span class="status ${c.status}">${STATUS_LABEL[c.status] || c.status}</span>
+                    ${badgeReaberto}
+                    ${badgeAvaliado}
+                    ${badgeTempo}
+                </div>
+                <h3 class="chamado-item-titulo">${escapeHtml(c.titulo)}</h3>
+                <p class="chamado-item-desc">${escapeHtml((c.descricao || '').substring(0, 200))}${(c.descricao || '').length > 200 ? '...' : ''}</p>
+                <div class="chamado-item-meta">
+                    <span>👤 ${escapeHtml(c.usuario_nome)}</span>
+                    <span>📱 ${escapeHtml(c.tela_titulo || c.tela_origem)}</span>
+                    <span>🕒 aberto em ${formatarDataHora(c.criado_em)}</span>
+                </div>
+                ${resumoSLA}
+            </div>
+        `;
+    }
+
     function renderizarChamados(lista) {
-        if (!lista.length) {
-            container.innerHTML = '<div class="sem-dados">Nenhum chamado encontrado.</div>';
-            return;
+        const grupos = {
+            aberto: [],
+            em_andamento: [],
+            resolvido: [],
+            cancelado: []
+        };
+        lista.forEach(c => {
+            if (grupos[c.status]) grupos[c.status].push(c);
+        });
+
+        const mapa = {
+            aberto:       { lista: 'listaAberto',    cont: 'contAberto',    secao: '[data-status="aberto"]' },
+            em_andamento: { lista: 'listaAndamento', cont: 'contAndamento', secao: '[data-status="em_andamento"]' },
+            resolvido:    { lista: 'listaResolvido', cont: 'contResolvido', secao: '[data-status="resolvido"]' },
+            cancelado:    { lista: 'listaCancelado', cont: 'contCancelado', secao: '[data-status="cancelado"]' }
+        };
+
+        Object.entries(mapa).forEach(([status, ids]) => {
+            const containerLista = document.getElementById(ids.lista);
+            const containerCont  = document.getElementById(ids.cont);
+            const secaoEl        = document.querySelector(ids.secao);
+            if (!containerLista) return;
+
+            const itens = grupos[status];
+            if (containerCont) containerCont.textContent = itens.length;
+
+            if (secaoEl) secaoEl.style.display = itens.length === 0 ? 'none' : '';
+
+            if (itens.length === 0) {
+                containerLista.innerHTML = '';
+                return;
+            }
+
+            containerLista.innerHTML = itens.map(renderCardChamado).join('');
+        });
+
+        const totalItens = lista.length;
+        let avisoGlobal = document.getElementById('avisoSemChamados');
+        if (totalItens === 0) {
+            if (!avisoGlobal) {
+                avisoGlobal = document.createElement('div');
+                avisoGlobal.id = 'avisoSemChamados';
+                avisoGlobal.className = 'aviso-sem-chamados';
+                avisoGlobal.innerHTML = `
+                    <div style="font-size:48px;margin-bottom:10px;">📭</div>
+                    <p>Nenhum chamado encontrado com os filtros atuais.</p>
+                    <small>Tente limpar os filtros ou aguarde novos chamados.</small>
+                `;
+                if (wrapper && wrapper.parentNode) {
+                    wrapper.parentNode.insertBefore(avisoGlobal, wrapper.nextSibling);
+                }
+            }
+        } else if (avisoGlobal) {
+            avisoGlobal.remove();
         }
 
-        container.innerHTML = lista.map(c => {
-            const est = c._estado || null;
-            const badgeTempo = renderBadgeSLA(est, est?.desde);
-            const resumoSLA = c._sla ? renderResumoSLA(c._sla) : '';
-
-            // ⭐ Badges
-            const badgeReaberto = (c.reaberto_count && c.reaberto_count > 0)
-                ? `<span class="badge-reaberto" title="Reaberto ${c.reaberto_count}x">🔄 Reaberto</span>` : '';
-            const badgeAvaliado = (c.avaliacao_nota)
-                ? `<span class="badge-avaliado" title="Avaliado com ${c.avaliacao_nota}★">⭐ ${c.avaliacao_nota}/5</span>` : '';
-
-            return `
-                <div class="chamado-item" data-id="${c.id}" data-prioridade="${c.prioridade}">
-                    <div class="chamado-item-header">
-                        <span class="protocolo">${escapeHtml(c.protocolo)}</span>
-                        ${c.tipo ? `<span class="tipo ${c.tipo}">${TIPO_LABEL[c.tipo] || c.tipo}</span>` : ''}
-                        <span class="prioridade ${c.prioridade}">${PRIO_LABEL[c.prioridade] || c.prioridade}</span>
-                        <span class="status ${c.status}">${STATUS_LABEL[c.status] || c.status}</span>
-                        ${badgeReaberto}
-                        ${badgeAvaliado}
-                        ${badgeTempo}
-                    </div>
-                    <h3 class="chamado-item-titulo">${escapeHtml(c.titulo)}</h3>
-                    <p class="chamado-item-desc">${escapeHtml((c.descricao || '').substring(0, 200))}${(c.descricao || '').length > 200 ? '...' : ''}</p>
-                    <div class="chamado-item-meta">
-                        <span>👤 ${escapeHtml(c.usuario_nome)}</span>
-                        <span>📱 ${escapeHtml(c.tela_titulo || c.tela_origem)}</span>
-                        <span>🕒 aberto em ${formatarDataHora(c.criado_em)}</span>
-                    </div>
-                    ${resumoSLA}
-                </div>
-            `;
-        }).join('');
-
-        container.querySelectorAll('.chamado-item').forEach(el => {
+        document.querySelectorAll('.chamado-item').forEach(el => {
             el.addEventListener('click', () => abrirModalDetalhes(parseInt(el.dataset.id)));
         });
 
         if (window._timerChamadosAtualizar) clearInterval(window._timerChamadosAtualizar);
         window._timerChamadosAtualizar = setInterval(() => {
-            container.querySelectorAll('.chamado-item').forEach(el => {
+            document.querySelectorAll('.chamado-item').forEach(el => {
                 const id = parseInt(el.dataset.id);
                 const chamado = lista.find(c => c.id === id);
                 if (!chamado || !chamado._estado) return;
@@ -1002,7 +1057,6 @@ function initPaginaListagem() {
                 </div>
             ` : '';
 
-            // ⭐ Avaliação / Reabrir
             const isDonoDoChamado = (c.usuario_email && c.usuario_email === user.matricula);
             const chamadoResolvido = (c.status === 'resolvido');
             const jaAvaliado = !!(c.avaliacao_nota);
@@ -1022,47 +1076,6 @@ function initPaginaListagem() {
                         <div class="estrelas-display">${estrelasHtml}</div>
                         ${c.avaliacao_comentario ? `<div class="comentario">"${escapeHtml(c.avaliacao_comentario)}"</div>` : ''}
                         ${c.avaliacao_em ? `<div class="meta">Avaliado em ${formatarDataHora(c.avaliacao_em)}</div>` : ''}
-                    </div>
-                `;
-            }
-
-            let blocoAvaliar = '';
-            if (podeAvaliar) {
-                blocoAvaliar = `
-                    <div class="avaliacao-container" id="avaliacaoContainer">
-                        <div class="avaliacao-header">
-                            <h3>⭐ Avalie o atendimento</h3>
-                            <span class="avaliacao-info">Chamado resolvido!</span>
-                        </div>
-                        <div class="avaliacao-estrelas" id="avaliacaoEstrelas">
-                            <button type="button" class="estrela-btn" data-nota="1" title="Muito ruim">★</button>
-                            <button type="button" class="estrela-btn" data-nota="2" title="Ruim">★</button>
-                            <button type="button" class="estrela-btn" data-nota="3" title="Regular">★</button>
-                            <button type="button" class="estrela-btn" data-nota="4" title="Bom">★</button>
-                            <button type="button" class="estrela-btn" data-nota="5" title="Excelente">★</button>
-                        </div>
-                        <div class="estrela-label" id="avaliacaoLabel">Clique nas estrelas para avaliar</div>
-                        <textarea class="avaliacao-textarea" id="avaliacaoComentario" placeholder="Conte-nos o que achou do atendimento (opcional)..." maxlength="500"></textarea>
-                        <div class="avaliacao-acoes">
-                            <button class="btn-avaliar" id="btnEnviarAvaliacao" disabled>⭐ Enviar Avaliação</button>
-                        </div>
-                    </div>
-                `;
-            }
-
-            let blocoReabrir = '';
-            if (podeReabrir) {
-                blocoReabrir = `
-                    <div style="margin-top: 20px; padding-top: 20px; border-top: 2px dashed #E2E8F0;">
-                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 200px;">
-                                <strong style="color: #DD6B20; font-size: 14px;">🔄 Problema voltou?</strong>
-                                <p style="margin: 4px 0 0; font-size: 12px; color: #718096;">
-                                    Se o problema não foi resolvido de fato, você pode reabrir o chamado.
-                                </p>
-                            </div>
-                            <button class="btn-reabrir-chamado" id="btnReabrirChamado">🔄 Reabrir Chamado</button>
-                        </div>
                     </div>
                 `;
             }
@@ -1129,14 +1142,11 @@ function initPaginaListagem() {
                 </div>
 
                 ${blocoAvaliacaoFeita}
-                ${blocoAvaliar}
 
                 <div class="modal-field">
                     <div class="modal-field-label">💬 Conversa</div>
                     <div class="chat-container" id="chatContainer">${chatHtml}</div>
                 </div>
-
-                ${blocoReabrir}
 
                 <div class="chat-input-area">
                     <div class="chat-input-wrapper">
@@ -1151,7 +1161,9 @@ function initPaginaListagem() {
                 </div>
 
                 <div class="modal-actions" id="modalAcoes">
-                    <button class="btn-chamado secondary" onclick="fecharModal()">Fechar</button>
+                    ${podeAvaliar ? `<button class="btn-chamado btn-avaliar-mini" id="btnAbrirAvaliacao" type="button">⭐ Avaliar Chamado</button>` : ''}
+                    ${podeReabrir ? `<button class="btn-chamado btn-reabrir-mini" id="btnReabrirChamado" type="button">🔄 Reabrir Chamado</button>` : ''}
+                    <button class="btn-chamado secondary" onclick="fecharModal()" type="button" style="margin-left:auto;">Fechar</button>
                 </div>
             `;
 
@@ -1168,6 +1180,7 @@ function initPaginaListagem() {
                     const btn = document.createElement('button');
                     btn.className = `btn-chamado ${b.cor}`;
                     btn.textContent = b.label;
+                    btn.type = 'button';
                     btn.addEventListener('click', async () => {
                         if (!confirm(`Alterar status para "${b.label}"?`)) return;
                         const ok = await alterarChamado(c.id, { status: b.s }, user);
@@ -1176,93 +1189,41 @@ function initPaginaListagem() {
                             abrirModalDetalhes(id);
                         }
                     });
-                    acoes.insertBefore(btn, acoes.firstChild);
+                    const btnFechar = acoes.querySelector('button[onclick="fecharModal()"]');
+                    acoes.insertBefore(btn, btnFechar);
                 });
             }
 
-            // ⭐ LISTENERS DA AVALIAÇÃO
-            if (podeAvaliar) {
-                const estrelasBtns = document.querySelectorAll('.estrela-btn');
-                const label = document.getElementById('avaliacaoLabel');
-                const btnEnviarAvaliacao = document.getElementById('btnEnviarAvaliacao');
-                let notaSelecionada = 0;
-                const labelsNotas = { 1: '😞 Muito ruim', 2: '😕 Ruim', 3: '😐 Regular', 4: '😊 Bom', 5: '🤩 Excelente!' };
+            const btnAbrirAvaliacao = document.getElementById('btnAbrirAvaliacao');
+            if (btnAbrirAvaliacao) {
+                btnAbrirAvaliacao.addEventListener('click', () => abrirModalAvaliacao(c, user));
+            }
 
-                estrelasBtns.forEach(btn => {
-                    const nota = parseInt(btn.dataset.nota);
-                    btn.addEventListener('mouseenter', () => {
-                        estrelasBtns.forEach((b, i) => b.classList.toggle('hover', i < nota));
-                        if (notaSelecionada === 0) label.textContent = labelsNotas[nota] || '';
-                    });
-                    btn.addEventListener('mouseleave', () => {
-                        estrelasBtns.forEach((b, i) => b.classList.toggle('hover', i < notaSelecionada));
-                        label.textContent = notaSelecionada > 0 ? labelsNotas[notaSelecionada] : 'Clique nas estrelas para avaliar';
-                    });
-                    btn.addEventListener('click', () => {
-                        notaSelecionada = nota;
-                        estrelasBtns.forEach((b, i) => b.classList.toggle('selecionada', i < nota));
-                        label.textContent = labelsNotas[nota] || '';
-                        btnEnviarAvaliacao.disabled = false;
-                    });
-                });
-
-                btnEnviarAvaliacao.addEventListener('click', async () => {
-                    if (notaSelecionada < 1) return;
-                    const comentario = document.getElementById('avaliacaoComentario').value.trim();
-                    btnEnviarAvaliacao.disabled = true;
-                    btnEnviarAvaliacao.textContent = '⏳ Enviando...';
+            const btnReabrir = document.getElementById('btnReabrirChamado');
+            if (btnReabrir) {
+                btnReabrir.addEventListener('click', async () => {
+                    if (!confirm('⚠️ Deseja realmente reabrir este chamado?\n\nEle voltará para o status "Aberto".')) return;
+                    btnReabrir.disabled = true;
+                    btnReabrir.textContent = '⏳ Reabrindo...';
 
                     try {
-                        const resp = await fetch(`${CHAMADOS_WORKER_URL}/api/chamados/${c.id}/avaliar`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-User-Matricula': user.matricula,
-                                'X-User-Perfil': user.perfil
-                            },
-                            body: JSON.stringify({ nota: notaSelecionada, comentario, usuario_avaliacao: user.nome })
-                        });
-                        const data = await resp.json();
-                        if (!data.success) throw new Error(data.error || 'Erro ao avaliar');
-                        alert(`⭐ Obrigado pela avaliação! Você deu ${notaSelecionada} estrela${notaSelecionada !== 1 ? 's' : ''}.`);
-                        abrirModalDetalhes(c.id);
-                    } catch (e) {
-                        console.error('❌ Erro ao avaliar:', e);
-                        alert('Erro ao avaliar: ' + e.message);
-                        btnEnviarAvaliacao.disabled = false;
-                        btnEnviarAvaliacao.innerHTML = '⭐ Enviar Avaliação';
-                    }
-                });
-            }
-
-            // 🔄 LISTENER REABRIR
-            if (podeReabrir) {
-                const btnReabrir = document.getElementById('btnReabrirChamado');
-                if (btnReabrir) {
-                    btnReabrir.addEventListener('click', async () => {
-                        if (!confirm('⚠️ Deseja realmente reabrir este chamado?\n\nEle voltará para o status "Aberto".')) return;
-                        btnReabrir.disabled = true;
-                        btnReabrir.textContent = '⏳ Reabrindo...';
-
-                        try {
-                            const ok = await alterarChamado(c.id, { status: 'aberto' }, user);
-                            if (ok) {
-                                alert('✅ Chamado reaberto com sucesso!');
-                                abrirModalDetalhes(c.id);
-                                if (typeof carregarChamados === 'function') carregarChamados();
-                                else window.dispatchEvent(new Event('chamados:reload'));
-                            } else {
-                                btnReabrir.disabled = false;
-                                btnReabrir.innerHTML = '🔄 Reabrir Chamado';
-                            }
-                        } catch (e) {
-                            console.error('❌ Erro ao reabrir:', e);
-                            alert('Erro ao reabrir: ' + e.message);
+                        const ok = await alterarChamado(c.id, { status: 'aberto' }, user);
+                        if (ok) {
+                            alert('✅ Chamado reaberto com sucesso!');
+                            abrirModalDetalhes(c.id);
+                            if (typeof carregarChamados === 'function') carregarChamados();
+                            else window.dispatchEvent(new Event('chamados:reload'));
+                        } else {
                             btnReabrir.disabled = false;
                             btnReabrir.innerHTML = '🔄 Reabrir Chamado';
                         }
-                    });
-                }
+                    } catch (e) {
+                        console.error('❌ Erro ao reabrir:', e);
+                        alert('Erro ao reabrir: ' + e.message);
+                        btnReabrir.disabled = false;
+                        btnReabrir.innerHTML = '🔄 Reabrir Chamado';
+                    }
+                });
             }
 
             // ========== CHAT: ENVIO ==========
@@ -1354,7 +1315,6 @@ function initPaginaListagem() {
     }
 
     document.getElementById('filtroTipo')?.addEventListener('change', carregarChamados);
-    document.getElementById('filtroStatus')?.addEventListener('change', carregarChamados);
     document.getElementById('filtroPrioridade')?.addEventListener('change', carregarChamados);
 
     let timeoutBusca;
@@ -1364,7 +1324,7 @@ function initPaginaListagem() {
     });
 
     document.getElementById('btnLimparFiltros')?.addEventListener('click', () => {
-        ['filtroTipo', 'filtroStatus', 'filtroPrioridade', 'filtroBusca'].forEach(id => {
+        ['filtroTipo', 'filtroPrioridade', 'filtroBusca'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
@@ -1380,6 +1340,111 @@ function initPaginaListagem() {
 
     carregarChamados();
 }
+
+// ============================================
+// MODAL SECUNDÁRIO — AVALIAÇÃO
+// ============================================
+function abrirModalAvaliacao(chamado, user) {
+    const anterior = document.getElementById('modalAvaliacaoOverlay');
+    if (anterior) anterior.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'modalAvaliacaoOverlay';
+    overlay.className = 'chamado-modal-overlay avaliacao-overlay';
+    overlay.innerHTML = `
+        <div class="chamado-modal avaliacao-modal">
+            <div class="chamado-modal-header">
+                <h2>⭐ Avaliar Chamado</h2>
+                <button class="btn-fechar-modal" type="button" id="btnFecharAvaliacao">✕</button>
+            </div>
+            <div class="chamado-modal-body">
+                <div class="avaliacao-container">
+                    <div class="avaliacao-header">
+                        <h3>Como foi o atendimento?</h3>
+                        <span class="avaliacao-info">${escapeHtml(chamado.protocolo || '')}</span>
+                    </div>
+                    <div class="avaliacao-estrelas" id="avaliacaoEstrelas">
+                        <button type="button" class="estrela-btn" data-nota="1" title="Muito ruim">★</button>
+                        <button type="button" class="estrela-btn" data-nota="2" title="Ruim">★</button>
+                        <button type="button" class="estrela-btn" data-nota="3" title="Regular">★</button>
+                        <button type="button" class="estrela-btn" data-nota="4" title="Bom">★</button>
+                        <button type="button" class="estrela-btn" data-nota="5" title="Excelente">★</button>
+                    </div>
+                    <div class="estrela-label" id="avaliacaoLabel">Clique nas estrelas para avaliar</div>
+                    <textarea class="avaliacao-textarea" id="avaliacaoComentario" placeholder="Conte-nos o que achou do atendimento (opcional)..." maxlength="500"></textarea>
+                    <div class="avaliacao-acoes">
+                        <button class="btn-chamado secondary" type="button" id="btnCancelarAvaliacao">Cancelar</button>
+                        <button class="btn-avaliar" id="btnEnviarAvaliacao" type="button" disabled>⭐ Enviar Avaliação</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const fechar = () => overlay.remove();
+    overlay.querySelector('#btnFecharAvaliacao').addEventListener('click', fechar);
+    overlay.querySelector('#btnCancelarAvaliacao').addEventListener('click', fechar);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) fechar(); });
+    const onEsc = (e) => { if (e.key === 'Escape') { fechar(); document.removeEventListener('keydown', onEsc); } };
+    document.addEventListener('keydown', onEsc);
+
+    const estrelasBtns = overlay.querySelectorAll('.estrela-btn');
+    const label = overlay.querySelector('#avaliacaoLabel');
+    const btnEnviarAvaliacao = overlay.querySelector('#btnEnviarAvaliacao');
+    const textarea = overlay.querySelector('#avaliacaoComentario');
+    let notaSelecionada = 0;
+    const labelsNotas = { 1: '😞 Muito ruim', 2: '😕 Ruim', 3: '😐 Regular', 4: '😊 Bom', 5: '🤩 Excelente!' };
+
+    estrelasBtns.forEach(btn => {
+        const nota = parseInt(btn.dataset.nota);
+        btn.addEventListener('mouseenter', () => {
+            estrelasBtns.forEach((b, i) => b.classList.toggle('hover', i < nota));
+            if (notaSelecionada === 0) label.textContent = labelsNotas[nota] || '';
+        });
+        btn.addEventListener('mouseleave', () => {
+            estrelasBtns.forEach((b, i) => b.classList.toggle('hover', i < notaSelecionada));
+            label.textContent = notaSelecionada > 0 ? labelsNotas[notaSelecionada] : 'Clique nas estrelas para avaliar';
+        });
+        btn.addEventListener('click', () => {
+            notaSelecionada = nota;
+            estrelasBtns.forEach((b, i) => b.classList.toggle('selecionada', i < nota));
+            label.textContent = labelsNotas[nota] || '';
+            btnEnviarAvaliacao.disabled = false;
+        });
+    });
+
+    btnEnviarAvaliacao.addEventListener('click', async () => {
+        if (notaSelecionada < 1) return;
+        const comentario = textarea.value.trim();
+        btnEnviarAvaliacao.disabled = true;
+        btnEnviarAvaliacao.textContent = '⏳ Enviando...';
+
+        try {
+            const resp = await fetch(`${CHAMADOS_WORKER_URL}/api/chamados/${chamado.id}/avaliar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-User-Matricula': user.matricula,
+                    'X-User-Perfil': user.perfil
+                },
+                body: JSON.stringify({ nota: notaSelecionada, comentario, usuario_avaliacao: user.nome })
+            });
+            const data = await resp.json();
+            if (!data.success) throw new Error(data.error || 'Erro ao avaliar');
+            alert(`⭐ Obrigado pela avaliação! Você deu ${notaSelecionada} estrela${notaSelecionada !== 1 ? 's' : ''}.`);
+            fechar();
+            const item = document.querySelector(`.chamado-item[data-id="${chamado.id}"]`);
+            if (item) item.click();
+        } catch (e) {
+            console.error('❌ Erro ao avaliar:', e);
+            alert('Erro ao avaliar: ' + e.message);
+            btnEnviarAvaliacao.disabled = false;
+            btnEnviarAvaliacao.innerHTML = '⭐ Enviar Avaliação';
+        }
+    });
+}
+window.abrirModalAvaliacao = abrirModalAvaliacao;
 
 // ============================================
 // AUXILIARES

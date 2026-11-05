@@ -75,16 +75,6 @@
                 </select>
             </div>
             <div class="chamado-form-group">
-                <label>Status</label>
-                <select id="filtroStatus">
-                    <option value="">Todos</option>
-                    <option value="aberto">🆕 Aberto</option>
-                    <option value="em_andamento">🔧 Em andamento</option>
-                    <option value="resolvido">✅ Resolvido</option>
-                    <option value="cancelado">❌ Cancelado</option>
-                </select>
-            </div>
-            <div class="chamado-form-group">
                 <label>Prioridade</label>
                 <select id="filtroPrioridade">
                     <option value="">Todas</option>
@@ -100,7 +90,37 @@
             <button class="btn-chamado secondary" id="btnLimparFiltros">🔄 Limpar</button>
         </div>
 
-        <div id="listaChamados" class="chamados-lista"></div>
+        <div class="chamados-listas-wrapper">
+
+            <section class="chamados-secao" data-status="aberto">
+                <header class="chamados-secao-header aberto">
+                    <h2>🆕 Em Aberto <span class="secao-contador" id="contAberto">0</span></h2>
+                </header>
+                <div class="chamados-lista" id="listaAberto"></div>
+            </section>
+
+            <section class="chamados-secao" data-status="em_andamento">
+                <header class="chamados-secao-header em-andamento">
+                    <h2>🔧 Em Andamento <span class="secao-contador" id="contAndamento">0</span></h2>
+                </header>
+                <div class="chamados-lista" id="listaAndamento"></div>
+            </section>
+
+            <section class="chamados-secao" data-status="resolvido">
+                <header class="chamados-secao-header resolvido">
+                    <h2>✅ Resolvidos <span class="secao-contador" id="contResolvido">0</span></h2>
+                </header>
+                <div class="chamados-lista" id="listaResolvido"></div>
+            </section>
+
+            <section class="chamados-secao" data-status="cancelado">
+                <header class="chamados-secao-header cancelado">
+                    <h2>❌ Cancelados <span class="secao-contador" id="contCancelado">0</span></h2>
+                </header>
+                <div class="chamados-lista" id="listaCancelado"></div>
+            </section>
+
+        </div>
     </div>
 
     <div class="chamado-modal-overlay" id="modalDetalhes" style="display:none;">
