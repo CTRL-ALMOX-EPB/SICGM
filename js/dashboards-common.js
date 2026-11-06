@@ -2,13 +2,38 @@
 // DASHBOARDS - FUNÇÕES COMPARTILHADAS
 // ============================================
 
-// Só declara se não existir
 if (typeof API_URL === 'undefined') {
     var API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
 }
 
 console.log('🚀 dashboards-common.js carregado!');
 console.log(`📡 API_URL: ${API_URL}`);
+
+// ============================================
+// HELPERS DE NAVEGAÇÃO EM ABAS
+// ============================================
+
+function navegarParaAba(url, titulo) {
+    let urlAbs = url;
+    try { urlAbs = new URL(url, window.location.href).href; } catch (_) {}
+
+    if (typeof window.solicitarNovaAba === 'function') {
+        window.solicitarNovaAba(urlAbs, titulo || urlAbs, urlAbs);
+    } else {
+        window.location.href = urlAbs;
+    }
+}
+
+function voltarNaAbaAtual(url, titulo) {
+    let urlAbs = url;
+    try { urlAbs = new URL(url, window.location.href).href; } catch (_) {}
+
+    if (typeof window.navegarNaAbaAtual === 'function') {
+        window.navegarNaAbaAtual(urlAbs, titulo || urlAbs);
+    } else {
+        window.location.href = urlAbs;
+    }
+}
 
 // ============================================
 // UTILIDADES
@@ -35,15 +60,12 @@ function formatarData(dataString) {
     
     const s = String(dataString).trim();
     
-    // "YYYY-MM-DD" → "DD.MM.YYYY"
     const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (m) return `${m[3]}.${m[2]}.${m[1]}`;
     
-    // "DD.MM.YYYY" → mantém
     const m2 = s.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
     if (m2) return `${m2[1]}.${m2[2]}.${m2[3]}`;
     
-    // "DD/MM/YYYY" → "DD.MM.YYYY"
     const m3 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
     if (m3) return `${m3[1]}.${m3[2]}.${m3[3]}`;
     
@@ -51,13 +73,12 @@ function formatarData(dataString) {
 }
 
 // ============================================
-// 🔥 GET SESSÃO (NOVA VERSÃO - USANDO authService)
+// 🔥 GET SESSÃO
 // ============================================
 
 function getSessao() {
     console.log('🔍 Verificando autenticação...');
     
-    // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
     if (typeof authService === 'undefined' || !authService) {
         console.error('❌ authService não disponível');
         window.location.href = '../login.html';
@@ -96,9 +117,9 @@ function redirecionarParaHome() {
         };
         const homePage = homeMap[sessao.perfil] || '../index.html';
         console.log('🏠 Redirecionando para:', homePage);
-        window.location.href = homePage;
+        voltarNaAbaAtual(homePage, 'Início');
     } else {
-        window.location.href = '../index.html';
+        voltarNaAbaAtual('../index.html', 'Início');
     }
 }
 
@@ -274,5 +295,7 @@ window.buscarTodosRegistros = buscarTodosRegistros;
 window.buscarRegistroComItens = buscarRegistroComItens;
 window.agruparItensPorCodigo = agruparItensPorCodigo;
 window.filtrarPorPeriodo = filtrarPorPeriodo;
+window.navegarParaAba = navegarParaAba;
+window.voltarNaAbaAtual = voltarNaAbaAtual;
 
 console.log('✅ dashboards-common.js inicializado!');

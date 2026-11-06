@@ -4,56 +4,7 @@
 
 console.log('🚀 dashboards-farol-obras.js carregado!');
 
-// ============================================
-// 🔥 GET SESSÃO (NOVA VERSÃO - USANDO authService)
-// ============================================
-
-function getSessao() {
-    console.log('🔍 Verificando autenticação...');
-    
-    if (typeof authService === 'undefined' || !authService) {
-        console.error('❌ authService não disponível');
-        window.location.href = '../login.html';
-        return null;
-    }
-
-    if (!authService.isLoggedIn()) {
-        console.error('❌ Usuário não logado');
-        window.location.href = '../login.html';
-        return null;
-    }
-
-    const user = authService.getUserData();
-    if (!user) {
-        console.error('❌ Dados do usuário não encontrados');
-        window.location.href = '../login.html';
-        return null;
-    }
-
-    console.log(`✅ Sessão válida: ${user.nome} (${user.perfil})`);
-    return {
-        nome: user.nome,
-        matricula: user.matricula,
-        perfil: user.perfil,
-        timestamp: Date.now()
-    };
-}
-
-function redirecionarParaHome() {
-    const sessao = getSessao();
-    if (sessao) {
-        const homeMap = {
-            'OPERACIONAL': '../home-operacional.html',
-            'GESTAO': '../home-gestao.html',
-            'VISUALIZACAO': '../home-visualizacao.html'
-        };
-        const homePage = homeMap[sessao.perfil] || '../index.html';
-        console.log('🏠 Redirecionando para:', homePage);
-        window.location.href = homePage;
-    } else {
-        window.location.href = '../index.html';
-    }
-}
+// getSessao() e redirecionarParaHome() vêm do dashboards-common.js
 
 let dadosCompletos = [];
 let dadosFiltrados = [];
@@ -64,10 +15,6 @@ let abaAtual = 'obras';
 let filtroAtivo = null;
 let mesSelecionado = null;
 
-// ============================================
-// FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO
-// ============================================
-
 function formatarObraParaExibicao(obra) {
     if (!obra) return '';
     let limpo = obra.trim().replace(/[^0-9]/g, '');
@@ -76,10 +23,6 @@ function formatarObraParaExibicao(obra) {
            limpo.substring(3, 5) + '-' + 
            limpo.substring(5, 10);
 }
-
-// ============================================
-// FUNÇÃO: OBTER MÊS DA DATA
-// ============================================
 
 function getMesAno(dataString) {
     if (!dataString) return null;
@@ -91,20 +34,12 @@ function getMesAno(dataString) {
     }
 }
 
-// ============================================
-// FUNÇÃO: FORMATAR MÊS PARA EXIBIÇÃO
-// ============================================
-
 function formatarMesAno(mesAno) {
     if (!mesAno) return '';
     const [ano, mes] = mesAno.split('-');
     const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     return `${meses[parseInt(mes) - 1]} ${ano}`;
 }
-
-// ============================================
-// INICIALIZAÇÃO
-// ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('📋 DOM carregado, iniciando dashboard Farol de Obras...');
@@ -170,10 +105,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-// ============================================
-// CRIAR MESES
-// ============================================
-
 function criarMeses() {
     const container = document.getElementById('mesesContainer');
     if (!container) return;
@@ -214,10 +145,6 @@ function criarMeses() {
     container.style.marginBottom = '15px';
 }
 
-// ============================================
-// FILTRAR POR MÊS
-// ============================================
-
 function filtrarPorMes(mes) {
     mesSelecionado = mes === 'todos' ? null : mes;
     
@@ -236,10 +163,6 @@ function filtrarPorMes(mes) {
     
     aplicarFiltros();
 }
-
-// ============================================
-// CRIAR ABAS
-// ============================================
 
 function criarAbas() {
     const mainContainer = document.querySelector('.dashboard-main');
@@ -261,10 +184,6 @@ function criarAbas() {
     
     mainContainer.parentNode.insertBefore(abaContainer, mainContainer);
 }
-
-// ============================================
-// TROCAR ABA
-// ============================================
 
 function trocarAba(aba) {
     abaAtual = aba;
@@ -297,10 +216,6 @@ function trocarAba(aba) {
     
     renderizarDashboard(dadosFiltrados);
 }
-
-// ============================================
-// FILTROS
-// ============================================
 
 function aplicarFiltros() {
     console.log('🔄 Aplicando filtros...');
@@ -377,10 +292,6 @@ function limparFiltros() {
     aplicarFiltros();
 }
 
-// ============================================
-// APLICAR FILTRO DO CARD
-// ============================================
-
 function aplicarFiltroCard(tipo, valor) {
     console.log(`🔍 Aplicando filtro do card: ${tipo} = ${valor}`);
     
@@ -434,10 +345,6 @@ function aplicarFiltroCard(tipo, valor) {
     }
 }
 
-// ============================================
-// AGRUPAR POR SEPARADOR
-// ============================================
-
 function agruparPorSeparador(obras) {
     console.log('📦 Agrupando por separador...');
     const separadores = {};
@@ -479,10 +386,6 @@ function agruparPorSeparador(obras) {
     console.log(`✅ ${resultado.length} separadores agrupados`);
     return resultado;
 }
-
-// ============================================
-// RENDERIZAÇÃO
-// ============================================
 
 function renderizarDashboard(obras) {
     dadosExibidos = [...obras];
@@ -530,10 +433,6 @@ function renderizarDashboard(obras) {
         }
     }
 }
-
-// ============================================
-// KPIs - OBRAS
-// ============================================
 
 function renderizarKPIsObras(obras, todasObras) {
     const container = document.getElementById('kpiGrid');
@@ -611,10 +510,6 @@ function renderizarKPIsObras(obras, todasObras) {
     `;
 }
 
-// ============================================
-// KPIs - SEPARADORES
-// ============================================
-
 function renderizarKPIsSeparadores(separadores) {
     const container = document.getElementById('kpiGrid');
     if (!container) return;
@@ -656,10 +551,6 @@ function renderizarKPIsSeparadores(separadores) {
         <div class="kpi-card" style="visibility: hidden;"></div>
     `;
 }
-
-// ============================================
-// LISTA DE OBRAS
-// ============================================
 
 function renderizarListaObras(obras) {
     const container = document.getElementById('obrasList');
@@ -711,10 +602,6 @@ function renderizarListaObras(obras) {
     container.innerHTML = html;
 }
 
-// ============================================
-// LISTA DE SEPARADORES
-// ============================================
-
 function renderizarListaSeparadores(separadores) {
     const container = document.getElementById('obrasList');
     if (!container) return;
@@ -750,10 +637,6 @@ function renderizarListaSeparadores(separadores) {
     container.innerHTML = html;
 }
 
-// ============================================
-// SELECIONAR OBRA
-// ============================================
-
 function selecionarObra(obraNumero) {
     console.log(`🔍 Selecionando obra: ${obraNumero}`);
     
@@ -767,10 +650,6 @@ function selecionarObra(obraNumero) {
     }
 }
 
-// ============================================
-// SELECIONAR SAÍDA
-// ============================================
-
 function selecionarSaida(saida) {
     console.log(`🔍 Selecionando saída: ${saida.data_programacao}`);
     saidaSelecionada = saida;
@@ -778,10 +657,6 @@ function selecionarSaida(saida) {
     const saidas = dadosExibidos.filter(o => o.obra === obraSelecionada.obra);
     renderizarDetalhesObra(saidas);
 }
-
-// ============================================
-// SELECIONAR SEPARADOR
-// ============================================
 
 function selecionarSeparador(nome) {
     console.log(`🔍 Selecionando separador: ${nome}`);
@@ -794,10 +669,6 @@ function selecionarSeparador(nome) {
         renderizarListaSeparadores(separadores);
     }
 }
-
-// ============================================
-// DETALHES DA OBRA
-// ============================================
 
 function renderizarDetalhesObra(saidas) {
     const container = document.getElementById('obraDetails');
@@ -940,10 +811,6 @@ function renderizarDetalhesObra(saidas) {
     container.innerHTML = html;
 }
 
-// ============================================
-// DETALHES DO SEPARADOR
-// ============================================
-
 function renderizarDetalhesSeparador(separador) {
     const container = document.getElementById('obraDetails');
     if (!container) return;
@@ -1010,10 +877,6 @@ function renderizarDetalhesSeparador(separador) {
     
     container.innerHTML = html;
 }
-
-// ============================================
-// GRÁFICOS - OBRAS
-// ============================================
 
 function renderizarGraficosObras(obras) {
     console.log('📊 Renderizando gráficos de obras...');
@@ -1116,10 +979,6 @@ function renderizarGraficosObras(obras) {
     document.getElementById('encarregadoChart').innerHTML = htmlSep;
 }
 
-// ============================================
-// GRÁFICOS - SEPARADORES
-// ============================================
-
 function renderizarGraficosSeparadores(separadores) {
     console.log('📊 Renderizando gráficos de separadores...');
     
@@ -1200,10 +1059,6 @@ function renderizarGraficosSeparadores(separadores) {
     
     document.getElementById('encarregadoChart').innerHTML = htmlSep;
 }
-
-// ============================================
-// EXPORTAR
-// ============================================
 
 window.aplicarFiltros = aplicarFiltros;
 window.limparFiltros = limparFiltros;

@@ -8,6 +8,75 @@
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/home-visualizacao.css">
     <link rel="stylesheet" href="./css/chamados.css">
+
+    <style>
+        /* ═══════════ SISTEMA DE ABAS ═══════════ */
+        #tab-bar {
+            display: flex;
+            align-items: flex-end;
+            background: #2D3748;
+            padding: 6px 6px 0 6px;
+            gap: 3px;
+            overflow-x: auto;
+            border-radius: 10px 10px 0 0;
+            margin-top: 20px;
+            min-height: 42px;
+        }
+        #tab-bar .tab {
+            padding: 8px 14px;
+            background: #4A5568;
+            color: #E2E8F0;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+            font-size: 13px;
+            font-family: inherit;
+            transition: background 0.15s;
+        }
+        #tab-bar .tab:hover { background: #5A6578; }
+        #tab-bar .tab.active { background: #F7FAFC; color: #1A202C; font-weight: 600; }
+        #tab-bar .tab.active:hover { background: #F7FAFC; }
+        #tab-bar .tab-close {
+            font-weight: 700;
+            padding: 0 4px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.15);
+            line-height: 1;
+            font-size: 14px;
+        }
+        #tab-bar .tab-close:hover { background: rgba(0,0,0,0.35); }
+
+        #content-area {
+            position: relative;
+            background: #F7FAFC;
+            border-radius: 0 0 10px 10px;
+            overflow: hidden;
+            min-height: 300px;
+        }
+        #content-area .aba-conteudo { padding: 20px; }
+        #content-area .iframe-container {
+            position: absolute;
+            inset: 0;
+            display: none;
+        }
+        #content-area .iframe-container.active { display: block; }
+        #content-area .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+        #content-area.tem-iframe-ativo {
+            height: 75vh;
+        }
+        #content-area.tem-iframe-ativo .aba-conteudo {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
     <div class="loading-overlay" id="loadingOverlay">
@@ -60,11 +129,19 @@
             </button>
         </div>
 
-        <!-- Área de Conteúdo -->
-        <div class="depto-content" id="deptoContentVisualizacao"></div>
+        <!-- ═══════════ SISTEMA DE ABAS ═══════════ -->
+        <div id="tab-bar"></div>
 
-        <div class="restricted-msg">
-            ℹ️ Seu perfil <strong>Visualização</strong> permite apenas visualizar relatórios em cada departamento.
+        <div id="content-area">
+            <!-- Aba "Início" (padrão): conteúdo de departamentos -->
+            <div class="aba-conteudo" data-aba-conteudo="inicio" style="display:block;">
+                <div class="depto-content" id="deptoContentVisualizacao"></div>
+
+                <div class="restricted-msg">
+                    ℹ️ Seu perfil <strong>Visualização</strong> permite apenas visualizar relatórios em cada departamento.
+                </div>
+            </div>
+            <!-- Iframes das abas são injetados aqui pelo gerenciador-abas.js -->
         </div>
     </div>
 
@@ -76,7 +153,7 @@
     <!-- SCRIPTS NA ORDEM CORRETA -->
     <!-- ============================================ -->
     <script src="js/firebase-config.js"></script>
-    <script src="js/firebase-init.js"></script>   <!-- 🔥 NOVO -->
+    <script src="js/firebase-init.js"></script>
     <script src="js/config.js"></script>
     <script src="js/auth-service.js"></script>
     <script src="js/auth-helper.js"></script>
@@ -84,6 +161,6 @@
     <script src="js/auth-global.js"></script>
     <script src="js/home-visualizacao.js"></script>
     <script src="./js/chamados.js" defer></script>
-    <!-- 🔥 REMOVIDO: login.js -->
+    <script src="./js/gerenciador-abas.js" defer></script>
 </body>
 </html>

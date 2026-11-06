@@ -4,13 +4,25 @@
 
 console.log('🚀 dashboards-index.js carregado!');
 
+function abrirDashboard(arquivo, titulo) {
+    if (typeof navegarParaAba === 'function') {
+        navegarParaAba(arquivo, titulo);
+    } else if (typeof window.solicitarNovaAba === 'function') {
+        let urlAbs = arquivo;
+        try { urlAbs = new URL(arquivo, window.location.href).href; } catch (_) {}
+        window.solicitarNovaAba(urlAbs, titulo || urlAbs, urlAbs);
+    } else {
+        window.location.href = arquivo;
+    }
+}
+window.abrirDashboard = abrirDashboard;
+
 // ============================================
-// 🔥 CARREGAR INFORMAÇÕES DO USUÁRIO (NOVA VERSÃO)
+// 🔥 CARREGAR INFORMAÇÕES DO USUÁRIO
 // ============================================
 
 function carregarDadosUsuario() {
     try {
-        // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
         if (typeof authService === 'undefined' || !authService) {
             console.warn('⚠️ authService não disponível');
             return null;
@@ -27,23 +39,14 @@ function carregarDadosUsuario() {
             return null;
         }
 
-        // Atualiza o nome
         const nomeEl = document.getElementById('userName');
-        if (nomeEl && user.nome) {
-            nomeEl.textContent = user.nome;
-        }
+        if (nomeEl && user.nome) nomeEl.textContent = user.nome;
         
-        // Atualiza a matrícula
         const matriculaEl = document.getElementById('userMatricula');
-        if (matriculaEl && user.matricula) {
-            matriculaEl.textContent = `Matrícula: ${user.matricula}`;
-        }
+        if (matriculaEl && user.matricula) matriculaEl.textContent = `Matrícula: ${user.matricula}`;
         
-        // Atualiza o perfil
         const perfilEl = document.getElementById('userPerfil');
-        if (perfilEl && user.perfil) {
-            perfilEl.textContent = user.perfil;
-        }
+        if (perfilEl && user.perfil) perfilEl.textContent = user.perfil;
         
         console.log(`✅ Usuário carregado: ${user.nome} (${user.perfil})`);
         return user;
@@ -73,10 +76,8 @@ async function preCarregarDashboardsIndex() {
         farol: document.getElementById('badgeFarol')
     };
     
-    // Aguarda um pouco para garantir que todos os scripts foram carregados
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Verifica se a API_URL está disponível
     if (typeof window.API_URL === 'undefined') {
         console.warn('⚠️ API_URL não definida, usando fallback');
         window.API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
@@ -85,7 +86,6 @@ async function preCarregarDashboardsIndex() {
     console.log('📡 API_URL:', window.API_URL);
     
     try {
-        // Verifica se a função de pré-carregamento está disponível
         if (typeof window.preCarregarDashboards === 'function') {
             preloadText.textContent = 'Pré-carregando dados...';
             if (preloadSpinner) preloadSpinner.style.display = 'inline-block';
@@ -147,7 +147,6 @@ async function preCarregarDashboardsIndex() {
             preloadText.textContent = '⚠️ Carregamento automático indisponível';
             if (preloadSpinner) preloadSpinner.style.display = 'none';
             
-            // Marca todos como disponíveis mesmo sem pré-carregamento
             Object.values(badges).forEach(badge => {
                 if (badge) {
                     badge.textContent = '✓ Disponível';
@@ -165,7 +164,6 @@ async function preCarregarDashboardsIndex() {
             preloadStatus.style.background = '#FFF5F5';
         }
         
-        // Marca todos como disponíveis mesmo com erro
         Object.values(badges).forEach(badge => {
             if (badge) {
                 badge.textContent = '✓ Disponível';
@@ -181,17 +179,9 @@ async function preCarregarDashboardsIndex() {
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📋 DOM carregado, inicializando página de dashboards...');
-    
-    // Carrega os dados do usuário
     carregarDadosUsuario();
-    
-    // Inicia o pré-carregamento
     preCarregarDashboardsIndex();
 });
-
-// ============================================
-// EXPORTAR
-// ============================================
 
 window.carregarDadosUsuario = carregarDadosUsuario;
 window.preCarregarDashboardsIndex = preCarregarDashboardsIndex;

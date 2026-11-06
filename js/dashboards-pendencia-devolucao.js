@@ -4,66 +4,13 @@
 
 console.log('🚀 dashboards-pendencia-devolucao.js carregado!');
 
-// ============================================
-// 🔥 GET SESSÃO (NOVA VERSÃO - USANDO authService)
-// ============================================
-
-function getSessao() {
-    console.log('🔍 Verificando autenticação...');
-
-    if (typeof authService === 'undefined' || !authService) {
-        console.error('❌ authService não disponível');
-        window.location.href = '../login.html';
-        return null;
-    }
-
-    if (!authService.isLoggedIn()) {
-        console.error('❌ Usuário não logado');
-        window.location.href = '../login.html';
-        return null;
-    }
-
-    const user = authService.getUserData();
-    if (!user) {
-        console.error('❌ Dados do usuário não encontrados');
-        window.location.href = '../login.html';
-        return null;
-    }
-
-    console.log(`✅ Sessão válida: ${user.nome} (${user.perfil})`);
-    return {
-        nome: user.nome,
-        matricula: user.matricula,
-        perfil: user.perfil,
-        timestamp: Date.now()
-    };
-}
-
-function redirecionarParaHome() {
-    const sessao = getSessao();
-    if (sessao) {
-        const homeMap = {
-            'OPERACIONAL': '../home-operacional.html',
-            'GESTAO': '../home-gestao.html',
-            'VISUALIZACAO': '../home-visualizacao.html'
-        };
-        const homePage = homeMap[sessao.perfil] || '../index.html';
-        console.log('🏠 Redirecionando para:', homePage);
-        window.location.href = homePage;
-    } else {
-        window.location.href = '../index.html';
-    }
-}
+// getSessao() e redirecionarParaHome() vêm do dashboards-common.js
 
 let dadosCompletos = [];
 let dadosFiltrados = [];
 let itemSelecionado = null;
 let abaAtual = 'obras';
 let mesSelecionado = null;
-
-// ============================================
-// FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO (com hífens)
-// ============================================
 
 function formatarObraParaExibicao(obra) {
     if (!obra) return '';
@@ -74,18 +21,10 @@ function formatarObraParaExibicao(obra) {
            limpo.substring(5, 10);
 }
 
-// ============================================
-// FUNÇÃO: OBTER APENAS OS DÍGITOS DA OBRA
-// (para exportar no Excel sem hífens)
-// ============================================
 function obraSomenteDigitos(obra) {
     if (!obra) return '';
     return String(obra).trim().replace(/[^0-9]/g, '');
 }
-
-// ============================================
-// FUNÇÃO: OBTER MÊS DA DATA
-// ============================================
 
 function getMesAno(dataString) {
     if (!dataString) return null;
@@ -97,10 +36,6 @@ function getMesAno(dataString) {
     }
 }
 
-// ============================================
-// FUNÇÃO: FORMATAR MÊS PARA EXIBIÇÃO
-// ============================================
-
 function formatarMesAno(mesAno) {
     if (!mesAno) return '';
     const [ano, mes] = mesAno.split('-');
@@ -108,34 +43,21 @@ function formatarMesAno(mesAno) {
     return `${meses[parseInt(mes) - 1]} ${ano}`;
 }
 
-// ============================================
-// FUNÇÃO: CONVERTER STRING DE DATA EM Date NATIVO
-// (para o Excel reconhecer como data de verdade)
-// ============================================
 function parseDataParaExcel(dataString) {
     if (!dataString) return null;
-
-    // Já é Date?
     if (dataString instanceof Date) {
         return isNaN(dataString.getTime()) ? null : dataString;
     }
-
     const s = String(dataString).trim();
     if (!s) return null;
-
-    // Formato ISO com T (ex.: "2026-10-01T00:00:00Z" ou "2026-10-01T03:00:00.000Z")
     if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
         const d = new Date(s);
         return isNaN(d.getTime()) ? null : d;
     }
-
-    // Formato ISO curto "2026-10-01"
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
         const [ano, mes, dia] = s.split('-').map(Number);
         return new Date(ano, mes - 1, dia);
     }
-
-    // Formato brasileiro "01/10/2026" ou "01.10.2026" ou "01-10-2026"
     const m = s.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{4})$/);
     if (m) {
         const dia = Number(m[1]);
@@ -143,15 +65,9 @@ function parseDataParaExcel(dataString) {
         const ano = Number(m[3]);
         return new Date(ano, mes, dia);
     }
-
-    // Fallback: tenta Date.parse
     const d = new Date(s);
     return isNaN(d.getTime()) ? null : d;
 }
-
-// ============================================
-// INICIALIZAÇÃO
-// ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('📋 DOM carregado, iniciando dashboard Pendência de Devolução...');
@@ -217,10 +133,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-// ============================================
-// CRIAR MESES
-// ============================================
-
 function criarMeses() {
     const container = document.getElementById('mesesContainer');
     if (!container) return;
@@ -261,10 +173,6 @@ function criarMeses() {
     container.style.marginBottom = '15px';
 }
 
-// ============================================
-// FILTRAR POR MÊS
-// ============================================
-
 function filtrarPorMes(mes) {
     mesSelecionado = mes === 'todos' ? null : mes;
 
@@ -283,10 +191,6 @@ function filtrarPorMes(mes) {
 
     aplicarFiltros();
 }
-
-// ============================================
-// CRIAR ABAS
-// ============================================
 
 function criarAbas() {
     const mainContainer = document.querySelector('.dashboard-main');
@@ -309,10 +213,6 @@ function criarAbas() {
     mainContainer.parentNode.insertBefore(abaContainer, mainContainer);
 }
 
-// ============================================
-// TROCAR ABA
-// ============================================
-
 function trocarAba(aba) {
     abaAtual = aba;
     itemSelecionado = null;
@@ -333,10 +233,6 @@ function trocarAba(aba) {
 
     renderizarDashboard(dadosFiltrados);
 }
-
-// ============================================
-// FILTROS
-// ============================================
 
 function aplicarFiltros() {
     console.log('🔄 Aplicando filtros...');
@@ -407,10 +303,6 @@ function limparFiltros() {
     aplicarFiltros();
 }
 
-// ============================================
-// RENDERIZAÇÃO
-// ============================================
-
 function renderizarDashboard(pendencias) {
     if (!pendencias || pendencias.length === 0) {
         console.log('📭 Nenhuma pendência para renderizar');
@@ -451,10 +343,6 @@ function renderizarDashboard(pendencias) {
         }
     }
 }
-
-// ============================================
-// KPIs
-// ============================================
 
 function renderizarKPIs(pendencias) {
     const container = document.getElementById('kpiGrid');
@@ -497,10 +385,6 @@ function renderizarKPIs(pendencias) {
         </div>
     `;
 }
-
-// ============================================
-// LISTA DE OBRAS
-// ============================================
 
 function renderizarListaObras(pendencias) {
     const container = document.getElementById('itemList');
@@ -552,10 +436,6 @@ function renderizarListaObras(pendencias) {
     container.innerHTML = html;
 }
 
-// ============================================
-// LISTA DE ENCARREGADOS
-// ============================================
-
 function renderizarListaEncarregados(pendencias) {
     const container = document.getElementById('itemList');
     if (!container) return;
@@ -606,10 +486,6 @@ function renderizarListaEncarregados(pendencias) {
     container.innerHTML = html;
 }
 
-// ============================================
-// SELECIONAR OBRA
-// ============================================
-
 function selecionarObra(obra) {
     console.log(`🔍 Selecionando obra: ${obra}`);
     const pendencias = dadosFiltrados.filter(p => p.obra === obra);
@@ -620,10 +496,6 @@ function selecionarObra(obra) {
     }
 }
 
-// ============================================
-// SELECIONAR ENCARREGADO
-// ============================================
-
 function selecionarEncarregado(nome) {
     console.log(`🔍 Selecionando encarregado: ${nome}`);
     const pendencias = dadosFiltrados.filter(p => p.encarregado === nome);
@@ -633,10 +505,6 @@ function selecionarEncarregado(nome) {
         renderizarListaEncarregados(dadosFiltrados);
     }
 }
-
-// ============================================
-// DETALHES DA OBRA
-// ============================================
 
 function renderizarDetalhesObra(pendencias) {
     const container = document.getElementById('itemDetails');
@@ -708,10 +576,6 @@ function renderizarDetalhesObra(pendencias) {
 
     container.innerHTML = html;
 }
-
-// ============================================
-// DETALHES DO ENCARREGADO
-// ============================================
 
 function renderizarDetalhesEncarregado(pendencias) {
     const container = document.getElementById('itemDetails');
@@ -788,10 +652,6 @@ function renderizarDetalhesEncarregado(pendencias) {
     container.innerHTML = html;
 }
 
-// ============================================
-// GRÁFICOS
-// ============================================
-
 function renderizarGraficos(pendencias) {
     console.log('📊 Renderizando gráficos...');
 
@@ -867,12 +727,7 @@ function renderizarGraficos(pendencias) {
     document.getElementById('topSkusChart').innerHTML = htmlEncarregado;
 }
 
-// ============================================
-// EXPORTAR EXCEL (XLSX com 2 abas - ExcelJS)
-// ============================================
-
 async function exportarExcel() {
-    // Verifica se as libs carregaram
     if (typeof ExcelJS === 'undefined') {
         mostrarToast('❌ Biblioteca ExcelJS não carregou. Recarregue a página.', 'erro');
         console.error('❌ ExcelJS não disponível. Verifique se o script foi adicionado ao HTML.');
@@ -884,7 +739,6 @@ async function exportarExcel() {
         return;
     }
 
-    // Fonte: dados filtrados OU dados completos
     const base = dadosFiltrados && dadosFiltrados.length > 0 ? dadosFiltrados : dadosCompletos;
 
     if (!base || base.length === 0) {
@@ -892,7 +746,6 @@ async function exportarExcel() {
         return;
     }
 
-    // 🔥 Só pendências (excluir devolvidas)
     const pendentes = base.filter(p => p.status !== 'FINALIZADO');
 
     if (pendentes.length === 0) {
@@ -900,7 +753,6 @@ async function exportarExcel() {
         return;
     }
 
-    // Desabilita o botão enquanto gera
     const btn = document.querySelector('.btn-filter.exportar');
     if (btn) {
         btn.disabled = true;
@@ -911,20 +763,12 @@ async function exportarExcel() {
         console.log(`📥 Gerando Excel com ${pendentes.length} pendências...`);
         const inicio = Date.now();
 
-        // ============================================
-        // MONTA O WORKBOOK
-        // ============================================
-
         const wb = new ExcelJS.Workbook();
         wb.creator = 'SICGM';
         wb.created = new Date();
 
-        // ============================================
-        // ABA 1: PENDÊNCIAS (uma linha por pendência)
-        // ============================================
-
         const ws1 = wb.addWorksheet('Pendências', {
-            views: [{ state: 'frozen', ySplit: 1 }] // congela cabeçalho
+            views: [{ state: 'frozen', ySplit: 1 }]
         });
 
         ws1.columns = [
@@ -934,7 +778,6 @@ async function exportarExcel() {
             { header: 'Motivo da Pendência', key: 'motivo',      width: 50 }
         ];
 
-        // Ordena: obra A-Z, depois data desc (mais recente primeiro)
         const pendentesOrdenadas = [...pendentes].sort((a, b) => {
             const cmpObra = (a.obra || '').localeCompare(b.obra || '');
             if (cmpObra !== 0) return cmpObra;
@@ -944,28 +787,20 @@ async function exportarExcel() {
         pendentesOrdenadas.forEach(p => {
             ws1.addRow({
                 obra: obraSomenteDigitos(p.obra) || '-',
-                data: parseDataParaExcel(p.data_programacao),   // ⭐ Date nativo (ou null)
+                data: parseDataParaExcel(p.data_programacao),
                 encarregado: p.encarregado || 'NÃO INFORMADO',
                 motivo: p.motivo_pendencia || 'Sem motivo'
             });
         });
 
-        // Estiliza cabeçalho da aba 1
         estilizarCabecalho(ws1);
         ws1.autoFilter = {
             from: { row: 1, column: 1 },
             to:   { row: 1, column: 4 }
         };
 
-        // Estiliza corpo (bordas + alinhamento)
         estilizarCorpo(ws1, 4);
-
-        // ⭐ Formata coluna Data como dd/mm/yyyy
         ws1.getColumn(2).numFmt = 'dd/mm/yyyy';
-
-        // ============================================
-        // ABA 2: POR ENCARREGADO
-        // ============================================
 
         const encarregadosMap = {};
         pendentes.forEach(p => {
@@ -1006,7 +841,7 @@ async function exportarExcel() {
                 nome: e.nome,
                 obras: e.obras.size,
                 total: e.total,
-                data: parseDataParaExcel(e.ultimaData)          // ⭐ Date nativo (ou null)
+                data: parseDataParaExcel(e.ultimaData)
             });
         });
 
@@ -1016,13 +851,7 @@ async function exportarExcel() {
             to:   { row: 1, column: 4 }
         };
         estilizarCorpo(ws2, 4);
-
-        // ⭐ Formata coluna Data como dd/mm/yyyy
         ws2.getColumn(4).numFmt = 'dd/mm/yyyy';
-
-        // ============================================
-        // GERA O ARQUIVO E BAIXA
-        // ============================================
 
         const buffer = await wb.xlsx.writeBuffer();
         const blob = new Blob([buffer], {
@@ -1052,10 +881,6 @@ async function exportarExcel() {
     }
 }
 
-// ============================================
-// HELPERS DE ESTILO (ExcelJS)
-// ============================================
-
 function estilizarCabecalho(ws) {
     const header = ws.getRow(1);
     header.height = 22;
@@ -1064,7 +889,7 @@ function estilizarCabecalho(ws) {
         cell.fill = {
             type: 'pattern',
             pattern: 'solid',
-            fgColor: { argb: 'FF2D3748' } // cinza escuro
+            fgColor: { argb: 'FF2D3748' }
         };
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
         cell.border = {
@@ -1077,7 +902,6 @@ function estilizarCabecalho(ws) {
 }
 
 function estilizarCorpo(ws, numColunas) {
-    // Aplica borda + alinhamento às linhas de dados (a partir da linha 2)
     for (let i = 2; i <= ws.rowCount; i++) {
         const row = ws.getRow(i);
         row.height = 18;
@@ -1089,7 +913,6 @@ function estilizarCorpo(ws, numColunas) {
                 bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
                 right:  { style: 'thin', color: { argb: 'FFE2E8F0' } }
             };
-            // ⭐ Data (tipo Date) centralizada; texto à esquerda
             if (cell.value instanceof Date) {
                 cell.alignment = { vertical: 'middle', horizontal: 'center' };
             } else {
@@ -1098,10 +921,6 @@ function estilizarCorpo(ws, numColunas) {
         }
     }
 }
-
-// ============================================
-// EXPORTAR
-// ============================================
 
 window.aplicarFiltros = aplicarFiltros;
 window.limparFiltros = limparFiltros;

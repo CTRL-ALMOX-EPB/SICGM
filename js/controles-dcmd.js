@@ -2,6 +2,7 @@
 // CONTROLES DCMD - PAINEL UNIFICADO
 // SOFT DELETE + AUDITORIA + LIBERAÇÃO OPERACIONAL
 // INCLUI MGM ONLINE
+// + SISTEMA DE ABAS: abrir formulário em nova aba
 // ============================================
 
 console.log('🚀 Iniciando Controles DCMD - Painel...');
@@ -130,6 +131,26 @@ function agendarFiltroData() {
 }
 
 window.agendarFiltroData = agendarFiltroData;
+
+// ============================================
+// HELPERS DE NAVEGAÇÃO EM ABAS
+// ============================================
+
+function abrirFormularioEmAba(numero, tipo, focarObra) {
+    // Calcula a URL ABSOLUTA baseada no local deste iframe (controles/index.html)
+    const url = new URL(
+        `formulario.html?numero=${numero}&tipo=${tipo}${focarObra ? '&focarObra=true' : ''}`,
+        window.location.href
+    ).href;
+
+    const titulo = `Controle #${String(numero).padStart(4, '0')}`;
+
+    if (typeof window.solicitarNovaAba === 'function') {
+        window.solicitarNovaAba(url, titulo, url);
+    } else {
+        window.location.href = url;
+    }
+}
 
 // ============================================
 // FUNÇÕES DE AUTENTICAÇÃO
@@ -473,7 +494,7 @@ async function criarNovoControle() {
         mostrarToast(`✅ ${tipoInfo.icon} #${String(numero).padStart(4, '0')} criado com sucesso!`, 'sucesso');
         
         setTimeout(() => {
-            window.location.href = `formulario.html?numero=${numero}&tipo=${tipoAtual}&focarObra=true`;
+            abrirFormularioEmAba(numero, tipoAtual, true);
         }, 500);
         
     } catch (error) {
@@ -773,12 +794,12 @@ function renderizarControles(controles) {
 }
 
 // ============================================
-// ABRIR CONTROLE
+// ABRIR CONTROLE — abre em nova aba
 // ============================================
 
 function abrirControle(numero) {
-    console.log(`📂 Abrindo controle #${numero}`);
-    window.location.href = `formulario.html?numero=${numero}&tipo=${tipoAtual}`;
+    console.log(`📂 Abrindo controle #${numero} em nova aba`);
+    abrirFormularioEmAba(numero, tipoAtual, false);
 }
 
 window.abrirControle = abrirControle;

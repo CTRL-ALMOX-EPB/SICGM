@@ -1,63 +1,18 @@
 // ============================================
 // DASHBOARD PENDÊNCIA DE REQUISIÇÃO - MGM ONLY
-// Aba "Separação" REMOVIDA (pendencia_baixa)
 // ============================================
 
 console.log('🚀 dashboards-pendencia-requisicao.js carregado! (MGM only)');
 
-// ============================================
-// GET SESSÃO
-// ============================================
+// getSessao() e redirecionarParaHome() vêm do dashboards-common.js
 
-function getSessao() {
-    if (typeof authService === 'undefined' || !authService) {
-        window.location.href = '../login.html';
-        return null;
-    }
-    if (!authService.isLoggedIn()) {
-        window.location.href = '../login.html';
-        return null;
-    }
-    const user = authService.getUserData();
-    if (!user) {
-        window.location.href = '../login.html';
-        return null;
-    }
-    console.log(`✅ Sessão válida: ${user.nome} (${user.perfil})`);
-    return {
-        nome: user.nome,
-        matricula: user.matricula,
-        perfil: user.perfil,
-        timestamp: Date.now()
-    };
-}
-
-function redirecionarParaHome() {
-    const sessao = getSessao();
-    if (sessao) {
-        const homeMap = {
-            'OPERACIONAL': '../home-operacional.html',
-            'GESTAO': '../home-gestao.html',
-            'VISUALIZACAO': '../home-visualizacao.html'
-        };
-        window.location.href = homeMap[sessao.perfil] || '../index.html';
-    } else {
-        window.location.href = '../index.html';
-    }
-}
-
-// URLs R2 - via Worker
 const ARQUIVOS_R2 = {
     movimentosSiago: `${API_URL}/proxy/movimentos-siago`,
     devolucaoCompilada: `${API_URL}/proxy/devolucao-compilada`,
     programacaoSiago: `${API_URL}/proxy/programacao-siago`
 };
 
-// ============================================
-// VARIÁVEIS GLOBAIS
-// ============================================
-
-let dadosCompletos = []; // mantido só para compatibilidade com filtro de obras
+let dadosCompletos = [];
 let dadosFiltrados = [];
 let dadosExibidos = [];
 let itemSelecionado = null;
@@ -82,18 +37,10 @@ let itensRepresados = {
     itens: []
 };
 
-// ============================================
-// FILTRO FRONT-END: OBRAS INICIADAS A PARTIR DE 2026-07-01
-// ============================================
-
 const DATA_CORTE_INICIO_OBRA = '2026-07-01';
 
 let obrasPermitidas = null;
 const __cacheInicioObra = {};
-
-// ============================================
-// PROGRAMAÇÃO SIAGO
-// ============================================
 
 function getDadosProgramacaoSiago() {
     return window.__dadosProgramacaoSiago || {};
@@ -210,10 +157,6 @@ async function carregarProgramacaoSiago() {
     }
 }
 
-// ============================================
-// FILTRO DE INÍCIO DE OBRA
-// ============================================
-
 function etapaEhValida(det) {
     if (!det) return false;
     const s = String(det.dsc_situacao_programacao_obra || '').toUpperCase();
@@ -281,10 +224,6 @@ function aplicarFiltroInicioObraFrontEnd() {
     dadosFiltradosMGM = [...pendenciasConsolidadas];
 }
 
-// ============================================
-// TOAST
-// ============================================
-
 function mostrarToast(mensagem, tipo = 'info') {
     const toastExistente = document.querySelector('.toast-dashboard');
     if (toastExistente) toastExistente.remove();
@@ -298,10 +237,6 @@ function mostrarToast(mensagem, tipo = 'info') {
         setTimeout(() => toast.remove(), 300);
     }, 4000);
 }
-
-// ============================================
-// UTILITÁRIOS
-// ============================================
 
 function formatarObraParaExibicao(obra) {
     if (!obra) return '';
@@ -340,10 +275,6 @@ function formatarData(dataString) {
     if (m3) return `${m[1]}.${m[2]}.${m[3]}`;
     return s.substring(0, 10);
 }
-
-// ============================================
-// BUSCAS (só MGM)
-// ============================================
 
 async function buscarMovimentosDoBanco() {
     console.log('📡 Buscando movimentos do banco...');
@@ -508,10 +439,6 @@ function parsearDevolucaoCompilada(texto) {
     console.log(`✅ ${itens.length} itens processados`);
     return itens;
 }
-
-// ============================================
-// CONSOLIDAÇÃO MGM (idêntica à anterior)
-// ============================================
 
 function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanco, aditivosSistemicos) {
     console.log('🔄 Consolidando pendências MGM...');
@@ -1584,7 +1511,6 @@ function limparFiltrosMGM() {
     renderizarDashboardMGM();
 }
 
-// 🔥 FORÇA MGM (aba Separação removida)
 function trocarAbaPrincipal(aba) {
     console.log(`🔄 Aba forçada MGM (Separação removida)`);
     abaAtual = 'mgm';
@@ -1599,10 +1525,6 @@ function trocarAbaPrincipal(aba) {
     else renderizarDashboardMGM();
 }
 
-// ============================================
-// INICIALIZAÇÃO
-// ============================================
-
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('📋 DOM carregado, iniciando dashboard (MGM only)...');
     const loadingOverlay = document.getElementById('loadingOverlay');
@@ -1614,7 +1536,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('userMatricula').textContent = `Matrícula: ${sessao.matricula || '---'}`;
     document.getElementById('userPerfil').textContent = sessao.perfil || 'GESTÃO';
     try {
-        // 🔥 Separação desativada
         dadosCompletos = [];
         dadosFiltrados = [];
         dadosExibidos = [];
@@ -1636,9 +1557,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-// ============================================
-// EXPORTS
-// ============================================
 window.trocarAbaPrincipal = trocarAbaPrincipal;
 window.aplicarFiltrosMGM = aplicarFiltrosMGM;
 window.limparFiltrosMGM = limparFiltrosMGM;
@@ -1648,6 +1566,5 @@ window.carregarDadosMGM = carregarDadosMGM;
 window.renderizarDashboardMGM = renderizarDashboardMGM;
 window.aplicarFiltroStatusMGM = aplicarFiltroStatusMGM;
 window.aplicarFiltroEtapas = aplicarFiltroEtapas;
-window.redirecionarParaHome = redirecionarParaHome;
 
 console.log('✅ dashboards-pendencia-requisicao.js inicializado! (MGM only)');

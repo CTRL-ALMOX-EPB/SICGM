@@ -4,58 +4,8 @@
 
 console.log('🚀 dashboards-aditivos-sistemicos.js carregado!');
 
-// ============================================
-// 🔥 GET SESSÃO (NOVA VERSÃO - USANDO authService)
-// ============================================
+// getSessao() e redirecionarParaHome() vêm do dashboards-common.js
 
-function getSessao() {
-    console.log('🔍 Verificando autenticação...');
-    
-    if (typeof authService === 'undefined' || !authService) {
-        console.error('❌ authService não disponível');
-        window.location.href = '../login.html';
-        return null;
-    }
-
-    if (!authService.isLoggedIn()) {
-        console.error('❌ Usuário não logado');
-        window.location.href = '../login.html';
-        return null;
-    }
-
-    const user = authService.getUserData();
-    if (!user) {
-        console.error('❌ Dados do usuário não encontrados');
-        window.location.href = '../login.html';
-        return null;
-    }
-
-    console.log(`✅ Sessão válida: ${user.nome} (${user.perfil})`);
-    return {
-        nome: user.nome,
-        matricula: user.matricula,
-        perfil: user.perfil,
-        timestamp: Date.now()
-    };
-}
-
-function redirecionarParaHome() {
-    const sessao = getSessao();
-    if (sessao) {
-        const homeMap = {
-            'OPERACIONAL': '../home-operacional.html',
-            'GESTAO': '../home-gestao.html',
-            'VISUALIZACAO': '../home-visualizacao.html'
-        };
-        const homePage = homeMap[sessao.perfil] || '../index.html';
-        console.log('🏠 Redirecionando para:', homePage);
-        window.location.href = homePage;
-    } else {
-        window.location.href = '../index.html';
-    }
-}
-
-// URL do Cloudflare R2
 const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
 
 let dadosCompletos = [];
@@ -67,10 +17,6 @@ let mesSelecionado = null;
 let filtroAtivo = null;
 let posicaoEstoque = {};
 
-// ============================================
-// FUNÇÃO: FORMATAR OBRA PARA EXIBIÇÃO
-// ============================================
-
 function formatarObraParaExibicao(obra) {
     if (!obra) return '';
     let limpo = obra.trim().replace(/[^0-9]/g, '');
@@ -79,10 +25,6 @@ function formatarObraParaExibicao(obra) {
            limpo.substring(3, 5) + '-' + 
            limpo.substring(5, 10);
 }
-
-// ============================================
-// FUNÇÃO: OBTER MÊS DA DATA
-// ============================================
 
 function getMesAno(dataString) {
     if (!dataString) return null;
@@ -94,10 +36,6 @@ function getMesAno(dataString) {
     }
 }
 
-// ============================================
-// FUNÇÃO: FORMATAR MÊS PARA EXIBIÇÃO
-// ============================================
-
 function formatarMesAno(mesAno) {
     if (!mesAno) return '';
     const [ano, mes] = mesAno.split('-');
@@ -105,18 +43,10 @@ function formatarMesAno(mesAno) {
     return `${meses[parseInt(mes) - 1]} ${ano}`;
 }
 
-// ============================================
-// FUNÇÃO: FORMATAR VALOR PARA MOEDA
-// ============================================
-
 function formatarValor(valor) {
     if (!valor || valor === 0) return 'R$ 0,00';
     return 'R$ ' + valor.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
-
-// ============================================
-// FUNÇÃO: BUSCAR VALOR DO ITEM NO R2
-// ============================================
 
 function buscarValorItem(codigo) {
     if (!codigo) return 0;
@@ -126,10 +56,6 @@ function buscarValorItem(codigo) {
     }
     return 0;
 }
-
-// ============================================
-// FUNÇÃO: CARREGAR POSIÇÃO DE ESTOQUE DO R2
-// ============================================
 
 async function carregarPosicaoEstoque() {
     try {
@@ -193,10 +119,6 @@ async function carregarPosicaoEstoque() {
         mostrarToast('❌ Erro ao carregar valores dos itens', 'erro');
     }
 }
-
-// ============================================
-// INICIALIZAÇÃO
-// ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('📋 DOM carregado, iniciando dashboard Aditivos Sistêmicos...');
@@ -264,10 +186,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-// ============================================
-// CRIAR MESES
-// ============================================
-
 function criarMeses() {
     const container = document.getElementById('mesesContainer');
     if (!container) return;
@@ -308,10 +226,6 @@ function criarMeses() {
     container.style.marginBottom = '15px';
 }
 
-// ============================================
-// FILTRAR POR MÊS
-// ============================================
-
 function filtrarPorMes(mes) {
     mesSelecionado = mes === 'todos' ? null : mes;
     
@@ -330,10 +244,6 @@ function filtrarPorMes(mes) {
     
     aplicarFiltros();
 }
-
-// ============================================
-// CRIAR ABAS
-// ============================================
 
 function criarAbas() {
     const mainContainer = document.querySelector('.dashboard-main');
@@ -356,10 +266,6 @@ function criarAbas() {
     mainContainer.parentNode.insertBefore(abaContainer, mainContainer);
 }
 
-// ============================================
-// TROCAR ABA
-// ============================================
-
 function trocarAba(aba) {
     abaAtual = aba;
     itemSelecionado = null;
@@ -380,10 +286,6 @@ function trocarAba(aba) {
     
     renderizarDashboard(dadosFiltrados);
 }
-
-// ============================================
-// APLICAR FILTRO DO CARD
-// ============================================
 
 function aplicarFiltroCard(tipo, valor) {
     console.log(`🔍 Aplicando filtro do card: ${tipo} = ${valor}`);
@@ -414,10 +316,6 @@ function aplicarFiltroCard(tipo, valor) {
     
     renderizarDashboard(dadosExibidos);
 }
-
-// ============================================
-// FILTROS
-// ============================================
 
 function aplicarFiltros() {
     console.log('🔄 Aplicando filtros...');
@@ -509,10 +407,6 @@ function limparFiltros() {
     aplicarFiltros();
 }
 
-// ============================================
-// AGRUPAMENTO DE ITENS POR CÓDIGO
-// ============================================
-
 function agruparItensPorCodigo(controles) {
     console.log(`📦 Agrupando itens de ${controles.length} controles...`);
     const grupos = {};
@@ -589,10 +483,6 @@ function agruparItensPorCodigo(controles) {
     return resultado;
 }
 
-// ============================================
-// AGRUPAR POR OBRA
-// ============================================
-
 function agruparPorObra(controles) {
     console.log(`🏗️ Agrupando por obra...`);
     const obras = {};
@@ -641,10 +531,6 @@ function agruparPorObra(controles) {
     console.log(`✅ ${resultado.length} obras agrupadas`);
     return resultado;
 }
-
-// ============================================
-// RENDERIZAÇÃO
-// ============================================
 
 function renderizarDashboard(aditivos) {
     if (!aditivos || aditivos.length === 0) {
@@ -697,10 +583,6 @@ function renderizarDashboard(aditivos) {
         }
     }
 }
-
-// ============================================
-// KPIs - MATERIAIS
-// ============================================
 
 function renderizarKPIsMateriais(itensAgrupados) {
     const container = document.getElementById('kpiGrid');
@@ -771,10 +653,6 @@ function renderizarKPIsMateriais(itensAgrupados) {
     `;
 }
 
-// ============================================
-// KPIs - OBRAS
-// ============================================
-
 function renderizarKPIsObras(obrasAgrupadas) {
     const container = document.getElementById('kpiGrid');
     if (!container) return;
@@ -816,10 +694,6 @@ function renderizarKPIsObras(obrasAgrupadas) {
     `;
 }
 
-// ============================================
-// LISTA DE ITENS (MATERIAIS)
-// ============================================
-
 function renderizarListaItens(itensAgrupados) {
     const container = document.getElementById('itemList');
     if (!container) return;
@@ -859,10 +733,6 @@ function renderizarListaItens(itensAgrupados) {
     
     container.innerHTML = html;
 }
-
-// ============================================
-// LISTA DE OBRAS
-// ============================================
 
 function renderizarListaObras(obrasAgrupadas) {
     const container = document.getElementById('itemList');
@@ -914,10 +784,6 @@ function renderizarListaObras(obrasAgrupadas) {
     container.innerHTML = html;
 }
 
-// ============================================
-// SELECIONAR OBRA
-// ============================================
-
 function selecionarObra(obraNome) {
     console.log(`🔍 Selecionando obra: ${obraNome}`);
     const obrasAgrupadas = agruparPorObra(dadosExibidos);
@@ -929,10 +795,6 @@ function selecionarObra(obraNome) {
         renderizarListaObras(obrasAgrupadas);
     }
 }
-
-// ============================================
-// DETALHES DA OBRA
-// ============================================
 
 function renderizarDetalhesObra(obra) {
     const container = document.getElementById('itemDetails');
@@ -1012,10 +874,6 @@ function renderizarDetalhesObra(obra) {
     container.innerHTML = html;
 }
 
-// ============================================
-// SELECIONAR ITEM (MATERIAL)
-// ============================================
-
 function selecionarItem(codigo) {
     console.log(`🔍 Selecionando item: ${codigo}`);
     const itensAgrupados = agruparItensPorCodigo(dadosExibidos);
@@ -1027,10 +885,6 @@ function selecionarItem(codigo) {
         renderizarListaItens(itensAgrupados);
     }
 }
-
-// ============================================
-// DETALHES DO ITEM (MATERIAL)
-// ============================================
 
 function renderizarDetalhes(item) {
     const container = document.getElementById('itemDetails');
@@ -1139,14 +993,9 @@ function getStatusBadge(status) {
     return map[status] || `<span class="badge-status">${status}</span>`;
 }
 
-// ============================================
-// GRÁFICOS
-// ============================================
-
 function renderizarGraficos(itensAgrupados) {
     console.log('📊 Renderizando gráficos de indicadores...');
     
-    // Gráfico 1: Ocorrências por Status
     const statusCount = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     itensAgrupados.forEach(item => {
         Object.keys(statusCount).forEach(status => {
@@ -1204,7 +1053,6 @@ function renderizarGraficos(itensAgrupados) {
     
     document.getElementById('statusChart').innerHTML = htmlStatus;
     
-    // Gráfico 2: Valores por Status
     const valorStatus = { ANALISE: 0, APROVADO: 0, REPROVADO: 0, 'S/ SOLICITAÇÃO': 0 };
     itensAgrupados.forEach(item => {
         Object.keys(valorStatus).forEach(status => {
@@ -1215,18 +1063,11 @@ function renderizarGraficos(itensAgrupados) {
     const valorTotal = Object.values(valorStatus).reduce((sum, v) => sum + v, 0);
     const maxValor = valorTotal > 0 ? valorTotal : 1;
     
-    const valorClasses = {
-        'ANALISE': 'bar-analise',
-        'APROVADO': 'bar-aprovado',
-        'REPROVADO': 'bar-reprovado',
-        'S/ SOLICITAÇÃO': 'bar-s-solicitacao'
-    };
-    
     let htmlValor = '';
     Object.keys(valorStatus).forEach(status => {
         const value = valorStatus[status];
         const percentual = maxValor > 0 ? (value / maxValor) * 100 : 0;
-        const colorClass = valorClasses[status];
+        const colorClass = statusClasses[status];
         
         htmlValor += `
             <div class="chart-bar-indicator">
@@ -1255,10 +1096,6 @@ function renderizarGraficos(itensAgrupados) {
     
     document.getElementById('valorChart').innerHTML = htmlValor;
 }
-
-// ============================================
-// EXPORTAR
-// ============================================
 
 window.aplicarFiltros = aplicarFiltros;
 window.limparFiltros = limparFiltros;

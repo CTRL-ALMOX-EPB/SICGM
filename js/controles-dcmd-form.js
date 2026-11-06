@@ -1,10 +1,10 @@
 // ============================================
 // CONTROLES DCMD - FORMULÁRIO UNIFICADO
 // Inclui MGM Online + Importação Excel
-// v6 — data US + bloqueio de cabeçalho + validação setSe
+// v7 — navegação em abas (abrir/voltar) + data US + bloqueio de cabeçalho + validação setSe
 // ============================================
 
-console.log('🚀 Iniciando Controles DCMD - Formulário... (v6)');
+console.log('🚀 Iniciando Controles DCMD - Formulário... (v7)');
 
 const API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
 const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
@@ -106,6 +106,32 @@ function esconderLoadingFormulario() {
     
     if (form) {
         form.classList.add('pronto');
+    }
+}
+
+// ============================================
+// HELPERS DE NAVEGAÇÃO EM ABAS
+// ============================================
+
+function navegarNaAbaAtual(url, titulo) {
+    if (typeof window.navegarNaAbaAtual === 'function') {
+        // Já exposto pelo iframe-nav.js — mas ele expõe um "pedido" ao topo.
+        // Como o nome é o mesmo, precisamos usar outro caminho:
+        // usamos postMessage direto para evitar recursão.
+    }
+    try {
+        window.top.postMessage({ type: 'NAVEGAR_NA_ABA', payload: { url, titulo } }, '*');
+    } catch (e) {
+        try { window.parent.postMessage({ type: 'NAVEGAR_NA_ABA', payload: { url, titulo } }, '*'); }
+        catch (_) { window.location.href = url; }
+    }
+}
+
+function solicitarNovaAbaSeDisponivel(url, titulo) {
+    if (typeof window.solicitarNovaAba === 'function') {
+        window.solicitarNovaAba(url, titulo, url);
+    } else {
+        window.location.href = url;
     }
 }
 
@@ -291,13 +317,14 @@ function buscarMaterialArquivo(codigo) {
 }
 
 // ============================================
-// NAVEGAÇÃO
+// NAVEGAÇÃO — voltar para painel NA ABA ATUAL
 // ============================================
 
 function voltarParaPainel() {
     const params = new URLSearchParams(window.location.search);
     const tipo = params.get('tipo') || 'pendencia';
-    window.location.href = `index.html?tipo=${tipo}`;
+    const url = `index.html?tipo=${tipo}`;
+    navegarNaAbaAtual(url, 'Controles');
 }
 
 window.voltarParaPainel = voltarParaPainel;
@@ -384,7 +411,6 @@ function formatarData(valor) {
 function normalizarDataExcel(valor) {
     if (!valor) return '';
     
-    // Date object
     if (valor instanceof Date && !isNaN(valor)) {
         const y = valor.getFullYear();
         const m = String(valor.getMonth() + 1).padStart(2, '0');
@@ -395,11 +421,8 @@ function normalizarDataExcel(valor) {
     const s = String(valor).trim();
     if (!s) return '';
     
-    // Já é ISO YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
     
-    // Tenta por data nativa (resolve "10/28/26", "Oct 28 2026", "2026-10-28 00:00:00")
-    // ⚠️ Só aceita se o ano ficar entre 2000 e 2099 (evita 1926 por causa do 26)
     const d = new Date(s);
     if (!isNaN(d.getTime()) && d.getFullYear() >= 2000 && d.getFullYear() <= 2099) {
         const y = d.getFullYear();
@@ -408,7 +431,6 @@ function normalizarDataExcel(valor) {
         return `${y}-${mo}-${dd}`;
     }
     
-    // Fallback: parser manual DD/MM vs MM/DD
     const m1 = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
     if (m1) {
         let a = parseInt(m1[1], 10);
@@ -416,9 +438,6 @@ function normalizarDataExcel(valor) {
         let c = m1[3];
         if (c.length === 2) c = '20' + c;
         
-        // Se a > 12, 'a' é dia (DD/MM)
-        // Se b > 12, 'a' é mês (MM/DD)
-        // Senão, assume DD/MM (BR)
         if (a > 12) {
             return `${c}-${String(b).padStart(2, '0')}-${String(a).padStart(2, '0')}`;
         } else if (b > 12) {
@@ -428,7 +447,6 @@ function normalizarDataExcel(valor) {
         }
     }
     
-    // Serial number do Excel
     const n = parseFloat(s);
     if (!isNaN(n) && n > 0 && n < 100000) {
         const epoch = new Date(1899, 11, 30);
@@ -2691,7 +2709,7 @@ async function finalizarControle() {
             
             if (erros === 0) {
                 mostrarToast(`✅ ${sucessos} finalizadas!`, 'sucesso');
-                setTimeout(() => window.location.href = `index.html?tipo=${tipoAtual}`, 1500);
+                setTimeout(() => voltarParaPainel(), 1500);
             } else {
                 mostrarToast(`⚠️ ${sucessos} ok, ${erros} falhas`, 'erro');
             }
@@ -2713,7 +2731,7 @@ async function finalizarControle() {
         });
         if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Erro'); }
         mostrarToast('✅ Finalizado!', 'sucesso');
-        setTimeout(() => window.location.href = `index.html?tipo=${tipoAtual}`, 1500);
+        setTimeout(() => voltarParaPainel(), 1500);
     } catch (error) {
         console.error('❌ Erro:', error);
         mostrarToast('❌ ' + error.message, 'erro');
@@ -2796,28 +2814,24 @@ async function handleArquivoExcel(event) {
                        /^QTDPENDENTE$/.test(norm);
             };
             
-            // 1. Ao lado (mesma linha)
             const aoLado = valorCelula(raw[linha], col + 1);
             if (aoLado && !isRotulo(aoLado) && !isCabecalhoTabela(aoLado) && normalizarCabecalho(aoLado) !== '') {
                 console.log(`   ✅ ${rotulo} → "${aoLado}" (ao lado, ${String.fromCharCode(65 + col + 1)}${linha + 1})`);
                 return aoLado;
             }
             
-            // 2. 2 à direita
             const duasDireita = valorCelula(raw[linha], col + 2);
             if (duasDireita && !isRotulo(duasDireita) && !isCabecalhoTabela(duasDireita) && normalizarCabecalho(duasDireita) !== '') {
                 console.log(`   ✅ ${rotulo} → "${duasDireita}" (2 à direita, ${String.fromCharCode(65 + col + 2)}${linha + 1})`);
                 return duasDireita;
             }
             
-            // 3. Abaixo (mesma coluna) — não pega cabeçalho de tabela
             const abaixo = valorCelula(raw[linha + 1], col);
             if (abaixo && !isRotulo(abaixo) && !isCabecalhoTabela(abaixo) && normalizarCabecalho(abaixo) !== '') {
                 console.log(`   ✅ ${rotulo} → "${abaixo}" (abaixo, ${String.fromCharCode(65 + col)}${linha + 2})`);
                 return abaixo;
             }
             
-            // 4. 2 abaixo
             const doisAbaixo = valorCelula(raw[linha + 2], col);
             if (doisAbaixo && !isRotulo(doisAbaixo) && !isCabecalhoTabela(doisAbaixo) && normalizarCabecalho(doisAbaixo) !== '') {
                 console.log(`   ✅ ${rotulo} → "${doisAbaixo}" (2 abaixo, ${String.fromCharCode(65 + col)}${linha + 3})`);
@@ -2992,7 +3006,6 @@ async function handleArquivoExcel(event) {
             const el = document.getElementById(id);
             if (!el || val === undefined || val === null || val === '') return;
             
-            // Se for input[type=date], valida YYYY-MM-DD antes
             if (el.type === 'date') {
                 if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
                     try { el.value = val; } catch (e) {
@@ -3061,7 +3074,7 @@ window.handleArquivoExcel = handleArquivoExcel;
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 Inicializando Controles DCMD - Formulário (v6)...');
+    console.log('🚀 Inicializando Controles DCMD - Formulário (v7)...');
     
     const sessao = carregarDadosUsuario();
     if (!sessao) return;

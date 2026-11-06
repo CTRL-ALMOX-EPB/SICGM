@@ -39,7 +39,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (redirecting) return;
         redirecting = true;
         console.log('🔒 Sessão inválida — indo para login.');
-        window.location.href = 'login.html';
+        if (window.self !== window.top) {
+            // Estou em iframe → avisa o parent para redirecionar a janela inteira
+            window.parent.postMessage({ type: 'PRECISA_LOGIN' }, '*');
+        } else {
+            window.location.href = 'login.html';
+        }
         return;
     }
 
