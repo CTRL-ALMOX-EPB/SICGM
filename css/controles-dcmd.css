@@ -1,6 +1,7 @@
 /* ============================================ */
 /* CONTROLES DCMD - ESTILOS UNIFICADOS          */
 /* Inclui MGM Online + Sticky Header funcional  */
+/* v8 — base unificada de encarregados          */
 /* ============================================ */
 
 .controles-panel {
@@ -674,6 +675,14 @@
     min-height: 34px;
 }
 
+/* 🆕 Ajustes para nomes longos de encarregados */
+.items-table select.item-encarregado {
+    font-size: 0.78em;
+    min-width: 200px;
+    max-width: 240px;
+    text-overflow: ellipsis;
+}
+
 .remove-item {
     color: #FC8181;
     cursor: pointer;
@@ -838,8 +847,38 @@
 .col-colaborador { width: 10%; min-width: 100px; max-width: 135px; }
 .col-colaborador select { font-size: 0.8em; padding: 4px 6px; min-height: 32px; }
 
-.col-encarregado { width: 10%; min-width: 100px; max-width: 135px; }
-.col-encarregado select { font-size: 0.8em; padding: 4px 6px; min-height: 32px; }
+.col-encarregado {
+    width: 12%;
+    min-width: 200px;
+    max-width: 250px;
+}
+.col-encarregado select {
+    font-size: 0.78em;
+    padding: 4px 6px;
+    min-height: 32px;
+    text-overflow: ellipsis;
+}
+
+/* 🆕 Badge de matrícula abaixo do select de encarregado */
+.encarregado-badge {
+    font-size: 0.62em;
+    color: #4A5568;
+    background: #EBF8FF;
+    border: 1px solid #BEE3F8;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-top: 3px;
+    text-align: center;
+    display: inline-block;
+    width: 100%;
+    box-sizing: border-box;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.encarregado-badge:empty {
+    display: none;
+}
 
 /* ============================================ */
 /* AÇÕES - ÚLTIMA COLUNA                       */
@@ -1266,6 +1305,7 @@ input[type="date"] {
     .items-table td:nth-child(2),
     .items-table th:nth-child(2) { min-width: 130px; max-width: 190px; }
     .col-motivo, .col-observacao-item { min-width: 80px; max-width: 120px; }
+    .col-encarregado { min-width: 180px; max-width: 220px; }
 }
 
 @media (max-width: 992px) {
@@ -1300,6 +1340,7 @@ input[type="date"] {
     .btn-topo { bottom: 55px; }
     .btn-fim { bottom: 10px; }
     .table-responsive { max-height: 60vh; }
+    .items-table select.item-encarregado { min-width: 160px; max-width: 200px; }
 }
 
 @media (max-width: 600px) {
@@ -1331,6 +1372,7 @@ input[type="date"] {
     .modal-actions { flex-direction: column; }
     .modal-actions button { width: 100%; justify-content: center; padding: 12px 20px; font-size: 14px; }
     .table-responsive { max-height: 50vh; }
+    .items-table select.item-encarregado { min-width: 140px; max-width: 180px; font-size: 0.7em; }
 }
 
 @media (max-width: 400px) {
@@ -1650,4 +1692,27 @@ input[type="date"] {
 @media (max-width: 420px) {
     .documentos-table-header { display: none; }
     .linha-documento-multiplo { grid-template-columns: 1fr 1fr 40px; }
+}
+
+/* ============================================ */
+/* 🆕 AÇÃO EM MASSA - ENCARREGADO              */
+/* ============================================ */
+
+.bulk-select-encarregado {
+    padding: 2px 8px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 0.8em;
+    min-width: 220px;
+    max-width: 100%;
+    background: white;
+    height: 30px;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.bulk-select-encarregado:focus {
+    outline: none;
+    border-color: #4299E1;
+    box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.15);
 }

@@ -1,13 +1,191 @@
 // ============================================
 // CONTROLES DCMD - FORMULÁRIO UNIFICADO
 // Inclui MGM Online + Importação Excel
-// v7 — navegação em abas (abrir/voltar) + data US + bloqueio de cabeçalho + validação setSe
+// v8 — base unificada de encarregados (nome + matrícula + equipe)
 // ============================================
 
-console.log('🚀 Iniciando Controles DCMD - Formulário... (v7)');
+console.log('🚀 Iniciando Controles DCMD - Formulário... (v8)');
 
 const API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
 const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
+
+// ============================================
+// BASE UNIFICADA DE ENCARREGADOS
+// equipe | nome | matricula
+// ============================================
+
+const ENCARREGADOS = [
+    { equipe: 'CRL 01', nome: 'ERITON MARCELO GONCALVES DA SILVA', matricula: '170829' },
+    { equipe: 'CRL 02', nome: 'ANTONIO MIGUEL DA SILVA', matricula: '170427' },
+    { equipe: 'CRL 03', nome: 'MEYDSON MENDONCA DA SILVA', matricula: '170855' },
+    { equipe: 'CRL 04', nome: 'ROBERTO PEREIRA VILLAR', matricula: '171392' },
+    { equipe: 'CRL 05', nome: 'ALCIDES HENRIQUE DE ARAUJO', matricula: '171220' },
+    { equipe: 'CRL 06', nome: 'BRENO MIGUEL DOS SANTOS', matricula: '171049' },
+    { equipe: 'CRL 07', nome: 'ERIVANIO ANANIAS DA SILVA', matricula: '170267' },
+    { equipe: 'CRL 08', nome: 'FRANCINALDO JOSE DO NASCIMENTO', matricula: '11010' },
+    { equipe: 'CRL 09', nome: 'TANCREDO AURELIANO DOS SANTOS', matricula: '171391' },
+    { equipe: 'CRL 10', nome: 'ROBSON KLEBER GABRIEL DOS SANTOS', matricula: '171149' },
+    { equipe: 'CRL 11', nome: 'EDILSON LEONCIO ALVES', matricula: '171254' },
+    { equipe: 'CRL 12', nome: 'LUCIANO MIGUEL BARBOSA', matricula: '170459' },
+    { equipe: 'CRL 13', nome: 'PAULO SERGIO DO NASCIMENTO', matricula: '170868' },
+    { equipe: 'CRL 14', nome: 'DAMIAO GOMES DOS SANTOS', matricula: '170265' },
+    { equipe: 'CRL 15', nome: 'JOSE VALENTIM SANTOS', matricula: '170685' },
+    { equipe: 'CRL 16', nome: 'REGINALDO JOSE DE OLIVEIRA JUNIOR', matricula: '171349' },
+    { equipe: 'CRL 17', nome: 'EDNALDO DOS SANTOS SILVA JUNIOR', matricula: '170612' },
+    { equipe: 'CRL 18', nome: 'DEMILSON BRAZ DOS SANTOS', matricula: '12660' },
+    { equipe: 'CRL 19', nome: 'JOSE FLAVIO JUVENAL BARBOSA', matricula: '171280' },
+    { equipe: 'CRL 81', nome: 'MARCOS MANOEL DA SILVA', matricula: '171286' },
+    { equipe: 'CRL 82', nome: 'NELSON FIRMINO DE MELO', matricula: '171335' },
+    { equipe: 'CRL 83', nome: 'JOSE EMERSON RODRIGUES GONCALVES', matricula: '170982' },
+    { equipe: 'CRL 84', nome: 'RIUSTON BENTO DA SILVA', matricula: '170139' },
+    { equipe: 'CRL 85', nome: 'DESMOBILIZADA', matricula: '' },
+    { equipe: 'CRL 86', nome: 'ANDERSON LUCAS DE ARAUJO', matricula: '170936' },
+    { equipe: 'LDLM ITA 03', nome: 'JOSE JAILSON MONTEIRO DO NASCIMENTO', matricula: '170871' },
+    { equipe: 'LDLM JPS 01', nome: 'DANILO DE ALBUQUERQUE LEITE', matricula: '170309' },
+    { equipe: 'LDLM JPS 02', nome: 'GIORGETHOM CORREIA PAULINO', matricula: '170386' },
+    { equipe: 'LDLM JPS 05', nome: 'GENESIS BARBOSA DO NASCIMENTO', matricula: '170848' },
+    { equipe: 'LDLM JPS 06', nome: 'PAULO ALVES DE MASSENA', matricula: '170742' },
+    { equipe: 'LDLM MMG 04', nome: 'TRAJANO DE PAULA NETO', matricula: '170844' },
+    { equipe: 'LV 01', nome: 'GUTEMBERG DA SILVA FERREIRA', matricula: '16841' },
+    { equipe: 'LV 02', nome: 'MANOEL COSTA DA SILVA', matricula: '16870' },
+    { equipe: 'LV 03', nome: 'ANTONIO OLIVEIRA NETO', matricula: '170216' },
+    { equipe: 'LV 04', nome: 'LINDOMAR DE MELO SANTOS', matricula: '16871' },
+    { equipe: 'LV 05', nome: 'ANTONIO DIAS PACHECO JUNIOR', matricula: '170749' },
+    { equipe: 'LV 06', nome: 'SEVERINO RAMOS PEREIRA DA SILVA', matricula: '170864' },
+    { equipe: 'LV 87', nome: 'LEANDRO DE MELO ROCHA', matricula: '170333' },
+    { equipe: 'LV 88', nome: 'JUNIOR CESAR DE ARAUJO', matricula: '171080' },
+    { equipe: 'PD 02', nome: 'WAGNER SOARES NUNES', matricula: '170186' },
+    { equipe: 'PD 03', nome: 'ANTONIO MARCOS TAVARES DA SILVA', matricula: '170004' },
+    { equipe: 'PD 04', nome: 'JOSE MACIEL DA SILVA', matricula: '170194' },
+    { equipe: 'PD 05', nome: 'JOAO MARCOS DA SILVA SA', matricula: '170190' },
+    { equipe: 'PD 06', nome: 'ALEXANDRE LUIZ RIBEIRO', matricula: '170006' },
+    { equipe: 'PD 07 LT', nome: 'JOSENILDO LEITE PESSOA JUNIOR', matricula: '170188' },
+    { equipe: 'PD 08', nome: 'SILVANO GONCALO DE FARIAS', matricula: '170008' }
+    { equipe: 'DESMOBILIZADA', nome: 'ROMARIO FERREIRA DO NASCIMENTO', matricula: '171302' },
+    { equipe: 'DESMOBILIZADA', nome: 'WALISSON LIRA DE LIMA', matricula: '171198' },
+    { equipe: 'DESMOBILIZADA', nome: 'JOSE MAYKE SOUZA DOS SANTOS', matricula: '016819' }
+];
+
+// Mapa de valores legados (variações antigas) → nome canônico da base
+// Usado APENAS para normalizar exibição quando o banco está bagunçado
+const MAPA_ENCARREGADO_LEGADO = {
+    'LUCIANO': 'LUCIANO MIGUEL BARBOSA',
+    'VALENTIM': 'JOSE VALENTIM SANTOS',
+    'VALETIM': 'JOSE VALENTIM SANTOS',
+    'ANTONIO': 'ANTONIO MIGUEL DA SILVA',
+    'ANTONIO.': 'ANTONIO MIGUEL DA SILVA',
+    'ANTONIO D.': 'ANTONIO DIAS PACHECO JUNIOR',
+    'EDILSON': 'EDILSON LEONCIO ALVES',
+    'E. MARCELO': 'ERITON MARCELO GONCALVES DA SILVA',
+    'MARCELO': 'ERITON MARCELO GONCALVES DA SILVA',
+    'MARCELO (ERITON)': 'ERITON MARCELO GONCALVES DA SILVA',
+    'ERITON': 'ERITON MARCELO GONCALVES DA SILVA',
+    'MEYDSON': 'MEYDSON MENDONCA DA SILVA',
+    'RIUSTON': 'RIUSTON BENTO DA SILVA',
+    'ROBSON': 'ROBSON KLEBER GABRIEL DOS SANTOS',
+    'ANDERSON': 'ANDERSON LUCAS DE ARAUJO',
+    'MARCOS': 'MARCOS MANOEL DA SILVA',
+    'LEANDRO': 'LEANDRO DE MELO ROCHA',
+    'FRANCINALDO(DEDÉ)': 'FRANCINALDO JOSE DO NASCIMENTO',
+    'FRANCINALDO (DEDÉ)': 'FRANCINALDO JOSE DO NASCIMENTO',
+    'FRANCINALDO': 'FRANCINALDO JOSE DO NASCIMENTO',
+    'DEDÉ': 'FRANCINALDO JOSE DO NASCIMENTO',
+    'DEDE': 'FRANCINALDO JOSE DO NASCIMENTO',
+    'MANOEL C.': 'MANOEL COSTA DA SILVA',
+    'ERIVANIO': 'ERIVANIO ANANIAS DA SILVA',
+    'PAULÃO': 'PAULO SERGIO DO NASCIMENTO',
+    'JUNIOR C.': 'JUNIOR CESAR DE ARAUJO',
+    'JÚNIOR': 'JUNIOR CESAR DE ARAUJO',
+    'JUNIOR': 'JUNIOR CESAR DE ARAUJO',
+    'DAMIÃO(MIMA)': 'DAMIAO GOMES DOS SANTOS',
+    'DAMIÃO': 'DAMIAO GOMES DOS SANTOS',
+    'BRENO M.': 'BRENO MIGUEL DOS SANTOS',
+    'BRENO': 'BRENO MIGUEL DOS SANTOS',
+    'ALCIDES': 'ALCIDES HENRIQUE DE ARAUJO',
+    'DEMILSON(PIM)': 'DEMILSON BRAZ DOS SANTOS',
+    'DEMILSON': 'DEMILSON BRAZ DOS SANTOS',
+    'SEVERINO': 'SEVERINO RAMOS PEREIRA DA SILVA',
+    'LINDOMAR': 'LINDOMAR DE MELO SANTOS',
+    'ROMARIO': 'ROMARIO FERREIRA DO NASCIMENTO',
+    'ROMÁRIO': 'ROMARIO FERREIRA DO NASCIMENTO',
+    'WALISSON': 'WALISSON LIRA DE LIMA',
+    'MAYKE': 'JOSE MAYKE SOUZA DOS SANTOS',
+    'JOSÉ JORDAN': '',
+    'JOSE JORDAN': '',
+    'CARLOS': '',
+    'ISMAEL JÚNIO': '',
+    'ISMAEL JUNIO': ''
+};
+
+function normalizarEncarregadoLegado(valor) {
+    if (!valor) return '';
+    const s = String(valor).trim();
+    const exato = ENCARREGADOS.find(e => e.nome.toUpperCase() === s.toUpperCase());
+    if (exato) return exato.nome;
+    const chave = s.toUpperCase();
+    if (Object.prototype.hasOwnProperty.call(MAPA_ENCARREGADO_LEGADO, chave)) {
+        const legado = MAPA_ENCARREGADO_LEGADO[chave];
+        if (legado === '') return '';        // ← mapeamento explícito para vazio
+        const enc = ENCARREGADOS.find(e => e.nome.toUpperCase() === legado.toUpperCase());
+        if (enc) return enc.nome;
+        return legado;
+    }
+    return s;
+}
+
+function getDadosEncarregado(nomeOuMatricula) {
+    if (!nomeOuMatricula) return null;
+    const s = String(nomeOuMatricula).trim().toUpperCase();
+    return ENCARREGADOS.find(e =>
+        e.nome.toUpperCase() === s || e.matricula === s
+    ) || null;
+}
+
+function gerarOptionsEncarregados(valorSelecionado = '') {
+    const nomeCanonico = normalizarEncarregadoLegado(valorSelecionado);
+    const sel = String(nomeCanonico || '').trim().toUpperCase();
+    let html = '<option value="">Selecione...</option>';
+    ENCARREGADOS.forEach(e => {
+        const selected = (e.nome.toUpperCase() === sel) ? ' selected' : '';
+        const mat = e.matricula ? ` · Mat: ${e.matricula}` : '';
+        html += `<option value="${e.nome}" data-equipe="${e.equipe}" data-matricula="${e.matricula}"${selected}>${e.equipe} — ${e.nome}${mat}</option>`;
+    });
+    return html;
+}
+
+function preencherSelectEncarregados(select, valorSelecionado = '') {
+    if (!select) return;
+    select.innerHTML = gerarOptionsEncarregados(valorSelecionado);
+}
+
+// Helpers para exibir matrícula/equipe espelhados
+function espelharEncarregado(selectId, matId, eqId) {
+    const sel = document.getElementById(selectId);
+    const mat = document.getElementById(matId);
+    const eq = document.getElementById(eqId);
+    if (!sel || !mat || !eq) return;
+    const sync = () => {
+        const dados = getDadosEncarregado(sel.value);
+        mat.value = dados?.matricula || '';
+        eq.value = dados?.equipe || '';
+    };
+    sel.removeEventListener('change', sync);
+    sel.addEventListener('change', sync);
+    sync();
+}
+
+function configurarEspelhamentoEncarregados() {
+    espelharEncarregado('formEncarregado', 'formEncarregadoMatricula', 'formEncarregadoEquipe');
+    espelharEncarregado('formEncarregadoMGM', 'formEncarregadoMGMMatricula', 'formEncarregadoMGMEquipe');
+}
+
+window.ENCARREGADOS = ENCARREGADOS;
+window.MAPA_ENCARREGADO_LEGADO = MAPA_ENCARREGADO_LEGADO;
+window.gerarOptionsEncarregados = gerarOptionsEncarregados;
+window.preencherSelectEncarregados = preencherSelectEncarregados;
+window.getDadosEncarregado = getDadosEncarregado;
+window.normalizarEncarregadoLegado = normalizarEncarregadoLegado;
+window.configurarEspelhamentoEncarregados = configurarEspelhamentoEncarregados;
 
 // ============================================
 // MAPEAMENTO DOS TIPOS
@@ -114,11 +292,6 @@ function esconderLoadingFormulario() {
 // ============================================
 
 function navegarNaAbaAtual(url, titulo) {
-    if (typeof window.navegarNaAbaAtual === 'function') {
-        // Já exposto pelo iframe-nav.js — mas ele expõe um "pedido" ao topo.
-        // Como o nome é o mesmo, precisamos usar outro caminho:
-        // usamos postMessage direto para evitar recursão.
-    }
     try {
         window.top.postMessage({ type: 'NAVEGAR_NA_ABA', payload: { url, titulo } }, '*');
     } catch (e) {
@@ -404,9 +577,7 @@ function formatarData(valor) {
 }
 
 // ============================================
-// NORMALIZA DATA DO EXCEL — v6
-// Aceita: YYYY-MM-DD, DD/MM/YYYY, MM/DD/YY (US),
-// "Oct 28 2026", serial number, Date object
+// NORMALIZA DATA DO EXCEL
 // ============================================
 function normalizarDataExcel(valor) {
     if (!valor) return '';
@@ -1479,6 +1650,46 @@ function criarSelectMassa(label, classe, opcoes, acao, labels) {
     return container;
 }
 
+// NOVO: select de encarregados para ação em massa
+function criarSelectMassaEncarregados() {
+    const container = document.createElement('div');
+    container.style.cssText = `display:flex;align-items:center;gap:4px;`;
+
+    const lbl = document.createElement('label');
+    lbl.textContent = '👤 Encarregado:';
+    lbl.style.cssText = `font-size:0.75em;font-weight:600;color:#4A5568;white-space:nowrap;`;
+    container.appendChild(lbl);
+
+    const select = document.createElement('select');
+    select.className = 'bulk-select-encarregado';
+    select.style.cssText = `padding:2px 8px;border:2px solid #E2E8F0;border-radius:6px;font-size:0.8em;min-width:220px;background:white;height:30px;box-sizing:border-box;max-width:100%;`;
+    select.innerHTML = gerarOptionsEncarregados();
+    container.appendChild(select);
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Aplicar';
+    btn.type = 'button';
+    btn.style.cssText = `background:#4299E1;color:white;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.75em;height:30px;`;
+    btn.onclick = function(e) {
+        e.preventDefault(); e.stopPropagation();
+        if (!select.value) { mostrarToast('⚠️ Selecione um encarregado', 'aviso'); return; }
+        const elementos = document.querySelectorAll('.item-encarregado');
+        let cont = 0;
+        elementos.forEach(el => {
+            if (isCampoEditavel(el)) {
+                el.value = select.value;
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                cont++;
+            }
+        });
+        if (cont > 0) mostrarToast(`✅ Encarregado aplicado a ${cont} item(ns)`, 'sucesso');
+        else mostrarToast('⚠️ Nenhum campo editável', 'aviso');
+    };
+    container.appendChild(btn);
+
+    return container;
+}
+
 function aplicarEmMassa(classe, valor) {
     const elementos = document.querySelectorAll(`.${classe}`);
     let cont = 0;
@@ -1568,6 +1779,8 @@ function adicionarBotoesAcoesMassa() {
         container.appendChild(criarSelectMassa('🔧 Aplicado:', 'item-aplicado', ['PENDENTE','NÃO','SIM','PARCIAL'], v => aplicarEmMassaSelect('item-aplicado', v)));
         container.appendChild(criarSeparadorPequeno());
         container.appendChild(criarSelectMassa('👤 Solicitante:', 'item-colaborador', ['','MATEUS SANTANA','SALES JUNIOR','VALENTIM','SIVANILDO','ERICK VEGA','JOSÉ JORDAN','ALCIDES','FRANCINALDO (DEDÉ)','ROMARIO','BRENO','MAYKE','MARIO J.','MEYDSON','WALISSON'], v => aplicarEmMassaSelect('item-colaborador', v)));
+        container.appendChild(criarSeparadorPequeno());
+        container.appendChild(criarSelectMassaEncarregados());
     }
     
     if (isMGM) {
@@ -1696,33 +1909,8 @@ function adicionarLinhaItem() {
                 </select>
             </td>
             <td class="col-encarregado">
-                <select class="item-encarregado">
-                    <option value="">Selecione...</option>
-                    <option value="ROMARIO">ROMARIO</option>
-                    <option value="ERIVANIO">ERIVANIO</option>
-                    <option value="RIUSTON">RIUSTON</option>
-                    <option value="E. MARCELO">E. MARCELO</option>
-                    <option value="BRENO M.">BRENO M.</option>
-                    <option value="FRANCINALDO(DEDÉ)">FRANCINALDO(DEDÉ)</option>
-                    <option value="WALISSON">WALISSON</option>
-                    <option value="VALENTIM">VALENTIM</option>
-                    <option value="LUCIANO">LUCIANO</option>
-                    <option value="MEYDSON">MEYDSON</option>
-                    <option value="PAULÃO">PAULÃO</option>
-                    <option value="DAMIÃO(MIMA)">DAMIÃO(MIMA)</option>
-                    <option value="DEMILSON(PIM)">DEMILSON(PIM)</option>
-                    <option value="JOSÉ JORDAN">JOSÉ JORDAN</option>
-                    <option value="ALCIDES">ALCIDES</option>
-                    <option value="EDILSON">EDILSON</option>
-                    <option value="ANTONIO">ANTONIO</option>
-                    <option value="JUNIOR C.">JUNIOR C.</option>
-                    <option value="MARCOS">MARCOS</option>
-                    <option value="ANTONIO D.">ANTONIO D.</option>
-                    <option value="ANDERSON">ANDERSON</option>
-                    <option value="LEANDRO">LEANDRO</option>
-                    <option value="ROBSON">ROBSON</option>
-                    <option value="MANOEL C.">MANOEL C.</option>
-                    <option value="MARCELO (ERITON)">MARCELO (ERITON)</option>
+                <select class="item-encarregado" onchange="atualizarBadgeEncarregado(this)">
+                    ${gerarOptionsEncarregados()}
                 </select>
             </td>
         `;
@@ -1747,6 +1935,25 @@ function adicionarLinhaItem() {
 }
 
 window.adicionarLinhaItem = adicionarLinhaItem;
+
+// Função chamada onchange do select de encarregado no item
+function atualizarBadgeEncarregado(select) {
+    if (!select) return;
+    const dados = getDadosEncarregado(select.value);
+    const td = select.closest('td');
+    if (!td) return;
+    let badge = td.querySelector('.encarregado-badge');
+    if (!badge) {
+        badge = document.createElement('div');
+        badge.className = 'encarregado-badge';
+        badge.style.cssText = 'font-size:0.65em;color:#718096;margin-top:2px;line-height:1.1;display:block;text-align:center;';
+        td.appendChild(badge);
+    }
+    badge.textContent = dados?.matricula ? `Mat: ${dados.matricula}` : '';
+    select.title = dados ? `${dados.equipe} · ${dados.nome} · Mat: ${dados.matricula || '---'}` : '';
+}
+
+window.atualizarBadgeEncarregado = atualizarBadgeEncarregado;
 
 // ============================================
 // REMOVER ITEM
@@ -1850,6 +2057,8 @@ function carregarItens(itens) {
         }
         
         if (isAditivoFisico) {
+            const encarregadoNormalizado = normalizarEncarregadoLegado(item.encarregado_obra || '');
+            const dadosEnc = getDadosEncarregado(encarregadoNormalizado);
             html += `
                 <td class="col-aplicado">
                     <select class="item-aplicado" ${isFinalizado ? 'disabled' : ''}>
@@ -1879,33 +2088,8 @@ function carregarItens(itens) {
                     </select>
                 </td>
                 <td class="col-encarregado">
-                    <select class="item-encarregado" ${isFinalizado ? 'disabled' : ''}>
-                        <option value="">Selecione...</option>
-                        <option value="ROMARIO" ${item.encarregado_obra === 'ROMARIO' ? 'selected' : ''}>ROMARIO</option>
-                        <option value="ERIVANIO" ${item.encarregado_obra === 'ERIVANIO' ? 'selected' : ''}>ERIVANIO</option>
-                        <option value="RIUSTON" ${item.encarregado_obra === 'RIUSTON' ? 'selected' : ''}>RIUSTON</option>
-                        <option value="E. MARCELO" ${item.encarregado_obra === 'E. MARCELO' ? 'selected' : ''}>E. MARCELO</option>
-                        <option value="BRENO M." ${item.encarregado_obra === 'BRENO M.' ? 'selected' : ''}>BRENO M.</option>
-                        <option value="FRANCINALDO(DEDÉ)" ${item.encarregado_obra === 'FRANCINALDO(DEDÉ)' ? 'selected' : ''}>FRANCINALDO(DEDÉ)</option>
-                        <option value="WALISSON" ${item.encarregado_obra === 'WALISSON' ? 'selected' : ''}>WALISSON</option>
-                        <option value="VALENTIM" ${item.encarregado_obra === 'VALENTIM' ? 'selected' : ''}>VALENTIM</option>
-                        <option value="LUCIANO" ${item.encarregado_obra === 'LUCIANO' ? 'selected' : ''}>LUCIANO</option>
-                        <option value="MEYDSON" ${item.encarregado_obra === 'MEYDSON' ? 'selected' : ''}>MEYDSON</option>
-                        <option value="PAULÃO" ${item.encarregado_obra === 'PAULÃO' ? 'selected' : ''}>PAULÃO</option>
-                        <option value="DAMIÃO(MIMA)" ${item.encarregado_obra === 'DAMIÃO(MIMA)' ? 'selected' : ''}>DAMIÃO(MIMA)</option>
-                        <option value="DEMILSON(PIM)" ${item.encarregado_obra === 'DEMILSON(PIM)' ? 'selected' : ''}>DEMILSON(PIM)</option>
-                        <option value="JOSÉ JORDAN" ${item.encarregado_obra === 'JOSÉ JORDAN' ? 'selected' : ''}>JOSÉ JORDAN</option>
-                        <option value="ALCIDES" ${item.encarregado_obra === 'ALCIDES' ? 'selected' : ''}>ALCIDES</option>
-                        <option value="EDILSON" ${item.encarregado_obra === 'EDILSON' ? 'selected' : ''}>EDILSON</option>
-                        <option value="ANTONIO" ${item.encarregado_obra === 'ANTONIO' ? 'selected' : ''}>ANTONIO</option>
-                        <option value="JUNIOR C." ${item.encarregado_obra === 'JUNIOR C.' ? 'selected' : ''}>JUNIOR C.</option>
-                        <option value="MARCOS" ${item.encarregado_obra === 'MARCOS' ? 'selected' : ''}>MARCOS</option>
-                        <option value="ANTONIO D." ${item.encarregado_obra === 'ANTONIO D.' ? 'selected' : ''}>ANTONIO D.</option>
-                        <option value="ANDERSON" ${item.encarregado_obra === 'ANDERSON' ? 'selected' : ''}>ANDERSON</option>
-                        <option value="LEANDRO" ${item.encarregado_obra === 'LEANDRO' ? 'selected' : ''}>LEANDRO</option>
-                        <option value="ROBSON" ${item.encarregado_obra === 'ROBSON' ? 'selected' : ''}>ROBSON</option>
-                        <option value="MANOEL C." ${item.encarregado_obra === 'MANOEL C.' ? 'selected' : ''}>MANOEL C.</option>
-                        <option value="MARCELO (ERITON)" ${item.encarregado_obra === 'MARCELO (ERITON)' ? 'selected' : ''}>MARCELO (ERITON)</option>
+                    <select class="item-encarregado" ${isFinalizado ? 'disabled' : ''} onchange="atualizarBadgeEncarregado(this)" title="${dadosEnc ? `${dadosEnc.equipe} · ${dadosEnc.nome} · Mat: ${dadosEnc.matricula || '---'}` : ''}">
+                        ${gerarOptionsEncarregados(encarregadoNormalizado)}
                     </select>
                 </td>
             `;
@@ -1926,6 +2110,9 @@ function carregarItens(itens) {
     setTimeout(configurarValidacaoDuplicados, 150);
     setTimeout(verificarECorrigirDuplicados, 200);
     setTimeout(atualizarNavegacaoSelects, 150);
+    
+    // Atualizar badges de matrícula nos selects de encarregado carregados
+    document.querySelectorAll('.item-encarregado').forEach(sel => atualizarBadgeEncarregado(sel));
 }
 
 // ============================================
@@ -1973,7 +2160,11 @@ function getItensFormulario() {
                 const encarregado = row.querySelector('.item-encarregado');
                 item.aplicado = aplicado?.value || 'PENDENTE';
                 item.colaborador_solicitante = colaborador?.value || '';
-                item.encarregado_obra = encarregado?.value || '';
+                const encNome = encarregado?.value || '';
+                const encDados = getDadosEncarregado(encNome);
+                item.encarregado_obra = encDados?.nome || encNome;
+                item.matricula_encarregado = encDados?.matricula || '';
+                item.equipe_encarregado = encDados?.equipe || '';
                 const formTipoAditivoFisico = document.getElementById('formTipoAditivoFisico');
                 const formDataExecucao = document.getElementById('formDataExecucao');
                 item.tipo = formTipoAditivoFisico?.value || 'SAÍDA';
@@ -2146,6 +2337,11 @@ async function carregarControleFormulario() {
     const formTipo = document.getElementById('formTipo');
     if (formTipo) formTipo.value = tipoInfo.label;
     
+    // Pré-preenche os selects unificados de encarregados (sempre)
+    preencherSelectEncarregados(document.getElementById('formEncarregado'));
+    preencherSelectEncarregados(document.getElementById('formEncarregadoMGM'));
+    configurarEspelhamentoEncarregados();
+    
     try {
         mostrarLoadingFormulario(`Buscando controle #${String(numero).padStart(4, '0')}...`);
         
@@ -2221,6 +2417,8 @@ async function carregarControleFormulario() {
         if (isDevolucao) {
             const formDataDescarga = document.getElementById('formDataDescarga');
             const formEncarregado = document.getElementById('formEncarregado');
+            const formEncarregadoMatricula = document.getElementById('formEncarregadoMatricula');
+            const formEncarregadoEquipe = document.getElementById('formEncarregadoEquipe');
             const formDataDevolucaoFisica = document.getElementById('formDataDevolucaoFisica');
             const formMotivoPendencia = document.getElementById('formMotivoPendencia');
             const formSolucaoPendencia = document.getElementById('formSolucaoPendencia');
@@ -2228,7 +2426,15 @@ async function carregarControleFormulario() {
             const formObservacaoDevolucao = document.getElementById('formObservacaoDevolucao');
             
             if (formDataDescarga) formDataDescarga.value = data.data_descarga || '';
-            if (formEncarregado) formEncarregado.value = data.encarregado || '';
+            if (formEncarregado) {
+                // Normaliza o valor antigo e tenta casar com a base
+                const normalizado = normalizarEncarregadoLegado(data.encarregado || '');
+                formEncarregado.value = normalizado;
+                // Se o backend já tem as colunas novas, prioriza elas
+                const dadosEnc = getDadosEncarregado(normalizado);
+                if (formEncarregadoMatricula) formEncarregadoMatricula.value = data.matricula_encarregado || dadosEnc?.matricula || '';
+                if (formEncarregadoEquipe) formEncarregadoEquipe.value = data.equipe_encarregado || dadosEnc?.equipe || '';
+            }
             if (formDataDevolucaoFisica) formDataDevolucaoFisica.value = data.data_devolucao_fisica || '';
             if (formMotivoPendencia) formMotivoPendencia.value = data.motivo_pendencia || '';
             if (formSolucaoPendencia) formSolucaoPendencia.value = data.solucao_pendencia || '';
@@ -2240,12 +2446,20 @@ async function carregarControleFormulario() {
             const formSeparadorMGM = document.getElementById('formSeparadorMGM');
             const formDataSeparacaoMGM = document.getElementById('formDataSeparacaoMGM');
             const formEncarregadoMGM = document.getElementById('formEncarregadoMGM');
+            const formEncarregadoMGMMatricula = document.getElementById('formEncarregadoMGMMatricula');
+            const formEncarregadoMGMEquipe = document.getElementById('formEncarregadoMGMEquipe');
             const formCaminhao = document.getElementById('formCaminhao');
             const formObservacaoMGM = document.getElementById('formObservacaoMGM');
             
             if (formSeparadorMGM) formSeparadorMGM.value = data.separador || '';
             if (formDataSeparacaoMGM) formDataSeparacaoMGM.value = data.data_separacao || '';
-            if (formEncarregadoMGM) formEncarregadoMGM.value = data.encarregado || '';
+            if (formEncarregadoMGM) {
+                const normalizado = normalizarEncarregadoLegado(data.encarregado || '');
+                formEncarregadoMGM.value = normalizado;
+                const dadosEnc = getDadosEncarregado(normalizado);
+                if (formEncarregadoMGMMatricula) formEncarregadoMGMMatricula.value = data.matricula_encarregado || dadosEnc?.matricula || '';
+                if (formEncarregadoMGMEquipe) formEncarregadoMGMEquipe.value = data.equipe_encarregado || dadosEnc?.equipe || '';
+            }
             if (formCaminhao) formCaminhao.value = data.caminhao || '';
             if (formObservacaoMGM) formObservacaoMGM.value = data.observacao || '';
         }
@@ -2609,7 +2823,13 @@ async function salvarControle() {
         const formPendenciaPor = document.getElementById('formPendenciaPor');
         const formObservacaoDevolucao = document.getElementById('formObservacaoDevolucao');
         data.data_descarga = formDataDescarga?.value || '';
-        data.encarregado = formEncarregado?.value || '';
+        
+        const encNome = formEncarregado?.value || '';
+        const encDados = getDadosEncarregado(encNome);
+        data.encarregado = encDados?.nome || encNome;
+        data.matricula_encarregado = encDados?.matricula || '';
+        data.equipe_encarregado = encDados?.equipe || '';
+        
         data.data_devolucao_fisica = formDataDevolucaoFisica?.value || '';
         data.motivo_pendencia = formMotivoPendencia?.value || '';
         data.solucao_pendencia = formSolucaoPendencia?.value || '';
@@ -2625,7 +2845,13 @@ async function salvarControle() {
         const formObservacaoMGM = document.getElementById('formObservacaoMGM');
         data.separador = formSeparadorMGM?.value || '';
         data.data_separacao = formDataSeparacaoMGM?.value || '';
-        data.encarregado = formEncarregadoMGM?.value || '';
+        
+        const encNome = formEncarregadoMGM?.value || '';
+        const encDados = getDadosEncarregado(encNome);
+        data.encarregado = encDados?.nome || encNome;
+        data.matricula_encarregado = encDados?.matricula || '';
+        data.equipe_encarregado = encDados?.equipe || '';
+        
         data.caminhao = formCaminhao?.value || '';
         data.observacao = formObservacaoMGM?.value || '';
     }
@@ -2741,7 +2967,7 @@ async function finalizarControle() {
 window.finalizarControle = finalizarControle;
 
 // ============================================
-// IMPORTAÇÃO DE EXCEL — v6
+// IMPORTAÇÃO DE EXCEL
 // ============================================
 
 async function handleArquivoExcel(event) {
@@ -2786,9 +3012,6 @@ async function handleArquivoExcel(event) {
             return;
         }
         
-        // ============================================
-        // 1. CABEÇALHO MGM — leitura POSICIONAL v6
-        // ============================================
         const cabecalho = {
             obra: '', data_programacao: '', separador: '', data_separacao: '', encarregado: '', caminhao: ''
         };
@@ -2816,25 +3039,21 @@ async function handleArquivoExcel(event) {
             
             const aoLado = valorCelula(raw[linha], col + 1);
             if (aoLado && !isRotulo(aoLado) && !isCabecalhoTabela(aoLado) && normalizarCabecalho(aoLado) !== '') {
-                console.log(`   ✅ ${rotulo} → "${aoLado}" (ao lado, ${String.fromCharCode(65 + col + 1)}${linha + 1})`);
                 return aoLado;
             }
             
             const duasDireita = valorCelula(raw[linha], col + 2);
             if (duasDireita && !isRotulo(duasDireita) && !isCabecalhoTabela(duasDireita) && normalizarCabecalho(duasDireita) !== '') {
-                console.log(`   ✅ ${rotulo} → "${duasDireita}" (2 à direita, ${String.fromCharCode(65 + col + 2)}${linha + 1})`);
                 return duasDireita;
             }
             
             const abaixo = valorCelula(raw[linha + 1], col);
             if (abaixo && !isRotulo(abaixo) && !isCabecalhoTabela(abaixo) && normalizarCabecalho(abaixo) !== '') {
-                console.log(`   ✅ ${rotulo} → "${abaixo}" (abaixo, ${String.fromCharCode(65 + col)}${linha + 2})`);
                 return abaixo;
             }
             
             const doisAbaixo = valorCelula(raw[linha + 2], col);
             if (doisAbaixo && !isRotulo(doisAbaixo) && !isCabecalhoTabela(doisAbaixo) && normalizarCabecalho(doisAbaixo) !== '') {
-                console.log(`   ✅ ${rotulo} → "${doisAbaixo}" (2 abaixo, ${String.fromCharCode(65 + col)}${linha + 3})`);
                 return doisAbaixo;
             }
             
@@ -2849,8 +3068,6 @@ async function handleArquivoExcel(event) {
             { rotulo: 'DATA SEP.', campo: 'data_separacao', linha: 3, col: 0, isData: true },
             { rotulo: 'CAMINHÃO', campo: 'caminhao', linha: 3, col: 5, isData: false }
         ];
-        
-        console.log('🔎 Lendo cabeçalho por mapa posicional...');
         
         for (const item of MAPA_CABECALHO) {
             const celulaOriginal = valorCelula(raw[item.linha], item.col);
@@ -2876,10 +3093,7 @@ async function handleArquivoExcel(event) {
                 }
             }
             
-            if (!usarPosicao) {
-                console.log(`   ⚠️ ${item.rotulo} não encontrado nas primeiras 4 linhas`);
-                continue;
-            }
+            if (!usarPosicao) continue;
             
             const valor = extrairValor(raw, item.linha, item.col, item.rotulo);
             if (valor) {
@@ -2891,7 +3105,6 @@ async function handleArquivoExcel(event) {
             }
         }
         
-        // Fallback: Nº OBRA pela regex (se não achou pelo mapa)
         if (!cabecalho.obra) {
             for (let i = 0; i < Math.min(4, raw.length); i++) {
                 const row = raw[i] || [];
@@ -2899,7 +3112,6 @@ async function handleArquivoExcel(event) {
                     const cell = valorCelula(row, c);
                     if (/^\d{8,12}$/.test(cell)) {
                         cabecalho.obra = cell;
-                        console.log(`   ✅ Nº OBRA (fallback regex) → "${cell}" (${String.fromCharCode(65 + c)}${i + 1})`);
                         break;
                     }
                 }
@@ -2907,11 +3119,6 @@ async function handleArquivoExcel(event) {
             }
         }
         
-        console.log('📋 Cabeçalho MGM extraído:', cabecalho);
-        
-        // ============================================
-        // 2. LOCALIZA CABEÇALHO DA TABELA
-        // ============================================
         let headerRowIdx = -1;
         let headerRowNorm = [];
         
@@ -2921,7 +3128,6 @@ async function handleArquivoExcel(event) {
             if (rowNorm.some(h => h === 'CODIGO' || h.startsWith('CODIGO'))) {
                 headerRowIdx = i;
                 headerRowNorm = rowNorm;
-                console.log(`📌 Cabeçalho da tabela na linha ${i + 1}`);
                 break;
             }
         }
@@ -2953,16 +3159,10 @@ async function handleArquivoExcel(event) {
             pendente: findCol([h => h.includes('PENDENTE')])
         };
         
-        console.log('📋 Índices da tabela:', colIdx);
-        
         if (colIdx.codigo === -1) {
-            console.warn('⚠️ CÓDIGO não encontrado — usando coluna B (idx 1)');
             colIdx.codigo = 1;
         }
         
-        // ============================================
-        // 3. LÊ OS ITENS
-        // ============================================
         const itens = [];
         
         for (let i = headerRowIdx + 1; i < raw.length; i++) {
@@ -2991,28 +3191,18 @@ async function handleArquivoExcel(event) {
             itens.push(item);
         }
         
-        console.log(`✅ ${itens.length} itens extraídos`);
-        if (itens.length > 0) console.log('Primeiro item:', itens[0]);
-        
         if (itens.length === 0) {
             mostrarToast('⚠️ Nenhum item válido no Excel', 'aviso');
             return;
         }
         
-        // ============================================
-        // 4. PREENCHE O FORMULÁRIO — v6 (setSe com validação)
-        // ============================================
         const setSe = (id, val) => {
             const el = document.getElementById(id);
             if (!el || val === undefined || val === null || val === '') return;
             
             if (el.type === 'date') {
                 if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-                    try { el.value = val; } catch (e) {
-                        console.warn(`⚠️ Valor "${val}" inválido para input date ${id}`);
-                    }
-                } else {
-                    console.warn(`⚠️ Valor "${val}" não é YYYY-MM-DD para input date ${id}`);
+                    try { el.value = val; } catch (e) {}
                 }
                 return;
             }
@@ -3024,7 +3214,14 @@ async function handleArquivoExcel(event) {
         setSe('formDataProgramacao', cabecalho.data_programacao);
         setSe('formSeparadorMGM', cabecalho.separador);
         setSe('formDataSeparacaoMGM', cabecalho.data_separacao);
-        setSe('formEncarregadoMGM', cabecalho.encarregado);
+        if (cabecalho.encarregado) {
+            const formEncarregadoMGM = document.getElementById('formEncarregadoMGM');
+            if (formEncarregadoMGM) {
+                const normalizado = normalizarEncarregadoLegado(cabecalho.encarregado);
+                formEncarregadoMGM.value = normalizado;
+                formEncarregadoMGM.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
         setSe('formCaminhao', cabecalho.caminhao);
         
         const tbody = document.getElementById('itemsBody');
@@ -3074,10 +3271,15 @@ window.handleArquivoExcel = handleArquivoExcel;
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 Inicializando Controles DCMD - Formulário (v7)...');
+    console.log('🚀 Inicializando Controles DCMD - Formulário (v8)...');
     
     const sessao = carregarDadosUsuario();
     if (!sessao) return;
+    
+    // Pré-preenche selects de encarregados ANTES de carregar o controle
+    preencherSelectEncarregados(document.getElementById('formEncarregado'));
+    preencherSelectEncarregados(document.getElementById('formEncarregadoMGM'));
+    configurarEspelhamentoEncarregados();
     
     await carregarMateriais();
     await carregarControleFormulario();
@@ -3145,3 +3347,4 @@ window.obterDocumentosMultiplos = obterDocumentosMultiplos;
 window.handleArquivoExcel = handleArquivoExcel;
 window.mostrarLoadingFormulario = mostrarLoadingFormulario;
 window.esconderLoadingFormulario = esconderLoadingFormulario;
+window.atualizarBadgeEncarregado = atualizarBadgeEncarregado;

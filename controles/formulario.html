@@ -9,55 +9,27 @@
     <link rel="stylesheet" href="../css/controles-dcmd.css">
     <link rel="stylesheet" href="../css/chamados.css">
     <style>
-        /* Overlay de loading do formulário (evita flash de "form errado") */
         #loadingFormulario {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(247, 250, 252, 0.95);
             z-index: 99999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            transition: opacity 0.3s ease;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 16px; transition: opacity 0.3s ease;
         }
-        #loadingFormulario.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
+        #loadingFormulario.hidden { opacity: 0; pointer-events: none; }
         #loadingFormulario .spinner {
-            width: 48px;
-            height: 48px;
+            width: 48px; height: 48px;
             border: 4px solid #E2E8F0;
             border-top-color: #4299E1;
             border-radius: 50%;
             animation: spinLoad 0.8s linear infinite;
         }
-        @keyframes spinLoad {
-            to { transform: rotate(360deg); }
-        }
-        #loadingFormulario p {
-            margin: 0;
-            color: #4A5568;
-            font-size: 15px;
-            font-weight: 600;
-        }
-        #loadingFormulario .loading-sub {
-            color: #718096;
-            font-size: 13px;
-            font-weight: 400;
-        }
-        #controleForm {
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        #controleForm.pronto {
-            opacity: 1;
-        }
+        @keyframes spinLoad { to { transform: rotate(360deg); } }
+        #loadingFormulario p { margin: 0; color: #4A5568; font-size: 15px; font-weight: 600; }
+        #loadingFormulario .loading-sub { color: #718096; font-size: 13px; font-weight: 400; }
+        #controleForm { opacity: 0; transition: opacity 0.3s ease; }
+        #controleForm.pronto { opacity: 1; }
     </style>
 </head>
 <body>
@@ -153,11 +125,25 @@
                             </div>
                         </div>
                         
-                        <div class="form-row">
+                        <!-- 🆕 ENCARREGADO MGM — Select Unificado + Matrícula + Equipe -->
+                        <div class="form-row form-row-3col">
                             <div class="form-group">
                                 <label for="formEncarregadoMGM">👔 Encarregado</label>
-                                <input type="text" id="formEncarregadoMGM" placeholder="Nome do encarregado">
+                                <select id="formEncarregadoMGM">
+                                    <option value="">Carregando encarregados...</option>
+                                </select>
                             </div>
+                            <div class="form-group">
+                                <label for="formEncarregadoMGMMatricula">🆔 Matrícula</label>
+                                <input type="text" id="formEncarregadoMGMMatricula" readonly placeholder="Matrícula">
+                            </div>
+                            <div class="form-group">
+                                <label for="formEncarregadoMGMEquipe">👥 Equipe</label>
+                                <input type="text" id="formEncarregadoMGMEquipe" readonly placeholder="Equipe">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
                             <div class="form-group">
                                 <label for="formCaminhao">🚚 Caminhão</label>
                                 <input type="text" id="formCaminhao" placeholder="Placa ou identificação">
@@ -294,51 +280,40 @@
                                 <input type="date" id="formDataDescarga">
                             </div>
                             <div class="form-group">
-                                <label for="formEncarregado">👤 Encarregado</label>
-                                <select id="formEncarregado">
-                                    <option value="">Selecione...</option>
-                                    <option value="ROMARIO">ROMARIO</option>
-                                    <option value="ERIVANIO">ERIVANIO</option>
-                                    <option value="RIUSTON">RIUSTON</option>
-                                    <option value="E. MARCELO">E. MARCELO</option>
-                                    <option value="BRENO M.">BRENO M.</option>
-                                    <option value="FRANCINALDO(DEDÉ)">FRANCINALDO(DEDÉ)</option>
-                                    <option value="WALISSON">WALISSON</option>
-                                    <option value="VALENTIM">VALENTIM</option>
-                                    <option value="LUCIANO">LUCIANO</option>
-                                    <option value="MEYDSON">MEYDSON</option>
-                                    <option value="PAULÃO">PAULÃO</option>
-                                    <option value="DAMIÃO(MIMA)">DAMIÃO(MIMA)</option>
-                                    <option value="DEMILSON(PIM)">DEMILSON(PIM)</option>
-                                    <option value="JOSÉ JORDAN">JOSÉ JORDAN</option>
-                                    <option value="ALCIDES">ALCIDES</option>
-                                    <option value="EDILSON">EDILSON</option>
-                                    <option value="ANTONIO">ANTONIO</option>
-                                    <option value="JUNIOR C.">JUNIOR C.</option>
-                                    <option value="MARCOS">MARCOS</option>
-                                    <option value="ANTONIO D.">ANTONIO D.</option>
-                                    <option value="ANDERSON">ANDERSON</option>
-                                    <option value="LEANDRO">LEANDRO</option>
-                                    <option value="ROBSON">ROBSON</option>
-                                    <option value="MANOEL C.">MANOEL C.</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
                                 <label for="formDataDevolucaoFisica">📅 Data da Devolução Física</label>
                                 <input type="date" id="formDataDevolucaoFisica">
                             </div>
+                        </div>
+                        
+                        <!-- 🆕 ENCARREGADO DEVOLUÇÃO — Select Unificado + Matrícula + Equipe -->
+                        <div class="form-row form-row-3col">
+                            <div class="form-group">
+                                <label for="formEncarregado">👤 Encarregado</label>
+                                <select id="formEncarregado">
+                                    <option value="">Carregando encarregados...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="formEncarregadoMatricula">🆔 Matrícula</label>
+                                <input type="text" id="formEncarregadoMatricula" readonly placeholder="Matrícula">
+                            </div>
+                            <div class="form-group">
+                                <label for="formEncarregadoEquipe">👥 Equipe</label>
+                                <input type="text" id="formEncarregadoEquipe" readonly placeholder="Equipe">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
                             <div class="form-group">
                                 <label for="formMotivoPendencia">📝 Motivo da Pendência</label>
                                 <input type="text" id="formMotivoPendencia" placeholder="Motivo da pendência">
                             </div>
-                        </div>
-                        <div class="form-row">
                             <div class="form-group">
                                 <label for="formSolucaoPendencia">✅ Solução da Pendência</label>
                                 <input type="text" id="formSolucaoPendencia" placeholder="Solução da pendência">
                             </div>
+                        </div>
+                        <div class="form-row">
                             <div class="form-group">
                                 <label for="formPendenciaPor">👤 Pendência por</label>
                                 <select id="formPendenciaPor">
@@ -493,14 +468,9 @@
     <div id="descricao-popup" class="descricao-popup"></div>
     <div id="popup-overlay" class="popup-overlay"></div>
 
-    <!-- SheetJS -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-
-    <!-- FIREBASE SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-
-    <!-- CONFIGURAÇÕES DO SISTEMA (ORDEM ORIGINAL PRESERVADA) -->
     <script src="../js/firebase-config.js"></script>   
     <script src="../js/config.js"></script>  
     <script src="../js/auth-service.js"></script>      
