@@ -1,72 +1,400 @@
 // ============================================
-// DASHBOARD PENDÊNCIA DE REQUISIÇÃO - MGM ONLY
+// DASHBOARD PENDÊNCIA DE REQUISIÇÃO - v5
+// Lógica: MGM (Σ QTD. APLICADA da devolucao_compilada) × qtdrealizada (previsto_realizado)
+//
+// REQUISITAR → qtdMGM > qtdRealizada  (falta subir o sistêmico)
+// DEVOLVER   → qtdRealizada > qtdMGM  (sobra, precisa baixar)
+// OK         → |qtdMGM - qtdRealizada| <= 0.01
+//
+// Fontes:
+//   - devolucao_compilada.txt (R2)   → MGM (usado fisicamente)
+//   - previsto_realizado.txt (R2)    → requisitado no sistêmico
+//   - programacao_siago.txt (R2)     → etapas formais (visual)
+//
+// QTD. DMA NOVO é ignorado (só rastreio, não entra na conta)
+// mgm-online-completo (D1) não é usado nesta versão (futuro)
 // ============================================
 
-console.log('🚀 dashboards-pendencia-requisicao.js carregado! (MGM only)');
-
-// getSessao() e redirecionarParaHome() vêm do dashboards-common.js
+console.log('🚀 dashboards-pendencia-requisicao.js carregado! (v5 - devolucao_compilada × previsto_realizado)');
 
 const ARQUIVOS_R2 = {
-    movimentosSiago: `${API_URL}/proxy/movimentos-siago`,
-    devolucaoCompilada: `${API_URL}/proxy/devolucao-compilada`,
-    programacaoSiago: `${API_URL}/proxy/programacao-siago`
+    movimentosSiago:    `${API_URL}/proxy/movimentos-siago`,
+    programacaoSiago:   `${API_URL}/proxy/programacao-siago`,
+    previstoRealizado:  `${API_URL}/proxy/previsto-realizado`,
+    devolucaoCompilada: `${API_URL}/proxy/devolucao-compilada`
 };
 
-let dadosCompletos = [];
-let dadosFiltrados = [];
-let dadosExibidos = [];
-let itemSelecionado = null;
-let abaAtual = 'mgm';
+// ============================================
+// ESTADO GLOBAL
+// ============================================
 
-let dadosMovimentosSiago = {};
-let dadosDevolucaoCompilada = [];
-let movimentosDoBanco = [];
-let aditivosSistemicos = [];
-let pendenciasConsolidadas = [];
-let dadosFiltradosMGM = [];
-let filtroStatusMGMAtivo = null;
-
-let abaAtualMGM = 'mgm';
-let itemSelecionadoMGM = null;
 let dadosCarregadosMGM = false;
-
+let pendenciasConsolidadas = [];   // [{ obra, codigo, qtdMGM, qtdRealizada, falta, sobra, status, ... }]
+let dadosFiltradosMGM = [];
+let dadosEtapasPorObra = {};       // { obra: { etapasMGM: [...], ... } }
+let filtroStatusMGMAtivo = null;
+let itemSelecionadoMGM = null;     // { obra }
 let filtroEtapasMinimo = 0;
 
-let itensRepresados = {
-    total: 0,
-    itens: []
-};
-
 const DATA_CORTE_INICIO_OBRA = '2026-07-01';
+const TOLERANCIA_QTD = 0.01;
 
 let obrasPermitidas = null;
 const __cacheInicioObra = {};
 
-function getDadosProgramacaoSiago() {
-    return window.__dadosProgramacaoSiago || {};
-}
+// ============================================
+// HELPERS BÁSICOS
+// ============================================
 
 function getEtapasPorObraData() {
     return window.__etapasPorObra || {};
 }
 
-function isProgramacaoSiagoCarregado() {
-    return window.__dadosProgramacaoSiagoCarregados || false;
+// Converte string numérica com vírgula ou ponto decimal para float.
+// Suporta "1.234,56" e "1234.56" e "1234,56".
+function parseNumeroBR(valor) {
+    if (valor === null || valor === undefined) return 0;
+    let s = String(valor).trim();
+    if (!s) return 0;
+    // Remove espaços e possíveis caracteres de moeda
+    s = s.replace(/\s/g, '').replace(/[R$]/g, '');
+    // Caso tenha vírgula E ponto: o último separador é o decimal
+    const temVirgula = s.includes(',');
+    const temPonto = s.includes('.');
+    if (temVirgula && temPonto) {
+        if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+            // Formato pt-BR: 1.234,56
+            s = s.replace(/\./g, '').replace(',', '.');
+        } else {
+            // Formato en-US: 1,234.56
+            s = s.replace(/,/g, '');
+        }
+    } else if (temVirgula) {
+        s = s.replace(',', '.');
+    }
+    const n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
 }
 
-function parseDataSiago(str) {
+// Converte data "DD.MM.YYYY", "DD/MM/YYYY" ou "YYYY-MM-DD" → "YYYY-MM-DD"
+function parseDataGenerica(str) {
     if (!str) return null;
     const s = String(str).trim();
-    let m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    let m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
     if (m) return `${m[3]}-${m[2]}-${m[1]}`;
     m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (m) return `${m[1]}-${m[2]}-${m[3]}`;
     return null;
 }
 
+// Mantido para compatibilidade (programacao_siago usa DD/MM/YYYY ou YYYY-MM-DD)
+function parseDataSiago(str) {
+    return parseDataGenerica(str);
+}
+
+function normalizarObra(obra) {
+    if (!obra) return '';
+    let limpo = String(obra).trim().replace(/[^0-9]/g, '');
+    if (limpo.length === 10) return limpo;
+    if (limpo.length === 9) return '0' + limpo;
+    if (limpo.length < 9) {
+        const padStart = 10 - limpo.length;
+        return '0'.repeat(padStart) + limpo;
+    }
+    return limpo;
+}
+
+function formatarObra(obra) {
+    if (!obra) return '';
+    let limpo = String(obra).trim().replace(/[^0-9]/g, '');
+    if (limpo.length !== 10) return obra;
+    return limpo.substring(0, 3) + '-' + limpo.substring(3, 5) + '-' + limpo.substring(5, 10);
+}
+
+function formatarData(dataString) {
+    if (!dataString) return '-';
+    const s = String(dataString).trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[3]}.${m[2]}.${m[1]}`;
+    const m2 = s.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+    if (m2) return s.substring(0, 10);
+    const m3 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (m3) return `${m[1]}.${m[2]}.${m[3]}`;
+    return s.substring(0, 10);
+}
+
+function mostrarToast(mensagem, tipo = 'info') {
+    const toastExistente = document.querySelector('.toast-dashboard');
+    if (toastExistente) toastExistente.remove();
+    const toast = document.createElement('div');
+    toast.className = `toast-dashboard ${tipo}`;
+    toast.textContent = mensagem;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+// ============================================
+// PARSER — DEVOLUÇÃO COMPILADA (= MGM)
+// Colunas: OBRA, DATA, CÓDIGO, DESCRIÇÃO, QTD. APLICADA, QTD. DMA NOVO, ARQUIVO
+// Agrega por obra+codigo:  Σ QTD. APLICADA, lista de datas (MGMs), descrição, unidade
+// ============================================
+
+function parsearDevolucaoCompilada(texto) {
+    console.log('🔄 Parseando devolucao_compilada.txt...');
+    const linhas = texto.split(/\r?\n/);
+    if (linhas.length < 2) {
+        console.warn('⚠️ devolucao_compilada.txt vazio ou sem cabeçalho');
+        return { mgmMap: {}, etapasPorObra: {} };
+    }
+
+    const cabecalho = linhas[0].split('\t').map(h => h.trim());
+    const idx = {
+        obra:        cabecalho.findIndex(h => /^OBRA$/i.test(h)),
+        data:        cabecalho.findIndex(h => /^DATA$/i.test(h)),
+        codigo:      cabecalho.findIndex(h => /C[ÓO]DIGO/i.test(h)),
+        descricao:   cabecalho.findIndex(h => /DESCRI[ÇC][ÃA]O/i.test(h)),
+        qtdAplicada: cabecalho.findIndex(h => /QTD\.?\s*APLICADA/i.test(h)),
+        qtdDmaNovo:  cabecalho.findIndex(h => /QTD\.?\s*DMA/i.test(h))
+    };
+
+    if (idx.obra < 0 || idx.codigo < 0 || idx.qtdAplicada < 0 || idx.data < 0) {
+        console.error('❌ Cabeçalho inesperado em devolucao_compilada:', cabecalho);
+        return { mgmMap: {}, etapasPorObra: {} };
+    }
+
+    const mgmMap = {};           // chave: "obra|codigo"
+    const etapasPorObra = {};    // chave: obra → { etapasMGM: [{ numero, data, itens: [] }] }
+    let totalLinhas = 0;
+    let linhasIgnoradasZero = 0;
+
+    for (let i = 1; i < linhas.length; i++) {
+        const linha = linhas[i];
+        if (!linha.trim()) continue;
+        const c = linha.split('\t');
+        if (c.length < cabecalho.length) continue;
+
+        const obra = normalizarObra(c[idx.obra] || '');
+        const codigo = String(c[idx.codigo] || '').trim();
+        if (!obra || !codigo) continue;
+
+        const qtdAplicada = parseNumeroBR(c[idx.qtdAplicada]);
+        if (qtdAplicada <= 0) {
+            linhasIgnoradasZero++;
+            continue;
+        }
+
+        const dataOriginal = (c[idx.data] || '').trim();
+        const dataISO = parseDataGenerica(dataOriginal);
+        const descricao = (c[idx.descricao] || '').trim();
+
+        // Agrega MGM por obra+codigo
+        const chave = `${obra}|${codigo}`;
+        if (!mgmMap[chave]) {
+            mgmMap[chave] = {
+                obra,
+                codigo,
+                descricao,
+                unidade: '',           // devolucao_compilada não traz unidade → preenche depois via previsto
+                qtdMGM: 0,
+                qtdDMA: 0,
+                datas: [],
+                arquivos: new Set()
+            };
+        }
+        mgmMap[chave].qtdMGM += qtdAplicada;
+        if (idx.qtdDmaNovo >= 0) {
+            mgmMap[chave].qtdDMA += parseNumeroBR(c[idx.qtdDmaNovo]);
+        }
+        if (dataISO && !mgmMap[chave].datas.includes(dataISO)) {
+            mgmMap[chave].datas.push(dataISO);
+        }
+        mgmMap[chave].arquivos.add(`${obra}|${dataOriginal}`);
+
+        // Agrupa itens por obra+data (cada data = uma MGM)
+        if (!etapasPorObra[obra]) {
+            etapasPorObra[obra] = { obra, etapasMGM: [], _mapa: {} };
+        }
+        const grupoObra = etapasPorObra[obra];
+        const chaveData = dataISO || dataOriginal || 'SEM_DATA';
+        if (!grupoObra._mapa[chaveData]) {
+            grupoObra._mapa[chaveData] = {
+                numero: chaveData,           // string YYYY-MM-DD (ou "SEM_DATA")
+                data: dataISO || '',
+                dataOriginal,
+                qtdItens: 0,
+                qtdAplicadaTotal: 0,
+                itens: []
+            };
+            grupoObra.etapasMGM.push(grupoObra._mapa[chaveData]);
+        }
+        grupoObra._mapa[chaveData].itens.push({
+            codigo,
+            descricao,
+            qtdAplicada
+        });
+        grupoObra._mapa[chaveData].qtdItens += 1;
+        grupoObra._mapa[chaveData].qtdAplicadaTotal += qtdAplicada;
+
+        totalLinhas++;
+    }
+
+    // Converte Set de datas em array ordenado e limpa _mapa
+    Object.keys(mgmMap).forEach(k => {
+        mgmMap[k].datas.sort();
+        delete mgmMap[k].arquivos;
+    });
+    Object.keys(etapasPorObra).forEach(o => {
+        delete etapasPorObra[o]._mapa;
+        etapasPorObra[o].etapasMGM.sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+    });
+
+    console.log(`✅ devolucao_compilada: ${totalLinhas} linhas válidas | ${Object.keys(mgmMap).length} combinações obra+codigo | ${Object.keys(etapasPorObra).length} obras`);
+    console.log(`   🔇 ${linhasIgnoradasZero} linhas ignoradas (QTD. APLICADA = 0 ou vazia)`);
+    return { mgmMap, etapasPorObra };
+}
+
+// ============================================
+// PARSER — PREVISTO REALIZADO
+// Colunas: num_obra, cod_material, descricao, und_medida, qtdprevista, qtdrealizada, val_material, val_requisitado, nome
+// ============================================
+
+function parsearPrevistoRealizado(texto) {
+    console.log('🔄 Parseando previsto_realizado.txt...');
+    const linhas = texto.split(/\r?\n/);
+    if (linhas.length < 2) return {};
+    const cabecalho = linhas[0].split('\t').map(h => h.trim());
+    const idx = {
+        num_obra:        cabecalho.indexOf('num_obra'),
+        cod_material:    cabecalho.indexOf('cod_material'),
+        descricao:       cabecalho.indexOf('descricao'),
+        und_medida:      cabecalho.indexOf('und_medida'),
+        qtdprevista:     cabecalho.indexOf('qtdprevista'),
+        qtdrealizada:    cabecalho.indexOf('qtdrealizada'),
+        val_material:    cabecalho.indexOf('val_material'),
+        val_requisitado: cabecalho.indexOf('val_requisitado'),
+        nome:            cabecalho.indexOf('nome')
+    };
+    const mapa = {};
+    let totalLinhas = 0;
+    for (let i = 1; i < linhas.length; i++) {
+        const c = linhas[i].split('\t');
+        if (c.length < cabecalho.length) continue;
+        const obra = normalizarObra(c[idx.num_obra] || '');
+        const codigo = String(c[idx.cod_material] || '').trim();
+        if (!obra || !codigo) continue;
+        const chave = `${obra}|${codigo}`;
+        const qtdRealizada = parseNumeroBR(c[idx.qtdrealizada]);
+        const qtdPrevista = parseNumeroBR(c[idx.qtdprevista]);
+        if (!mapa[chave]) {
+            mapa[chave] = {
+                obra,
+                codigo,
+                descricao: (c[idx.descricao] || '').trim(),
+                unidade: (c[idx.und_medida] || 'UN').trim(),
+                qtdPrevista: 0,
+                qtdRealizada: 0,
+                valorUnitario: parseNumeroBR(c[idx.val_material]),
+                valorRequisitado: 0,
+                nome: (c[idx.nome] || '').trim()
+            };
+        }
+        mapa[chave].qtdPrevista += qtdPrevista;
+        mapa[chave].qtdRealizada += qtdRealizada;
+        mapa[chave].valorRequisitado += parseNumeroBR(c[idx.val_requisitado]);
+        totalLinhas++;
+    }
+    console.log(`✅ previsto_realizado: ${totalLinhas} linhas | ${Object.keys(mapa).length} combinações obra+codigo`);
+    return mapa;
+}
+
+// ============================================
+// CONSOLIDAÇÃO POR OBRA
+// Regras:
+//   qtdMGM       = Σ QTD. APLICADA (devolucao_compilada) = usado fisicamente
+//   qtdRealizada = previsto_realizado.qtdrealizada      = requisitado no sistêmico
+//
+//   qtdMGM > qtdRealizada → 🔴 REQUISITAR (falta subir o sistêmico)
+//   qtdRealizada > qtdMGM → 🟠 DEVOLVER   (sobra, precisa baixar)
+//   |diferença| <= TOLERANCIA_QTD → ✅ OK
+// ============================================
+
+function consolidarPorObra(mgmMap, previstoMap) {
+    console.log('🔄 Consolidando (MGM × previsto_realizado)...');
+    const pendencias = [];
+    const todasChaves = new Set([
+        ...Object.keys(mgmMap || {}),
+        ...Object.keys(previstoMap || {})
+    ]);
+
+    todasChaves.forEach(chave => {
+        const mgm = mgmMap[chave];
+        const prev = previstoMap[chave];
+
+        const obra = (mgm?.obra) || (prev?.obra) || normalizarObra(chave.split('|')[0]);
+        const codigo = (mgm?.codigo) || (prev?.codigo) || chave.split('|')[1];
+        const descricao = (prev?.descricao) || (mgm?.descricao) || '';
+        const unidade = (prev?.unidade) || (mgm?.unidade) || 'UN';
+
+        const qtdMGM = mgm?.qtdMGM || 0;
+        const qtdRealizada = prev?.qtdRealizada || 0;
+
+        // falta requisitar → MGM > Realizada → precisa SUBIR o sistêmico
+        // devolver (sobra) → Realizada > MGM → precisa BAIXAR o sistêmico
+        const falta = Math.max(0, qtdMGM - qtdRealizada);
+        const sobra = Math.max(0, qtdRealizada - qtdMGM);
+        const diferenca = qtdMGM - qtdRealizada;   // com sinal, útil para debug
+
+        let status;
+        if (falta > TOLERANCIA_QTD) {
+            status = 'REQUISITAR';
+        } else if (sobra > TOLERANCIA_QTD) {
+            status = 'DEVOLVER';
+        } else {
+            status = 'OK';
+        }
+
+        pendencias.push({
+            obra,
+            obraFormatada: formatarObra(obra),
+            codigo,
+            descricao,
+            unidade,
+            qtdMGM,
+            qtdRealizada,
+            qtdPrevista: prev?.qtdPrevista || 0,
+            diferenca,
+            falta,
+            sobra,
+            status,
+            valorUnitario: prev?.valorUnitario || 0,
+            valorRequisitado: prev?.valorRequisitado || 0,
+            nome: prev?.nome || '',
+            datasMGM: mgm?.datas || [],
+            numEtapasMGM: (mgm?.datas || []).length
+        });
+    });
+
+    console.log(`✅ ${pendencias.length} pendências geradas`);
+    console.log(`   🔴 Requisitar (falta subir):   ${pendencias.filter(p => p.status === 'REQUISITAR').length}`);
+    console.log(`   🟠 Devolver  (precisa baixar): ${pendencias.filter(p => p.status === 'DEVOLVER').length}`);
+    console.log(`   ✅ OK (MGM ≈ Realizada):        ${pendencias.filter(p => p.status === 'OK').length}`);
+
+    return { pendencias };
+}
+
+// ============================================
+// PROGRAMAÇÃO SIAGO (etapas formais — apenas visual)
+// ============================================
+
 function parsearProgramacaoSiago(texto) {
     console.log('🔄 Parseando programacao_siago.txt...');
-    const linhas = texto.trim().split('\n');
+    const linhas = texto.trim().split(/\r?\n/);
     if (linhas.length < 2) return {};
     const cabecalho = linhas[0].split('\t').map(h => h.trim());
     const idx = {
@@ -88,13 +416,9 @@ function parsearProgramacaoSiago(texto) {
         const obraNorm = normalizarObra(numObra);
         if (!etapasPorObra[obraNorm]) {
             etapasPorObra[obraNorm] = {
-                obra: obraNorm,
-                etapas_raw: [],
-                etapas: [],
-                etapas_detalhes: {},
-                total_etapas: 0,
-                etapas_validas: 0,
-                etapas_reprovadas: 0
+                obra: obraNorm, etapas_raw: [], etapas: [],
+                etapas_detalhes: {}, total_etapas: 0,
+                etapas_validas: 0, etapas_reprovadas: 0
             };
         }
         const etapaNum = parseInt(partes[idx.etapa] || '0');
@@ -132,36 +456,27 @@ function parsearProgramacaoSiago(texto) {
         info.etapas_validas = validas;
         info.etapas_reprovadas = reprovadas;
     });
-    console.log(`✅ ${Object.keys(etapasPorObra).length} obras parseadas`);
+    console.log(`✅ ${Object.keys(etapasPorObra).length} obras com programação Siago`);
     return etapasPorObra;
 }
 
-async function carregarProgramacaoSiago() {
-    console.log('📥 Carregando programacao_siago...');
-    try {
-        const response = await fetch(ARQUIVOS_R2.programacaoSiago);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const texto = await response.text();
-        const etapasPorObra = parsearProgramacaoSiago(texto);
-        window.__etapasPorObra = etapasPorObra;
-        window.__dadosProgramacaoSiago = etapasPorObra;
-        window.__dadosProgramacaoSiagoCarregados = true;
-        console.log(`✅ Programação siago pronta: ${Object.keys(etapasPorObra).length} obras`);
-        return etapasPorObra;
-    } catch (error) {
-        console.error('❌ Erro ao carregar programação siago:', error);
-        window.__etapasPorObra = {};
-        window.__dadosProgramacaoSiago = {};
-        window.__dadosProgramacaoSiagoCarregados = false;
-        return null;
-    }
+function getEtapasPorObra(obraNorm) {
+    const etapasPorObra = getEtapasPorObraData();
+    const info = etapasPorObra[obraNorm];
+    if (!info) return null;
+    return {
+        total_etapas: info.total_etapas,
+        etapas_validas: info.etapas_validas,
+        etapas_reprovadas: info.etapas_reprovadas,
+        etapas: info.etapas,
+        etapas_detalhes: info.etapas_detalhes
+    };
 }
 
 function etapaEhValida(det) {
     if (!det) return false;
     const s = String(det.dsc_situacao_programacao_obra || '').toUpperCase();
-    if (s.includes('CANCELADA')) return false;
-    if (s.includes('REPROVADA')) return false;
+    if (s.includes('CANCELADA') || s.includes('REPROVADA')) return false;
     return true;
 }
 
@@ -198,7 +513,6 @@ function classificarObra(obraNorm) {
 }
 
 function construirObrasPermitidas() {
-    console.log(`🔎 Montando filtro de obras iniciadas a partir de ${DATA_CORTE_INICIO_OBRA}...`);
     const todasObras = new Set();
     pendenciasConsolidadas.forEach(p => todasObras.add(normalizarObra(p.obra)));
     const permitidas = new Set();
@@ -216,106 +530,17 @@ function construirObrasPermitidas() {
 
 function aplicarFiltroInicioObraFrontEnd() {
     obrasPermitidas = construirObrasPermitidas();
-    const antesMGM = pendenciasConsolidadas.length;
+    const antes = pendenciasConsolidadas.length;
     pendenciasConsolidadas = pendenciasConsolidadas.filter(p =>
         obrasPermitidas.has(normalizarObra(p.obra))
     );
-    console.log(`🚫 MGM: ${antesMGM - pendenciasConsolidadas.length} pendências removidas`);
+    console.log(`🚫 ${antes - pendenciasConsolidadas.length} pendências removidas pelo corte de data`);
     dadosFiltradosMGM = [...pendenciasConsolidadas];
 }
 
-function mostrarToast(mensagem, tipo = 'info') {
-    const toastExistente = document.querySelector('.toast-dashboard');
-    if (toastExistente) toastExistente.remove();
-    const toast = document.createElement('div');
-    toast.className = `toast-dashboard ${tipo}`;
-    toast.textContent = mensagem;
-    document.body.appendChild(toast);
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s';
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
-}
-
-function formatarObraParaExibicao(obra) {
-    if (!obra) return '';
-    let limpo = obra.trim().replace(/[^0-9]/g, '');
-    if (limpo.length !== 10) return obra;
-    return limpo.substring(0, 3) + '-' + limpo.substring(3, 5) + '-' + limpo.substring(5, 10);
-}
-
-function normalizarObra(obra) {
-    if (!obra) return '';
-    let limpo = obra.trim().replace(/[^0-9]/g, '');
-    if (limpo.length === 10) return limpo;
-    if (limpo.length === 9) return '0' + limpo;
-    if (limpo.length < 9) {
-        const padStart = 10 - limpo.length;
-        return '0'.repeat(padStart) + limpo;
-    }
-    return obra;
-}
-
-function formatarObra(obra) {
-    if (!obra) return '';
-    let limpo = obra.trim().replace(/[^0-9]/g, '');
-    if (limpo.length !== 10) return obra;
-    return limpo.substring(0, 3) + '-' + limpo.substring(3, 5) + '-' + limpo.substring(5, 10);
-}
-
-function formatarData(dataString) {
-    if (!dataString) return '-';
-    const s = String(dataString).trim();
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (m) return `${m[3]}.${m[2]}.${m[1]}`;
-    const m2 = s.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
-    if (m2) return s.substring(0, 10);
-    const m3 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-    if (m3) return `${m[1]}.${m[2]}.${m[3]}`;
-    return s.substring(0, 10);
-}
-
-async function buscarMovimentosDoBanco() {
-    console.log('📡 Buscando movimentos do banco...');
-    try {
-        const response = await fetch(`${API_URL}/movimento?limit=10000`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        movimentosDoBanco = data.data || [];
-        console.log(`✅ ${movimentosDoBanco.length} movimentos carregados`);
-        movimentosDoBanco.forEach(m => {
-            const tipoMgm = (m.tipo_mgm || '').toUpperCase();
-            if (tipoMgm === 'MULTIPLO' || tipoMgm === 'MULTIPLA') {
-                m.tipo_mgm = 'MULTIPLO';
-                if (typeof m.datas_programacao === 'string') {
-                    m.datas_programacao = m.datas_programacao.split(',').map(d => d.trim());
-                }
-                if (!m.datas_programacao) m.datas_programacao = [];
-                if (!m.qtd_linhas) m.qtd_linhas = m.datas_programacao.length || 1;
-            }
-        });
-        return movimentosDoBanco;
-    } catch (error) {
-        console.error('❌ Erro ao buscar movimentos:', error);
-        return [];
-    }
-}
-
-async function buscarAditivosSistemicos() {
-    console.log('📡 Buscando aditivos sistêmicos...');
-    try {
-        const response = await fetch(`${API_URL}/aditivo-sistemico-completo?limit=10000`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        aditivosSistemicos = data.data || [];
-        console.log(`✅ ${aditivosSistemicos.length} aditivos carregados`);
-        return aditivosSistemicos;
-    } catch (error) {
-        console.error('❌ Erro ao buscar aditivos:', error);
-        return [];
-    }
-}
+// ============================================
+// CARREGAMENTO (R2) — devolucao_compilada + previsto_realizado + programacao_siago
+// ============================================
 
 async function carregarArquivoR2(url, nomeArquivo) {
     console.log(`📥 Carregando ${nomeArquivo}...`);
@@ -331,549 +556,51 @@ async function carregarArquivoR2(url, nomeArquivo) {
     }
 }
 
-function parsearMovimentosSiago(texto) {
-    console.log('🔄 Parseando movimentos_siago.txt...');
-    const linhas = texto.trim().split('\n');
-    if (linhas.length < 2) return {};
-    const cabecalho = linhas[0].split('\t').map(h => h.trim());
-    const indices = {
-        numdoc_mov: cabecalho.indexOf('numdoc_mov'),
-        orgmov: cabecalho.indexOf('orgmov'),
-        sigla_mov_mat: cabecalho.indexOf('sigla_mov_mat'),
-        dscmat: cabecalho.indexOf('dscmat'),
-        qtdmov: cabecalho.indexOf('qtdmov'),
-        nummov: cabecalho.indexOf('nummov'),
-        codmat_mov: cabecalho.indexOf('codmat_mov'),
-        datamov: cabecalho.indexOf('datamov'),
-        codreg: cabecalho.indexOf('codreg'),
-        nomereg: cabecalho.indexOf('nomereg'),
-        vlrult_cot: cabecalho.indexOf('vlrult_cot')
-    };
-    const movimentos = {};
-    for (let i = 1; i < linhas.length; i++) {
-        const linha = linhas[i].trim();
-        if (!linha) continue;
-        const partes = linha.split('\t');
-        const numdocMov = partes[indices.numdoc_mov]?.trim() || '';
-        if (!numdocMov) continue;
-        if (!movimentos[numdocMov]) {
-            movimentos[numdocMov] = {
-                numdoc_mov: numdocMov,
-                orgmov: partes[indices.orgmov]?.trim() || '',
-                sigla_mov_mat: partes[indices.sigla_mov_mat]?.trim() || '',
-                nummov: partes[indices.nummov]?.trim() || '',
-                datamov: partes[indices.datamov]?.trim() || '',
-                codreg: partes[indices.codreg]?.trim() || '',
-                nomereg: partes[indices.nomereg]?.trim() || '',
-                itens: []
-            };
-        }
-        const item = {
-            codmat_mov: partes[indices.codmat_mov]?.trim() || '',
-            dscmat: partes[indices.dscmat]?.trim() || '',
-            qtdmov: parseFloat(partes[indices.qtdmov]?.trim().replace(',', '.') || '0'),
-            vlrult_cot: parseFloat(partes[indices.vlrult_cot]?.trim().replace(',', '.') || '0')
-        };
-        if (item.codmat_mov && item.dscmat) movimentos[numdocMov].itens.push(item);
-    }
-    console.log(`✅ ${Object.keys(movimentos).length} movimentos processados`);
-    return movimentos;
-}
-
-function parsearDevolucaoCompilada(texto) {
-    console.log('🔄 Parseando devolucao_compilada.txt...');
-    const linhas = texto.trim().split('\n');
-    if (linhas.length < 2) return [];
-    const cabecalho = linhas[0].split('\t').map(h => h.trim());
-    const indices = {
-        obra: cabecalho.indexOf('OBRA'),
-        data: cabecalho.indexOf('DATA'),
-        codigo: cabecalho.indexOf('CÓDIGO'),
-        descricao: cabecalho.indexOf('DESCRIÇÃO'),
-        qtdAplicada: cabecalho.indexOf('QTD. APLICADA'),
-        qtdDma: cabecalho.indexOf('QTD. DMA NOVO'),
-        arquivo: cabecalho.indexOf('ARQUIVO')
-    };
-    const itens = [];
-    for (let i = 1; i < linhas.length; i++) {
-        const linha = linhas[i].trim();
-        if (!linha) continue;
-        const partes = linha.split('\t');
-        if (partes.length < 7) continue;
-        let dataOriginal = partes[indices.data]?.trim() || '';
-        let dataConvertida = dataOriginal;
-        if (dataOriginal) {
-            let m = dataOriginal.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
-            if (m) dataConvertida = `${m[3]}-${m[2]}-${m[1]}`;
-            else {
-                m = dataOriginal.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-                if (m) dataConvertida = `${m[3]}-${m[2]}-${m[1]}`;
-                else {
-                    m = dataOriginal.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                    if (m) dataConvertida = `${m[1]}-${m[2]}-${m[3]}`;
-                    else {
-                        const regexMatch = dataOriginal.match(/(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})/);
-                        if (regexMatch) {
-                            const dia = regexMatch[1].padStart(2, '0');
-                            const mes = regexMatch[2].padStart(2, '0');
-                            let ano = regexMatch[3];
-                            if (ano.length === 2) ano = '20' + ano;
-                            dataConvertida = `${ano}-${mes}-${dia}`;
-                        }
-                    }
-                }
-            }
-        }
-        const item = {
-            obra: partes[indices.obra]?.trim() || '',
-            data: dataConvertida,
-            dataOriginal: dataOriginal,
-            codigo: partes[indices.codigo]?.trim() || '',
-            descricao: partes[indices.descricao]?.trim() || '',
-            qtdAplicada: parseFloat(partes[indices.qtdAplicada]?.trim().replace(',', '.') || '0'),
-            qtdDma: parseFloat(partes[indices.qtdDma]?.trim().replace(',', '.') || '0'),
-            arquivo: partes[indices.arquivo]?.trim() || ''
-        };
-        if (item.obra && item.codigo) itens.push(item);
-    }
-    console.log(`✅ ${itens.length} itens processados`);
-    return itens;
-}
-
-function consolidarPendenciasMGM(devolucaoItens, movimentosSiago, movimentosBanco, aditivosSistemicos) {
-    console.log('🔄 Consolidando pendências MGM...');
-    const itensComAplicada = devolucaoItens.filter(item => (parseFloat(item.qtdAplicada) || 0) > 0);
-    if (itensComAplicada.length === 0) return [];
-    
-    const documentosMultiplos = new Set();
-    const documentosPorObraDocumento = {};
-    
-    movimentosBanco.forEach(m => {
-        const obraNorm = normalizarObra(m.obra);
-        const tipoMgm = (m.tipo_mgm || '').toUpperCase();
-        if (m.cod_movimentacao && (tipoMgm === 'MULTIPLO' || tipoMgm === 'MULTIPLA')) {
-            documentosMultiplos.add(m.cod_movimentacao);
-            const chaveDoc = `${obraNorm}|${m.cod_movimentacao}`;
-            if (!documentosPorObraDocumento[chaveDoc]) documentosPorObraDocumento[chaveDoc] = [];
-            documentosPorObraDocumento[chaveDoc].push(m);
-        }
-    });
-    
-    if (documentosMultiplos.size === 0) {
-        const gruposPorCodigo = {};
-        movimentosBanco.forEach(m => {
-            if (!m.cod_movimentacao) return;
-            const chave = `${m.cod_movimentacao}|${normalizarObra(m.obra)}`;
-            if (!gruposPorCodigo[chave]) gruposPorCodigo[chave] = [];
-            gruposPorCodigo[chave].push(m);
-        });
-        Object.keys(gruposPorCodigo).forEach(chave => {
-            if (gruposPorCodigo[chave].length > 1) {
-                gruposPorCodigo[chave].forEach(m => {
-                    const obraNorm = normalizarObra(m.obra);
-                    const codMov = m.cod_movimentacao;
-                    documentosMultiplos.add(codMov);
-                    const chaveDoc = `${obraNorm}|${codMov}`;
-                    if (!documentosPorObraDocumento[chaveDoc]) documentosPorObraDocumento[chaveDoc] = [];
-                    if (!documentosPorObraDocumento[chaveDoc].includes(m)) documentosPorObraDocumento[chaveDoc].push(m);
-                });
-            }
-        });
-    }
-    
-    const movimentosPorDocumento = {};
-    const movimentosPorObraData = {};
-    
-    movimentosBanco.forEach(m => {
-        const obraNorm = normalizarObra(m.obra);
-        if (m.cod_movimentacao) {
-            if (!movimentosPorDocumento[m.cod_movimentacao]) movimentosPorDocumento[m.cod_movimentacao] = [];
-            movimentosPorDocumento[m.cod_movimentacao].push(m);
-        }
-        const chave = `${obraNorm}|${m.data_programacao}`;
-        if (!movimentosPorObraData[chave]) movimentosPorObraData[chave] = [];
-        movimentosPorObraData[chave].push(m);
-    });
-    
-    const aditivosPorDocumento = {};
-    const aditivosPorObraData = {};
-    
-    aditivosSistemicos.forEach(aditivo => {
-        const obraNorm = normalizarObra(aditivo.obra);
-        const itens = aditivo.itens || [];
-        itens.forEach(item => {
-            const numDoc = item.numero_documento || '';
-            if (numDoc) {
-                if (!aditivosPorDocumento[numDoc]) aditivosPorDocumento[numDoc] = [];
-                aditivosPorDocumento[numDoc].push({
-                    aditivo: aditivo,
-                    item: item,
-                    codigo: item.codigo,
-                    descricao: item.descricao,
-                    obra: obraNorm,
-                    data_programacao: aditivo.data_programacao,
-                    numero_documento: numDoc,
-                    tipo_movimento: 'RMA'
-                });
-                const chave = `${obraNorm}|${aditivo.data_programacao}`;
-                if (!aditivosPorObraData[chave]) aditivosPorObraData[chave] = [];
-                if (!aditivosPorObraData[chave].includes(numDoc)) aditivosPorObraData[chave].push(numDoc);
-            }
-        });
-    });
-    
-    const gruposMultiplos = {};
-    const gruposUnicos = {};
-    
-    itensComAplicada.forEach(item => {
-        const obraNorm = normalizarObra(item.obra);
-        const documento = item.arquivo;
-        const qtdAplicada = parseFloat(item.qtdAplicada) || 0;
-        if (qtdAplicada === 0) return;
-        
-        const isMultiplo = documentosMultiplos.has(documento) || documentosMultiplos.has(item.codigo);
-        
-        if (isMultiplo) {
-            const chave = `${documento}|${obraNorm}|${item.codigo}`;
-            if (!gruposMultiplos[chave]) {
-                gruposMultiplos[chave] = {
-                    documento: documento,
-                    obra: obraNorm,
-                    codigo: item.codigo,
-                    descricao: item.descricao,
-                    qtdEsperada: 0,
-                    datas: [],
-                    itens: [],
-                    movimentos: documentosPorObraDocumento[`${obraNorm}|${documento}`] || []
-                };
-            }
-            const grupo = gruposMultiplos[chave];
-            grupo.qtdEsperada += qtdAplicada;
-            grupo.itens.push(item);
-            if (item.data && !grupo.datas.includes(item.data)) grupo.datas.push(item.data);
-        } else {
-            const chave = `${obraNorm}|${item.data}|${item.codigo}`;
-            if (!gruposUnicos[chave]) {
-                gruposUnicos[chave] = {
-                    obra: obraNorm,
-                    data: item.data,
-                    codigo: item.codigo,
-                    descricao: item.descricao,
-                    qtdEsperada: 0,
-                    documentos: [],
-                    itens: []
-                };
-            }
-            const grupo = gruposUnicos[chave];
-            grupo.qtdEsperada += qtdAplicada;
-            grupo.itens.push(item);
-            if (documento && !grupo.documentos.includes(documento)) grupo.documentos.push(documento);
-        }
-    });
-    
-    const pendencias = [];
-    const itensRepresadosTemp = [];
-    let totalRepresados = 0;
-    
-    for (const chave in gruposUnicos) {
-        const grupo = gruposUnicos[chave];
-        const { obra, data, codigo, descricao, qtdEsperada, documentos } = grupo;
-        const chaveObraData = `${obra}|${data}`;
-        let movimentosEncontrados = movimentosPorObraData[chaveObraData] || [];
-        let fontes = [];
-        let documentosEncontrados = [];
-        
-        if (movimentosEncontrados.length > 0) {
-            movimentosEncontrados.forEach(m => {
-                if (m.cod_movimentacao && !documentosEncontrados.includes(m.cod_movimentacao)) {
-                    documentosEncontrados.push(m.cod_movimentacao);
-                    fontes.push({ documento: m.cod_movimentacao, tipo: 'MOVIMENTO', dados: m, tipo_movimento: m.tipo_movimento || '' });
-                }
-            });
-        }
-        
-        const aditivosDocs = aditivosPorObraData[chaveObraData] || [];
-        if (aditivosDocs.length > 0) {
-            aditivosDocs.forEach(doc => {
-                if (!documentosEncontrados.includes(doc)) {
-                    documentosEncontrados.push(doc);
-                    fontes.push({ documento: doc, tipo: 'ADITIVO', dados: null, tipo_movimento: 'RMA' });
-                }
-            });
-        }
-        
-        let tipo_mgm = 'UNICO';
-        let statusBanco = null;
-        let tipoMovimento = null;
-        if (movimentosEncontrados.length > 0) {
-            const primeiro = movimentosEncontrados[0];
-            tipo_mgm = primeiro.tipo_mgm || 'UNICO';
-            statusBanco = primeiro.status || 'PENDENTE';
-            tipoMovimento = primeiro.tipo_movimento || null;
-        }
-        
-        let qtdRMA = 0, qtdDMA = 0;
-        let docsRMA = [], docsDMA = [], docsUsados = [], distribuicao = [];
-        let valorUnitario = 0, siglaMovimento = '';
-        let detalhesDocumentos = [];
-        let qtdTotalDocumentos = 0;
-        
-        for (const fonte of fontes) {
-            const documento = fonte.documento;
-            const movimentoSiago = movimentosSiago[documento];
-            if (movimentoSiago) {
-                const itemSiago = movimentoSiago.itens.find(i => 
-                    i.codmat_mov === codigo || i.codmat_mov === codigo.padStart(5, '0')
-                );
-                if (itemSiago && itemSiago.qtdmov > 0) {
-                    const qtdItem = itemSiago.qtdmov;
-                    qtdTotalDocumentos += qtdItem;
-                    valorUnitario = itemSiago.vlrult_cot || 0;
-                    siglaMovimento = movimentoSiago.sigla_mov_mat || '';
-                    const tipoMov = fonte.tipo_movimento || movimentoSiago.orgmov || '';
-                    const isRMA = tipoMov.toUpperCase() === 'RMA' || tipoMov.toUpperCase().includes('RMA');
-                    if (isRMA) { qtdRMA += qtdItem; docsRMA.push(documento); }
-                    else { qtdDMA += qtdItem; docsDMA.push(documento); }
-                    if (!docsUsados.includes(documento)) docsUsados.push(documento);
-                    detalhesDocumentos.push({
-                        documento: documento,
-                        fonte: fonte.tipo,
-                        quantidade: qtdItem,
-                        tipo: isRMA ? 'RMA' : 'DMA',
-                        descricao_item: itemSiago.dscmat || ''
-                    });
-                    distribuicao.push({
-                        documento: documento,
-                        fonte: fonte.tipo,
-                        quantidade: qtdItem,
-                        data: data,
-                        tipo: isRMA ? 'RMA' : 'DMA'
-                    });
-                }
-            }
-        }
-        
-        let qtdEfetiva = qtdRMA - qtdDMA;
-        let pendenciaRMA = 0, pendenciaDMA = 0;
-        let status = 'PENDENTE', motivo = '';
-        let sobra = 0, falta = 0;
-        
-        if (qtdEfetiva === 0 && qtdTotalDocumentos === 0) {
-            status = 'PENDENTE';
-            motivo = 'Nenhum movimento ou aditivo encontrado';
-            pendenciaRMA = qtdEsperada;
-        } else if (qtdEfetiva === 0 && qtdTotalDocumentos > 0) {
-            status = 'PENDENTE';
-            motivo = `RMA (${qtdRMA}) e DMA (${qtdDMA}) se cancelam - efetivo 0`;
-            pendenciaRMA = qtdEsperada;
-        } else if (qtdEfetiva < 0) {
-            status = 'PENDENTE';
-            motivo = `DMA (${qtdDMA}) excede RMA (${qtdRMA})`;
-            pendenciaRMA = Math.abs(qtdEfetiva) + qtdEsperada;
-        } else if (qtdEfetiva > 0) {
-            if (qtdEfetiva > qtdEsperada) {
-                pendenciaDMA = qtdEfetiva - qtdEsperada;
-                status = 'SOBRA';
-                motivo = `Excedente de ${pendenciaDMA.toFixed(0)} unidades (precisa de DMA)`;
-                sobra = pendenciaDMA;
-            } else if (qtdEfetiva >= qtdEsperada) {
-                status = 'ATENDIDO';
-                motivo = `Atendido (RMA: ${qtdRMA}, DMA: ${qtdDMA})`;
-            } else {
-                pendenciaRMA = qtdEsperada - qtdEfetiva;
-                status = 'PARCIAL';
-                motivo = `Faltam ${pendenciaRMA.toFixed(0)} unidades (precisa de RMA)`;
-                falta = pendenciaRMA;
-            }
-        }
-        
-        const docsStr = docsUsados.length > 0 ? docsUsados.join(', ') : 'Nenhum';
-        const docsRMAStr = docsRMA.length > 0 ? docsRMA.join(', ') : 'Nenhum';
-        const docsDMAStr = docsDMA.length > 0 ? docsDMA.join(', ') : 'Nenhum';
-        const temAditivos = fontes.some(f => f.tipo === 'ADITIVO');
-        
-        if (qtdEsperada > 0 || qtdRMA > 0 || qtdDMA > 0) {
-            pendencias.push({
-                obra, obraFormatada: formatarObra(obra), data, codigo, descricao,
-                qtdEsperada, qtdRMA, qtdDMA, qtdEfetiva,
-                qtdEncontrada: qtdEfetiva > 0 ? qtdEfetiva : 0,
-                pendenciaRMA, pendenciaDMA, sobra, falta, status, motivo,
-                documentosEncontrados, documentosUsados: docsUsados, documentosStr: docsStr,
-                documentosRMA: docsRMA, documentosRMAStr: docsRMAStr,
-                documentosDMA: docsDMA, documentosDMAStr: docsDMAStr,
-                qtdDocumentos: docsUsados.length, totalDocumentos: documentosEncontrados.length,
-                temMultiplasMGM: false, tipo_mgm: tipo_mgm, distribuicao, detalhesDocumentos,
-                temAditivos, temMovimentos: fontes.some(f => f.tipo === 'MOVIMENTO'),
-                valor_unitario: valorUnitario, tipoMovimento, siglaMovimento,
-                statusBanco, fontes, isMultipla: false, qtdTotalDocumentos
-            });
-        }
-    }
-    
-    for (const chave in gruposMultiplos) {
-        const grupo = gruposMultiplos[chave];
-        const { documento, obra, codigo, descricao, qtdEsperada, datas } = grupo;
-        const movimentoSiago = movimentosSiago[documento];
-        let qtdRMA = 0, qtdDMA = 0;
-        let docsRMA = [], docsDMA = [], valorUnitario = 0, siglaMovimento = '';
-        let docsUsados = [], tipoMovimentoDoc = '';
-        
-        if (movimentoSiago) {
-            const itemSiago = movimentoSiago.itens.find(i => 
-                i.codmat_mov === codigo || i.codmat_mov === codigo.padStart(5, '0')
-            );
-            if (itemSiago && itemSiago.qtdmov > 0) {
-                tipoMovimentoDoc = movimentoSiago.orgmov || '';
-                const isRMA = tipoMovimentoDoc.toUpperCase() === 'RMA' || tipoMovimentoDoc.toUpperCase().includes('RMA');
-                const qtdItem = itemSiago.qtdmov;
-                valorUnitario = itemSiago.vlrult_cot || 0;
-                siglaMovimento = movimentoSiago.sigla_mov_mat || '';
-                docsUsados.push(documento);
-                if (isRMA) { qtdRMA = qtdItem; docsRMA.push(documento); }
-                else { qtdDMA = qtdItem; docsDMA.push(documento); }
-            }
-        }
-        
-        const pendenciasExistentes = pendencias.filter(p => 
-            p.obra === obra && p.codigo === codigo && p.temMultiplasMGM === false
-        );
-        
-        let pendenciaRMA = 0, pendenciaDMA = 0;
-        pendenciasExistentes.forEach(p => {
-            pendenciaRMA += p.pendenciaRMA || 0;
-            pendenciaDMA += p.pendenciaDMA || 0;
-        });
-        
-        let saldoRMA = qtdRMA, saldoDMA = qtdDMA;
-        let rmaUsado = 0, dmaUsado = 0;
-        let represadosRMA = 0, represadosDMA = 0;
-        let status = 'PENDENTE', motivo = '';
-        let pendenciaRMAFinal = pendenciaRMA, pendenciaDMAFinal = pendenciaDMA;
-        
-        if (pendenciaRMA > 0 && saldoRMA > 0) {
-            const usado = Math.min(pendenciaRMA, saldoRMA);
-            rmaUsado = usado;
-            pendenciaRMAFinal = pendenciaRMA - usado;
-            saldoRMA -= usado;
-        }
-        if (pendenciaDMA > 0 && saldoDMA > 0) {
-            const usado = Math.min(pendenciaDMA, saldoDMA);
-            dmaUsado = usado;
-            pendenciaDMAFinal = pendenciaDMA - usado;
-            saldoDMA -= usado;
-        }
-        if (saldoRMA > 0) {
-            represadosRMA = saldoRMA;
-            totalRepresados += saldoRMA;
-            itensRepresadosTemp.push({
-                documento, obra, codigo, descricao,
-                quantidade: saldoRMA, tipo: 'RMA',
-                motivo: 'Excedente de RMA após corrigir pendências'
-            });
-        }
-        if (saldoDMA > 0) {
-            represadosDMA = saldoDMA;
-            totalRepresados += saldoDMA;
-            itensRepresadosTemp.push({
-                documento, obra, codigo, descricao,
-                quantidade: saldoDMA, tipo: 'DMA',
-                motivo: 'Excedente de DMA após corrigir pendências'
-            });
-        }
-        
-        if (pendenciaRMAFinal === 0 && pendenciaDMAFinal === 0) {
-            status = 'ATENDIDO';
-            motivo = 'Todas as pendências corrigidas pela MGM Múltipla';
-        } else if (pendenciaRMAFinal > 0 || pendenciaDMAFinal > 0) {
-            status = 'PARCIAL';
-            motivo = `Pendências restantes: RMA=${pendenciaRMAFinal}, DMA=${pendenciaDMAFinal}`;
-        }
-        
-        if (pendenciasExistentes.length > 0 || qtdRMA > 0 || qtdDMA > 0) {
-            pendenciasExistentes.forEach(p => {
-                p.status = status;
-                p.motivo = motivo + ' (corrigido pela MGM Múltipla)';
-                p.pendenciaRMA = pendenciaRMAFinal;
-                p.pendenciaDMA = pendenciaDMAFinal;
-                p.qtdEncontrada = p.qtdEsperada - pendenciaRMAFinal + pendenciaDMAFinal;
-                p.temMultiplasMGM = true;
-                p.isMultipla = true;
-            });
-            const docsStr = docsUsados.length > 0 ? docsUsados.join(', ') : 'Nenhum';
-            const docsRMAStr = docsRMA.length > 0 ? docsRMA.join(', ') : 'Nenhum';
-            const docsDMAStr = docsDMA.length > 0 ? docsDMA.join(', ') : 'Nenhum';
-            if (qtdRMA > 0 || qtdDMA > 0 || pendenciaRMAFinal > 0 || pendenciaDMAFinal > 0) {
-                pendencias.push({
-                    obra, obraFormatada: formatarObra(obra),
-                    data: datas.length > 0 ? datas[0] : '', codigo, descricao,
-                    qtdEsperada, qtdRMA, qtdDMA, qtdEfetiva: qtdRMA - qtdDMA,
-                    qtdEncontrada: qtdRMA - qtdDMA,
-                    pendenciaRMA: pendenciaRMAFinal, pendenciaDMA: pendenciaDMAFinal,
-                    sobra: 0, falta: pendenciaRMAFinal + pendenciaDMAFinal,
-                    represados: represadosRMA + represadosDMA,
-                    status, motivo, documento,
-                    documentosUsados: docsUsados, documentosStr: docsStr,
-                    documentosRMA: docsRMA, documentosRMAStr: docsRMAStr,
-                    documentosDMA: docsDMA, documentosDMAStr: docsDMAStr,
-                    qtdDocumentos: docsUsados.length, totalDocumentos: 1,
-                    temMultiplasMGM: true, isMultipla: true, tipo_mgm: 'MULTIPLO',
-                    distribuicao: [], temAditivos: false, temMovimentos: true,
-                    valor_unitario: valorUnitario, siglaMovimento, datas,
-                    qtdDisponivel: qtdRMA - qtdDMA, tipoMovimentoDoc,
-                    rmaUsado, dmaUsado, represadosRMA, represadosDMA,
-                    pendenciasCorrigidas: pendenciasExistentes.length
-                });
-            }
-        }
-    }
-    
-    itensRepresados = { total: totalRepresados, itens: itensRepresadosTemp };
-    console.log(`✅ ${pendencias.length} pendências MGM consolidadas`);
-    return pendencias;
-}
-
 async function carregarDadosMGM() {
-    console.log('🚀 Iniciando carregamento dos dados MGM...');
+    console.log('🚀 Iniciando carregamento (devolucao_compilada × previsto_realizado)...');
     try {
         if (dadosCarregadosMGM) {
             renderizarDashboardMGM();
             return true;
         }
-        const [textoMovimentos, textoDevolucao, movimentosBanco, aditivos] = await Promise.all([
-            carregarArquivoR2(ARQUIVOS_R2.movimentosSiago, 'movimentos_siago.txt'),
-            carregarArquivoR2(ARQUIVOS_R2.devolucaoCompilada, 'devolucao_compilada.txt'),
-            buscarMovimentosDoBanco(),
-            buscarAditivosSistemicos()
+
+        const [textoProgramacao, textoPrevisto, textoDevolucao] = await Promise.all([
+            carregarArquivoR2(ARQUIVOS_R2.programacaoSiago, 'programacao_siago.txt').catch(() => ''),
+            carregarArquivoR2(ARQUIVOS_R2.previstoRealizado, 'previsto_realizado.txt'),
+            carregarArquivoR2(ARQUIVOS_R2.devolucaoCompilada, 'devolucao_compilada.txt')
         ]);
-        dadosMovimentosSiago = parsearMovimentosSiago(textoMovimentos);
-        dadosDevolucaoCompilada = parsearDevolucaoCompilada(textoDevolucao);
-        movimentosDoBanco = movimentosBanco;
-        aditivosSistemicos = aditivos;
-        pendenciasConsolidadas = consolidarPendenciasMGM(
-            dadosDevolucaoCompilada, dadosMovimentosSiago, movimentosDoBanco, aditivosSistemicos
-        );
+
+        if (textoProgramacao) {
+            const etapasPorObra = parsearProgramacaoSiago(textoProgramacao);
+            window.__etapasPorObra = etapasPorObra;
+        } else {
+            window.__etapasPorObra = {};
+        }
+
+        const { mgmMap, etapasPorObra: etapasMGM } = parsearDevolucaoCompilada(textoDevolucao);
+        const previstoMap = parsearPrevistoRealizado(textoPrevisto);
+        const { pendencias } = consolidarPorObra(mgmMap, previstoMap);
+
+        pendenciasConsolidadas = pendencias;
+        dadosEtapasPorObra = etapasMGM;   // etapas MGM agrupadas por obra+data
         dadosFiltradosMGM = [...pendenciasConsolidadas];
         dadosCarregadosMGM = true;
-        if (obrasPermitidas) {
-            const antes = pendenciasConsolidadas.length;
-            pendenciasConsolidadas = pendenciasConsolidadas.filter(p =>
-                obrasPermitidas.has(normalizarObra(p.obra))
-            );
-            console.log(`🔁 Reaplicando filtro de início: ${antes - pendenciasConsolidadas.length} removidas`);
-            dadosFiltradosMGM = [...pendenciasConsolidadas];
-        }
+
+        aplicarFiltroInicioObraFrontEnd();
+
         const loadingElement = document.getElementById('loadingMGM');
         if (loadingElement) loadingElement.style.display = 'none';
+
         renderizarDashboardMGM();
         return true;
     } catch (error) {
-        console.error('❌ Erro ao carregar dados MGM:', error);
+        console.error('❌ Erro ao carregar dados:', error);
         const loadingElement = document.getElementById('loadingMGM');
         if (loadingElement) {
             loadingElement.innerHTML = `
                 <div style="color: #FC8181; text-align: center; padding: 20px;">
                     <div style="font-size: 36px;">❌</div>
-                    <p style="margin-top: 10px;">Erro ao carregar dados MGM</p>
+                    <p style="margin-top: 10px;">Erro ao carregar dados</p>
                     <p style="font-size: 12px; color: #718096;">${error.message}</p>
                     <button onclick="carregarDadosMGM()" style="margin-top: 10px; padding: 8px 20px; background: #4299E1; color: white; border: none; border-radius: 6px; cursor: pointer;">
                         🔄 Tentar novamente
@@ -884,6 +611,10 @@ async function carregarDadosMGM() {
         return false;
     }
 }
+
+// ============================================
+// FILTROS
+// ============================================
 
 function aplicarFiltroStatusMGM(status) {
     if (filtroStatusMGMAtivo === status) {
@@ -903,6 +634,75 @@ function aplicarFiltroStatusMGM(status) {
     renderizarDashboardMGM();
 }
 
+function aplicarFiltrosMGM() {
+    const filtroStatus = document.getElementById('filterStatusMGM')?.value || 'todos';
+    const buscaTexto = document.getElementById('filterBuscaMGM')?.value?.toLowerCase() || '';
+    const buscaObra = document.getElementById('filterObraMGM')?.value || '';
+    const inputEtapas = document.getElementById('filtroEtapas');
+    const valorEtapas = inputEtapas ? parseInt(inputEtapas.value) : 0;
+    filtroEtapasMinimo = isNaN(valorEtapas) || valorEtapas < 0 ? 0 : valorEtapas;
+
+    let filtrados = [...pendenciasConsolidadas];
+
+    if (filtroStatus !== 'todos') {
+        filtrados = filtrados.filter(p => p.status === filtroStatus);
+        filtroStatusMGMAtivo = filtroStatus;
+    } else {
+        filtroStatusMGMAtivo = null;
+    }
+
+    if (buscaTexto) {
+        filtrados = filtrados.filter(p =>
+            String(p.codigo).toLowerCase().includes(buscaTexto) ||
+            String(p.descricao).toLowerCase().includes(buscaTexto)
+        );
+    }
+    if (buscaObra) {
+        const obraNorm = normalizarObra(buscaObra);
+        filtrados = filtrados.filter(p =>
+            p.obra.includes(obraNorm) || p.obraFormatada.includes(buscaObra)
+        );
+    }
+    if (filtroEtapasMinimo > 0) {
+        filtrados = filtrados.filter(p => {
+            const etapasInfo = getEtapasPorObra(p.obra);
+            if (!etapasInfo) return false;
+            return etapasInfo.etapas_validas === filtroEtapasMinimo;
+        });
+    }
+
+    dadosFiltradosMGM = filtrados;
+    itemSelecionadoMGM = null;
+    const totalRegistros = document.getElementById('totalRegistrosMGM');
+    if (totalRegistros) totalRegistros.textContent = `${filtrados.length} pendências`;
+    renderizarDashboardMGM();
+}
+
+function aplicarFiltroEtapas() {
+    aplicarFiltrosMGM();
+}
+
+function limparFiltrosMGM() {
+    const elStatus = document.getElementById('filterStatusMGM');
+    const elBusca = document.getElementById('filterBuscaMGM');
+    const elObra = document.getElementById('filterObraMGM');
+    const elEtapas = document.getElementById('filtroEtapas');
+    if (elStatus) elStatus.value = 'todos';
+    if (elBusca) elBusca.value = '';
+    if (elObra) elObra.value = '';
+    if (elEtapas) elEtapas.value = '';
+    filtroEtapasMinimo = 0;
+    filtroStatusMGMAtivo = null;
+    dadosFiltradosMGM = [...pendenciasConsolidadas];
+    itemSelecionadoMGM = null;
+    document.querySelectorAll('.kpi-card-mgm').forEach(el => el.classList.remove('active-filter'));
+    renderizarDashboardMGM();
+}
+
+// ============================================
+// RENDERIZAÇÃO — DASHBOARD
+// ============================================
+
 function renderizarDashboardMGM() {
     const container = document.getElementById('dashboardMGM');
     if (!container) return;
@@ -910,18 +710,21 @@ function renderizarDashboardMGM() {
         container.innerHTML = `
             <div class="empty-state-dashboard">
                 <div class="icon">📊</div>
-                <p>Nenhum dado MGM disponível</p>
+                <p>Nenhum dado disponível</p>
                 <p class="sub">Aguarde o carregamento dos dados</p>
             </div>
         `;
         return;
     }
+
     const dadosExibir = dadosFiltradosMGM.length > 0 ? dadosFiltradosMGM : pendenciasConsolidadas;
     renderizarKPIsMGM(dadosExibir);
     renderizarListaObrasMGM(dadosExibir);
     renderizarGraficosMGM(dadosExibir);
+
     const totalRegistros = document.getElementById('totalRegistrosMGM');
     if (totalRegistros) totalRegistros.textContent = `${dadosExibir.length} pendências`;
+
     if (itemSelecionadoMGM) {
         renderizarDetalhesObraMGM(itemSelecionadoMGM);
     } else {
@@ -937,298 +740,305 @@ function renderizarDashboardMGM() {
     }
 }
 
+// ============================================
+// KPIs
+// ============================================
+
 function renderizarKPIsMGM(pendencias) {
     const container = document.getElementById('kpiGridMGM');
     if (!container) return;
-    
+
     const total = pendencias.length;
-    const pendentes = pendencias.filter(p => p.status === 'PENDENTE').length;
-    const parciais = pendencias.filter(p => p.status === 'PARCIAL').length;
-    const atendidos = pendencias.filter(p => p.status === 'ATENDIDO').length;
-    const sobras = pendencias.filter(p => p.status === 'SOBRA').length;
-    const represados = pendencias.filter(p => p.status === 'REPRESADO').length;
-    const comAditivos = pendencias.filter(p => p.temAditivos).length;
-    const comMovimentos = pendencias.filter(p => p.temMovimentos).length;
-    const multiplasMGM = pendencias.filter(p => p.temMultiplasMGM || p.isMultipla).length;
+    const devolver = pendencias.filter(p => p.status === 'DEVOLVER');
+    const requisitar = pendencias.filter(p => p.status === 'REQUISITAR');
+    const ok = pendencias.filter(p => p.status === 'OK');
+
     const obrasSet = new Set(pendencias.map(p => p.obra));
-    const totalObras = obrasSet.size;
-    
-    let totalQuantidadeEsperada = 0, totalQuantidadeEncontrada = 0;
-    let totalSobra = 0, totalFalta = 0, totalRepresados = 0;
-    pendencias.forEach(p => {
-        totalQuantidadeEsperada += p.qtdEsperada || 0;
-        totalQuantidadeEncontrada += p.qtdEncontrada || 0;
-        totalSobra += p.sobra || 0;
-        totalFalta += p.falta || 0;
-        totalRepresados += p.represados || 0;
+    const obrasDevolver = new Set(devolver.map(p => p.obra));
+    const obrasRequisitar = new Set(requisitar.map(p => p.obra));
+    const obrasOk = new Set(ok.map(p => p.obra));
+
+    let qtdTotalDevolver = 0, valorTotalDevolver = 0;
+    devolver.forEach(p => {
+        qtdTotalDevolver += p.sobra || 0;
+        valorTotalDevolver += (p.sobra || 0) * (p.valorUnitario || 0);
     });
+
+    let qtdTotalRequisitar = 0, valorTotalRequisitar = 0;
+    requisitar.forEach(p => {
+        qtdTotalRequisitar += p.falta || 0;
+        valorTotalRequisitar += (p.falta || 0) * (p.valorUnitario || 0);
+    });
+
+    const totalEtapasMGM = Object.values(dadosEtapasPorObra).reduce(
+        (acc, o) => acc + (o.etapasMGM?.length || 0), 0
+    );
+
     const isActive = (status) => filtroStatusMGMAtivo === status;
-    
+    const fmtBRL = (v) => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
     container.innerHTML = `
-        <div class="kpi-card kpi-card-mgm status-total ${isActive('TOTAL') ? 'active-filter' : ''}" data-status="TOTAL" onclick="aplicarFiltroStatusMGM('TOTAL')" style="cursor: pointer;">
+        <div class="kpi-card kpi-card-mgm status-total ${isActive('TOTAL') ? 'active-filter' : ''}" 
+             data-status="TOTAL" onclick="aplicarFiltroStatusMGM('TOTAL')" style="cursor: pointer;">
             <div class="kpi-icon">📦</div>
             <div class="kpi-value">${total}</div>
             <div class="kpi-label">Total de Pendências</div>
         </div>
-        <div class="kpi-card kpi-card-mgm status-pendente ${isActive('PENDENTE') ? 'active-filter' : ''}" data-status="PENDENTE" onclick="aplicarFiltroStatusMGM('PENDENTE')" style="cursor: pointer; border-color: ${isActive('PENDENTE') ? '#E53E3E' : '#E2E8F0'};">
-            <div class="kpi-icon">🔴</div>
-            <div class="kpi-value" style="color: #E53E3E;">${pendentes + parciais}</div>
-            <div class="kpi-label">🔴 Pendentes (${parciais} parciais)</div>
-        </div>
-        <div class="kpi-card kpi-card-mgm status-baixado ${isActive('ATENDIDO') ? 'active-filter' : ''}" data-status="ATENDIDO" onclick="aplicarFiltroStatusMGM('ATENDIDO')" style="cursor: pointer; border-color: ${isActive('ATENDIDO') ? '#48BB78' : '#E2E8F0'};">
-            <div class="kpi-icon">✅</div>
-            <div class="kpi-value" style="color: #48BB78;">${atendidos}</div>
-            <div class="kpi-label">✅ Atendidos</div>
-        </div>
-        <div class="kpi-card kpi-card-mgm status-sobra ${isActive('SOBRA') ? 'active-filter' : ''}" data-status="SOBRA" onclick="aplicarFiltroStatusMGM('SOBRA')" style="cursor: pointer; border-color: ${isActive('SOBRA') ? '#D69E2E' : '#E2E8F0'};">
+        
+        <div class="kpi-card kpi-card-mgm status-sobra ${isActive('DEVOLVER') ? 'active-filter' : ''}" 
+             data-status="DEVOLVER" onclick="aplicarFiltroStatusMGM('DEVOLVER')" 
+             style="cursor: pointer; border-color: ${isActive('DEVOLVER') ? '#D69E2E' : '#E2E8F0'};">
             <div class="kpi-icon">🟠</div>
-            <div class="kpi-value" style="color: #D69E2E;">${sobras}</div>
-            <div class="kpi-label">🟠 Devolver (sobras)</div>
+            <div class="kpi-value" style="color: #D69E2E;">${devolver.length}</div>
+            <div class="kpi-label">🟠 Devolver (${qtdTotalDevolver.toFixed(0)} un)</div>
+            <div class="kpi-sublabel" style="font-size: 10px; color: #A0AEC0; margin-top: 2px;">${fmtBRL(valorTotalDevolver)}</div>
         </div>
-        <div class="kpi-card kpi-card-mgm status-represado ${isActive('REPRESADO') ? 'active-filter' : ''}" data-status="REPRESADO" onclick="aplicarFiltroStatusMGM('REPRESADO')" style="cursor: pointer; border-color: ${isActive('REPRESADO') ? '#805AD5' : '#E2E8F0'};">
-            <div class="kpi-icon">📌</div>
-            <div class="kpi-value" style="color: #805AD5;">${represados}</div>
-            <div class="kpi-label">📌 Itens Represados</div>
+        
+        <div class="kpi-card kpi-card-mgm status-falta ${isActive('REQUISITAR') ? 'active-filter' : ''}" 
+             data-status="REQUISITAR" onclick="aplicarFiltroStatusMGM('REQUISITAR')" 
+             style="cursor: pointer; border-color: ${isActive('REQUISITAR') ? '#E53E3E' : '#E2E8F0'};">
+            <div class="kpi-icon">🔴</div>
+            <div class="kpi-value" style="color: #E53E3E;">${requisitar.length}</div>
+            <div class="kpi-label">🔴 Requisitar (${qtdTotalRequisitar.toFixed(0)} un)</div>
+            <div class="kpi-sublabel" style="font-size: 10px; color: #A0AEC0; margin-top: 2px;">${fmtBRL(valorTotalRequisitar)}</div>
         </div>
-        <div class="kpi-card kpi-card-mgm" style="cursor: default;">
+        
+        <div class="kpi-card kpi-card-mgm status-baixado ${isActive('OK') ? 'active-filter' : ''}" 
+             data-status="OK" onclick="aplicarFiltroStatusMGM('OK')" 
+             style="cursor: pointer; border-color: ${isActive('OK') ? '#48BB78' : '#E2E8F0'};">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-value" style="color: #48BB78;">${ok.length}</div>
+            <div class="kpi-label">✅ OK (MGM = Realizado)</div>
+        </div>
+        
+        <div class="kpi-card kpi-card-mgm" style="cursor: default; background: #F7FAFC;">
             <div class="kpi-icon">🏗️</div>
-            <div class="kpi-value">${totalObras}</div>
+            <div class="kpi-value" style="color: #2D3748;">${obrasSet.size}</div>
             <div class="kpi-label">Obras Impactadas</div>
+            <div class="kpi-sublabel" style="font-size: 10px; color: #A0AEC0; margin-top: 2px;">
+                🟠 ${obrasDevolver.size} | 🔴 ${obrasRequisitar.size} | ✅ ${obrasOk.size}
+            </div>
         </div>
-        <div class="kpi-card kpi-card-mgm" style="border-color: #9F7AEA; cursor: default; background: #FAF5FF;">
-            <div class="kpi-icon">📝</div>
-            <div class="kpi-value" style="color: #805AD5; font-size: 18px;">${comAditivos}</div>
-            <div class="kpi-label">📝 Com Aditivos</div>
-        </div>
-        <div class="kpi-card kpi-card-mgm" style="border-color: #4299E1; cursor: default; background: #EBF8FF;">
-            <div class="kpi-icon">📄</div>
-            <div class="kpi-value" style="color: #4299E1; font-size: 18px;">${comMovimentos}</div>
-            <div class="kpi-label">📄 Com Movimentos</div>
-        </div>
-        <div class="kpi-card kpi-card-mgm" style="border-color: #D69E2E; cursor: default; background: #FFFAF0;">
-            <div class="kpi-icon">🔀</div>
-            <div class="kpi-value" style="color: #D69E2E; font-size: 18px;">${multiplasMGM}</div>
-            <div class="kpi-label">🔀 Múltiplas MGM</div>
-        </div>
-        <div class="kpi-card kpi-card-mgm status-valor" style="border-color: #4299E1; cursor: default;">
-            <div class="kpi-icon">📊</div>
-            <div class="kpi-value" style="color: #4299E1; font-size: 18px;">${totalQuantidadeEsperada.toFixed(0)}</div>
-            <div class="kpi-label">Qtd. Esperada</div>
-        </div>
-        <div class="kpi-card kpi-card-mgm status-total" style="border-color: #48BB78; cursor: default;">
-            <div class="kpi-icon">📈</div>
-            <div class="kpi-value" style="color: #48BB78; font-size: 18px;">${totalQuantidadeEncontrada.toFixed(0)}</div>
-            <div class="kpi-label">Qtd. Encontrada</div>
-        </div>
-        <div class="kpi-card kpi-card-mgm" style="border-color: #D69E2E; cursor: default;">
-            <div class="kpi-icon">🔄</div>
-            <div class="kpi-value" style="color: #D69E2E; font-size: 18px;">${totalSobra.toFixed(0)}</div>
-            <div class="kpi-label">Total de Sobras</div>
-        </div>
-        <div class="kpi-card kpi-card-mgm" style="border-color: #E53E3E; cursor: default;">
-            <div class="kpi-icon">❌</div>
-            <div class="kpi-value" style="color: #E53E3E; font-size: 18px;">${totalFalta.toFixed(0)}</div>
-            <div class="kpi-label">Total de Faltas</div>
-        </div>
-        <div class="kpi-card kpi-card-mgm status-represado" style="border-color: #805AD5; cursor: default; background: #FAF5FF;">
-            <div class="kpi-icon">📌</div>
-            <div class="kpi-value" style="color: #805AD5; font-size: 18px; font-weight: 700;">${totalRepresados.toFixed(0)}</div>
-            <div class="kpi-label">📌 Itens Represados do Passado</div>
+        
+        <div class="kpi-card kpi-card-mgm" style="cursor: default; background: #EBF8FF; border-color: #4299E1;">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-value" style="color: #4299E1;">${totalEtapasMGM}</div>
+            <div class="kpi-label">Etapas MGM (total)</div>
         </div>
     `;
 }
+
+// ============================================
+// LISTA AGRUPADA POR OBRA
+// ============================================
 
 function renderizarListaObrasMGM(pendencias) {
     const container = document.getElementById('itemListMGM');
     if (!container) return;
+
     if (!pendencias || pendencias.length === 0) {
         container.innerHTML = `
             <div class="empty-state-dashboard">
                 <div class="icon">📭</div>
-                <p>Nenhuma pendência MGM encontrada</p>
-                <p class="sub">Tente ajustar os filtros</p>
+                <p>Nenhuma pendência encontrada</p>
             </div>
         `;
         return;
     }
-    let pendenciasFiltradas = pendencias;
-    if (filtroEtapasMinimo > 0) {
-        pendenciasFiltradas = pendencias.filter(p => {
-            const obraNorm = normalizarObra(p.obra);
-            const etapasInfo = getEtapasPorObra(obraNorm);
-            if (!etapasInfo) return false;
-            return etapasInfo.etapas_validas === filtroEtapasMinimo;
-        });
-    }
-    if (pendenciasFiltradas.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state-dashboard">
-                <div class="icon">🔍</div>
-                <p>Nenhuma obra encontrada com exatamente ${filtroEtapasMinimo} etapa(s) válida(s)</p>
-            </div>
-        `;
-        return;
-    }
+
     const grupos = {};
-    pendenciasFiltradas.forEach(p => {
+    pendencias.forEach(p => {
         const obra = p.obra;
         if (!grupos[obra]) {
             grupos[obra] = {
-                obra, obraFormatada: p.obraFormatada,
-                datas: new Set(), itens: [],
-                totalPendentes: 0, totalAtendidos: 0, totalParciais: 0,
-                totalSobras: 0, totalRepresados: 0,
-                totalSobraQtd: 0, totalFaltaQtd: 0, totalRepresadosQtd: 0,
-                totalDocumentos: 0, totalAditivos: 0,
-                multiplasMGM: 0, multiplasMGMItens: [], status: 'PENDENTE'
+                obra,
+                obraFormatada: p.obraFormatada,
+                itens: [],
+                numDevolver: 0, qtdDevolver: 0, valorDevolver: 0,
+                numRequisitar: 0, qtdRequisitar: 0, valorRequisitar: 0,
+                numOk: 0,
+                numEtapasMGM: 0,
+                etapasInfoSiago: null
             };
         }
         grupos[obra].itens.push(p);
-        if (p.datas) p.datas.forEach(d => grupos[obra].datas.add(d));
-        grupos[obra].totalDocumentos += p.totalDocumentos || 0;
-        if (p.temAditivos) grupos[obra].totalAditivos++;
-        if (p.temMultiplasMGM || p.isMultipla) {
-            grupos[obra].multiplasMGM++;
-            grupos[obra].multiplasMGMItens.push(p);
+        if (p.status === 'DEVOLVER') {
+            grupos[obra].numDevolver++;
+            grupos[obra].qtdDevolver += p.sobra || 0;
+            grupos[obra].valorDevolver += (p.sobra || 0) * (p.valorUnitario || 0);
+        } else if (p.status === 'REQUISITAR') {
+            grupos[obra].numRequisitar++;
+            grupos[obra].qtdRequisitar += p.falta || 0;
+            grupos[obra].valorRequisitar += (p.falta || 0) * (p.valorUnitario || 0);
+        } else {
+            grupos[obra].numOk++;
         }
-        if (p.status === 'PENDENTE') grupos[obra].totalPendentes++;
-        else if (p.status === 'PARCIAL') { grupos[obra].totalParciais++; grupos[obra].totalFaltaQtd += p.falta || 0; }
-        else if (p.status === 'ATENDIDO') grupos[obra].totalAtendidos++;
-        else if (p.status === 'SOBRA') { grupos[obra].totalSobras++; grupos[obra].totalSobraQtd += p.sobra || 0; }
-        else if (p.status === 'REPRESADO') { grupos[obra].totalRepresados++; grupos[obra].totalRepresadosQtd += p.represados || 0; }
-        if (grupos[obra].totalPendentes > 0 || grupos[obra].totalParciais > 0 || grupos[obra].totalSobras > 0 || grupos[obra].totalRepresados > 0) {
-            grupos[obra].status = 'PENDENTE';
-        } else grupos[obra].status = 'ATENDIDO';
     });
-    
+
+    Object.keys(grupos).forEach(obra => {
+        const etapasMGM = dadosEtapasPorObra[obra]?.etapasMGM || [];
+        grupos[obra].numEtapasMGM = etapasMGM.length;
+        grupos[obra].etapasInfoSiago = getEtapasPorObra(obra);
+    });
+
     let html = `
-        <div class="list-header" style="display: grid; grid-template-columns: 80px 1fr 40px 50px 50px 60px 50px 45px; gap: 4px; padding: 6px 10px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 10px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
-            <span>Obra</span><span>Descrição</span>
-            <span style="text-align: right;">Qtd</span>
-            <span style="text-align: center; color: #805AD5;">📌</span>
-            <span style="text-align: center; color: #D69E2E;">🟠</span>
-            <span style="text-align: center; color: #E53E3E;">🔴</span>
+        <div class="list-header" style="display: grid; grid-template-columns: 90px 1fr 55px 70px 70px 60px 55px; gap: 4px; padding: 6px 10px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 10px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
+            <span>Obra</span>
+            <span>Itens / Etapas</span>
+            <span style="text-align: right;">Total</span>
+            <span style="text-align: center; color: #D69E2E;">🟠 Dev.</span>
+            <span style="text-align: center; color: #E53E3E;">🔴 Req.</span>
+            <span style="text-align: center; color: #48BB78;">✅ OK</span>
             <span style="text-align: center;">Status</span>
-            <span style="text-align: center; color: #805AD5;">🔀</span>
         </div>
     `;
-    
-    for (const obra in grupos) {
-        const grupo = grupos[obra];
+
+    const listaOrdenada = Object.values(grupos).sort((a, b) => {
+        const scoreA = (a.numRequisitar > 0 ? 1000 : 0) + (a.numDevolver > 0 ? 500 : 0) + a.itens.length;
+        const scoreB = (b.numRequisitar > 0 ? 1000 : 0) + (b.numDevolver > 0 ? 500 : 0) + b.itens.length;
+        return scoreB - scoreA;
+    });
+
+    listaOrdenada.forEach(grupo => {
         const isActive = itemSelecionadoMGM && itemSelecionadoMGM.obra === grupo.obra;
-        const totalItens = grupo.itens.length;
-        const temSobra = grupo.totalSobraQtd > 0;
-        const temFalta = grupo.totalFaltaQtd > 0;
-        const temRepresado = grupo.totalRepresadosQtd > 0;
-        const temAditivo = grupo.totalAditivos > 0;
-        const temMultiplas = grupo.multiplasMGM > 0;
+        const temDevolver = grupo.numDevolver > 0;
+        const temRequisitar = grupo.numRequisitar > 0;
+
         let statusBadge = '', statusClass = '';
-        if (temRepresado) { statusBadge = `📌 ${grupo.totalRepresadosQtd.toFixed(0)}`; statusClass = 'status-represado'; }
-        else if (temSobra && temFalta) { statusBadge = `🟠+🔴`; statusClass = 'status-misto'; }
-        else if (temSobra) { statusBadge = `🟠 ${grupo.totalSobraQtd.toFixed(0)}`; statusClass = 'status-sobra'; }
-        else if (temFalta) { statusBadge = `🔴 ${grupo.totalFaltaQtd.toFixed(0)}`; statusClass = 'status-falta'; }
-        else if (totalItens > 0) { statusBadge = '⏳ Pendente'; statusClass = 'status-pendente'; }
-        else { statusBadge = '✅ Atendido'; statusClass = 'status-atendido'; }
-        const totalSobraExibicao = temSobra ? `🟠 ${grupo.totalSobraQtd.toFixed(0)}` : '-';
-        const totalFaltaExibicao = temFalta ? `🔴 ${grupo.totalFaltaQtd.toFixed(0)}` : '-';
-        const totalRepresadoExibicao = temRepresado ? `📌 ${grupo.totalRepresadosQtd.toFixed(0)}` : '-';
-        const docsInfo = grupo.totalDocumentos > 0 ? `📄${grupo.totalDocumentos}` : '';
-        const aditivoInfo = temAditivo ? `📝${grupo.totalAditivos}` : '';
-        const multiplasInfo = temMultiplas ? `🔀${grupo.multiplasMGM}` : '';
-        const infoExtra = [docsInfo, aditivoInfo, multiplasInfo].filter(Boolean).join(' ');
-        const obraNorm = normalizarObra(grupo.obra);
-        const etapasInfo = getEtapasPorObra(obraNorm);
-        let etapasIndicator = '';
-        if (etapasInfo && etapasInfo.total_etapas > 0) {
-            const validas = etapasInfo.etapas_validas;
-            const total = etapasInfo.total_etapas;
-            const hasValid = validas > 0;
-            etapasIndicator = `<span class="obra-etapas-indicator ${hasValid ? 'has-etapas' : 'no-etapas'}" title="${validas} etapas válidas de ${total}">📋 ${validas}/${total}</span>`;
+        if (temDevolver && temRequisitar) {
+            statusBadge = '🟠+🔴';
+            statusClass = 'status-misto';
+        } else if (temDevolver) {
+            statusBadge = '🟠 Dev';
+            statusClass = 'status-sobra';
+        } else if (temRequisitar) {
+            statusBadge = '🔴 Req';
+            statusClass = 'status-falta';
         } else {
-            etapasIndicator = `<span class="obra-etapas-indicator no-etapas" title="Sem dados de programação">📭</span>`;
+            statusBadge = '✅ OK';
+            statusClass = 'status-atendido';
         }
+
+        const etapasSiagoInfo = grupo.etapasInfoSiago;
+        let etapasBadge = '';
+        if (grupo.numEtapasMGM > 0 || etapasSiagoInfo) {
+            const validas = etapasSiagoInfo?.etapas_validas ?? 0;
+            const totalSiago = etapasSiagoInfo?.total_etapas ?? 0;
+            etapasBadge = `<span class="obra-etapas-indicator has-etapas" title="MGM: ${grupo.numEtapasMGM} | Siago: ${validas}/${totalSiago}">📋 MGM:${grupo.numEtapasMGM} · SIA:${validas}/${totalSiago}</span>`;
+        } else {
+            etapasBadge = `<span class="obra-etapas-indicator no-etapas">📭</span>`;
+        }
+
         html += `
-            <div class="item-group-item ${isActive ? 'active' : ''} ${statusClass}" onclick="selecionarObraMGM('${grupo.obra}')" style="display: grid; grid-template-columns: 80px 1fr 40px 50px 50px 60px 50px 45px; gap: 4px; padding: 8px 10px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s; ${temRepresado ? 'border-left: 4px solid #805AD5;' : ''} ${temSobra ? 'border-left: 4px solid #D69E2E;' : ''} ${temFalta ? 'border-right: 4px solid #E53E3E;' : ''}">
-                <span class="item-code" style="font-size: 11px;">${grupo.obraFormatada}<br>${etapasIndicator}</span>
-                <span class="item-desc" style="font-size: 11px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">${totalItens} itens ${infoExtra}</span>
-                <span style="text-align: right; font-weight: 700; color: #2B6CB0; font-size: 11px;">${totalItens}</span>
-                <span style="text-align: center; font-weight: 600; color: ${temRepresado ? '#805AD5' : '#A0AEC0'}; font-size: 11px;">${totalRepresadoExibicao}</span>
-                <span style="text-align: center; font-weight: 600; color: ${temSobra ? '#D69E2E' : '#A0AEC0'}; font-size: 11px;">${totalSobraExibicao}</span>
-                <span style="text-align: center; font-weight: 600; color: ${temFalta ? '#E53E3E' : '#A0AEC0'}; font-size: 11px;">${totalFaltaExibicao}</span>
-                <span style="text-align: center;"><span class="badge-status ${statusClass}" style="font-size: 9px; padding: 2px 6px;">${statusBadge}</span></span>
-                <span style="text-align: center; font-size: 14px; color: ${temMultiplas ? '#805AD5' : '#A0AEC0'};">${temMultiplas ? '🔀' : ''}</span>
+            <div class="item-group-item ${isActive ? 'active' : ''} ${statusClass}" 
+                 onclick="selecionarObraMGM('${grupo.obra}')" 
+                 style="display: grid; grid-template-columns: 90px 1fr 55px 70px 70px 60px 55px; gap: 4px; padding: 8px 10px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;
+                        ${temRequisitar ? 'border-left: 4px solid #E53E3E;' : temDevolver ? 'border-left: 4px solid #D69E2E;' : 'border-left: 4px solid #48BB78;'}">
+                <span class="item-code" style="font-size: 11px;">
+                    ${grupo.obraFormatada}<br>${etapasBadge}
+                </span>
+                <span class="item-desc" style="font-size: 11px; display: flex; align-items: center;">
+                    ${grupo.itens.length} item(ns)
+                </span>
+                <span style="text-align: right; font-weight: 700; color: #2B6CB0; font-size: 11px;">${grupo.itens.length}</span>
+                <span style="text-align: center; font-weight: 600; color: ${temDevolver ? '#D69E2E' : '#A0AEC0'}; font-size: 10px;">
+                    ${temDevolver ? grupo.qtdDevolver.toFixed(0) : '-'}
+                </span>
+                <span style="text-align: center; font-weight: 600; color: ${temRequisitar ? '#E53E3E' : '#A0AEC0'}; font-size: 10px;">
+                    ${temRequisitar ? grupo.qtdRequisitar.toFixed(0) : '-'}
+                </span>
+                <span style="text-align: center; font-weight: 600; color: #48BB78; font-size: 10px;">${grupo.numOk}</span>
+                <span style="text-align: center;">
+                    <span class="badge-status ${statusClass}" style="font-size: 9px; padding: 2px 6px;">${statusBadge}</span>
+                </span>
             </div>
         `;
-    }
+    });
+
     container.innerHTML = html;
+
     const inputEtapas = document.getElementById('filtroEtapas');
     if (inputEtapas) inputEtapas.value = filtroEtapasMinimo > 0 ? filtroEtapasMinimo : '';
 }
 
+// ============================================
+// GRÁFICOS
+// ============================================
+
 function renderizarGraficosMGM(pendencias) {
-    const statusCount = { 'PENDENTE': 0, 'PARCIAL': 0, 'ATENDIDO': 0, 'SOBRA': 0, 'REPRESADO': 0 };
-    pendencias.forEach(p => { if (statusCount[p.status] !== undefined) statusCount[p.status]++; });
+    const statusCount = { DEVOLVER: 0, REQUISITAR: 0, OK: 0 };
+    pendencias.forEach(p => {
+        if (statusCount[p.status] !== undefined) statusCount[p.status]++;
+    });
     const total = Object.values(statusCount).reduce((a, b) => a + b, 0) || 1;
-    const statusLabels = { 'PENDENTE': '🔴 Pendentes', 'PARCIAL': '🔴 Parciais', 'ATENDIDO': '✅ Atendidos', 'SOBRA': '🟠 Sobras', 'REPRESADO': '📌 Represados' };
-    const statusColors = { 'PENDENTE': 'bar-pendente', 'PARCIAL': 'bar-parcial', 'ATENDIDO': 'bar-baixado', 'SOBRA': 'bar-sobra', 'REPRESADO': 'bar-represado' };
+    const statusLabels = { DEVOLVER: '🟠 Devolver', REQUISITAR: '🔴 Requisitar', OK: '✅ OK' };
+    const statusColors = { DEVOLVER: 'bar-sobra', REQUISITAR: 'bar-pendente', OK: 'bar-baixado' };
+
     let htmlStatus = '';
-    for (const status in statusCount) {
-        const value = statusCount[status];
+    for (const status of ['REQUISITAR', 'DEVOLVER', 'OK']) {
+        const value = statusCount[status] || 0;
         const percentual = (value / total) * 100;
-        const colorClass = statusColors[status];
         htmlStatus += `
             <div class="chart-bar-indicator">
                 <span class="label">${statusLabels[status]}</span>
-                <div class="bar-track"><div class="bar-fill ${colorClass}" style="width: ${percentual}%;"><span class="value">${value}</span></div></div>
+                <div class="bar-track">
+                    <div class="bar-fill ${statusColors[status]}" style="width: ${percentual}%;">
+                        <span class="value">${value}</span>
+                    </div>
+                </div>
                 <span class="percent">${percentual.toFixed(0)}%</span>
             </div>
         `;
     }
-    document.getElementById('statusChartMGM').innerHTML = htmlStatus;
-    const obrasComSobra = new Set(pendencias.filter(p => p.status === 'SOBRA').map(p => p.obra));
+    const elStatus = document.getElementById('statusChartMGM');
+    if (elStatus) elStatus.innerHTML = htmlStatus;
+
     const obrasSet = new Set(pendencias.map(p => p.obra));
-    const obrasComFalta = new Set(pendencias.filter(p => p.status === 'PENDENTE' || p.status === 'PARCIAL').map(p => p.obra));
-    const obrasAtendidas = new Set(pendencias.filter(p => p.status === 'ATENDIDO').map(p => p.obra));
-    const obrasRepresadas = new Set(pendencias.filter(p => p.status === 'REPRESADO').map(p => p.obra));
+    const obrasDevolver = new Set(pendencias.filter(p => p.status === 'DEVOLVER').map(p => p.obra));
+    const obrasRequisitar = new Set(pendencias.filter(p => p.status === 'REQUISITAR').map(p => p.obra));
+    const obrasOk = new Set(pendencias.filter(p => p.status === 'OK').map(p => p.obra));
     const totalObras = obrasSet.size || 1;
-    const obrasFalta = obrasComFalta.size;
-    const obrasAtendidasCount = obrasAtendidas.size;
-    const obrasSobra = obrasComSobra.size;
-    const obrasRepresadasCount = obrasRepresadas.size;
+
     let htmlObras = `
-        <div class="chart-bar-indicator"><span class="label">🔴 Com Falta</span><div class="bar-track"><div class="bar-fill bar-pendente" style="width: ${(obrasFalta / totalObras) * 100}%;"><span class="value">${obrasFalta}</span></div></div><span class="percent">${((obrasFalta / totalObras) * 100).toFixed(0)}%</span></div>
-        <div class="chart-bar-indicator"><span class="label">🟠 Com Sobras</span><div class="bar-track"><div class="bar-fill bar-sobra" style="width: ${(obrasSobra / totalObras) * 100}%;"><span class="value">${obrasSobra}</span></div></div><span class="percent">${((obrasSobra / totalObras) * 100).toFixed(0)}%</span></div>
-        <div class="chart-bar-indicator"><span class="label">✅ Atendidas</span><div class="bar-track"><div class="bar-fill bar-baixado" style="width: ${(obrasAtendidasCount / totalObras) * 100}%;"><span class="value">${obrasAtendidasCount}</span></div></div><span class="percent">${((obrasAtendidasCount / totalObras) * 100).toFixed(0)}%</span></div>
-        <div class="chart-bar-indicator"><span class="label">📌 Com Represados</span><div class="bar-track"><div class="bar-fill bar-represado" style="width: ${(obrasRepresadasCount / totalObras) * 100}%;"><span class="value">${obrasRepresadasCount}</span></div></div><span class="percent">${((obrasRepresadasCount / totalObras) * 100).toFixed(0)}%</span></div>
+        <div class="chart-bar-indicator">
+            <span class="label">🔴 Com Falta</span>
+            <div class="bar-track"><div class="bar-fill bar-pendente" style="width: ${(obrasRequisitar.size / totalObras) * 100}%;"><span class="value">${obrasRequisitar.size}</span></div></div>
+            <span class="percent">${((obrasRequisitar.size / totalObras) * 100).toFixed(0)}%</span>
+        </div>
+        <div class="chart-bar-indicator">
+            <span class="label">🟠 Com Sobra</span>
+            <div class="bar-track"><div class="bar-fill bar-sobra" style="width: ${(obrasDevolver.size / totalObras) * 100}%;"><span class="value">${obrasDevolver.size}</span></div></div>
+            <span class="percent">${((obrasDevolver.size / totalObras) * 100).toFixed(0)}%</span>
+        </div>
+        <div class="chart-bar-indicator">
+            <span class="label">✅ OK</span>
+            <div class="bar-track"><div class="bar-fill bar-baixado" style="width: ${(obrasOk.size / totalObras) * 100}%;"><span class="value">${obrasOk.size}</span></div></div>
+            <span class="percent">${((obrasOk.size / totalObras) * 100).toFixed(0)}%</span>
+        </div>
     `;
-    document.getElementById('valorChartMGM').innerHTML = htmlObras;
+    const elValor = document.getElementById('valorChartMGM');
+    if (elValor) elValor.innerHTML = htmlObras;
 }
+
+// ============================================
+// DETALHE DA OBRA
+// ============================================
 
 function selecionarObraMGM(obra) {
     if (itemSelecionadoMGM && itemSelecionadoMGM.obra === obra) {
         itemSelecionadoMGM = null;
     } else {
-        itemSelecionadoMGM = { obra: obra, dataSelecionada: null };
+        itemSelecionadoMGM = { obra };
     }
     renderizarDetalhesObraMGM(itemSelecionadoMGM);
+
     document.querySelectorAll('#itemListMGM .item-group-item').forEach(el => el.classList.remove('active'));
     if (itemSelecionadoMGM) {
         document.querySelectorAll('#itemListMGM .item-group-item').forEach(el => {
-            const onclickAttr = el.getAttribute('onclick');
-            if (onclickAttr && onclickAttr.includes(`'${itemSelecionadoMGM.obra}'`)) el.classList.add('active');
+            const attr = el.getAttribute('onclick');
+            if (attr && attr.includes(`'${itemSelecionadoMGM.obra}'`)) el.classList.add('active');
         });
     }
-}
-
-function selecionarDataObraMGM(obra, data) {
-    if (!itemSelecionadoMGM || itemSelecionadoMGM.obra !== obra) {
-        itemSelecionadoMGM = { obra: obra, dataSelecionada: data };
-    } else if (itemSelecionadoMGM.dataSelecionada === data) {
-        itemSelecionadoMGM.dataSelecionada = null;
-    } else {
-        itemSelecionadoMGM.dataSelecionada = data;
-    }
-    renderizarDetalhesObraMGM(itemSelecionadoMGM);
 }
 
 function renderizarDetalhesObraMGM(itemSelecionado) {
@@ -1238,282 +1048,180 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         container.innerHTML = `<div class="empty-state-dashboard"><div class="icon">👆</div><p>Selecione uma obra para ver os detalhes</p></div>`;
         return;
     }
+
     const obra = itemSelecionado.obra;
-    const dataSelecionada = itemSelecionado.dataSelecionada;
-    const obraNorm = normalizarObra(obra);
-    let todosItens = dadosFiltradosMGM.filter(p => p.obra === obra);
-    if (todosItens.length === 0) {
-        container.innerHTML = `<div class="empty-state-dashboard"><div class="icon">📭</div><p>Nenhum detalhe encontrado para esta obra</p></div>`;
+    const itensObra = dadosFiltradosMGM.filter(p => p.obra === obra);
+    if (itensObra.length === 0) {
+        container.innerHTML = `<div class="empty-state-dashboard"><div class="icon">📭</div><p>Sem pendências para esta obra</p></div>`;
         return;
     }
-    const datasMap = {};
-    todosItens.forEach(p => {
-        const dataKey = p.data || 'sem_data';
-        if (!datasMap[dataKey]) {
-            datasMap[dataKey] = {
-                data: dataKey, dataFormatada: p.data ? formatarData(p.data) : 'Sem data',
-                itens: [], totalPendentes: 0, totalAtendidos: 0, totalParciais: 0,
-                totalSobras: 0, totalRepresados: 0, totalSobraQtd: 0, totalFaltaQtd: 0,
-                totalRepresadosQtd: 0, totalAditivos: 0, totalDocumentos: 0, multiplasMGM: 0
-            };
+
+    const obraFormatada = itensObra[0].obraFormatada;
+
+    let numDevolver = 0, numRequisitar = 0, numOk = 0;
+    let qtdDevolver = 0, qtdRequisitar = 0;
+    let valorDevolver = 0, valorRequisitar = 0;
+    itensObra.forEach(p => {
+        if (p.status === 'DEVOLVER') {
+            numDevolver++; qtdDevolver += p.sobra;
+            valorDevolver += p.sobra * (p.valorUnitario || 0);
+        } else if (p.status === 'REQUISITAR') {
+            numRequisitar++; qtdRequisitar += p.falta;
+            valorRequisitar += p.falta * (p.valorUnitario || 0);
+        } else {
+            numOk++;
         }
-        datasMap[dataKey].itens.push(p);
-        if (p.status === 'PENDENTE') datasMap[dataKey].totalPendentes++;
-        else if (p.status === 'PARCIAL') { datasMap[dataKey].totalParciais++; datasMap[dataKey].totalFaltaQtd += p.falta || 0; }
-        else if (p.status === 'ATENDIDO') datasMap[dataKey].totalAtendidos++;
-        else if (p.status === 'SOBRA') { datasMap[dataKey].totalSobras++; datasMap[dataKey].totalSobraQtd += p.sobra || 0; }
-        else if (p.status === 'REPRESADO') { datasMap[dataKey].totalRepresados++; datasMap[dataKey].totalRepresadosQtd += p.represados || 0; }
-        if (p.temAditivos) datasMap[dataKey].totalAditivos++;
-        datasMap[dataKey].totalDocumentos += p.totalDocumentos || 0;
-        if (p.temMultiplasMGM || p.isMultipla) datasMap[dataKey].multiplasMGM++;
     });
-    const datasOrdenadas = Object.keys(datasMap).sort();
-    const obraFormatada = todosItens[0].obraFormatada;
-    let itensParaMostrar = [];
-    let dataAtiva = dataSelecionada;
-    if (dataSelecionada && datasMap[dataSelecionada]) itensParaMostrar = datasMap[dataSelecionada].itens;
-    else { todosItens.forEach(p => itensParaMostrar.push(p)); dataAtiva = null; }
-    let totalPendentes = 0, totalAtendidos = 0, totalParciais = 0, totalSobras = 0, totalRepresados = 0;
-    let totalSobraQtd = 0, totalFaltaQtd = 0, totalRepresadosQtd = 0, valorTotal = 0;
-    let totalAditivos = 0, totalDocumentos = 0, totalMultiplas = 0;
-    todosItens.forEach(p => {
-        if (p.status === 'PENDENTE') totalPendentes++;
-        else if (p.status === 'PARCIAL') { totalParciais++; totalFaltaQtd += p.falta || 0; }
-        else if (p.status === 'ATENDIDO') totalAtendidos++;
-        else if (p.status === 'SOBRA') { totalSobras++; totalSobraQtd += p.sobra || 0; }
-        else if (p.status === 'REPRESADO') { totalRepresados++; totalRepresadosQtd += p.represados || 0; }
-        if (p.temAditivos) totalAditivos++;
-        totalDocumentos += p.totalDocumentos || 0;
-        if (p.temMultiplasMGM || p.isMultipla) totalMultiplas++;
-        valorTotal += p.qtdEsperada * (p.valor_unitario || 0);
+
+    const etapasMGM = dadosEtapasPorObra[obra]?.etapasMGM || [];
+    const etapasSiago = getEtapasPorObra(obra);
+    const fmtBRL = (v) => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    let html = `
+        <div class="detail-header">
+            <div class="detail-title">🏗️ ${obraFormatada}</div>
+            <div class="detail-subtitle">
+                📦 ${itensObra.length} item(ns) analisados · 
+                📋 ${etapasMGM.length} MGM aplicada(s)
+                ${etapasSiago ? ` · 🗂️ ${etapasSiago.etapas_validas}/${etapasSiago.total_etapas} etapas Siago válidas` : ''}
+            </div>
+        </div>
+        
+        <div class="detail-stats-grid">
+            <div class="detail-stat">
+                <span class="stat-label">🟠 Devolver</span>
+                <span class="stat-value" style="color: #D69E2E;">${numDevolver}</span>
+            </div>
+            <div class="detail-stat">
+                <span class="stat-label">🔴 Requisitar</span>
+                <span class="stat-value" style="color: #E53E3E;">${numRequisitar}</span>
+            </div>
+            <div class="detail-stat">
+                <span class="stat-label">✅ OK</span>
+                <span class="stat-value" style="color: #48BB78;">${numOk}</span>
+            </div>
+        </div>
+        
+        <div class="detail-summary">
+            <div class="summary-item" style="background: #FEFCBF; border-left: 4px solid #D69E2E;">
+                <span class="summary-label">🟠 Devolver (qtd)</span>
+                <span class="summary-value" style="color: #D69E2E; font-weight: 700;">${qtdDevolver.toFixed(0)} un</span>
+            </div>
+            <div class="summary-item" style="background: #FED7D7; border-left: 4px solid #E53E3E;">
+                <span class="summary-label">🔴 Requisitar (qtd)</span>
+                <span class="summary-value" style="color: #E53E3E; font-weight: 700;">${qtdRequisitar.toFixed(0)} un</span>
+            </div>
+        </div>
+        <div class="detail-summary">
+            <div class="summary-item" style="background: #FFFAF0; border-left: 4px solid #D69E2E;">
+                <span class="summary-label">💰 Valor a devolver</span>
+                <span class="summary-value" style="color: #D69E2E; font-weight: 700;">${fmtBRL(valorDevolver)}</span>
+            </div>
+            <div class="summary-item" style="background: #FFF5F5; border-left: 4px solid #E53E3E;">
+                <span class="summary-label">💰 Valor a requisitar</span>
+                <span class="summary-value" style="color: #E53E3E; font-weight: 700;">${fmtBRL(valorRequisitar)}</span>
+            </div>
+        </div>
+        
+        <div class="detail-section-title">📋 Itens (MGM × Previsto/Realizado)</div>
+        <div class="detail-items-list">
+    `;
+
+    const ordemStatus = { REQUISITAR: 1, DEVOLVER: 2, OK: 3 };
+    const itensOrdenados = [...itensObra].sort((a, b) => {
+        const da = ordemStatus[a.status] - ordemStatus[b.status];
+        if (da !== 0) return da;
+        return String(a.codigo).localeCompare(String(b.codigo));
     });
-    const etapasInfo = getEtapasPorObra(obraNorm);
-    let etapasHTML = '';
-    if (etapasInfo) {
-        const total = etapasInfo.total_etapas;
-        const validas = etapasInfo.etapas_validas;
-        const reprovadas = etapasInfo.etapas_reprovadas;
-        const percentual = total > 0 ? Math.round((validas / total) * 100) : 0;
-        let badgesHTML = '';
-        etapasInfo.etapas.forEach(etapa => {
-            const detalhe = etapasInfo.etapas_detalhes[etapa] || {};
-            const situacao = detalhe.dsc_situacao_programacao_obra || 'Desconhecida';
-            const isReprovada = situacao.toUpperCase().includes('REPROVADA');
-            const isCancelada = situacao.toUpperCase().includes('CANCELADA');
-            const isConcluida = situacao.toUpperCase().includes('CONCLUÍDA');
-            let icon = '⏳', classe = 'etapa-pendente';
-            if (isReprovada) { icon = '🔴'; classe = 'etapa-reprovada'; }
-            else if (isCancelada) { icon = '🚫'; classe = 'etapa-reprovada'; }
-            else if (isConcluida) { icon = '✅'; classe = 'etapa-concluida'; }
-            badgesHTML += `<span class="etapa-badge ${classe}" title="${situacao}">${icon} ${etapa}</span>`;
-        });
-        etapasHTML = `
+
+    itensOrdenados.forEach(item => {
+        let statusBadge = '', statusClass = '';
+        if (item.status === 'REQUISITAR') {
+            statusBadge = `🔴 +${item.falta.toFixed(2)}`;
+            statusClass = 'status-falta';
+        } else if (item.status === 'DEVOLVER') {
+            statusBadge = `🟠 -${item.sobra.toFixed(2)}`;
+            statusClass = 'status-sobra';
+        } else {
+            statusBadge = '✅';
+            statusClass = 'status-atendido';
+        }
+
+        const valorDif = Math.abs(item.qtdMGM - item.qtdRealizada) * (item.valorUnitario || 0);
+
+        html += `
+            <div class="detail-item ${statusClass}">
+                <div class="item-code-detail">${item.codigo}</div>
+                <div class="item-desc-detail" title="${item.descricao}">${item.descricao}</div>
+                <div class="item-qtd-detail" title="MGM aplicada × Requisitado">${item.qtdMGM.toFixed(2)} × ${item.qtdRealizada.toFixed(2)}</div>
+                <div class="item-status-detail ${statusClass}">${statusBadge}</div>
+                <div class="item-mov-detail" style="font-size: 9px; color: #718096;">
+                    ${item.valorUnitario ? fmtBRL(valorDif) : ''}
+                </div>
+                ${item.numEtapasMGM > 0 ? `<div class="item-multi-detail" style="font-size: 9px; color: #805AD5; grid-column: 1 / -1;">🔀 ${item.numEtapasMGM} MGM: ${item.datasMGM.join(', ')}</div>` : ''}
+            </div>
+        `;
+    });
+    html += `</div>`;
+
+    // ===== ETAPAS MGM (secundário) =====
+    if (etapasMGM.length > 0) {
+        html += `
             <div class="detail-etapas-section">
-                <div class="section-title">📋 Etapas da Obra</div>
+                <div class="section-title">📋 Etapas MGM (execução) — ${etapasMGM.length}</div>
+                <div class="etapas-info">
+                    <div class="etapas-badges">
+        `;
+        etapasMGM.forEach(e => {
+            const dataFmt = formatarData(e.data) || formatarData(e.dataOriginal);
+            html += `<span class="etapa-badge etapa-pendente" title="MGM ${dataFmt} · ${e.qtdItens} itens · ${e.qtdAplicadaTotal.toFixed(2)} qtd aplicada">📋 ${dataFmt} (${e.qtdItens})</span>`;
+        });
+        html += `</div></div></div>`;
+    }
+
+    // ===== ETAPAS SIAGO (secundário) =====
+    if (etapasSiago) {
+        const percentual = etapasSiago.total_etapas > 0
+            ? Math.round((etapasSiago.etapas_validas / etapasSiago.total_etapas) * 100)
+            : 0;
+        let badgesHTML = '';
+        etapasSiago.etapas.forEach(etapa => {
+            const det = etapasSiago.etapas_detalhes[etapa] || {};
+            const sit = String(det.dsc_situacao_programacao_obra || '').toUpperCase();
+            const isReprov = sit.includes('REPROVADA');
+            const isCancel = sit.includes('CANCELADA');
+            const isConcl = sit.includes('CONCLUÍDA');
+            let icon = '⏳', cls = 'etapa-pendente';
+            if (isReprov) { icon = '🔴'; cls = 'etapa-reprovada'; }
+            else if (isCancel) { icon = '🚫'; cls = 'etapa-reprovada'; }
+            else if (isConcl) { icon = '✅'; cls = 'etapa-concluida'; }
+            const dataFmt = formatarData(det.data_programacao_inicial);
+            badgesHTML += `<span class="etapa-badge ${cls}" title="${det.dsc_situacao_programacao_obra || ''} · ${dataFmt}">${icon} ${etapa}</span>`;
+        });
+        html += `
+            <div class="detail-etapas-section">
+                <div class="section-title">🗂️ Programação Siago — ${etapasSiago.total_etapas} etapa(s)</div>
                 <div class="etapas-info">
                     <div class="etapas-resumo">
-                        <span class="etapas-total">📊 ${total} etapas</span>
-                        <span class="etapas-validas" style="color: ${validas > 0 ? '#48BB78' : '#718096'};">✅ ${validas} válidas</span>
-                        <span class="etapas-reprovadas" style="color: ${reprovadas > 0 ? '#FC8181' : '#718096'};">🔴 ${reprovadas} reprovadas/canceladas</span>
+                        <span class="etapas-total">📊 ${etapasSiago.total_etapas} total</span>
+                        <span class="etapas-validas" style="color: ${etapasSiago.etapas_validas > 0 ? '#48BB78' : '#718096'};">✅ ${etapasSiago.etapas_validas} válidas</span>
+                        <span class="etapas-reprovadas" style="color: ${etapasSiago.etapas_reprovadas > 0 ? '#FC8181' : '#718096'};">🔴 ${etapasSiago.etapas_reprovadas} reprov/canc</span>
                         <span class="etapas-percentual">${percentual}% válidas</span>
                     </div>
                     <div class="etapas-badges">${badgesHTML}</div>
                 </div>
             </div>
         `;
-    } else {
-        etapasHTML = `
-            <div class="detail-etapas-section">
-                <div class="section-title">📋 Etapas da Obra</div>
-                <div class="etapas-info empty"><span>📭 Sem dados de programação para esta obra</span></div>
-            </div>
-        `;
     }
-    let html = `
-        <div class="detail-header">
-            <div class="detail-title">🏗️ ${obraFormatada}</div>
-            <div class="detail-subtitle">📦 ${todosItens.length} itens | 📄 ${totalDocumentos} documentos ${totalAditivos > 0 ? `| 📝 ${totalAditivos} aditivos` : ''} ${totalMultiplas > 0 ? `| 🔀 ${totalMultiplas} múltiplas` : ''}</div>
-        </div>
-        <div class="detail-stats-grid">
-            <div class="detail-stat"><span class="stat-label">📦 Total</span><span class="stat-value">${todosItens.length}</span></div>
-            <div class="detail-stat"><span class="stat-label">🔴 Pendentes</span><span class="stat-value" style="color: #E53E3E;">${totalPendentes}</span></div>
-            <div class="detail-stat"><span class="stat-label">🔴 Parciais</span><span class="stat-value" style="color: #E53E3E;">${totalParciais}</span></div>
-            <div class="detail-stat"><span class="stat-label">🟠 Sobras</span><span class="stat-value" style="color: #D69E2E;">${totalSobras}</span></div>
-            <div class="detail-stat"><span class="stat-label">📌 Represados</span><span class="stat-value" style="color: #805AD5;">${totalRepresados}</span></div>
-            <div class="detail-stat"><span class="stat-label">✅ Atendidos</span><span class="stat-value" style="color: #48BB78;">${totalAtendidos}</span></div>
-            ${totalAditivos > 0 ? `<div class="detail-stat"><span class="stat-label">📝 Aditivos</span><span class="stat-value" style="color: #805AD5;">${totalAditivos}</span></div>` : ''}
-            <div class="detail-stat"><span class="stat-label">📄 Documentos</span><span class="stat-value" style="color: #4299E1;">${totalDocumentos}</span></div>
-            ${totalMultiplas > 0 ? `<div class="detail-stat"><span class="stat-label">🔀 Múltiplas</span><span class="stat-value" style="color: #D69E2E;">${totalMultiplas}</span></div>` : ''}
-        </div>
-        <div class="detail-summary">
-            <div class="summary-item" style="background: #FEFCBF; border-left: 4px solid #D69E2E;">
-                <span class="summary-label">🟠 Excedentes (Sobras)</span>
-                <span class="summary-value" style="color: #D69E2E; font-weight: 700;">${totalSobraQtd.toFixed(0)} unidades</span>
-            </div>
-            <div class="summary-item" style="background: #FED7D7; border-left: 4px solid #E53E3E;">
-                <span class="summary-label">🔴 Faltas (Pendentes)</span>
-                <span class="summary-value" style="color: #E53E3E; font-weight: 700;">${totalFaltaQtd.toFixed(0)} unidades</span>
-            </div>
-            <div class="summary-item" style="background: #FAF5FF; border-left: 4px solid #805AD5;">
-                <span class="summary-label">📌 Represados do Passado</span>
-                <span class="summary-value" style="color: #805AD5; font-weight: 700;">${totalRepresadosQtd.toFixed(0)} unidades</span>
-            </div>
-        </div>
-        <div class="detail-section-title">📅 Datas de Programação</div>
-        <div class="detail-datas-list">
-    `;
-    datasOrdenadas.forEach(data => {
-        const info = datasMap[data];
-        const isActive = dataAtiva === data;
-        const totalPend = info.totalPendentes + info.totalParciais + info.totalSobras + info.totalRepresados;
-        const temAditivo = info.totalAditivos > 0;
-        const temDocumentos = info.totalDocumentos > 0;
-        const temMultiplas = info.multiplasMGM > 0;
-        let statusBadge = '', badgeClass = '';
-        if (info.totalRepresadosQtd > 0) { statusBadge = `📌 ${info.totalRepresadosQtd.toFixed(0)}`; badgeClass = 'status-represado'; }
-        else if (info.totalSobraQtd > 0 && info.totalFaltaQtd > 0) { statusBadge = `🟠+🔴`; badgeClass = 'status-misto'; }
-        else if (info.totalSobraQtd > 0) { statusBadge = `🟠 ${info.totalSobraQtd.toFixed(0)}`; badgeClass = 'status-sobra'; }
-        else if (info.totalFaltaQtd > 0) { statusBadge = `🔴 ${info.totalFaltaQtd.toFixed(0)}`; badgeClass = 'status-falta'; }
-        else if (totalPend > 0) { statusBadge = '⏳'; badgeClass = 'status-pendente'; }
-        else { statusBadge = '✅'; badgeClass = 'status-atendido'; }
-        const aditivoInfo = temAditivo ? ' 📝' : '';
-        const docInfo = temDocumentos ? ` 📄${info.totalDocumentos}` : '';
-        const multiplasInfo = temMultiplas ? ' 🔀' : '';
-        html += `
-            <div class="detail-data-item ${isActive ? 'active' : ''} ${badgeClass}" onclick="selecionarDataObraMGM('${obra}', '${data}')">
-                <span class="data-label">📅 ${info.dataFormatada}</span>
-                <span class="data-badge">${info.itens.length} itens${aditivoInfo}${docInfo}${multiplasInfo}</span>
-                <span class="data-status ${badgeClass}">${statusBadge}</span>
-            </div>
-        `;
-    });
-    html += `</div><div class="detail-section-title">📋 Itens ${dataAtiva ? 'da data selecionada' : 'da obra'}</div><div class="detail-items-list">`;
-    itensParaMostrar.forEach(item => {
-        let statusBadge = '', statusClass = '';
-        if (item.status === 'ATENDIDO') { statusBadge = '✅ Atendido'; statusClass = 'status-atendido'; }
-        else if (item.status === 'SOBRA') { statusBadge = `🟠 +${item.sobra.toFixed(0)}`; statusClass = 'status-sobra'; }
-        else if (item.status === 'PARCIAL') { statusBadge = `🔴 -${item.falta.toFixed(0)}`; statusClass = 'status-falta'; }
-        else if (item.status === 'REPRESADO') { statusBadge = `📌 ${item.represados.toFixed(0)} represados`; statusClass = 'status-represado'; }
-        else { statusBadge = '🔴 Pendente'; statusClass = 'status-pendente'; }
-        const qtdInfo = `${item.qtdEncontrada.toFixed(2)} / ${item.qtdEsperada.toFixed(2)}`;
-        const temMultiplas = (item.temMultiplasMGM || item.isMultipla) ? '🔀 Múltiplas MGM' : '';
-        const tipoMgmLabel = item.tipo_mgm === 'MULTIPLO' ? '🔀' : '📌';
-        const temAditivo = item.temAditivos ? '📝 Aditivo' : '';
-        const docsInfo = item.qtdDocumentos > 0 ? `📄${item.qtdDocumentos}` : '';
-        let distribuicaoInfo = '';
-        if (item.distribuicao && item.distribuicao.length > 0) {
-            distribuicaoInfo = item.distribuicao.map(d => `${formatarData(d.data)}: ${d.quantidade.toFixed(2)}`).join(' | ');
-        }
-        const docsRMAInfo = item.documentosRMA && item.documentosRMA.length > 0 ? item.documentosRMA.join(', ') : '';
-        const docsDMAInfo = item.documentosDMA && item.documentosDMA.length > 0 ? item.documentosDMA.join(', ') : '';
-        const infoExtra = [docsInfo, temAditivo, temMultiplas].filter(Boolean).join(' ');
-        html += `
-            <div class="detail-item ${statusClass}">
-                <div class="item-code-detail">${item.codigo}</div>
-                <div class="item-desc-detail">${item.descricao}</div>
-                <div class="item-qtd-detail">${qtdInfo}</div>
-                <div class="item-status-detail ${statusClass}">${statusBadge}</div>
-                <div class="item-mov-detail" style="font-size: 9px; color: #718096;">${infoExtra} ${tipoMgmLabel}</div>
-                ${docsRMAInfo ? `<div class="item-rma-detail" style="font-size: 9px; color: #48BB78; margin-top: 2px;">🟢 RMA: ${docsRMAInfo}</div>` : ''}
-                ${docsDMAInfo ? `<div class="item-dma-detail" style="font-size: 9px; color: #E53E3E; margin-top: 2px;">🔴 DMA: ${docsDMAInfo}</div>` : ''}
-                ${temMultiplas ? `<div class="item-multi-detail" style="font-size: 9px; color: #805AD5;">${temMultiplas}</div>` : ''}
-                ${distribuicaoInfo ? `<div class="item-distribuicao-detail" style="font-size: 9px; color: #4A5568; grid-column: 1 / -1; background: #F7FAFC; padding: 4px 8px; border-radius: 4px; margin-top: 2px;">📊 Distribuição: ${distribuicaoInfo}</div>` : ''}
-            </div>
-        `;
-    });
-    html += `</div>${etapasHTML}`;
+
     container.innerHTML = html;
 }
 
-function getEtapasPorObra(obraNorm) {
-    const etapasPorObra = getEtapasPorObraData();
-    const info = etapasPorObra[obraNorm];
-    if (!info) return null;
-    return {
-        total_etapas: info.total_etapas,
-        etapas_validas: info.etapas_validas,
-        etapas_reprovadas: info.etapas_reprovadas,
-        etapas: info.etapas,
-        etapas_detalhes: info.etapas_detalhes,
-        _raw: info.etapas_raw
-    };
-}
-
-function aplicarFiltroEtapas() {
-    const input = document.getElementById('filtroEtapas');
-    if (!input) return;
-    const valor = parseInt(input.value);
-    filtroEtapasMinimo = isNaN(valor) || valor < 0 ? 0 : valor;
-    let filtrados = [...pendenciasConsolidadas];
-    if (filtroStatusMGMAtivo) filtrados = filtrados.filter(p => p.status === filtroStatusMGMAtivo);
-    const buscaTexto = document.getElementById('filterBuscaMGM')?.value?.toLowerCase() || '';
-    if (buscaTexto) filtrados = filtrados.filter(p => p.codigo.toLowerCase().includes(buscaTexto) || p.descricao.toLowerCase().includes(buscaTexto));
-    const buscaObra = document.getElementById('filterObraMGM')?.value || '';
-    if (buscaObra) {
-        const obraNorm = normalizarObra(buscaObra);
-        filtrados = filtrados.filter(p => p.obra.includes(obraNorm) || p.obraFormatada.includes(buscaObra));
-    }
-    if (filtroEtapasMinimo > 0) {
-        filtrados = filtrados.filter(p => {
-            const obraNorm = normalizarObra(p.obra);
-            const etapasInfo = getEtapasPorObra(obraNorm);
-            if (!etapasInfo) return false;
-            return etapasInfo.etapas_validas === filtroEtapasMinimo;
-        });
-    }
-    dadosFiltradosMGM = filtrados;
-    itemSelecionadoMGM = null;
-    const totalRegistros = document.getElementById('totalRegistrosMGM');
-    if (totalRegistros) totalRegistros.textContent = `${filtrados.length} pendências`;
-    renderizarDashboardMGM();
-}
-
-function aplicarFiltrosMGM() {
-    const filtroStatus = document.getElementById('filterStatusMGM')?.value || 'todos';
-    const buscaTexto = document.getElementById('filterBuscaMGM')?.value?.toLowerCase() || '';
-    const buscaObra = document.getElementById('filterObraMGM')?.value || '';
-    const inputEtapas = document.getElementById('filtroEtapas');
-    const valorEtapas = inputEtapas ? parseInt(inputEtapas.value) : 0;
-    filtroEtapasMinimo = isNaN(valorEtapas) || valorEtapas < 0 ? 0 : valorEtapas;
-    let filtrados = [...pendenciasConsolidadas];
-    if (filtroStatus !== 'todos') { filtrados = filtrados.filter(p => p.status === filtroStatus); filtroStatusMGMAtivo = filtroStatus; }
-    else filtroStatusMGMAtivo = null;
-    if (buscaTexto) filtrados = filtrados.filter(p => p.codigo.toLowerCase().includes(buscaTexto) || p.descricao.toLowerCase().includes(buscaTexto));
-    if (buscaObra) {
-        const obraNorm = normalizarObra(buscaObra);
-        filtrados = filtrados.filter(p => p.obra.includes(obraNorm) || p.obraFormatada.includes(buscaObra));
-    }
-    if (filtroEtapasMinimo > 0) {
-        filtrados = filtrados.filter(p => {
-            const obraNorm = normalizarObra(p.obra);
-            const etapasInfo = getEtapasPorObra(obraNorm);
-            if (!etapasInfo) return false;
-            return etapasInfo.etapas_validas === filtroEtapasMinimo;
-        });
-    }
-    dadosFiltradosMGM = filtrados;
-    itemSelecionadoMGM = null;
-    const totalRegistros = document.getElementById('totalRegistrosMGM');
-    if (totalRegistros) totalRegistros.textContent = `${filtrados.length} pendências`;
-    renderizarDashboardMGM();
-}
-
-function limparFiltrosMGM() {
-    document.getElementById('filterStatusMGM').value = 'todos';
-    document.getElementById('filterBuscaMGM').value = '';
-    document.getElementById('filterObraMGM').value = '';
-    const inputEtapas = document.getElementById('filtroEtapas');
-    if (inputEtapas) { inputEtapas.value = ''; filtroEtapasMinimo = 0; }
-    filtroStatusMGMAtivo = null;
-    dadosFiltradosMGM = [...pendenciasConsolidadas];
-    itemSelecionadoMGM = null;
-    document.querySelectorAll('.kpi-card-mgm').forEach(el => el.classList.remove('active-filter'));
-    renderizarDashboardMGM();
-}
+// ============================================
+// ABA PRINCIPAL
+// ============================================
 
 function trocarAbaPrincipal(aba) {
-    console.log(`🔄 Aba forçada MGM (Separação removida)`);
-    abaAtual = 'mgm';
     document.querySelectorAll('.btn-aba-principal').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.aba === 'mgm');
     });
@@ -1525,46 +1233,51 @@ function trocarAbaPrincipal(aba) {
     else renderizarDashboardMGM();
 }
 
+// ============================================
+// BOOTSTRAP
+// ============================================
+
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('📋 DOM carregado, iniciando dashboard (MGM only)...');
+    console.log('📋 DOM carregado, iniciando dashboard (v5)...');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const dashboardContent = document.getElementById('dashboardContent');
     if (!loadingOverlay || !dashboardContent) return;
+
     const sessao = getSessao();
     if (!sessao) return;
-    document.getElementById('userName').textContent = sessao.nome || 'Usuário';
-    document.getElementById('userMatricula').textContent = `Matrícula: ${sessao.matricula || '---'}`;
-    document.getElementById('userPerfil').textContent = sessao.perfil || 'GESTÃO';
+
+    const elName = document.getElementById('userName');
+    const elMat = document.getElementById('userMatricula');
+    const elPerfil = document.getElementById('userPerfil');
+    if (elName) elName.textContent = sessao.nome || 'Usuário';
+    if (elMat) elMat.textContent = `Matrícula: ${sessao.matricula || '---'}`;
+    if (elPerfil) elPerfil.textContent = sessao.perfil || 'GESTÃO';
+
     try {
-        dadosCompletos = [];
-        dadosFiltrados = [];
-        dadosExibidos = [];
-        console.log('ℹ️ Separação desativada — dashboard só MGM');
-        
-        await carregarProgramacaoSiago();
         await carregarDadosMGM();
-        aplicarFiltroInicioObraFrontEnd();
-        renderizarDashboardMGM();
         trocarAbaPrincipal('mgm');
         loadingOverlay.classList.remove('active');
         dashboardContent.style.display = 'block';
         console.log('✅ Dashboard renderizado com sucesso!');
     } catch (error) {
         console.error('❌ Erro ao carregar dados:', error);
-        mostrarToast(`❌ Erro ao carregar dados: ${error.message}`, 'error');
+        mostrarToast(`❌ Erro: ${error.message}`, 'error');
         loadingOverlay.classList.remove('active');
         dashboardContent.style.display = 'block';
     }
 });
 
+// ============================================
+// EXPORTS GLOBAIS
+// ============================================
+
 window.trocarAbaPrincipal = trocarAbaPrincipal;
 window.aplicarFiltrosMGM = aplicarFiltrosMGM;
 window.limparFiltrosMGM = limparFiltrosMGM;
 window.selecionarObraMGM = selecionarObraMGM;
-window.selecionarDataObraMGM = selecionarDataObraMGM;
 window.carregarDadosMGM = carregarDadosMGM;
 window.renderizarDashboardMGM = renderizarDashboardMGM;
 window.aplicarFiltroStatusMGM = aplicarFiltroStatusMGM;
 window.aplicarFiltroEtapas = aplicarFiltroEtapas;
 
-console.log('✅ dashboards-pendencia-requisicao.js inicializado! (MGM only)');
+console.log('✅ dashboards-pendencia-requisicao.js inicializado! (v5)');
