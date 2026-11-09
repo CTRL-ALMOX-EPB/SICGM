@@ -1,10 +1,10 @@
 // ============================================
 // CONTROLES DCMD - FORMULÁRIO UNIFICADO
 // Inclui MGM Online + Importação Excel
-// v8 — base unificada de encarregados (nome + matrícula + equipe)
+// v9 — base unificada de encarregados + blindagem de loading
 // ============================================
 
-console.log('🚀 Iniciando Controles DCMD - Formulário... (v8)');
+console.log('🚀 Iniciando Controles DCMD - Formulário... (v9)');
 
 const API_URL = 'https://hidden-truth-f37f.alefe-gomes-72f.workers.dev/api';
 const R2_URL = 'https://pub-b5fbd1ddaff14047bf16aef93e8886dd.r2.dev';
@@ -60,14 +60,13 @@ const ENCARREGADOS = [
     { equipe: 'PD 05', nome: 'JOAO MARCOS DA SILVA SA', matricula: '170190' },
     { equipe: 'PD 06', nome: 'ALEXANDRE LUIZ RIBEIRO', matricula: '170006' },
     { equipe: 'PD 07 LT', nome: 'JOSENILDO LEITE PESSOA JUNIOR', matricula: '170188' },
-    { equipe: 'PD 08', nome: 'SILVANO GONCALO DE FARIAS', matricula: '170008' }
+    { equipe: 'PD 08', nome: 'SILVANO GONCALO DE FARIAS', matricula: '170008' },
     { equipe: 'DESMOBILIZADA', nome: 'ROMARIO FERREIRA DO NASCIMENTO', matricula: '171302' },
     { equipe: 'DESMOBILIZADA', nome: 'WALISSON LIRA DE LIMA', matricula: '171198' },
     { equipe: 'DESMOBILIZADA', nome: 'JOSE MAYKE SOUZA DOS SANTOS', matricula: '016819' }
 ];
 
 // Mapa de valores legados (variações antigas) → nome canônico da base
-// Usado APENAS para normalizar exibição quando o banco está bagunçado
 const MAPA_ENCARREGADO_LEGADO = {
     'LUCIANO': 'LUCIANO MIGUEL BARBOSA',
     'VALENTIM': 'JOSE VALENTIM SANTOS',
@@ -94,11 +93,14 @@ const MAPA_ENCARREGADO_LEGADO = {
     'MANOEL C.': 'MANOEL COSTA DA SILVA',
     'ERIVANIO': 'ERIVANIO ANANIAS DA SILVA',
     'PAULÃO': 'PAULO SERGIO DO NASCIMENTO',
+    'PAULAO': 'PAULO SERGIO DO NASCIMENTO',
     'JUNIOR C.': 'JUNIOR CESAR DE ARAUJO',
+    'JUNIOR LV': 'JUNIOR CESAR DE ARAUJO',
     'JÚNIOR': 'JUNIOR CESAR DE ARAUJO',
     'JUNIOR': 'JUNIOR CESAR DE ARAUJO',
     'DAMIÃO(MIMA)': 'DAMIAO GOMES DOS SANTOS',
     'DAMIÃO': 'DAMIAO GOMES DOS SANTOS',
+    'DAMIAO': 'DAMIAO GOMES DOS SANTOS',
     'BRENO M.': 'BRENO MIGUEL DOS SANTOS',
     'BRENO': 'BRENO MIGUEL DOS SANTOS',
     'ALCIDES': 'ALCIDES HENRIQUE DE ARAUJO',
@@ -125,7 +127,7 @@ function normalizarEncarregadoLegado(valor) {
     const chave = s.toUpperCase();
     if (Object.prototype.hasOwnProperty.call(MAPA_ENCARREGADO_LEGADO, chave)) {
         const legado = MAPA_ENCARREGADO_LEGADO[chave];
-        if (legado === '') return '';        // ← mapeamento explícito para vazio
+        if (legado === '') return '';
         const enc = ENCARREGADOS.find(e => e.nome.toUpperCase() === legado.toUpperCase());
         if (enc) return enc.nome;
         return legado;
@@ -158,7 +160,6 @@ function preencherSelectEncarregados(select, valorSelecionado = '') {
     select.innerHTML = gerarOptionsEncarregados(valorSelecionado);
 }
 
-// Helpers para exibir matrícula/equipe espelhados
 function espelharEncarregado(selectId, matId, eqId) {
     const sel = document.getElementById(selectId);
     const mat = document.getElementById(matId);
@@ -258,7 +259,7 @@ let linhasDocumentosMultiplos = [];
 let tipoMgmSelecionado = 'UNICO';
 
 // ============================================
-// HELPERS DE LOADING
+// HELPERS DE LOADING (BLINDADOS)
 // ============================================
 
 function mostrarLoadingFormulario(texto) {
@@ -272,18 +273,47 @@ function mostrarLoadingFormulario(texto) {
 }
 
 function esconderLoadingFormulario() {
-    const overlay = document.getElementById('loadingFormulario');
-    const form = document.getElementById('controleForm');
-    
-    if (overlay) {
-        overlay.classList.add('hidden');
-        setTimeout(() => {
-            if (overlay.parentNode) overlay.style.display = 'none';
-        }, 350);
+    try {
+        const overlay = document.getElementById('loadingFormulario');
+        const form = document.getElementById('controleForm');
+        
+        if (overlay) {
+            overlay.classList.add('hidden');
+            setTimeout(() => {
+                if (overlay.parentNode) overlay.style.display = 'none';
+            }, 350);
+        }
+        
+        if (form) {
+            form.classList.add('pronto');
+        }
+    } catch (e) {
+        console.warn('⚠️ Erro ao esconder loading:', e);
+        // Fallback bruto: força esconder mesmo se der erro acima
+        const overlay = document.getElementById('loadingFormulario');
+        if (overlay) overlay.style.display = 'none';
     }
-    
-    if (form) {
-        form.classList.add('pronto');
+}
+
+function mostrarErroLoadingFormulario(mensagem) {
+    try {
+        const overlay = document.getElementById('loadingFormulario');
+        if (!overlay) return;
+        
+        const sub = document.getElementById('loadingSub');
+        if (sub) sub.textContent = mensagem || 'Erro ao carregar';
+        
+        // Adiciona botão de recarregar
+        const div = overlay.querySelector('.loading-erro') || document.createElement('div');
+        div.className = 'loading-erro';
+        div.style.cssText = 'margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;';
+        div.innerHTML = `
+            <button type="button" onclick="location.reload()" style="background:#4299E1;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">🔄 Recarregar</button>
+            <button type="button" onclick="voltarParaPainel()" style="background:#E2E8F0;color:#4A5568;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">⬅ Voltar</button>
+        `;
+        if (!div.parentNode) overlay.appendChild(div);
+    } catch (e) {
+        console.warn('⚠️ Erro ao mostrar erro no loading:', e);
     }
 }
 
@@ -1650,7 +1680,6 @@ function criarSelectMassa(label, classe, opcoes, acao, labels) {
     return container;
 }
 
-// NOVO: select de encarregados para ação em massa
 function criarSelectMassaEncarregados() {
     const container = document.createElement('div');
     container.style.cssText = `display:flex;align-items:center;gap:4px;`;
@@ -1936,7 +1965,6 @@ function adicionarLinhaItem() {
 
 window.adicionarLinhaItem = adicionarLinhaItem;
 
-// Função chamada onchange do select de encarregado no item
 function atualizarBadgeEncarregado(select) {
     if (!select) return;
     const dados = getDadosEncarregado(select.value);
@@ -2111,7 +2139,6 @@ function carregarItens(itens) {
     setTimeout(verificarECorrigirDuplicados, 200);
     setTimeout(atualizarNavegacaoSelects, 150);
     
-    // Atualizar badges de matrícula nos selects de encarregado carregados
     document.querySelectorAll('.item-encarregado').forEach(sel => atualizarBadgeEncarregado(sel));
 }
 
@@ -2209,140 +2236,150 @@ function getItensFormulario() {
 }
 
 // ============================================
-// CARREGAR CONTROLE NO FORMULÁRIO
+// CARREGAR CONTROLE NO FORMULÁRIO (BLINDADO)
 // ============================================
 
 async function carregarControleFormulario() {
-    const params = new URLSearchParams(window.location.search);
-    const numero = params.get('numero');
-    const tipo = params.get('tipo') || 'pendencia';
-    
-    tipoAtual = tipo;
-    
-    if (!numero) {
-        mostrarToast('⚠️ Controle não encontrado', 'erro');
-        window.location.href = 'index.html';
-        return;
-    }
-    
-    console.log(`📋 Carregando controle #${numero} (${tipoAtual})`);
-    
-    const tipoInfo = TIPOS[tipoAtual];
-    
-    const tituloEl = document.getElementById('formTitulo');
-    if (tituloEl) tituloEl.textContent = `${tipoInfo.icon} ${tipoInfo.label}`;
-    
-    const isAditivo = tipoAtual === 'aditivo';
-    const isAditivoFisico = tipoAtual === 'aditivo-fisico';
-    const isFarol = tipoAtual === 'farol';
-    const isDevolucao = tipoAtual === 'devolucao';
-    const isPendencia = tipoAtual === 'pendencia';
-    const isMovimento = tipoAtual === 'movimento';
-    const isMGM = tipoAtual === 'mgm';
-    const temItens = tipoInfo.temItens;
-    
-    const camposMGM = document.getElementById('camposMGM');
-    if (camposMGM) camposMGM.style.display = isMGM ? '' : 'none';
-    
-    const camposAditivoFisico = document.getElementById('camposAditivoFisico');
-    if (camposAditivoFisico) camposAditivoFisico.style.display = isAditivoFisico ? '' : 'none';
-    
-    const camposFarol = document.getElementById('camposFarol');
-    if (camposFarol) camposFarol.style.display = isFarol ? '' : 'none';
-    
-    const camposDevolucao = document.getElementById('camposDevolucao');
-    if (camposDevolucao) camposDevolucao.style.display = isDevolucao ? '' : 'none';
-    
-    const camposMovimento = document.getElementById('camposMovimento');
-    if (camposMovimento) camposMovimento.style.display = isMovimento ? '' : 'none';
-    
-    const campoObservacaoGeral = document.getElementById('campoObservacaoGeral');
-    if (campoObservacaoGeral) campoObservacaoGeral.style.display = isFarol ? '' : 'none';
-    
-    const campoDataProgramacao = document.getElementById('campoDataProgramacao');
-    if (campoDataProgramacao) campoDataProgramacao.style.display = isMovimento ? 'none' : '';
-    
-    const btnImportarExcelContainer = document.getElementById('btnImportarExcelContainer');
-    if (btnImportarExcelContainer) btnImportarExcelContainer.style.display = isMGM ? '' : 'none';
-    
-    const secaoItens = document.getElementById('secaoItens');
-    if (secaoItens) secaoItens.style.display = temItens ? '' : 'none';
-    
-    const tituloItens = document.getElementById('tituloItens');
-    if (tituloItens) {
-        if (isAditivoFisico) tituloItens.textContent = '🔧 Itens do Aditivo Físico';
-        else if (isAditivo) tituloItens.textContent = '📝 Itens do Aditivo Sistêmico';
-        else if (isPendencia) tituloItens.textContent = '📦 Itens Pendentes';
-        else if (isMGM) tituloItens.textContent = '📋 Itens da MGM';
-        else tituloItens.textContent = '📦 Itens';
-    }
-    
-    document.querySelectorAll('.col-mgm').forEach(el => { if (el) el.style.display = isMGM ? '' : 'none'; });
-    document.querySelectorAll('.col-status-aditivo').forEach(el => { if (el) el.style.display = isAditivo ? '' : 'none'; });
-    document.querySelectorAll('.col-num-doc').forEach(el => { if (el) el.style.display = isAditivo ? '' : 'none'; });
-    document.querySelectorAll('.col-usuario').forEach(el => { if (el) el.style.display = isAditivo ? '' : 'none'; });
-    document.querySelectorAll('.col-observacao').forEach(el => { if (el) el.style.display = isAditivo ? '' : 'none'; });
-    document.querySelectorAll('.col-aplicado').forEach(el => { if (el) el.style.display = isAditivoFisico ? '' : 'none'; });
-    document.querySelectorAll('.col-colaborador').forEach(el => { if (el) el.style.display = isAditivoFisico ? '' : 'none'; });
-    document.querySelectorAll('.col-encarregado').forEach(el => { if (el) el.style.display = isAditivoFisico ? '' : 'none'; });
-    document.querySelectorAll('.col-data-baixa').forEach(el => { if (el) el.style.display = isPendencia ? '' : 'none'; });
-    document.querySelectorAll('.col-baixado').forEach(el => { if (el) el.style.display = isPendencia ? '' : 'none'; });
-    document.querySelectorAll('.col-motivo').forEach(el => { if (el) el.style.display = isPendencia ? '' : 'none'; });
-    document.querySelectorAll('.col-colaborador-item').forEach(el => { if (el) el.style.display = isPendencia ? '' : 'none'; });
-    document.querySelectorAll('.col-observacao-item').forEach(el => { if (el) el.style.display = isPendencia ? '' : 'none'; });
-    
-    const thQuantidade = document.getElementById('thQuantidade');
-    if (thQuantidade) thQuantidade.textContent = isMGM ? 'QTD (Base)' : 'QTD';
-    
-    const thStatus = document.getElementById('thStatusAditivo');
-    const thNumDoc = document.getElementById('thNumDoc');
-    const thUsuario = document.getElementById('thUsuario');
-    const thObservacao = document.getElementById('thObservacao');
-    const thAditivoSaida = document.getElementById('thAditivoSaida');
-    const thAditivoCampo = document.getElementById('thAditivoCampo');
-    const thRma = document.getElementById('thRma');
-    const thSeparada = document.getElementById('thSeparada');
-    const thAplicada = document.getElementById('thAplicada');
-    const thDma = document.getElementById('thDma');
-    const thPendente = document.getElementById('thPendente');
-    const thAplicado = document.getElementById('thAplicado');
-    const thColaborador = document.getElementById('thColaborador');
-    const thEncarregado = document.getElementById('thEncarregado');
-    const thDataBaixa = document.getElementById('thDataBaixa');
-    const thBaixado = document.getElementById('thBaixado');
-    const thMotivo = document.getElementById('thMotivo');
-    const thColaboradorItem = document.getElementById('thColaboradorItem');
-    const thObservacaoItem = document.getElementById('thObservacaoItem');
-    
-    if (thStatus) thStatus.style.display = isAditivo ? '' : 'none';
-    if (thNumDoc) thNumDoc.style.display = isAditivo ? '' : 'none';
-    if (thUsuario) thUsuario.style.display = isAditivo ? '' : 'none';
-    if (thObservacao) thObservacao.style.display = isAditivo ? '' : 'none';
-    if (thAditivoSaida) thAditivoSaida.style.display = isMGM ? '' : 'none';
-    if (thAditivoCampo) thAditivoCampo.style.display = isMGM ? '' : 'none';
-    if (thRma) thRma.style.display = isMGM ? '' : 'none';
-    if (thSeparada) thSeparada.style.display = isMGM ? '' : 'none';
-    if (thAplicada) thAplicada.style.display = isMGM ? '' : 'none';
-    if (thDma) thDma.style.display = isMGM ? '' : 'none';
-    if (thPendente) thPendente.style.display = isMGM ? '' : 'none';
-    if (thAplicado) thAplicado.style.display = isAditivoFisico ? '' : 'none';
-    if (thColaborador) thColaborador.style.display = isAditivoFisico ? '' : 'none';
-    if (thEncarregado) thEncarregado.style.display = isAditivoFisico ? '' : 'none';
-    if (thDataBaixa) thDataBaixa.style.display = isPendencia ? '' : 'none';
-    if (thBaixado) thBaixado.style.display = isPendencia ? '' : 'none';
-    if (thMotivo) thMotivo.style.display = isPendencia ? '' : 'none';
-    if (thColaboradorItem) thColaboradorItem.style.display = isPendencia ? '' : 'none';
-    if (thObservacaoItem) thObservacaoItem.style.display = isPendencia ? '' : 'none';
-    
-    const formTipo = document.getElementById('formTipo');
-    if (formTipo) formTipo.value = tipoInfo.label;
-    
-    // Pré-preenche os selects unificados de encarregados (sempre)
-    preencherSelectEncarregados(document.getElementById('formEncarregado'));
-    preencherSelectEncarregados(document.getElementById('formEncarregadoMGM'));
-    configurarEspelhamentoEncarregados();
-    
     try {
+        const params = new URLSearchParams(window.location.search);
+        const numero = params.get('numero');
+        const tipo = params.get('tipo') || 'pendencia';
+        
+        tipoAtual = tipo;
+        
+        if (!numero) {
+            mostrarToast('⚠️ Controle não encontrado', 'erro');
+            window.location.href = 'index.html';
+            return;
+        }
+        
+        console.log(`📋 Carregando controle #${numero} (${tipoAtual})`);
+        
+        // Fallback de tipo: se tipo não existir em TIPOS, usa pendencia com aviso
+        let tipoInfo = TIPOS[tipoAtual];
+        if (!tipoInfo) {
+            console.warn(`⚠️ Tipo inválido: "${tipoAtual}". Usando "pendencia" como fallback.`);
+            tipoAtual = 'pendencia';
+            tipoInfo = TIPOS['pendencia'];
+        }
+        
+        const tituloEl = document.getElementById('formTitulo');
+        if (tituloEl) tituloEl.textContent = `${tipoInfo.icon} ${tipoInfo.label}`;
+        
+        const isAditivo = tipoAtual === 'aditivo';
+        const isAditivoFisico = tipoAtual === 'aditivo-fisico';
+        const isFarol = tipoAtual === 'farol';
+        const isDevolucao = tipoAtual === 'devolucao';
+        const isPendencia = tipoAtual === 'pendencia';
+        const isMovimento = tipoAtual === 'movimento';
+        const isMGM = tipoAtual === 'mgm';
+        const temItens = tipoInfo.temItens;
+        
+        const camposMGM = document.getElementById('camposMGM');
+        if (camposMGM) camposMGM.style.display = isMGM ? '' : 'none';
+        
+        const camposAditivoFisico = document.getElementById('camposAditivoFisico');
+        if (camposAditivoFisico) camposAditivoFisico.style.display = isAditivoFisico ? '' : 'none';
+        
+        const camposFarol = document.getElementById('camposFarol');
+        if (camposFarol) camposFarol.style.display = isFarol ? '' : 'none';
+        
+        const camposDevolucao = document.getElementById('camposDevolucao');
+        if (camposDevolucao) camposDevolucao.style.display = isDevolucao ? '' : 'none';
+        
+        const camposMovimento = document.getElementById('camposMovimento');
+        if (camposMovimento) camposMovimento.style.display = isMovimento ? '' : 'none';
+        
+        const campoObservacaoGeral = document.getElementById('campoObservacaoGeral');
+        if (campoObservacaoGeral) campoObservacaoGeral.style.display = isFarol ? '' : 'none';
+        
+        const campoDataProgramacao = document.getElementById('campoDataProgramacao');
+        if (campoDataProgramacao) campoDataProgramacao.style.display = isMovimento ? 'none' : '';
+        
+        const btnImportarExcelContainer = document.getElementById('btnImportarExcelContainer');
+        if (btnImportarExcelContainer) btnImportarExcelContainer.style.display = isMGM ? '' : 'none';
+        
+        const secaoItens = document.getElementById('secaoItens');
+        if (secaoItens) secaoItens.style.display = temItens ? '' : 'none';
+        
+        const tituloItens = document.getElementById('tituloItens');
+        if (tituloItens) {
+            if (isAditivoFisico) tituloItens.textContent = '🔧 Itens do Aditivo Físico';
+            else if (isAditivo) tituloItens.textContent = '📝 Itens do Aditivo Sistêmico';
+            else if (isPendencia) tituloItens.textContent = '📦 Itens Pendentes';
+            else if (isMGM) tituloItens.textContent = '📋 Itens da MGM';
+            else tituloItens.textContent = '📦 Itens';
+        }
+        
+        document.querySelectorAll('.col-mgm').forEach(el => { if (el) el.style.display = isMGM ? '' : 'none'; });
+        document.querySelectorAll('.col-status-aditivo').forEach(el => { if (el) el.style.display = isAditivo ? '' : 'none'; });
+        document.querySelectorAll('.col-num-doc').forEach(el => { if (el) el.style.display = isAditivo ? '' : 'none'; });
+        document.querySelectorAll('.col-usuario').forEach(el => { if (el) el.style.display = isAditivo ? '' : 'none'; });
+        document.querySelectorAll('.col-observacao').forEach(el => { if (el) el.style.display = isAditivo ? '' : 'none'; });
+        document.querySelectorAll('.col-aplicado').forEach(el => { if (el) el.style.display = isAditivoFisico ? '' : 'none'; });
+        document.querySelectorAll('.col-colaborador').forEach(el => { if (el) el.style.display = isAditivoFisico ? '' : 'none'; });
+        document.querySelectorAll('.col-encarregado').forEach(el => { if (el) el.style.display = isAditivoFisico ? '' : 'none'; });
+        document.querySelectorAll('.col-data-baixa').forEach(el => { if (el) el.style.display = isPendencia ? '' : 'none'; });
+        document.querySelectorAll('.col-baixado').forEach(el => { if (el) el.style.display = isPendencia ? '' : 'none'; });
+        document.querySelectorAll('.col-motivo').forEach(el => { if (el) el.style.display = isPendencia ? '' : 'none'; });
+        document.querySelectorAll('.col-colaborador-item').forEach(el => { if (el) el.style.display = isPendencia ? '' : 'none'; });
+        document.querySelectorAll('.col-observacao-item').forEach(el => { if (el) el.style.display = isPendencia ? '' : 'none'; });
+        
+        const thQuantidade = document.getElementById('thQuantidade');
+        if (thQuantidade) thQuantidade.textContent = isMGM ? 'QTD (Base)' : 'QTD';
+        
+        const thStatus = document.getElementById('thStatusAditivo');
+        const thNumDoc = document.getElementById('thNumDoc');
+        const thUsuario = document.getElementById('thUsuario');
+        const thObservacao = document.getElementById('thObservacao');
+        const thAditivoSaida = document.getElementById('thAditivoSaida');
+        const thAditivoCampo = document.getElementById('thAditivoCampo');
+        const thRma = document.getElementById('thRma');
+        const thSeparada = document.getElementById('thSeparada');
+        const thAplicada = document.getElementById('thAplicada');
+        const thDma = document.getElementById('thDma');
+        const thPendente = document.getElementById('thPendente');
+        const thAplicado = document.getElementById('thAplicado');
+        const thColaborador = document.getElementById('thColaborador');
+        const thEncarregado = document.getElementById('thEncarregado');
+        const thDataBaixa = document.getElementById('thDataBaixa');
+        const thBaixado = document.getElementById('thBaixado');
+        const thMotivo = document.getElementById('thMotivo');
+        const thColaboradorItem = document.getElementById('thColaboradorItem');
+        const thObservacaoItem = document.getElementById('thObservacaoItem');
+        
+        if (thStatus) thStatus.style.display = isAditivo ? '' : 'none';
+        if (thNumDoc) thNumDoc.style.display = isAditivo ? '' : 'none';
+        if (thUsuario) thUsuario.style.display = isAditivo ? '' : 'none';
+        if (thObservacao) thObservacao.style.display = isAditivo ? '' : 'none';
+        if (thAditivoSaida) thAditivoSaida.style.display = isMGM ? '' : 'none';
+        if (thAditivoCampo) thAditivoCampo.style.display = isMGM ? '' : 'none';
+        if (thRma) thRma.style.display = isMGM ? '' : 'none';
+        if (thSeparada) thSeparada.style.display = isMGM ? '' : 'none';
+        if (thAplicada) thAplicada.style.display = isMGM ? '' : 'none';
+        if (thDma) thDma.style.display = isMGM ? '' : 'none';
+        if (thPendente) thPendente.style.display = isMGM ? '' : 'none';
+        if (thAplicado) thAplicado.style.display = isAditivoFisico ? '' : 'none';
+        if (thColaborador) thColaborador.style.display = isAditivoFisico ? '' : 'none';
+        if (thEncarregado) thEncarregado.style.display = isAditivoFisico ? '' : 'none';
+        if (thDataBaixa) thDataBaixa.style.display = isPendencia ? '' : 'none';
+        if (thBaixado) thBaixado.style.display = isPendencia ? '' : 'none';
+        if (thMotivo) thMotivo.style.display = isPendencia ? '' : 'none';
+        if (thColaboradorItem) thColaboradorItem.style.display = isPendencia ? '' : 'none';
+        if (thObservacaoItem) thObservacaoItem.style.display = isPendencia ? '' : 'none';
+        
+        const formTipo = document.getElementById('formTipo');
+        if (formTipo) formTipo.value = tipoInfo.label;
+        
+        // Pré-preenche os selects unificados de encarregados (sempre)
+        try {
+            preencherSelectEncarregados(document.getElementById('formEncarregado'));
+            preencherSelectEncarregados(document.getElementById('formEncarregadoMGM'));
+            configurarEspelhamentoEncarregados();
+        } catch (e) {
+            console.warn('⚠️ Erro ao pré-preencher encarregados:', e);
+        }
+        
         mostrarLoadingFormulario(`Buscando controle #${String(numero).padStart(4, '0')}...`);
         
         const url = `${API_URL}${tipoInfo.endpoint}/${numero}`;
@@ -2427,10 +2464,8 @@ async function carregarControleFormulario() {
             
             if (formDataDescarga) formDataDescarga.value = data.data_descarga || '';
             if (formEncarregado) {
-                // Normaliza o valor antigo e tenta casar com a base
                 const normalizado = normalizarEncarregadoLegado(data.encarregado || '');
                 formEncarregado.value = normalizado;
-                // Se o backend já tem as colunas novas, prioriza elas
                 const dadosEnc = getDadosEncarregado(normalizado);
                 if (formEncarregadoMatricula) formEncarregadoMatricula.value = data.matricula_encarregado || dadosEnc?.matricula || '';
                 if (formEncarregadoEquipe) formEncarregadoEquipe.value = data.equipe_encarregado || dadosEnc?.equipe || '';
@@ -2575,7 +2610,6 @@ async function carregarControleFormulario() {
         setTimeout(verificarECorrigirDuplicados, 250);
         
         setTimeout(() => {
-            esconderLoadingFormulario();
             if (!isMovimento) focarCampoObra();
             setTimeout(() => {
                 configurarNavegacaoDocumentosMultiplos();
@@ -2586,7 +2620,10 @@ async function carregarControleFormulario() {
     } catch (error) {
         console.error('❌ Erro ao carregar controle:', error);
         mostrarToast('❌ Erro ao carregar controle', 'erro');
-        esconderLoadingFormulario();
+        mostrarErroLoadingFormulario('Erro ao carregar: ' + error.message);
+    } finally {
+        // SEMPRE esconde o loading, sucesso ou erro
+        setTimeout(() => esconderLoadingFormulario(), 200);
     }
 }
 
@@ -3267,39 +3304,60 @@ async function handleArquivoExcel(event) {
 window.handleArquivoExcel = handleArquivoExcel;
 
 // ============================================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO (BLINDADA)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 Inicializando Controles DCMD - Formulário (v8)...');
+    console.log('🚀 Inicializando Controles DCMD - Formulário (v9)...');
     
-    const sessao = carregarDadosUsuario();
-    if (!sessao) return;
-    
-    // Pré-preenche selects de encarregados ANTES de carregar o controle
-    preencherSelectEncarregados(document.getElementById('formEncarregado'));
-    preencherSelectEncarregados(document.getElementById('formEncarregadoMGM'));
-    configurarEspelhamentoEncarregados();
-    
-    await carregarMateriais();
-    await carregarControleFormulario();
-    
-    window.addEventListener('scroll', controlarBotoesNavegacao);
-    window.addEventListener('resize', controlarBotoesNavegacao);
-    
-    setTimeout(controlarBotoesNavegacao, 500);
-    setTimeout(configurarNavegacaoTeclado, 300);
-    setTimeout(configurarPasteEmMassa, 300);
-    setTimeout(adicionarBotoesAcoesMassa, 300);
-    setTimeout(configurarValidacaoDuplicados, 400);
-    setTimeout(verificarECorrigirDuplicados, 450);
-    setTimeout(configurarNavegacaoSelectPorNumero, 300);
-    setTimeout(() => {
-        configurarNavegacaoDocumentosMultiplos();
-        configurarPasteDocumentosMultiplos();
-    }, 500);
-    
-    console.log('✅ Inicialização concluída!');
+    // Fallback: se o init falhar, esconde o loading e mostra erro
+    try {
+        const sessao = carregarDadosUsuario();
+        if (!sessao) return;
+        
+        // Pré-preenche selects de encarregados ANTES de carregar o controle
+        try {
+            preencherSelectEncarregados(document.getElementById('formEncarregado'));
+            preencherSelectEncarregados(document.getElementById('formEncarregadoMGM'));
+            configurarEspelhamentoEncarregados();
+        } catch (e) {
+            console.warn('⚠️ Erro ao pré-preencher encarregados (não bloqueante):', e);
+        }
+        
+        await carregarMateriais();
+        await carregarControleFormulario();
+        
+        window.addEventListener('scroll', controlarBotoesNavegacao);
+        window.addEventListener('resize', controlarBotoesNavegacao);
+        
+        setTimeout(controlarBotoesNavegacao, 500);
+        setTimeout(configurarNavegacaoTeclado, 300);
+        setTimeout(configurarPasteEmMassa, 300);
+        setTimeout(adicionarBotoesAcoesMassa, 300);
+        setTimeout(configurarValidacaoDuplicados, 400);
+        setTimeout(verificarECorrigirDuplicados, 450);
+        setTimeout(configurarNavegacaoSelectPorNumero, 300);
+        setTimeout(() => {
+            configurarNavegacaoDocumentosMultiplos();
+            configurarPasteDocumentosMultiplos();
+        }, 500);
+        
+        console.log('✅ Inicialização concluída!');
+    } catch (error) {
+        console.error('❌ Erro crítico na inicialização:', error);
+        esconderLoadingFormulario();
+        mostrarErroLoadingFormulario('Erro ao inicializar: ' + error.message);
+    } finally {
+        // Safety net: se por algum motivo o carregarControleFormulario
+        // não tiver escondido o loading, esconde à força em 3s
+        setTimeout(() => {
+            const overlay = document.getElementById('loadingFormulario');
+            if (overlay && !overlay.classList.contains('hidden')) {
+                console.warn('⚠️ Safety net: escondendo loading forçadamente');
+                esconderLoadingFormulario();
+            }
+        }, 3000);
+    }
 });
 
 // ============================================
@@ -3347,4 +3405,5 @@ window.obterDocumentosMultiplos = obterDocumentosMultiplos;
 window.handleArquivoExcel = handleArquivoExcel;
 window.mostrarLoadingFormulario = mostrarLoadingFormulario;
 window.esconderLoadingFormulario = esconderLoadingFormulario;
+window.mostrarErroLoadingFormulario = mostrarErroLoadingFormulario;
 window.atualizarBadgeEncarregado = atualizarBadgeEncarregado;
