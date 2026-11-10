@@ -1,5 +1,5 @@
 // ============================================
-// SICGM - HOME UNIFICADA v7
+// SICGM - HOME UNIFICADA v8
 // ============================================
 
 let perfilUsuario = 'GESTAO';
@@ -178,10 +178,7 @@ const DEPARTAMENTOS_VISUALIZACAO = {
     }
 };
 
-// ============================================
-// DASHBOARDS E AJUDA
-// ============================================
-
+// Dashboards
 const DASHBOARDS_DISPONIVEIS = [
     { nome: 'Pendência de Requisição', link: 'dashboards/pendencia-requisicao.html' },
     { nome: 'Aditivos Sistêmicos', link: 'dashboards/aditivos-sistemicos.html' },
@@ -218,7 +215,7 @@ preencherDashboards();
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📋 Home Unificada v7 carregada');
+    console.log('📋 Home Unificada v8 carregada');
 
     if (typeof firebase === 'undefined' || !firebase.auth) {
         console.error('❌ Firebase não carregado');
@@ -236,12 +233,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     inicializarSinoHome();
 
-    // Escuta pedidos de abertura de aba vindos de iframes (iframe-nav.js)
     window.addEventListener('message', tratarMensagemIframe);
 });
 
 // ============================================
-// COMUNICAÇÃO IFRAME → HOME
+// COMUNICAÇÃO IFRAME → HOME (v8 - normaliza link)
 // ============================================
 
 function tratarMensagemIframe(event) {
@@ -253,7 +249,33 @@ function tratarMensagemIframe(event) {
     if (!link || !titulo) return;
 
     console.log('📨 Home recebeu pedido de nova aba:', { link, titulo });
-    abrirAba(link, titulo, tabId || `iframe-${Date.now()}`);
+
+    // 🔥 NORMALIZA O LINK: garante que é relativo à raiz do projeto
+    let linkNormalizado = String(link);
+
+    // Remove protocolo + host se vier por acaso
+    if (linkNormalizado.startsWith('http')) {
+        try {
+            const url = new URL(linkNormalizado);
+            linkNormalizado = url.pathname.replace(/^\//, '') + url.search + url.hash;
+        } catch (e) { /* mantém */ }
+    }
+
+    // Remove o base path se estiver presente (ex: SICGM/controles/...)
+    const basePath = (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.BASE_PATH)
+        ? String(CONFIG.BASE_PATH).replace(/\/$/, '')
+        : '';
+
+    if (basePath && linkNormalizado.startsWith(basePath + '/')) {
+        linkNormalizado = linkNormalizado.substring(basePath.length + 1);
+    }
+
+    // Remove barras iniciais duplicadas
+    linkNormalizado = linkNormalizado.replace(/^\/+/, '');
+
+    console.log('📨 Link normalizado:', linkNormalizado);
+
+    abrirAba(linkNormalizado, titulo, tabId || `iframe-${Date.now()}`);
 }
 
 async function buscarDadosUsuario(user) {
@@ -389,7 +411,6 @@ function renderizarSidebar() {
         sidebar.appendChild(submenu);
     });
 
-    // CHAMADOS
     const chamados = document.createElement('div');
     chamados.className = 'sidebar-fixed-item';
     chamados.innerHTML = `<i class="fa-solid fa-headset"></i> <span>Chamados</span>`;
@@ -398,7 +419,6 @@ function renderizarSidebar() {
     };
     sidebar.appendChild(chamados);
 
-    // AJUDA (com submenu de departamentos)
     const ajudaWrap = document.createElement('div');
     ajudaWrap.id = 'ajuda-wrap';
 
@@ -498,17 +518,20 @@ function toggleAjudaSubmenu() {
 // ============================================
 
 function abrirAba(link, titulo, tabId) {
-    const existente = abasAbertas.find(a => a.link === link);
+    // Normaliza o link também (garantia extra)
+    let linkFinal = String(link || '').replace(/^\/+/, '');
+
+    const existente = abasAbertas.find(a => a.link === linkFinal);
     if (existente) {
         ativarAba(existente.id);
         return;
     }
 
-    abasAbertas.push({ id: tabId, titulo, link });
+    abasAbertas.push({ id: tabId, titulo, link: linkFinal });
     abaAtiva = tabId;
 
     renderizarAbas();
-    mostrarIframe(link);
+    mostrarIframe(linkFinal);
 }
 
 function renderizarAbas() {
@@ -780,7 +803,6 @@ function renderizarListaSino(lista) {
     `).join('');
 }
 
-// Expor funções para uso no HTML gerado
 window._clicarNotifSino = clicarNotifSino;
 window._marcarUmaLidaSino = marcarUmaLidaSino;
 
