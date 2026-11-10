@@ -20,54 +20,70 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
-      
+
       # ============================================
-      # 🔥 INJETAR FIREBASE CONFIG NOS HTMLs
+      # 🔥 INJETAR FIREBASE CONFIG NOS ARQUIVOS
       # ============================================
-      - name: Injetar Firebase Config nos HTMLs
+      - name: Injetar Firebase Config
         run: |
-          echo "📁 Injetando Firebase Config nos HTMLs..."
+          echo "📁 Injetando Firebase Config..."
           
           echo "🔍 Verificando Secrets..."
-          if [ -n "${{ secrets.FIREBASE_API_KEY }}" ]; then
-            echo "✅ FIREBASE_API_KEY configurado"
-          else
+          if [ -z "${{ secrets.FIREBASE_API_KEY }}" ]; then
             echo "❌ FIREBASE_API_KEY NÃO configurado!"
             exit 1
           fi
-          
-          # Substituir no login.html
-          echo "🔧 Processando login.html..."
-          sed -i "s|SUBSTITUIR_API_KEY|${{ secrets.FIREBASE_API_KEY }}|g" login.html
-          sed -i "s|SUBSTITUIR_AUTH_DOMAIN|${{ secrets.FIREBASE_AUTH_DOMAIN }}|g" login.html
-          sed -i "s|SUBSTITUIR_PROJECT_ID|${{ secrets.FIREBASE_PROJECT_ID }}|g" login.html
-          sed -i "s|SUBSTITUIR_STORAGE_BUCKET|${{ secrets.FIREBASE_STORAGE_BUCKET }}|g" login.html
-          sed -i "s|SUBSTITUIR_SENDER_ID|${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}|g" login.html
-          sed -i "s|SUBSTITUIR_APP_ID|${{ secrets.FIREBASE_APP_ID }}|g" login.html
-          
-          # Substituir no home-gestao.html
-          echo "🔧 Processando home-gestao.html..."
-          sed -i "s|SUBSTITUIR_API_KEY|${{ secrets.FIREBASE_API_KEY }}|g" home-gestao.html
-          sed -i "s|SUBSTITUIR_AUTH_DOMAIN|${{ secrets.FIREBASE_AUTH_DOMAIN }}|g" home-gestao.html
-          sed -i "s|SUBSTITUIR_PROJECT_ID|${{ secrets.FIREBASE_PROJECT_ID }}|g" home-gestao.html
-          sed -i "s|SUBSTITUIR_STORAGE_BUCKET|${{ secrets.FIREBASE_STORAGE_BUCKET }}|g" home-gestao.html
-          sed -i "s|SUBSTITUIR_SENDER_ID|${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}|g" home-gestao.html
-          sed -i "s|SUBSTITUIR_APP_ID|${{ secrets.FIREBASE_APP_ID }}|g" home-gestao.html
-          
-          # Substituir no admin.html
-          echo "🔧 Processando gestao/admin.html..."
-          sed -i "s|SUBSTITUIR_API_KEY|${{ secrets.FIREBASE_API_KEY }}|g" gestao/admin.html
-          sed -i "s|SUBSTITUIR_AUTH_DOMAIN|${{ secrets.FIREBASE_AUTH_DOMAIN }}|g" gestao/admin.html
-          sed -i "s|SUBSTITUIR_PROJECT_ID|${{ secrets.FIREBASE_PROJECT_ID }}|g" gestao/admin.html
-          sed -i "s|SUBSTITUIR_STORAGE_BUCKET|${{ secrets.FIREBASE_STORAGE_BUCKET }}|g" gestao/admin.html
-          sed -i "s|SUBSTITUIR_SENDER_ID|${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}|g" gestao/admin.html
-          sed -i "s|SUBSTITUIR_APP_ID|${{ secrets.FIREBASE_APP_ID }}|g" gestao/admin.html
-          
-          echo "✅ Todos os HTMLs processados!"
-      
+          echo "✅ FIREBASE_API_KEY configurado"
+
+          # 🔥 Função helper: só processa o arquivo SE ele existir
+          processar() {
+            local arquivo="$1"
+            if [ ! -f "$arquivo" ]; then
+              echo "⏭️  $arquivo não existe, pulando..."
+              return 0
+            fi
+            echo "🔧 Processando $arquivo..."
+            sed -i "s|SUBSTITUIR_API_KEY|${{ secrets.FIREBASE_API_KEY }}|g" "$arquivo"
+            sed -i "s|SUBSTITUIR_AUTH_DOMAIN|${{ secrets.FIREBASE_AUTH_DOMAIN }}|g" "$arquivo"
+            sed -i "s|SUBSTITUIR_PROJECT_ID|${{ secrets.FIREBASE_PROJECT_ID }}|g" "$arquivo"
+            sed -i "s|SUBSTITUIR_STORAGE_BUCKET|${{ secrets.FIREBASE_STORAGE_BUCKET }}|g" "$arquivo"
+            sed -i "s|SUBSTITUIR_SENDER_ID|${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}|g" "$arquivo"
+            sed -i "s|SUBSTITUIR_APP_ID|${{ secrets.FIREBASE_APP_ID }}|g" "$arquivo"
+            echo "✅ $arquivo processado"
+          }
+
+          # ═══════════════════════════════════════════
+          # Lista de arquivos que DEVEM ter os placeholders
+          # Adicione/remova conforme sua estrutura
+          # ═══════════════════════════════════════════
+          processar "login.html"
+          processar "home-unificada.html"
+          processar "gestao/admin.html"
+          processar "index.htm"
+
+          # ═══════════════════════════════════════════
+          # 🔥 Também processa o firebase-config.js
+          # (caso os placeholders estejam lá em vez dos HTMLs)
+          # ═══════════════════════════════════════════
+          if [ -f "js/firebase-config.js" ]; then
+            echo "🔧 Processando js/firebase-config.js..."
+            sed -i "s|SUBSTITUIR_API_KEY|${{ secrets.FIREBASE_API_KEY }}|g" "js/firebase-config.js"
+            sed -i "s|SUBSTITUIR_AUTH_DOMAIN|${{ secrets.FIREBASE_AUTH_DOMAIN }}|g" "js/firebase-config.js"
+            sed -i "s|SUBSTITUIR_PROJECT_ID|${{ secrets.FIREBASE_PROJECT_ID }}|g" "js/firebase-config.js"
+            sed -i "s|SUBSTITUIR_STORAGE_BUCKET|${{ secrets.FIREBASE_STORAGE_BUCKET }}|g" "js/firebase-config.js"
+            sed -i "s|SUBSTITUIR_SENDER_ID|${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}|g" "js/firebase-config.js"
+            sed -i "s|SUBSTITUIR_APP_ID|${{ secrets.FIREBASE_APP_ID }}|g" "js/firebase-config.js"
+            echo "✅ js/firebase-config.js processado"
+          else
+            echo "⏭️  js/firebase-config.js não existe, pulando..."
+          fi
+
+          echo ""
+          echo "✅ Todos os arquivos existentes foram processados!"
+
       # ============================================
       # 🔥 VERIFICAR SE FUNCIONOU
       # ============================================
@@ -76,30 +92,39 @@ jobs:
           echo "========================================="
           echo "📁 VERIFICANDO substituição"
           echo "========================================="
-          
-          if grep -q "SUBSTITUIR_API_KEY" login.html; then
-            echo "❌ ERRO: login.html ainda tem placeholders!"
+
+          ERROS=0
+
+          # Só verifica arquivos que existem
+          verificar() {
+            local arquivo="$1"
+            if [ ! -f "$arquivo" ]; then
+              echo "⏭️  $arquivo não existe (skip)"
+              return 0
+            fi
+            if grep -q "SUBSTITUIR_API_KEY" "$arquivo" 2>/dev/null; then
+              echo "❌ ERRO: $arquivo ainda tem placeholders!"
+              ERROS=$((ERROS+1))
+            else
+              echo "✅ $arquivo OK"
+            fi
+          }
+
+          verificar "login.html"
+          verificar "home-unificada.html"
+          verificar "gestao/admin.html"
+          verificar "index.htm"
+          verificar "js/firebase-config.js"
+
+          if [ $ERROS -gt 0 ]; then
+            echo ""
+            echo "❌ $ERROS arquivo(s) com placeholders não substituídos"
             exit 1
-          else
-            echo "✅ login.html processado com sucesso!"
-            echo "📄 Primeira linha do FIREBASE_CONFIG em login.html:"
-            grep -A 1 "FIREBASE_CONFIG" login.html | head -2
           fi
-          
-          if grep -q "SUBSTITUIR_API_KEY" home-gestao.html; then
-            echo "❌ ERRO: home-gestao.html ainda tem placeholders!"
-            exit 1
-          else
-            echo "✅ home-gestao.html processado com sucesso!"
-          fi
-          
-          if grep -q "SUBSTITUIR_API_KEY" gestao/admin.html; then
-            echo "❌ ERRO: admin.html ainda tem placeholders!"
-            exit 1
-          else
-            echo "✅ admin.html processado com sucesso!"
-          fi
-      
+
+          echo ""
+          echo "✅ Todos os arquivos verificados com sucesso!"
+
       # ============================================
       # 🔥 UPLOAD
       # ============================================
