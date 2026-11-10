@@ -3,6 +3,7 @@ const CHAMADOS_WORKER_URL = 'https://chamados.alefe-gomes-72f.workers.dev';
 const TELAS_SISTEMA = [
     { arquivo: 'index.htm', titulo: 'Página Inicial' },
     { arquivo: 'login.html', titulo: 'Login' },
+    { arquivo: 'home-unificada.html', titulo: 'Home - SICGM' },
     { arquivo: 'home-gestao.html', titulo: 'Home - Gestão' },
     { arquivo: 'home-operacional.html', titulo: 'Home - Operacional' },
     { arquivo: 'home-visualizacao.html', titulo: 'Home - Visualização' },
@@ -316,8 +317,33 @@ function _iconeNotif(tipo) {
 }
 
 function _injetarSino() {
+    // 🔥 NOVO: NÃO injeta se estiver dentro de iframe
+    if (window.self !== window.top) {
+        console.log('🔕 Sino não injetado: página em iframe');
+        return;
+    }
+
+    // Se já existe sino na página (ex: home-unificada.html), não cria outro
     if (document.getElementById('sinoNotificacoes')) return;
+
     if (window.location.pathname.includes('/chamados/abrir.html')) return;
+
+    // 🔥 NOVO: Só injeta se for home OU se for página do sistema explicitamente listada
+    const arquivoAtual = window.location.pathname.split('/').pop() || 'index.htm';
+    const paginasComSino = [
+        'home-unificada.html',
+        'home-gestao.html',
+        'home-operacional.html',
+        'home-visualizacao.html',
+        'index.htm',
+        'index.html'
+    ];
+
+    // Se não é home E não é página com sino explicitamente listada → não injeta
+    if (!paginasComSino.includes(arquivoAtual) && !isPaginaHome()) {
+        console.log('🔕 Sino não injetado: página interna sem suporte a sino');
+        return;
+    }
 
     const user = getUsuarioLogado();
     if (!user.matricula) return;
@@ -526,6 +552,9 @@ function irParaAbrirChamado() {
 }
 
 function criarBotaoFlutuante() {
+    // 🔥 NOVO: NÃO cria botão flutuante dentro de iframe
+    if (window.self !== window.top) return;
+
     if (window.location.pathname.includes('/chamados/')) return;
     if (document.getElementById('btnChamadoFlutuante')) return;
 
@@ -1537,19 +1566,13 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Escape') window.fecharModal();
 });
 
+// ============================================
+// REDIRECIONAMENTO PARA HOME (UNIFICADO)
+// ============================================
 function redirecionarParaHome() {
     const base = getBasePath();
-    let perfil = 'GESTAO';
-    if (typeof authService !== 'undefined' && authService) {
-        const user = authService.getUserData();
-        if (user && user.perfil) perfil = user.perfil;
-    }
-    const homeMap = {
-        'OPERACIONAL': 'home-operacional.html',
-        'GESTAO': 'home-gestao.html',
-        'VISUALIZACAO': 'home-visualizacao.html'
-    };
-    window.location.href = base + (homeMap[perfil] || 'home-gestao.html');
+    // 🔥 TODOS os perfis vão para a home unificada
+    window.location.href = base + 'home-unificada.html';
 }
 
 window.redirecionarParaHome = redirecionarParaHome;

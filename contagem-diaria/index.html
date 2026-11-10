@@ -4,34 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SICGM - Contagem Diária</title>
-    
-    <!-- CSS Base -->
+
     <link rel="stylesheet" href="../css/base.css">
-    <link rel="stylesheet" href="../css/chamados.css">
-    
-    <!-- CSS Contagem Diária -->
+    <link rel="stylesheet" href="../css/design-system.css">
     <link rel="stylesheet" href="../css/contagem-diaria.css">
+    <link rel="stylesheet" href="../css/chamados.css">
 </head>
 <body>
-    <!-- ============================================ -->
-    <!-- BOTÃO IR PARA O TOPO (FIXO NO CANTO)        -->
-    <!-- ============================================ -->
     <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
         <span class="btn-navegacao-icone">⬆</span>
         <span class="btn-navegacao-texto">Topo</span>
     </button>
 
-    <!-- ============================================ -->
-    <!-- BOTÃO IR PARA O FIM (FIXO NO CANTO)         -->
-    <!-- ============================================ -->
     <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
         <span class="btn-navegacao-icone">⬇</span>
         <span class="btn-navegacao-texto">Fim</span>
     </button>
 
-    <!-- ============================================ -->
-    <!-- MODAL DE CONFIRMAÇÃO DE BAIXA               -->
-    <!-- ============================================ -->
     <div id="modal-baixa" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-header">
@@ -60,293 +49,141 @@
         </div>
     </div>
 
-    <!-- ============================================ -->
-    <!-- CONTEÚDO PRINCIPAL                          -->
-    <!-- ============================================ -->
     <div class="container">
-        <div class="form-card">
-            
-            <!-- Logo e Título com Timer Integrado -->
-            <div class="header-container">
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 8px;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
-                        <h1 class="title">SICGM - Contagem Diária</h1>
+
+
+        <form id="contagemForm">
+
+            <div class="seletor-deposito-container">
+                <div class="seletor-deposito-nav" id="seletor-deposito-nav">
+                    <button type="button" class="tab-deposito-btn active" data-deposito="1050" onclick="ativarDeposito('1050')">
+                        <span class="tab-icone">🏠</span> Depósito 1050
+                    </button>
+                    <button type="button" class="tab-deposito-btn" data-deposito="1855" onclick="ativarDeposito('1855')">
+                        <span class="tab-icone">📦</span> Depósito 1855
+                    </button>
+                    <button type="button" class="tab-deposito-btn" data-deposito="1854" onclick="ativarDeposito('1854')">
+                        <span class="tab-icone">📦</span> Depósito 1854
+                    </button>
+                    <button type="button" class="tab-deposito-btn" data-deposito="1853" onclick="ativarDeposito('1853')">
+                        <span class="tab-icone">📦</span> Depósito 1853
+                    </button>
+                </div>
+            </div>
+
+            <div class="filtro-container">
+                <div class="filtro-row">
+                    <div class="filtro-input-group">
+                        <label for="filtro-texto">🔍 Pesquisar</label>
+                        <input type="text" id="filtro-texto" placeholder="Digite para pesquisar..." oninput="aplicarFiltro()">
+                    </div>
+                    <div class="filtro-select-group">
+                        <label for="filtro-tipo">Filtrar por</label>
+                        <select id="filtro-tipo" onchange="aplicarFiltro()">
+                            <option value="codigo">Código</option>
+                            <option value="descricao">Descrição</option>
+                            <option value="tombamento">Tombamento</option>
+                            <option value="todos" selected>Todos os campos</option>
+                        </select>
+                    </div>
+                    <div class="filtro-clear-group">
+                        <button type="button" class="btn-limpar-filtro" onclick="limparFiltro()">✕ Limpar</button>
                     </div>
                 </div>
             </div>
-            
-            <!-- Botão Voltar ao Início Baseado no Perfil -->
-            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
-                <button onclick="redirecionarParaHome()" class="btn-voltar-home">
-                    🏠 Voltar ao Início
-                </button>
+
+            <div class="tabs-principais-container">
+                <div class="tabs-principais-nav" id="tabs-principais-nav">
+                    <button type="button" class="tab-principal-btn active" data-tipo="diaria" onclick="ativarTipoContagem('diaria')">
+                        <span class="tab-icone">📋</span> Contagem Diária
+                    </button>
+                    <button type="button" class="tab-principal-btn" data-tipo="semanal" onclick="ativarTipoContagem('semanal')">
+                        <span class="tab-icone">📅</span> Contagem Semanal
+                    </button>
+                    <button type="button" class="tab-principal-btn" data-tipo="rotativas" onclick="ativarTipoContagem('rotativas')">
+                        <span class="tab-icone">🔄</span> Contagens Rotativas
+                    </button>
+                </div>
             </div>
-            
-            <form id="contagemForm">
-                
-                <!-- Nome, Matrícula e Data lado a lado -->
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="nome">Nome *</label>
-                        <input type="text" id="nome" name="nome" placeholder="Digite seu nome" required readonly>
-                    </div>
 
-                    <div class="form-group">
-                        <label for="matricula">Matrícula *</label>
-                        <input type="text" id="matricula" name="matricula" placeholder="Digite sua matrícula" required readonly>
-                    </div>
-
-                    <div class="data-field">
-                        <label for="data">Data</label>
-                        <input type="date" id="data" name="data" readonly>
-                    </div>
+            <div class="tab-principal-content active" id="tab-principal-diaria">
+                <div class="sub-titulo-secao">
+                    <span class="sub-titulo-icone">📋</span>
+                    <span>Materiais contados diariamente: Concretos, Bobinas, Trafos, Específicos e Medidores</span>
                 </div>
-
-                <!-- ============================================ -->
-                <!-- SELETOR DE DEPÓSITOS                        -->
-                <!-- ============================================ -->
-                <div class="seletor-deposito-container">
-                    <div class="seletor-deposito-nav" id="seletor-deposito-nav">
-                        <button type="button" class="tab-deposito-btn active" data-deposito="1050" onclick="ativarDeposito('1050')">
-                            <span class="tab-icone">🏠</span>
-                            Depósito 1050
-                        </button>
-                        <button type="button" class="tab-deposito-btn" data-deposito="1855" onclick="ativarDeposito('1855')">
-                            <span class="tab-icone">📦</span>
-                            Depósito 1855
-                        </button>
-                        <button type="button" class="tab-deposito-btn" data-deposito="1854" onclick="ativarDeposito('1854')">
-                            <span class="tab-icone">📦</span>
-                            Depósito 1854
-                        </button>
-                        <button type="button" class="tab-deposito-btn" data-deposito="1853" onclick="ativarDeposito('1853')">
-                            <span class="tab-icone">📦</span>
-                            Depósito 1853
-                        </button>
-                    </div>
+                <div class="tabs-container" id="tabs-diaria">
+                    <div class="tabs-nav" id="tabs-nav-diaria"></div>
+                    <div id="tabs-content-diaria"></div>
                 </div>
+            </div>
 
-                <!-- ============================================ -->
-                <!-- FILTRO DE PESQUISA                          -->
-                <!-- ============================================ -->
-                <div class="filtro-container">
-                    <div class="filtro-row">
-                        <div class="filtro-input-group">
-                            <label for="filtro-texto">🔍 Pesquisar</label>
-                            <input type="text" id="filtro-texto" placeholder="Digite para pesquisar..." oninput="aplicarFiltro()">
-                        </div>
-                        <div class="filtro-select-group">
-                            <label for="filtro-tipo">Filtrar por</label>
-                            <select id="filtro-tipo" onchange="aplicarFiltro()">
-                                <option value="codigo">Código</option>
-                                <option value="descricao">Descrição</option>
-                                <option value="tombamento">Tombamento</option>
-                                <option value="todos" selected>Todos os campos</option>
-                            </select>
-                        </div>
-                        <div class="filtro-clear-group">
-                            <button type="button" class="btn-limpar-filtro" onclick="limparFiltro()">
-                                ✕ Limpar
-                            </button>
-                        </div>
-                    </div>
-                    <div id="filtro-resultado" class="filtro-resultado">
-                        <span id="filtro-contagem">Mostrando 0 itens</span>
-                    </div>
+            <div class="tab-principal-content" id="tab-principal-semanal">
+                <div class="sub-titulo-secao">
+                    <span class="sub-titulo-icone">📅</span>
+                    <span>Materiais contados semanalmente: Miscelâneas (antigo)</span>
                 </div>
+                <div class="tabs-container" id="tabs-semanal">
+                    <div class="tabs-nav" id="tabs-nav-semanal"></div>
+                    <div id="tabs-content-semanal"></div>
+                </div>
+            </div>
 
-                <!-- ============================================ -->
-                <!-- ABAS PRINCIPAIS - TIPO DE CONTAGEM          -->
-                <!-- ============================================ -->
-                <div class="tabs-principais-container">
-                    <div class="tabs-principais-nav" id="tabs-principais-nav">
-                        <button type="button" class="tab-principal-btn active" data-tipo="diaria" onclick="ativarTipoContagem('diaria')">
-                            <span class="tab-icone">📋</span>
-                            Contagem Diária
-                        </button>
-                        <button type="button" class="tab-principal-btn" data-tipo="semanal" onclick="ativarTipoContagem('semanal')">
-                            <span class="tab-icone">📅</span>
-                            Contagem Semanal
-                        </button>
-                        <button type="button" class="tab-principal-btn" data-tipo="rotativas" onclick="ativarTipoContagem('rotativas')">
-                            <span class="tab-icone">🔄</span>
-                            Contagens Rotativas
-                        </button>
-                    </div>
+            <div class="tab-principal-content" id="tab-principal-rotativas">
+                <div class="sub-titulo-secao">
+                    <span class="sub-titulo-icone">🔄</span>
+                    <span>Materiais contados em rotação: Laços, Alças, Parafusos, Cabos, Miscelâneas 1 e Miscelâneas 2</span>
                 </div>
+                <div class="tabs-container" id="tabs-rotativas">
+                    <div class="tabs-nav" id="tabs-nav-rotativas"></div>
+                    <div id="tabs-content-rotativas"></div>
+                </div>
+            </div>
 
-                <!-- ============================================ -->
-                <!-- CONTEÚDO DAS ABAS PRINCIPAIS                 -->
-                <!-- ============================================ -->
-                
-                <!-- CONTAGEM DIÁRIA -->
-                <div class="tab-principal-content active" id="tab-principal-diaria">
-                    <div class="sub-titulo-secao">
-                        <span class="sub-titulo-icone">📋</span>
-                        <span>Materiais contados diariamente: Concretos, Bobinas, Trafos, Específicos e Medidores</span>
-                    </div>
-                    <div class="tabs-container" id="tabs-diaria">
-                        <div class="tabs-nav" id="tabs-nav-diaria"></div>
-                        <div id="tabs-content-diaria"></div>
-                    </div>
-                </div>
+            <div id="loading-materiais" style="text-align: center; padding: 20px; color: #718096;">
+                ⏳ Carregando materiais...
+            </div>
 
-                <!-- CONTAGEM SEMANAL -->
-                <div class="tab-principal-content" id="tab-principal-semanal">
-                    <div class="sub-titulo-secao">
-                        <span class="sub-titulo-icone">📅</span>
-                        <span>Materiais contados semanalmente: Miscelâneas (antigo)</span>
-                    </div>
-                    <div class="tabs-container" id="tabs-semanal">
-                        <div class="tabs-nav" id="tabs-nav-semanal"></div>
-                        <div id="tabs-content-semanal"></div>
-                    </div>
-                </div>
+            <div id="mensagem" class="mensagem"></div>
 
-                <!-- CONTAGENS ROTATIVAS -->
-                <div class="tab-principal-content" id="tab-principal-rotativas">
-                    <div class="sub-titulo-secao">
-                        <span class="sub-titulo-icone">🔄</span>
-                        <span>Materiais contados em rotação: Laços, Alças, Parafusos, Cabos, Miscelâneas 1 e Miscelâneas 2</span>
-                    </div>
-                    <div class="tabs-container" id="tabs-rotativas">
-                        <div class="tabs-nav" id="tabs-nav-rotativas"></div>
-                        <div id="tabs-content-rotativas"></div>
-                    </div>
-                </div>
-                
-                <div id="loading-materiais" style="text-align: center; padding: 20px; color: #718096;">
-                    ⏳ Carregando materiais...
-                </div>
-                
-                <div id="mensagem" class="mensagem"></div>
-
-                <button type="submit" class="submit-btn">📝 Registrar Contagem</button>
-            </form>
-            
-        </div>
-        
-        <!-- Rodapé com link de voltar (fallback) -->
-        <div style="text-align: center; margin-top: 1rem;">
-            <button onclick="redirecionarParaHome()" style="
-                background: transparent;
-                color: #4299E1;
-                border: none;
-                cursor: pointer;
-                font-weight: 500;
-                font-size: 14px;
-                text-decoration: underline;
-            ">
-                ← Voltar para Home
-            </button>
-        </div>
+            <button type="submit" class="submit-btn">📝 Registrar Contagem</button>
+        </form>
     </div>
 
-    <!-- Pop-up para descrição completa -->
     <div id="descricao-popup" class="descricao-popup"></div>
     <div id="popup-overlay" class="popup-overlay"></div>
 
-    <!-- ============================================ -->
-    <!-- 🔥 FIREBASE SDK                              -->
-    <!-- ============================================ -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-
-    <!-- ============================================ -->
-    <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
-    <!-- ============================================ -->
-    <script src="../js/firebase-config.js"></script>   
-    <script src="../js/config.js"></script>  
-    <script src="../js/auth-service.js"></script>      
-    <script src="../js/auth-helper.js"></script>  
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/auth-service.js"></script>
+    <script src="../js/auth-helper.js"></script>
     <script src="../js/script.js"></script>
-    <script src="../js/auth-global.js"></script>  
-    <Script src="../js/login.js"></script>      
+    <script src="../js/auth-global.js"></script>
     <script src="../js/config-depositos.js"></script>
     <script src="../js/contagem-diaria.js"></script>
     <script src="../js/chamados.js" defer></script>
     <script src="../js/iframe-nav.js"></script>
-    
-    <!-- ============================================ -->
-    <!-- 🔥 FUNÇÕES DE NAVEGAÇÃO CORRIGIDAS          -->
-    <!-- ============================================ -->
+
     <script>
-        /**
-         * 🔥 FUNÇÃO PARA VOLTAR PARA HOME CORRIGIDA
-         * Usa authService em vez da função antiga verificarSessao()
-         * E sobe um nível (../) porque estamos em contagem-diaria/
-         */
         function redirecionarParaHome() {
-            console.log('🏠 Redirecionando para home...');
-            
-            try {
-                // 🔥 USAR authService EM VEZ DA SESSÃO ANTIGA
-                let perfil = 'GESTAO';
-                
-                if (typeof authService !== 'undefined' && authService) {
-                    const user = authService.getUserData();
-                    if (user && user.perfil) {
-                        perfil = user.perfil;
-                    }
-                }
-                
-                console.log(`📝 Perfil detectado: ${perfil}`);
-                
-                const homeMap = {
-                    'OPERACIONAL': '../home-operacional.html',
-                    'GESTAO': '../home-gestao.html',
-                    'VISUALIZACAO': '../home-visualizacao.html'
-                };
-                
-                const homePage = homeMap[perfil] || '../home-gestao.html';
-                
-                console.log(`🔀 Navegando para: ${homePage}`);
-                window.location.href = homePage;
-                
-            } catch (error) {
-                console.error('❌ Erro ao redirecionar:', error);
-                // Fallback: sobe um nível e vai para home-gestao.html
-                window.location.href = '../home-gestao.html';
-            }
+            window.location.href = '../home-unificada.html';
         }
-
-        /**
-         * 🔥 FUNÇÕES DE NAVEGAÇÃO DA PÁGINA
-         */
-        function irParaTopo() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function irParaFim() {
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        }
-
+        function irParaTopo() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        function irParaFim() { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }
         function controlarBotoesNavegacao() {
             const btnTopo = document.getElementById('btnTopo');
             const btnFim = document.getElementById('btnFim');
             const scrollY = window.scrollY;
             const alturaTotal = document.body.scrollHeight - window.innerHeight;
-
-            if (scrollY > 200) {
-                btnTopo.classList.add('visivel');
-            } else {
-                btnTopo.classList.remove('visivel');
-            }
-
-            if (scrollY < alturaTotal - 100) {
-                btnFim.classList.add('visivel');
-            } else {
-                btnFim.classList.remove('visivel');
-            }
+            if (scrollY > 200) btnTopo.classList.add('visivel'); else btnTopo.classList.remove('visivel');
+            if (scrollY < alturaTotal - 100) btnFim.classList.add('visivel'); else btnFim.classList.remove('visivel');
         }
-
         document.addEventListener('DOMContentLoaded', function() {
             window.addEventListener('scroll', controlarBotoesNavegacao);
             window.addEventListener('resize', controlarBotoesNavegacao);
             setTimeout(controlarBotoesNavegacao, 100);
         });
     </script>
-
 </body>
 </html>

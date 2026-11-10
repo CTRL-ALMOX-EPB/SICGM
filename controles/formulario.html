@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SICGM - Formulário Controle DCMD</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+
     <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/design-system.css">
     <link rel="stylesheet" href="../css/controles-dcmd.css">
     <link rel="stylesheet" href="../css/chamados.css">
+
     <style>
         #loadingFormulario {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -21,7 +24,7 @@
         #loadingFormulario .spinner {
             width: 48px; height: 48px;
             border: 4px solid #E2E8F0;
-            border-top-color: #4299E1;
+            border-top-color: #3d8bfd;
             border-radius: 50%;
             animation: spinLoad 0.8s linear infinite;
         }
@@ -49,420 +52,414 @@
     </button>
 
     <div class="container">
-        <div class="form-card">
-            <div class="header-container">
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 8px;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
-                        <h1 class="title">📋 Formulário Controle DCMD</h1>
+
+        <!-- HEADER PADRONIZADO -->
+        <div class="page-header">
+            <div class="header-left">
+                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                <h1>
+                    📋 Formulário Controle DCMD
+                    <small id="headerSubtitulo">Novo controle</small>
+                </h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info" id="userHeader">
+                    <div class="avatar" id="userAvatar">U</div>
+                    <div class="user-details">
+                        <span class="user-name" id="userName">Carregando...</span>
+                        <span class="user-matricula" id="userMatricula">Matrícula: ---</span>
                     </div>
                 </div>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <button onclick="voltarParaPainel()" class="btn-voltar-home">⬅ Voltar ao Painel</button>
-                
+                <button class="btn-voltar-home" onclick="voltarParaPainel()">⬅ Voltar ao Painel</button>
+
                 <div id="btnImportarExcelContainer" style="display: none;">
                     <input type="file" id="inputArquivoExcel" accept=".xlsx,.xls,.csv" style="display: none;" onchange="handleArquivoExcel(event)">
-                    <button type="button" class="btn-importar-excel" onclick="document.getElementById('inputArquivoExcel').click()">
+                    <button type="button" class="btn-exportar" onclick="document.getElementById('inputArquivoExcel').click()">
                         📥 Importar Excel
                     </button>
                 </div>
             </div>
+        </div>
 
-            <div class="user-header" id="userHeader">
-                <div class="user-info">
-                    <div class="avatar" id="userAvatar">U</div>
-                    <div class="user-details">
-                        <h3 id="userName">Carregando...</h3>
-                        <p id="userRole">Carregando...</p>
-                        <p id="userMatricula">Matrícula: ---</p>
+        <form id="controleForm" class="controle-form">
+            <!-- CABEÇALHO DO FORMULÁRIO -->
+            <div class="controle-form-header">
+                <div>
+                    <h2 id="formTitulo">📌 Pendência de Baixa</h2>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 8px;">
+                        <span class="controle-numero" id="controleNumero">#0000</span>
+                        <span class="controle-status" id="controleStatus">⏳ PENDENTE</span>
                     </div>
                 </div>
             </div>
 
-            <form id="controleForm" class="controle-form">
-                <div class="controle-form-header">
-                    <div>
-                        <h1 id="formTitulo">📌 Pendência de Baixa</h1>
-                        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 5px;">
-                            <span class="controle-numero" id="controleNumero">#0000</span>
-                            <span class="controle-status" id="controleStatus">⏳ PENDENTE</span>
-                        </div>
+            <div class="controle-form-body">
+                <div class="form-row form-row-3col">
+                    <div class="form-group">
+                        <label>📋 Tipo de Controle</label>
+                        <input type="text" id="formTipo" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="formObra">🏗️ Obra *</label>
+                        <input type="text" id="formObra" placeholder="Digite o número da obra" required>
+                    </div>
+
+                    <div class="form-group" id="campoDataProgramacao">
+                        <label for="formDataProgramacao">📅 Data de Programação <span style="color:#FC8181;">*</span></label>
+                        <input type="date" id="formDataProgramacao">
                     </div>
                 </div>
 
-                <div class="controle-form-body">
+                <div id="camposMGM" style="display:none;">
+                    <hr>
+                    <h3>📋 Dados da MGM</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formSeparadorMGM">👤 Separador</label>
+                            <input type="text" id="formSeparadorMGM" placeholder="Nome do separador">
+                        </div>
+                        <div class="form-group">
+                            <label for="formDataSeparacaoMGM">📅 Data de Separação</label>
+                            <input type="date" id="formDataSeparacaoMGM">
+                        </div>
+                    </div>
+
                     <div class="form-row form-row-3col">
                         <div class="form-group">
-                            <label>📋 Tipo de Controle</label>
-                            <input type="text" id="formTipo" readonly>
+                            <label for="formEncarregadoMGM">👔 Encarregado</label>
+                            <select id="formEncarregadoMGM">
+                                <option value="">Carregando encarregados...</option>
+                            </select>
                         </div>
-                        
                         <div class="form-group">
-                            <label for="formObra">🏗️ Obra *</label>
-                            <input type="text" id="formObra" placeholder="Digite o número da obra" required>
+                            <label for="formEncarregadoMGMMatricula">🆔 Matrícula</label>
+                            <input type="text" id="formEncarregadoMGMMatricula" readonly placeholder="Matrícula">
                         </div>
-                        
-                        <div class="form-group" id="campoDataProgramacao">
-                            <label for="formDataProgramacao">📅 Data de Programação <span style="color:#FC8181;">*</span></label>
-                            <input type="date" id="formDataProgramacao">
-                        </div>
-                    </div>
-
-                    <div id="camposMGM" style="display:none;">
-                        <hr>
-                        <h3>📋 Dados da MGM</h3>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="formSeparadorMGM">👤 Separador</label>
-                                <input type="text" id="formSeparadorMGM" placeholder="Nome do separador">
-                            </div>
-                            <div class="form-group">
-                                <label for="formDataSeparacaoMGM">📅 Data de Separação</label>
-                                <input type="date" id="formDataSeparacaoMGM">
-                            </div>
-                        </div>
-                        
-                        <!-- 🆕 ENCARREGADO MGM — Select Unificado + Matrícula + Equipe -->
-                        <div class="form-row form-row-3col">
-                            <div class="form-group">
-                                <label for="formEncarregadoMGM">👔 Encarregado</label>
-                                <select id="formEncarregadoMGM">
-                                    <option value="">Carregando encarregados...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="formEncarregadoMGMMatricula">🆔 Matrícula</label>
-                                <input type="text" id="formEncarregadoMGMMatricula" readonly placeholder="Matrícula">
-                            </div>
-                            <div class="form-group">
-                                <label for="formEncarregadoMGMEquipe">👥 Equipe</label>
-                                <input type="text" id="formEncarregadoMGMEquipe" readonly placeholder="Equipe">
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="formCaminhao">🚚 Caminhão</label>
-                                <input type="text" id="formCaminhao" placeholder="Placa ou identificação">
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group" style="grid-column: 1 / -1;">
-                                <label for="formObservacaoMGM">📝 Observação (Conferido / Expedição / Outros)</label>
-                                <textarea id="formObservacaoMGM" rows="2" placeholder="Ex: Conferido por: João / Expedição: Maria"></textarea>
-                            </div>
+                        <div class="form-group">
+                            <label for="formEncarregadoMGMEquipe">👥 Equipe</label>
+                            <input type="text" id="formEncarregadoMGMEquipe" readonly placeholder="Equipe">
                         </div>
                     </div>
 
-                    <div id="camposAditivoFisico" style="display:none;">
-                        <hr>
-                        <h3>🔧 Dados do Aditivo Físico</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="formTipoAditivoFisico">📋 Tipo</label>
-                                <select id="formTipoAditivoFisico">
-                                    <option value="SAÍDA">SAÍDA</option>
-                                    <option value="CAMPO">CAMPO</option>
-                                    <option value="AMBOS">AMBOS</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="formDataExecucao">📅 Data de Execução</label>
-                                <input type="date" id="formDataExecucao">
-                            </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formCaminhao">🚚 Caminhão</label>
+                            <input type="text" id="formCaminhao" placeholder="Placa ou identificação">
                         </div>
                     </div>
 
-                    <div id="camposFarol" style="display:none;">
-                        <hr>
-                        <h3>🚦 Dados do Farol de Obras</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="formSetor">📋 Setor</label>
-                                <select id="formSetor">
-                                    <option value="">Selecione...</option>
-                                    <option value="CONSTRUÇÃO">CONSTRUÇÃO</option>
-                                    <option value="MANUTENÇÃO">MANUTENÇÃO</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="formDataRecebimento">📅 Data de Recebimento</label>
-                                <input type="date" id="formDataRecebimento">
-                            </div>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label for="formObservacaoMGM">📝 Observação (Conferido / Expedição / Outros)</label>
+                            <textarea id="formObservacaoMGM" rows="2" placeholder="Ex: Conferido por: João / Expedição: Maria"></textarea>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="formSeparador">👤 Separador</label>
-                                <select id="formSeparador">
-                                    <option value="">Selecione...</option>
-                                    <option value="GABRIEL">GABRIEL</option>
-                                    <option value="GUSTAVO">GUSTAVO</option>
-                                    <option value="MARCOS">MARCOS</option>
-                                    <option value="VALMIR R.">VALMIR R.</option>
-                                    <option value="VALMIR S.">VALMIR S.</option>
-                                    <option value="KHARLOS">KHARLOS</option>
-                                    <option value="ERICK V.">ERICK V.</option>
-                                    <option value="ERIQUE L.">ERIQUE L.</option>
-                                    <option value="ARLINDO">ARLINDO</option>
-                                    <option value="NÃO PREENCHIDO">NÃO PREENCHIDO</option>
-                                    <option value="MATHEUS">MATHEUS</option>
-                                    <option value="NÃO SEPARADA">NÃO SEPARADA</option>
-                                    <option value="JOHN">JOHN</option>
-                                    <option value="JEFFERSON">JEFFERSON</option>
-                                    <option value="LUIZ G.">LUIZ G.</option>
-                                    <option value="CARLOS A.">CARLOS A.</option>
-                                    <option value="TRAJANO">TRAJANO</option>
-                                    <option value="GILZARTE">GILZARTE</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="formDataSeparacaoFarol">📅 Data de Separação</label>
-                                <input type="date" id="formDataSeparacaoFarol">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="formObraTeveSaida">🚚 Obra teve saída?</label>
-                                <select id="formObraTeveSaida">
-                                    <option value="NÃO">NÃO</option>
-                                    <option value="SIM">SIM</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="formDataSaida">📅 Data de Saída</label>
-                                <input type="date" id="formDataSaida">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="formAditivo">📝 Aditivo</label>
-                                <select id="formAditivo">
-                                    <option value="NÃO">NÃO</option>
-                                    <option value="SIM">SIM</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="formObraProgramada">📋 Obra Programada</label>
-                                <select id="formObraProgramada">
-                                    <option value="NÃO">NÃO</option>
-                                    <option value="SIM">SIM</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="formDevolvida">🔄 Devolvida</label>
-                                <select id="formDevolvida">
-                                    <option value="NÃO">NÃO</option>
-                                    <option value="SIM">SIM</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="formCancelada">❌ Cancelada</label>
-                                <select id="formCancelada">
-                                    <option value="NÃO">NÃO</option>
-                                    <option value="SIM">SIM</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="camposDevolucao" style="display:none;">
-                        <hr>
-                        <h3>📦 Dados da Pendência de Devolução</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="formDataDescarga">📅 Data da Descarga</label>
-                                <input type="date" id="formDataDescarga">
-                            </div>
-                            <div class="form-group">
-                                <label for="formDataDevolucaoFisica">📅 Data da Devolução Física</label>
-                                <input type="date" id="formDataDevolucaoFisica">
-                            </div>
-                        </div>
-                        
-                        <!-- 🆕 ENCARREGADO DEVOLUÇÃO — Select Unificado + Matrícula + Equipe -->
-                        <div class="form-row form-row-3col">
-                            <div class="form-group">
-                                <label for="formEncarregado">👤 Encarregado</label>
-                                <select id="formEncarregado">
-                                    <option value="">Carregando encarregados...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="formEncarregadoMatricula">🆔 Matrícula</label>
-                                <input type="text" id="formEncarregadoMatricula" readonly placeholder="Matrícula">
-                            </div>
-                            <div class="form-group">
-                                <label for="formEncarregadoEquipe">👥 Equipe</label>
-                                <input type="text" id="formEncarregadoEquipe" readonly placeholder="Equipe">
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="formMotivoPendencia">📝 Motivo da Pendência</label>
-                                <input type="text" id="formMotivoPendencia" placeholder="Motivo da pendência">
-                            </div>
-                            <div class="form-group">
-                                <label for="formSolucaoPendencia">✅ Solução da Pendência</label>
-                                <input type="text" id="formSolucaoPendencia" placeholder="Solução da pendência">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="formPendenciaPor">👤 Pendência por</label>
-                                <select id="formPendenciaPor">
-                                    <option value="">Selecione...</option>
-                                    <option value="TÉCNICA">TÉCNICA</option>
-                                    <option value="ALMOXARIFADO">ALMOXARIFADO</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group" style="grid-column: 1 / -1;">
-                                <label for="formObservacaoDevolucao">📝 Observação Geral</label>
-                                <textarea id="formObservacaoDevolucao" rows="3" placeholder="Digite observações gerais..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="camposMovimento" style="display:none;">
-                        <hr>
-                        <h3>📄 Dados da Movimentação</h3>
-                        
-                        <div class="form-row">
-                            <div class="form-group" style="grid-column: 1 / -1; max-width: 400px;">
-                                <label for="formTipoMovimento">📋 Tipo de Movimento *</label>
-                                <select id="formTipoMovimento" style="width: 100%;">
-                                    <option value="RMA">RMA - Controle de Movimentações</option>
-                                    <option value="DMA">DMA - Controle de Movimentações DMA</option>
-                                    <option value="DMA_SUCATA">DMA SUCATA - Controle de Movimentações Sucata</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group" style="grid-column: 1 / -1; padding: 10px 18px;">
-                                <label style="font-size: 0.85em; margin-bottom: 4px;">🔄 Tipo de MGM</label>
-                                <div class="radio-mgm-group">
-                                    <label>
-                                        <input type="radio" name="tipoMgm" value="UNICO" checked onchange="toggleTipoMgm()">
-                                        <span>📌 MGM Única</span>
-                                        <span class="radio-label-small">(1 documento = 1 data)</span>
-                                    </label>
-                                    <label>
-                                        <input type="radio" name="tipoMgm" value="MULTIPLO" onchange="toggleTipoMgm()">
-                                        <span>📌 Múltiplas MGM</span>
-                                        <span class="radio-label-small">(vários documentos/datas)</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="campoDataUnica">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="formCodMovimentacao">🔢 Cód. Movimentação *</label>
-                                    <input type="text" id="formCodMovimentacao" placeholder="Digite o código da movimentação">
-                                </div>
-                                <div class="form-group">
-                                    <label for="formDataUnica">📅 Data de Programação *</label>
-                                    <input type="date" id="formDataUnica">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="secaoDocumentosMultiplos" style="display:none; margin-top: 10px;">
-                            <div class="form-group" style="background: #F0FFF4; border-color: #9AE6B4; padding: 12px 16px;">
-                                <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #276749; font-size: 0.9em;">
-                                    📄 Documentos e Datas (Múltiplas MGM)
-                                    <span style="font-size: 0.7em; font-weight: 400; color: #48BB78;">Cada linha será um movimento</span>
-                                </label>
-                                
-                                <div class="documentos-table-header">
-                                    <span>📄 Nº Documento</span>
-                                    <span>📅 Data de Programação</span>
-                                    <span style="text-align: center;">Ações</span>
-                                </div>
-                                
-                                <div id="containerDocumentosMultiplos"></div>
-                                
-                                <button type="button" class="btn-add-doc" onclick="adicionarLinhaDocumentoMultiplo()">
-                                    ➕ Adicionar Documento
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="secaoItens">
-                        <hr>
-                        <h3 id="tituloItens">📦 Itens</h3>
-                        <div class="table-responsive">
-                            <table class="items-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width:7%;">Código</th>
-                                        <th style="width:12%;">Descrição</th>
-                                        <th style="width:4%;">UND</th>
-                                        <th style="width:6%;" id="thQuantidade">QTD</th>
-                                        
-                                        <th style="width:7%; display:none;" class="col-mgm" id="thAditivoSaida">Aditivo Saída</th>
-                                        <th style="width:7%; display:none;" class="col-mgm" id="thAditivoCampo">Aditivo Campo</th>
-                                        <th style="width:7%; display:none;" class="col-mgm" id="thRma">RMA</th>
-                                        <th style="width:7%; display:none;" class="col-mgm" id="thSeparada">Separada</th>
-                                        <th style="width:7%; display:none;" class="col-mgm" id="thAplicada">Aplicada</th>
-                                        <th style="width:7%; display:none;" class="col-mgm" id="thDma">DMA</th>
-                                        <th style="width:7%; display:none;" class="col-mgm" id="thPendente">Pendente</th>
-                                        
-                                        <th style="width:9%; display:none;" id="thDataBaixa">Data Baixa</th>
-                                        <th style="width:7%; display:none;" id="thBaixado">Baixado?</th>
-                                        <th style="width:10%; display:none;" id="thMotivo">Motivo</th>
-                                        <th style="width:9%; display:none;" id="thColaboradorItem">Colaborador</th>
-                                        <th style="width:12%; display:none;" id="thObservacaoItem">Observação</th>
-                                        
-                                        <th style="width:8%; display:none;" id="thStatusAditivo">Status</th>
-                                        <th style="width:9%; display:none;" id="thNumDoc">Nº Documento</th>
-                                        <th style="width:7%; display:none;" id="thUsuario">Usuário</th>
-                                        <th style="width:10%; display:none;" id="thObservacao">Observação</th>
-                                        
-                                        <th style="width:7%; display:none;" id="thAplicado">Aplicado</th>
-                                        <th style="width:9%; display:none;" id="thColaborador">Solicitante</th>
-                                        <th style="width:9%; display:none;" id="thEncarregado">Encarregado</th>
-                                        
-                                        <th style="width:6%;">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="itemsBody"></tbody>
-                            </table>
-                        </div>
-                        <button type="button" class="add-item-btn" onclick="adicionarLinhaItem()">➕ Adicionar Item</button>
-                    </div>
-
-                    <div id="campoObservacaoGeral" style="display:none;">
-                        <hr>
-                        <div class="form-row">
-                            <div class="form-group" style="grid-column: 1 / -1;">
-                                <label for="formObservacaoGeral">📝 Observação Geral</label>
-                                <textarea id="formObservacaoGeral" rows="3" placeholder="Digite observações..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    <div class="modal-actions">
-                        <button type="button" class="btn-salvar" onclick="salvarControle()">💾 Salvar</button>
-                        <button type="button" class="btn-finalizar" onclick="finalizarControle()">✅ Finalizar</button>
-                        <button type="button" class="btn-cancelar" onclick="voltarParaPainel()">✕ Cancelar</button>
                     </div>
                 </div>
-            </form>
-        </div>
+
+                <div id="camposAditivoFisico" style="display:none;">
+                    <hr>
+                    <h3>🔧 Dados do Aditivo Físico</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formTipoAditivoFisico">📋 Tipo</label>
+                            <select id="formTipoAditivoFisico">
+                                <option value="SAÍDA">SAÍDA</option>
+                                <option value="CAMPO">CAMPO</option>
+                                <option value="AMBOS">AMBOS</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="formDataExecucao">📅 Data de Execução</label>
+                            <input type="date" id="formDataExecucao">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="camposFarol" style="display:none;">
+                    <hr>
+                    <h3>🚦 Dados do Farol de Obras</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formSetor">📋 Setor</label>
+                            <select id="formSetor">
+                                <option value="">Selecione...</option>
+                                <option value="CONSTRUÇÃO">CONSTRUÇÃO</option>
+                                <option value="MANUTENÇÃO">MANUTENÇÃO</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="formDataRecebimento">📅 Data de Recebimento</label>
+                            <input type="date" id="formDataRecebimento">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formSeparador">👤 Separador</label>
+                            <select id="formSeparador">
+                                <option value="">Selecione...</option>
+                                <option value="GABRIEL">GABRIEL</option>
+                                <option value="GUSTAVO">GUSTAVO</option>
+                                <option value="MARCOS">MARCOS</option>
+                                <option value="VALMIR R.">VALMIR R.</option>
+                                <option value="VALMIR S.">VALMIR S.</option>
+                                <option value="KHARLOS">KHARLOS</option>
+                                <option value="ERICK V.">ERICK V.</option>
+                                <option value="ERIQUE L.">ERIQUE L.</option>
+                                <option value="ARLINDO">ARLINDO</option>
+                                <option value="NÃO PREENCHIDO">NÃO PREENCHIDO</option>
+                                <option value="MATHEUS">MATHEUS</option>
+                                <option value="NÃO SEPARADA">NÃO SEPARADA</option>
+                                <option value="JOHN">JOHN</option>
+                                <option value="JEFFERSON">JEFFERSON</option>
+                                <option value="LUIZ G.">LUIZ G.</option>
+                                <option value="CARLOS A.">CARLOS A.</option>
+                                <option value="TRAJANO">TRAJANO</option>
+                                <option value="GILZARTE">GILZARTE</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="formDataSeparacaoFarol">📅 Data de Separação</label>
+                            <input type="date" id="formDataSeparacaoFarol">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formObraTeveSaida">🚚 Obra teve saída?</label>
+                            <select id="formObraTeveSaida">
+                                <option value="NÃO">NÃO</option>
+                                <option value="SIM">SIM</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="formDataSaida">📅 Data de Saída</label>
+                            <input type="date" id="formDataSaida">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formAditivo">📝 Aditivo</label>
+                            <select id="formAditivo">
+                                <option value="NÃO">NÃO</option>
+                                <option value="SIM">SIM</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="formObraProgramada">📋 Obra Programada</label>
+                            <select id="formObraProgramada">
+                                <option value="NÃO">NÃO</option>
+                                <option value="SIM">SIM</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formDevolvida">🔄 Devolvida</label>
+                            <select id="formDevolvida">
+                                <option value="NÃO">NÃO</option>
+                                <option value="SIM">SIM</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="formCancelada">❌ Cancelada</label>
+                            <select id="formCancelada">
+                                <option value="NÃO">NÃO</option>
+                                <option value="SIM">SIM</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="camposDevolucao" style="display:none;">
+                    <hr>
+                    <h3>📦 Dados da Pendência de Devolução</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formDataDescarga">📅 Data da Descarga</label>
+                            <input type="date" id="formDataDescarga">
+                        </div>
+                        <div class="form-group">
+                            <label for="formDataDevolucaoFisica">📅 Data da Devolução Física</label>
+                            <input type="date" id="formDataDevolucaoFisica">
+                        </div>
+                    </div>
+
+                    <div class="form-row form-row-3col">
+                        <div class="form-group">
+                            <label for="formEncarregado">👤 Encarregado</label>
+                            <select id="formEncarregado">
+                                <option value="">Carregando encarregados...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="formEncarregadoMatricula">🆔 Matrícula</label>
+                            <input type="text" id="formEncarregadoMatricula" readonly placeholder="Matrícula">
+                        </div>
+                        <div class="form-group">
+                            <label for="formEncarregadoEquipe">👥 Equipe</label>
+                            <input type="text" id="formEncarregadoEquipe" readonly placeholder="Equipe">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formMotivoPendencia">📝 Motivo da Pendência</label>
+                            <input type="text" id="formMotivoPendencia" placeholder="Motivo da pendência">
+                        </div>
+                        <div class="form-group">
+                            <label for="formSolucaoPendencia">✅ Solução da Pendência</label>
+                            <input type="text" id="formSolucaoPendencia" placeholder="Solução da pendência">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formPendenciaPor">👤 Pendência por</label>
+                            <select id="formPendenciaPor">
+                                <option value="">Selecione...</option>
+                                <option value="TÉCNICA">TÉCNICA</option>
+                                <option value="ALMOXARIFADO">ALMOXARIFADO</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label for="formObservacaoDevolucao">📝 Observação Geral</label>
+                            <textarea id="formObservacaoDevolucao" rows="3" placeholder="Digite observações gerais..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="camposMovimento" style="display:none;">
+                    <hr>
+                    <h3>📄 Dados da Movimentação</h3>
+
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1; max-width: 400px;">
+                            <label for="formTipoMovimento">📋 Tipo de Movimento *</label>
+                            <select id="formTipoMovimento" style="width: 100%;">
+                                <option value="RMA">RMA - Controle de Movimentações</option>
+                                <option value="DMA">DMA - Controle de Movimentações DMA</option>
+                                <option value="DMA_SUCATA">DMA SUCATA - Controle de Movimentações Sucata</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1; padding: 10px 18px;">
+                            <label style="font-size: 0.85em; margin-bottom: 4px;">🔄 Tipo de MGM</label>
+                            <div class="radio-mgm-group">
+                                <label>
+                                    <input type="radio" name="tipoMgm" value="UNICO" checked onchange="toggleTipoMgm()">
+                                    <span>📌 MGM Única</span>
+                                    <span class="radio-label-small">(1 documento = 1 data)</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="tipoMgm" value="MULTIPLO" onchange="toggleTipoMgm()">
+                                    <span>📌 Múltiplas MGM</span>
+                                    <span class="radio-label-small">(vários documentos/datas)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="campoDataUnica">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="formCodMovimentacao">🔢 Cód. Movimentação *</label>
+                                <input type="text" id="formCodMovimentacao" placeholder="Digite o código da movimentação">
+                            </div>
+                            <div class="form-group">
+                                <label for="formDataUnica">📅 Data de Programação *</label>
+                                <input type="date" id="formDataUnica">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="secaoDocumentosMultiplos" style="display:none; margin-top: 10px;">
+                        <div class="form-group" style="background: #F0FFF4; border-color: #9AE6B4; padding: 12px 16px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #276749; font-size: 0.9em;">
+                                📄 Documentos e Datas (Múltiplas MGM)
+                                <span style="font-size: 0.7em; font-weight: 400; color: #48BB78;">Cada linha será um movimento</span>
+                            </label>
+
+                            <div class="documentos-table-header">
+                                <span>📄 Nº Documento</span>
+                                <span>📅 Data de Programação</span>
+                                <span style="text-align: center;">Ações</span>
+                            </div>
+
+                            <div id="containerDocumentosMultiplos"></div>
+
+                            <button type="button" class="btn-add-doc" onclick="adicionarLinhaDocumentoMultiplo()">
+                                ➕ Adicionar Documento
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="secaoItens">
+                    <hr>
+                    <h3 id="tituloItens">📦 Itens</h3>
+                    <div class="table-responsive">
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:7%;">Código</th>
+                                    <th style="width:12%;">Descrição</th>
+                                    <th style="width:4%;">UND</th>
+                                    <th style="width:6%;" id="thQuantidade">QTD</th>
+
+                                    <th style="width:7%; display:none;" class="col-mgm" id="thAditivoSaida">Aditivo Saída</th>
+                                    <th style="width:7%; display:none;" class="col-mgm" id="thAditivoCampo">Aditivo Campo</th>
+                                    <th style="width:7%; display:none;" class="col-mgm" id="thRma">RMA</th>
+                                    <th style="width:7%; display:none;" class="col-mgm" id="thSeparada">Separada</th>
+                                    <th style="width:7%; display:none;" class="col-mgm" id="thAplicada">Aplicada</th>
+                                    <th style="width:7%; display:none;" class="col-mgm" id="thDma">DMA</th>
+                                    <th style="width:7%; display:none;" class="col-mgm" id="thPendente">Pendente</th>
+
+                                    <th style="width:9%; display:none;" id="thDataBaixa">Data Baixa</th>
+                                    <th style="width:7%; display:none;" id="thBaixado">Baixado?</th>
+                                    <th style="width:10%; display:none;" id="thMotivo">Motivo</th>
+                                    <th style="width:9%; display:none;" id="thColaboradorItem">Colaborador</th>
+                                    <th style="width:12%; display:none;" id="thObservacaoItem">Observação</th>
+
+                                    <th style="width:8%; display:none;" id="thStatusAditivo">Status</th>
+                                    <th style="width:9%; display:none;" id="thNumDoc">Nº Documento</th>
+                                    <th style="width:7%; display:none;" id="thUsuario">Usuário</th>
+                                    <th style="width:10%; display:none;" id="thObservacao">Observação</th>
+
+                                    <th style="width:7%; display:none;" id="thAplicado">Aplicado</th>
+                                    <th style="width:9%; display:none;" id="thColaborador">Solicitante</th>
+                                    <th style="width:9%; display:none;" id="thEncarregado">Encarregado</th>
+
+                                    <th style="width:6%;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsBody"></tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="add-item-btn" onclick="adicionarLinhaItem()">➕ Adicionar Item</button>
+                </div>
+
+                <div id="campoObservacaoGeral" style="display:none;">
+                    <hr>
+                    <div class="form-row">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label for="formObservacaoGeral">📝 Observação Geral</label>
+                            <textarea id="formObservacaoGeral" rows="3" placeholder="Digite observações..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-salvar" onclick="salvarControle()">💾 Salvar</button>
+                    <button type="button" class="btn-finalizar" onclick="finalizarControle()">✅ Finalizar</button>
+                    <button type="button" class="btn-cancelar" onclick="voltarParaPainel()">✕ Cancelar</button>
+                </div>
+            </div>
+        </form>
     </div>
 
     <div id="descricao-popup" class="descricao-popup"></div>
@@ -471,15 +468,33 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="../js/firebase-config.js"></script>   
-    <script src="../js/config.js"></script>  
-    <script src="../js/auth-service.js"></script>      
-    <script src="../js/auth-helper.js"></script>  
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/auth-service.js"></script>
+    <script src="../js/auth-helper.js"></script>
     <script src="../js/script.js"></script>
-    <script src="../js/auth-global.js"></script>  
+    <script src="../js/auth-global.js"></script>
     <script src="../js/login.js"></script>
     <script src="../js/controles-dcmd-form.js"></script>
     <script src="../js/chamados.js" defer></script>
     <script src="../js/iframe-nav.js"></script>
+
+    <script>
+        function irParaTopo() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        function irParaFim() { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }
+        function controlarBotoesNavegacao() {
+            const btnTopo = document.getElementById('btnTopo');
+            const btnFim = document.getElementById('btnFim');
+            const scrollY = window.scrollY;
+            const alturaTotal = document.body.scrollHeight - window.innerHeight;
+            if (scrollY > 200) btnTopo.classList.add('visivel'); else btnTopo.classList.remove('visivel');
+            if (scrollY < alturaTotal - 100) btnFim.classList.add('visivel'); else btnFim.classList.remove('visivel');
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            window.addEventListener('scroll', controlarBotoesNavegacao);
+            window.addEventListener('resize', controlarBotoesNavegacao);
+            setTimeout(controlarBotoesNavegacao, 100);
+        });
+    </script>
 </body>
 </html>

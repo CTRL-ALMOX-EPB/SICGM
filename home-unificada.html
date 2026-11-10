@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SICGM - Sistema Interno de Controle e Gestão de Materiais</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/layout-unificado.css">
+    <!-- chamados.css para estilizar o sino e o modal -->
+    <link rel="stylesheet" href="css/chamados.css">
+</head>
+<body>
+
+    <div class="app-container">
+
+        <!-- BARRA SUPERIOR -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <img src="assets/img/logo-control.png" alt="Control" class="logo-top"
+                     onerror="this.style.display='none'">
+                <span class="brand-name">SICGM</span>
+            </div>
+
+            <div class="top-bar-center">
+                <span class="system-title">Sistema Interno de Controle e Gestão de Materiais</span>
+            </div>
+
+            <div class="top-bar-right">
+                <i class="fa-solid fa-user-circle user-avatar"></i>
+                <div class="user-info-top">
+                    <span class="user-name" id="headerNomeUser">Carregando...</span>
+                    <span class="user-mat" id="headerMatUser">Matrícula: ---</span>
+                </div>
+
+                <div class="badges-top">
+                    <span class="badge-tag badge-gestao" id="headerPerfilUser">GESTÃO</span>
+                    <a href="gestao/admin.html" class="badge-tag badge-admin" id="headerAdminBtn" target="_self">
+                        <i class="fa-solid fa-crown"></i> ADMIN
+                    </a>
+                </div>
+
+                <!-- SINO DE NOTIFICAÇÃO -->
+                <div class="sino-container" id="sinoNotificacoes">
+                    <button class="sino-btn" id="sinoBtn" title="Notificações" type="button">
+                        <span class="sino-icone">🔔</span>
+                        <span class="sino-badge" id="sinoBadge" style="display:none;">0</span>
+                    </button>
+                    <div class="sino-dropdown" id="sinoDropdown" style="display:none;">
+                        <div class="sino-header">
+                            <h3>🔔 Notificações</h3>
+                            <button class="sino-btn-link" id="sinoMarcarTodas" type="button" title="Marcar todas como lidas">
+                                ✓ Marcar todas
+                            </button>
+                        </div>
+                        <div class="sino-lista" id="sinoLista">
+                            <div class="sino-empty">Carregando...</div>
+                        </div>
+                        <div class="sino-footer">
+                            <span id="sinoInfo">0 notificações</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-sair-top" onclick="sair()">
+                    <i class="fa-solid fa-door-open"></i> Sair
+                </button>
+            </div>
+        </header>
+
+        <!-- CORPO -->
+        <div class="body-wrapper">
+
+            <!-- SIDEBAR -->
+            <aside class="sidebar" id="sidebar"></aside>
+
+            <!-- ÁREA PRINCIPAL -->
+            <div class="main-wrapper">
+
+                <!-- BARRA DE ABAS -->
+                <div class="tabs-bar" id="tabsBar"></div>
+
+                <!-- ÁREA DE CONTEÚDO -->
+                <main class="content-area" id="content-area">
+
+                    <div id="empty-state" class="empty-state">
+                        <i class="fa-solid fa-hand-pointer"></i>
+                        <h3>Selecione uma opção no menu lateral</h3>
+                        <p>Escolha um departamento ou módulo para começar.</p>
+                    </div>
+
+                    <div id="iframe-container" class="iframe-container hidden">
+                        <iframe id="iframe-content" src="" frameborder="0"></iframe>
+                    </div>
+
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/firebase-init.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth-service.js"></script>
+    <script src="js/auth-helper.js"></script>
+    <script src="js/script.js"></script>
+    <script src="js/auth-global.js"></script>
+    <script src="js/home-unificada.js" defer></script>
+    
+</body>
+</html>

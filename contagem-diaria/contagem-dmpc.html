@@ -33,44 +33,8 @@
     <!-- CONTEÚDO PRINCIPAL                          -->
     <!-- ============================================ -->
     <div class="container">
-        <div class="form-card">
-            
-            <!-- Logo e Título com Timer Integrado -->
-            <div class="header-container">
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 8px;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
-                        <h1 class="title">SICGM - Contagem DMPC</h1>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Botão Voltar ao Início -->
-            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
-                <button onclick="redirecionarParaHome()" class="btn-voltar-home">
-                    🏠 Voltar ao Início
-                </button>
-            </div>
-            
+        <div class="form-card">        
             <form id="contagemForm">
-                
-                <!-- Nome, Matrícula e Data lado a lado -->
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="nome">Nome *</label>
-                        <input type="text" id="nome" name="nome" placeholder="Digite seu nome" required readonly>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="matricula">Matrícula *</label>
-                        <input type="text" id="matricula" name="matricula" placeholder="Digite sua matrícula" required readonly>
-                    </div>
-
-                    <div class="data-field">
-                        <label for="data">Data</label>
-                        <input type="date" id="data" name="data" readonly>
-                    </div>
-                </div>
 
                 <!-- ============================================ -->
                 <!-- FILTRO DE PESQUISA                          -->
@@ -95,17 +59,6 @@
                             </button>
                         </div>
                     </div>
-                    <div id="filtro-resultado" class="filtro-resultado">
-                        <span id="filtro-contagem">Mostrando 0 itens</span>
-                    </div>
-                </div>
-
-                <!-- ============================================ -->
-                <!-- CONTAGEM DMPC - MATERIAIS PRÓPRIOS          -->
-                <!-- ============================================ -->
-                <div class="sub-titulo-secao">
-                    <span class="sub-titulo-icone">📦</span>
-                    <span>Materiais Próprios - Contagem Semanal</span>
                 </div>
 
                 <!-- Container dos materiais -->

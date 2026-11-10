@@ -1,5 +1,6 @@
 // ============================================
 // S.A. EMERGENCIAL - SICGM (COMPLETO COM R2)
+// v2 - Modal de assinatura interno (sem popup)
 // ============================================
 
 const API_URL = 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/api';
@@ -26,37 +27,32 @@ let streamAtual = null;
 let fotoCapturada = null;
 let cameraAtiva = 'environment';
 
+// Variáveis do modal de assinatura
+let _modalSignaturePad = null;
+let _modalAssinaturaTipo = null;
+let _modalResizeTimeout = null;
+let _modalAssinaturaConfirmada = false;
+let _modalHandleResize = null;
+
 // ============================================
-// 🔥 FUNÇÃO PARA VOLTAR PARA HOME (CORRIGIDA)
+// FUNÇÃO PARA VOLTAR PARA HOME
 // ============================================
 
 function redirecionarParaHome() {
     console.log('🏠 Redirecionando para home...');
-    
     try {
-        // 🔥 USAR authService EM VEZ DE sessionStorage
         let perfil = 'GESTAO';
-        
         if (typeof authService !== 'undefined' && authService) {
             const user = authService.getUserData();
-            if (user && user.perfil) {
-                perfil = user.perfil;
-            }
+            if (user && user.perfil) perfil = user.perfil;
         }
-        
-        console.log(`📝 Perfil detectado: ${perfil}`);
-        
         const homeMap = {
             'OPERACIONAL': '../home-operacional.html',
             'GESTAO': '../home-gestao.html',
             'VISUALIZACAO': '../home-visualizacao.html'
         };
-        
         const homePage = homeMap[perfil] || '../home-gestao.html';
-        
-        console.log(`🔀 Navegando para: ${homePage}`);
         window.location.href = homePage;
-        
     } catch (error) {
         console.error('❌ Erro ao redirecionar:', error);
         window.location.href = '../home-gestao.html';
@@ -169,7 +165,7 @@ function usuarioPodeCriarSA(matricula) {
 }
 
 // ============================================
-// CARREGAR COLABORADORES DO ARQUIVO
+// CARREGAR COLABORADORES
 // ============================================
 
 async function carregarColaboradoresSA() {
@@ -232,7 +228,7 @@ async function carregarColaboradoresSA() {
 }
 
 // ============================================
-// CARREGAR MATERIAIS DO ARQUIVO
+// CARREGAR MATERIAIS
 // ============================================
 
 async function carregarMateriaisSA() {
@@ -303,14 +299,13 @@ function formatarDataHora(dataString) {
 }
 
 // ============================================
-// CARREGAR DADOS DO USUÁRIO (CORRIGIDO - USA authService)
+// CARREGAR DADOS DO USUÁRIO
 // ============================================
 
 function carregarDadosUsuario() {
     console.log('🔐 Carregando dados do usuário S.A...');
     
     try {
-        // 🔥 USAR authService EM VEZ DE sessionStorage
         if (typeof authService === 'undefined' || !authService) {
             console.error('❌ authService não disponível');
             window.location.href = '../login.html';
@@ -339,7 +334,6 @@ function carregarDadosUsuario() {
         
         perfilUsuario = user.perfil || 'OPERACIONAL';
 
-        // Atualizar elementos da UI
         const userNameEl = document.getElementById('userName');
         const userRoleEl = document.getElementById('userRole');
         const userMatriculaEl = document.getElementById('userMatricula');
@@ -361,7 +355,7 @@ function carregarDadosUsuario() {
 }
 
 // ============================================
-// BUSCAR COLABORADOR POR MATRÍCULA
+// BUSCAR COLABORADOR
 // ============================================
 
 function buscarColaboradorArquivo(matricula) {
@@ -420,31 +414,23 @@ async function buscarColaborador() {
 window.buscarColaborador = buscarColaborador;
 
 // ============================================
-// OBTER TIPO DE S.A. SELECIONADO
+// TIPO S.A. / DESCONTO
 // ============================================
 
 function getTipoSASelecionado() {
     const radios = document.querySelectorAll('input[name="tipo_sa"]');
     for (const radio of radios) {
-        if (radio.checked) {
-            return radio.value;
-        }
+        if (radio.checked) return radio.value;
     }
     return 'EMERGENCIAL';
 }
 
 window.getTipoSASelecionado = getTipoSASelecionado;
 
-// ============================================
-// OBTER GERAR DESCONTO SELECIONADO
-// ============================================
-
 function getGerarDescontoSelecionado() {
     const radios = document.querySelectorAll('input[name="gerar_desconto"]');
     for (const radio of radios) {
-        if (radio.checked) {
-            return radio.value;
-        }
+        if (radio.checked) return radio.value;
     }
     return 'NAO';
 }
@@ -452,7 +438,7 @@ function getGerarDescontoSelecionado() {
 window.getGerarDescontoSelecionado = getGerarDescontoSelecionado;
 
 // ============================================
-// BUSCAR MATERIAL POR CÓDIGO (CASE-INSENSITIVE)
+// BUSCAR MATERIAL
 // ============================================
 
 function buscarMaterialArquivo(codigo) {
@@ -502,7 +488,7 @@ async function buscarMaterial(input) {
 window.buscarMaterial = buscarMaterial;
 
 // ============================================
-// POP-UP DE DESCRIÇÃO DO MATERIAL
+// POP-UP DESCRIÇÃO
 // ============================================
 
 function inicializarPopup() {
@@ -516,9 +502,7 @@ function inicializarPopup() {
     });
     
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            fecharPopup();
-        }
+        if (e.key === 'Escape') fecharPopup();
     });
 }
 
@@ -593,12 +577,8 @@ function mostrarPopup(input) {
 }
 
 function fecharPopup() {
-    if (popupElement) {
-        popupElement.classList.remove('show');
-    }
-    if (overlayElement) {
-        overlayElement.classList.remove('active');
-    }
+    if (popupElement) popupElement.classList.remove('show');
+    if (overlayElement) overlayElement.classList.remove('active');
     if (popupTimeout) {
         clearTimeout(popupTimeout);
         popupTimeout = null;
@@ -641,19 +621,13 @@ function configurarPopupDescricao() {
 }
 
 // ============================================
-// FUNÇÃO PARA UPLOAD VIA API PROXY
+// UPLOAD R2
 // ============================================
 
 async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
     try {
-        console.log('📤 Iniciando upload via API proxy...');
-        console.log('📤 Pasta:', pasta);
-        console.log('📤 Arquivo:', nomeArquivo);
-        
         const response = await fetch(imagemDataURL);
         const blob = await response.blob();
-        
-        console.log('📤 Tamanho do blob:', blob.size, 'bytes');
         
         if (!nomeArquivo) {
             const timestamp = Date.now();
@@ -668,8 +642,6 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
         const path = `${pasta}/${nomeArquivo}`;
         const url = `${R2_PROXY_URL}/${path}`;
         
-        console.log(`📤 Upload via proxy: ${url}`);
-        
         let contentType = 'image/jpeg';
         if (imagemDataURL.startsWith('data:image/png')) {
             contentType = 'image/png';
@@ -679,43 +651,28 @@ async function uploadParaR2(imagemDataURL, pasta, nomeArquivo) {
         
         const uploadResponse = await fetch(url, {
             method: 'PUT',
-            headers: {
-                'Content-Type': contentType
-            },
+            headers: { 'Content-Type': contentType },
             body: blob
         });
         
-        console.log('📤 Status do upload:', uploadResponse.status);
-        
         if (!uploadResponse.ok) {
             const errorText = await uploadResponse.text();
-            console.error('❌ Erro no upload:', errorText);
             throw new Error(`Erro ao fazer upload: ${uploadResponse.status} - ${errorText}`);
         }
         
         const result = await uploadResponse.json();
         const publicUrl = result.url || `${R2_PUBLIC_URL}/${path}`;
         
-        console.log(`✅ Upload concluído: ${publicUrl}`);
-        
-        return {
-            success: true,
-            url: publicUrl,
-            path: path,
-            nome: nomeArquivo
-        };
+        return { success: true, url: publicUrl, path: path, nome: nomeArquivo };
         
     } catch (error) {
         console.error('❌ Erro no upload para R2:', error);
-        return {
-            success: false,
-            error: error.message
-        };
+        return { success: false, error: error.message };
     }
 }
 
 // ============================================
-// COMPRIMIR IMAGEM ANTES DO UPLOAD
+// COMPRIMIR IMAGEM
 // ============================================
 
 async function comprimirImagem(dataURL, qualidade = 0.7) {
@@ -759,11 +716,10 @@ async function comprimirImagem(dataURL, qualidade = 0.7) {
 }
 
 // ============================================
-// CRIAR NOVA S.A. (CORRIGIDO)
+// CRIAR NOVA S.A.
 // ============================================
 
 async function criarNovaSA() {
-    // 🔥 USA dadosSessao que agora vem do authService
     if (!dadosSessao) {
         mostrarToast('⚠️ Sessão inválida. Faça login novamente.', 'erro');
         return;
@@ -826,7 +782,7 @@ async function criarNovaSA() {
 window.criarNovaSA = criarNovaSA;
 
 // ============================================
-// ADICIONAR LINHA DE ITEM
+// ADICIONAR / REMOVER ITENS
 // ============================================
 
 function adicionarLinhaItem() {
@@ -858,25 +814,16 @@ function adicionarLinhaItem() {
 
 window.adicionarLinhaItem = adicionarLinhaItem;
 
-// ============================================
-// REMOVER ITEM
-// ============================================
-
 function removerItem(btn) {
     const tbody = document.getElementById('itemsBody');
     if (tbody.children.length <= 1) {
         mostrarToast('⚠️ Deve haver pelo menos um item', 'aviso');
         return;
     }
-    const row = btn.closest('tr');
-    row.remove();
+    btn.closest('tr').remove();
 }
 
 window.removerItem = removerItem;
-
-// ============================================
-// OBTER ITENS DO FORMULÁRIO
-// ============================================
 
 function getItensFormulario() {
     const items = [];
@@ -897,11 +844,10 @@ function getItensFormulario() {
 }
 
 // ============================================
-// SALVAR S.A. (CORRIGIDO)
+// SALVAR S.A.
 // ============================================
 
 async function salvarSA() {
-    // 🔥 USA authService em vez de sessionStorage
     if (!dadosSessao) {
         if (typeof authService !== 'undefined' && authService) {
             const user = authService.getUserData();
@@ -972,8 +918,6 @@ async function salvarSA() {
             criado_por: dadosSessao?.matricula || 'sistema'
         };
         
-        console.log('📤 Salvando S.A.:', data);
-        
         const response = await fetch(`${API_URL}/sa/${numero}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -986,9 +930,7 @@ async function salvarSA() {
         }
         
         mostrarToast('✅ S.A. salva com sucesso!', 'sucesso');
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1500);
+        setTimeout(() => { window.location.href = 'index.html'; }, 1500);
         
     } catch (error) {
         console.error('❌ Erro ao salvar S.A.:', error);
@@ -999,19 +941,16 @@ async function salvarSA() {
 window.salvarSA = salvarSA;
 
 // ============================================
-// FINALIZAR S.A. (CORRIGIDO)
+// FINALIZAR S.A.
 // ============================================
 
 async function finalizarSA() {
     if (!confirm('⚠️ Tem certeza que deseja FINALIZAR esta S.A.?')) return;
     
-    // 🔥 USA authService em vez de sessionStorage
     let matricula = 'sistema';
     if (typeof authService !== 'undefined' && authService) {
         const user = authService.getUserData();
-        if (user) {
-            matricula = user.matricula || 'sistema';
-        }
+        if (user) matricula = user.matricula || 'sistema';
     }
     
     const numero = document.getElementById('saNumero').textContent.replace('#', '');
@@ -1036,9 +975,7 @@ async function finalizarSA() {
         }
         
         mostrarToast('✅ S.A. finalizada com sucesso!', 'sucesso');
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1500);
+        setTimeout(() => { window.location.href = 'index.html'; }, 1500);
         
     } catch (error) {
         console.error('❌ Erro ao finalizar S.A.:', error);
@@ -1049,7 +986,7 @@ async function finalizarSA() {
 window.finalizarSA = finalizarSA;
 
 // ============================================
-// MARCAR S.A. COMO ATENDIDA NO PROTHEUS (CORRIGIDO)
+// MARCAR ATENDIDA PROTHEUS
 // ============================================
 
 async function marcarAtendidaProtheus() {
@@ -1057,13 +994,10 @@ async function marcarAtendidaProtheus() {
     
     if (!confirm(`⚠️ Confirma que a S.A. #${String(numero).padStart(4, '0')} foi ATENDIDA no sistema Protheus?`)) return;
     
-    // 🔥 USA authService em vez de sessionStorage
     let matricula = 'sistema';
     if (typeof authService !== 'undefined' && authService) {
         const user = authService.getUserData();
-        if (user) {
-            matricula = user.matricula || 'sistema';
-        }
+        if (user) matricula = user.matricula || 'sistema';
     }
     
     try {
@@ -1097,20 +1031,18 @@ async function marcarAtendidaProtheus() {
 window.marcarAtendidaProtheus = marcarAtendidaProtheus;
 
 // ============================================
-// ABRIR PÁGINA DE ASSINATURA (CORRIGIDO)
+// 🆕 MODAL DE ASSINATURA INTERNO (substitui popup)
 // ============================================
 
-function abrirPaginaAssinatura(tipo) {
+function abrirModalAssinatura(tipo) {
     if (window.event) {
         window.event.preventDefault();
         window.event.stopPropagation();
     }
     
-    const numero = document.getElementById('saNumero').textContent.replace('#', '');
+    const numero = document.getElementById('saNumero')?.textContent?.replace('#', '') || '0000';
     
-    // 🔥 USA dadosSessao que agora vem do authService
     let nome = '';
-    
     if (tipo === 'entregue') {
         nome = dadosSessao?.nome || document.getElementById('solicitante')?.value || '';
     } else {
@@ -1122,25 +1054,243 @@ function abrirPaginaAssinatura(tipo) {
         return false;
     }
     
-    const url = `assinar.html?tipo=${tipo}&numero=${numero}&nome=${encodeURIComponent(nome)}`;
+    _modalAssinaturaTipo = tipo;
+    _modalAssinaturaConfirmada = false;
     
-    const janela = window.open(
-        url, 
-        'AssinaturaSA', 
-        'width=500,height=650,resizable=yes,scrollbars=yes,menubar=no,status=no'
-    );
-    
-    if (!janela) {
-        mostrarToast('⚠️ Permita pop-ups para realizar a assinatura.', 'aviso');
+    const modal = document.getElementById('modalAssinatura');
+    if (!modal) {
+        console.error('❌ Modal de assinatura não encontrado no DOM');
+        mostrarToast('❌ Modal de assinatura não encontrado. Recarregue a página.', 'erro');
+        return false;
     }
+    
+    document.getElementById('assinaturaTipoLabel').textContent = 
+        tipo === 'entregue' ? 'Assinatura de Entrega' : 'Assinatura de Recebimento';
+    document.getElementById('assinaturaNumero').textContent = `#${String(numero).padStart(4, '0')}`;
+    document.getElementById('assinaturaNome').textContent = nome;
+    document.getElementById('assinaturaNomeInput').value = nome;
+    
+    const status = document.getElementById('assinaturaStatus');
+    status.style.display = 'none';
+    status.className = 'modal-assinatura-status';
+    
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    setTimeout(function() {
+        _inicializarModalSignaturePad();
+    }, 100);
     
     return false;
 }
 
-window.abrirPaginaAssinatura = abrirPaginaAssinatura;
+function _inicializarModalSignaturePad() {
+    const canvas = document.getElementById('assinaturaCanvas');
+    const area = document.getElementById('assinaturaArea');
+    const placeholder = document.getElementById('assinaturaPlaceholder');
+    
+    if (!canvas || !area) {
+        console.error('❌ Canvas de assinatura não encontrado');
+        return;
+    }
+    
+    if (typeof SignaturePad === 'undefined') {
+        console.error('❌ SignaturePad não carregado');
+        mostrarStatusModal('❌ Biblioteca de assinatura não carregada. Recarregue a página.', 'error');
+        return;
+    }
+    
+    if (_modalSignaturePad) {
+        _modalSignaturePad.off();
+        _modalSignaturePad = null;
+    }
+    
+    function resizeCanvas() {
+        const rect = area.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const dpr = window.devicePixelRatio || 1;
+        
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        
+        if (_modalSignaturePad) {
+            _modalSignaturePad.clear();
+        }
+        if (placeholder) placeholder.style.display = '';
+    }
+    
+    resizeCanvas();
+    
+    _modalSignaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'rgba(255, 255, 255, 0)',
+        penColor: '#1a237e',
+        minWidth: 2,
+        maxWidth: 3.5,
+        throttle: 16
+    });
+    
+    _modalSignaturePad.addEventListener('beginStroke', function() {
+        if (placeholder) placeholder.style.display = 'none';
+        area.classList.add('assinado');
+    });
+    
+    window.removeEventListener('resize', _modalHandleResize);
+    _modalHandleResize = function() {
+        if (_modalResizeTimeout) clearTimeout(_modalResizeTimeout);
+        _modalResizeTimeout = setTimeout(function() {
+            const data = _modalSignaturePad && !_modalSignaturePad.isEmpty() 
+                ? _modalSignaturePad.toData() 
+                : null;
+            resizeCanvas();
+            if (data && data.length > 0 && _modalSignaturePad) {
+                _modalSignaturePad.fromData(data);
+                if (placeholder) placeholder.style.display = 'none';
+                area.classList.add('assinado');
+            }
+        }, 150);
+    };
+    window.addEventListener('resize', _modalHandleResize);
+}
+
+function fecharModalAssinatura() {
+    const modal = document.getElementById('modalAssinatura');
+    if (!modal) return;
+    
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    
+    if (_modalSignaturePad) {
+        _modalSignaturePad.off();
+        _modalSignaturePad = null;
+    }
+    
+    _modalAssinaturaTipo = null;
+    _modalAssinaturaConfirmada = false;
+}
+
+function limparAssinaturaModal() {
+    if (_modalSignaturePad) {
+        _modalSignaturePad.clear();
+    }
+    const placeholder = document.getElementById('assinaturaPlaceholder');
+    if (placeholder) placeholder.style.display = '';
+    const area = document.getElementById('assinaturaArea');
+    if (area) area.classList.remove('assinado');
+    const status = document.getElementById('assinaturaStatus');
+    if (status) status.style.display = 'none';
+}
+
+function mostrarStatusModal(mensagem, tipo) {
+    const status = document.getElementById('assinaturaStatus');
+    if (!status) return;
+    status.textContent = mensagem;
+    status.className = 'modal-assinatura-status ' + (tipo || 'info');
+    status.style.display = 'block';
+}
+
+async function confirmarAssinaturaModal() {
+    if (_modalAssinaturaConfirmada) return;
+    
+    if (!_modalAssinaturaTipo) {
+        mostrarStatusModal('⚠️ Erro: tipo de assinatura não definido.', 'error');
+        return;
+    }
+    
+    const nomeInput = document.getElementById('assinaturaNomeInput');
+    const nome = nomeInput ? nomeInput.value.trim() : '';
+    
+    if (!nome) {
+        mostrarStatusModal('⚠️ Por favor, informe o nome do signatário.', 'error');
+        if (nomeInput) nomeInput.focus();
+        return;
+    }
+    
+    if (!_modalSignaturePad || _modalSignaturePad.isEmpty()) {
+        mostrarStatusModal('⚠️ Por favor, assine no campo acima.', 'error');
+        return;
+    }
+    
+    const btnConfirmar = document.querySelector('.btn-confirmar-assinatura');
+    if (btnConfirmar) {
+        btnConfirmar.disabled = true;
+        btnConfirmar.textContent = '⏳ Salvando...';
+    }
+    
+    const assinaturaDataURL = _modalSignaturePad.toDataURL('image/png');
+    const numero = document.getElementById('saNumero')?.textContent?.replace('#', '') || '0000';
+    
+    try {
+        mostrarStatusModal('⏳ Enviando assinatura...', 'info');
+        
+        const nomeArquivo = `assinatura_${_modalAssinaturaTipo}_${numero}_${Date.now()}.png`;
+        const resultadoUpload = await uploadParaR2(assinaturaDataURL, 'assinaturas', nomeArquivo);
+        
+        if (!resultadoUpload.success) {
+            throw new Error(resultadoUpload.error || 'Erro ao fazer upload da assinatura');
+        }
+        
+        const urlAssinatura = resultadoUpload.url;
+        
+        const response = await fetch(`${API_URL}/sa/${numero}/assinatura`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tipo: _modalAssinaturaTipo,
+                nome: nome,
+                assinatura_url: urlAssinatura
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao salvar assinatura');
+        }
+        
+        _modalAssinaturaConfirmada = true;
+        mostrarStatusModal('✅ Assinatura salva com sucesso!', 'success');
+        
+        atualizarAssinaturaUI(_modalAssinaturaTipo, {
+            nome: nome,
+            assinatura: urlAssinatura,
+            data: new Date().toISOString()
+        });
+        
+        setTimeout(function() {
+            fecharModalAssinatura();
+            verificarAssinaturas();
+            mostrarToast('✅ Assinatura confirmada!', 'sucesso');
+        }, 1200);
+        
+    } catch (error) {
+        console.error('❌ Erro ao confirmar assinatura:', error);
+        mostrarStatusModal('❌ ' + error.message, 'error');
+        if (btnConfirmar) {
+            btnConfirmar.disabled = false;
+            btnConfirmar.textContent = '✅ Confirmar Assinatura';
+        }
+    }
+}
+
+// Fallback: manter abrirPaginaAssinatura para compatibilidade
+function abrirPaginaAssinatura(tipo) {
+    return abrirModalAssinatura(tipo);
+}
+
+// Fecha modal com ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('modalAssinatura');
+        if (modal && modal.classList.contains('active')) {
+            fecharModalAssinatura();
+        }
+    }
+});
 
 // ============================================
-// VERIFICAR ASSINATURA CONCLUÍDA
+// VERIFICAR ASSINATURA CONCLUÍDA (vindo de assinar.html)
 // ============================================
 
 function verificarAssinaturaConcluida() {
@@ -1154,9 +1304,7 @@ function verificarAssinaturaConcluida() {
             const info = JSON.parse(dados);
             const agora = Date.now();
             if (agora - info.timestamp < 30000) {
-                console.log(`✅ Assinatura ${info.tipo} concluída detectada!`);
                 sessionStorage.removeItem(chave);
-                
                 setTimeout(() => {
                     carregarSAFormulario();
                     mostrarToast(`✅ Assinatura ${info.tipo === 'entregue' ? 'de entrega' : 'de recebimento'} concluída!`, 'sucesso');
@@ -1170,18 +1318,9 @@ function verificarAssinaturaConcluida() {
     }
 }
 
-// ============================================
-// ATUALIZAR UI DE ASSINATURA
-// ============================================
-
 function atualizarAssinaturaUI(tipo, dados) {
-    console.log(`🔄 Atualizando UI para ${tipo}:`, dados);
-    
     const box = document.querySelector(`.assinatura-box[data-tipo="${tipo}"]`);
-    if (!box) {
-        console.warn(`⚠️ Box de assinatura não encontrada para ${tipo}`);
-        return;
-    }
+    if (!box) return;
     
     const nomeEl = box.querySelector('.signatario-nome');
     const dataEl = box.querySelector('.signatario-data');
@@ -1199,19 +1338,13 @@ function atualizarAssinaturaUI(tipo, dados) {
         if (btnAssinar) btnAssinar.style.display = 'none';
         if (btnReassinar) btnReassinar.style.display = 'inline-flex';
         box.classList.add('has-signature');
-        console.log(`✅ Assinatura ${tipo} renderizada com sucesso`);
     } else {
         if (preview) preview.style.display = 'none';
         if (btnAssinar) btnAssinar.style.display = 'inline-flex';
         if (btnReassinar) btnReassinar.style.display = 'none';
         box.classList.remove('has-signature');
-        console.log(`⚠️ Nenhuma imagem de assinatura para ${tipo}`);
     }
 }
-
-// ============================================
-// ATUALIZAR UI DE FOTO
-// ============================================
 
 function atualizarFotoUI(fotoData) {
     const preview = document.getElementById('fotoPreviewRecebido');
@@ -1222,16 +1355,14 @@ function atualizarFotoUI(fotoData) {
         img.src = fotoData.url;
         preview.style.display = 'block';
         if (btnExcluir) btnExcluir.style.display = 'inline-block';
-        console.log('✅ Foto do colaborador carregada');
     } else {
         preview.style.display = 'none';
         if (btnExcluir) btnExcluir.style.display = 'none';
-        console.log('ℹ️ Nenhuma foto disponível');
     }
 }
 
 // ============================================
-// FUNÇÕES DE CÂMERA
+// CÂMERA
 // ============================================
 
 function capturarFoto(tipo) {
@@ -1241,9 +1372,7 @@ function capturarFoto(tipo) {
     }
     
     if (fotoCapturada) {
-        if (!confirm('⚠️ Você já tirou uma foto. Deseja tirar outra?')) {
-            return;
-        }
+        if (!confirm('⚠️ Você já tirou uma foto. Deseja tirar outra?')) return;
         fotoCapturada = null;
         const preview = document.getElementById('fotoPreviewRecebido');
         const img = document.getElementById('fotoImgRecebido');
@@ -1260,9 +1389,7 @@ function capturarFoto(tipo) {
         <div class="camera-container">
             <video id="cameraVideo" autoplay playsinline></video>
             <div class="camera-controls">
-                <button class="btn-switch-camera" onclick="trocarCamera()" title="Trocar câmera">
-                    🔄 Trocar Câmera
-                </button>
+                <button class="btn-switch-camera" onclick="trocarCamera()" title="Trocar câmera">🔄 Trocar Câmera</button>
                 <button class="btn-capturar" onclick="capturarFotoFrame()">📸 Capturar</button>
                 <button class="btn-fechar-camera" onclick="fecharCamera()">✕ Fechar</button>
             </div>
@@ -1302,7 +1429,6 @@ function iniciarCamera(video, status) {
                 status.textContent = '📷 Câmera pronta. Clique em Capturar para tirar a foto.';
                 status.style.color = '#48BB78';
             }
-            console.log(`✅ Câmera iniciada (${cameraAtiva})`);
         })
         .catch(function(error) {
             console.error('❌ Erro ao acessar câmera:', error);
@@ -1316,9 +1442,8 @@ function iniciarCamera(video, status) {
                 mensagem += 'A câmera está sendo usada por outro aplicativo.';
             } else if (error.name === 'OverconstrainedError') {
                 const facing = cameraAtiva === 'environment' ? 'user' : 'environment';
-                mensagem = `🔄 Tentando câmera ${facing === 'environment' ? 'traseira' : 'frontal'}...`;
                 if (status) {
-                    status.textContent = mensagem;
+                    status.textContent = `🔄 Tentando câmera ${facing === 'environment' ? 'traseira' : 'frontal'}...`;
                     status.style.color = '#ED8936';
                 }
                 cameraAtiva = facing;
@@ -1334,9 +1459,7 @@ function iniciarCamera(video, status) {
             }
             mostrarToast(mensagem, 'erro');
             
-            setTimeout(() => {
-                fecharCamera();
-            }, 3000);
+            setTimeout(() => { fecharCamera(); }, 3000);
         });
 }
 
@@ -1380,11 +1503,7 @@ function capturarFotoFrame() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, width, height);
     
-    const qualidade = 0.6;
-    const imagemDataURL = canvas.toDataURL('image/jpeg', qualidade);
-    
-    console.log(`📸 Foto capturada: ${Math.round(imagemDataURL.length / 1024)} KB`);
-    
+    const imagemDataURL = canvas.toDataURL('image/jpeg', 0.6);
     fotoCapturada = imagemDataURL;
     
     const preview = document.getElementById('fotoPreviewRecebido');
@@ -1392,11 +1511,8 @@ function capturarFotoFrame() {
     if (preview && img) {
         img.src = imagemDataURL;
         preview.style.display = 'block';
-        
         const btnExcluir = document.getElementById('btnExcluirFoto');
-        if (btnExcluir) {
-            btnExcluir.style.display = 'inline-block';
-        }
+        if (btnExcluir) btnExcluir.style.display = 'inline-block';
     }
     
     if (status) {
@@ -1419,34 +1535,21 @@ function fecharCamera() {
     const modal = document.getElementById('cameraModal');
     if (modal) {
         modal.classList.remove('active');
-        setTimeout(() => {
-            modal.remove();
-        }, 300);
+        setTimeout(() => { modal.remove(); }, 300);
     }
-    
-    console.log('🔒 Câmera fechada');
 }
 
-// ============================================
-// EXCLUIR FOTO (CORRIGIDA)
-// ============================================
-
 async function excluirFoto() {
-    if (!confirm('⚠️ Tem certeza que deseja excluir esta foto?')) {
-        return;
-    }
+    if (!confirm('⚠️ Tem certeza que deseja excluir esta foto?')) return;
     
     const numero = document.getElementById('saNumero')?.textContent?.replace('#', '') || '0000';
     
     try {
         mostrarToast('⏳ Excluindo foto...', 'info');
         
-        // Chama a API para excluir a foto
         const response = await fetch(`${API_URL}/sa/${numero}/foto`, {
             method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Content-Type': 'application/json' }
         });
         
         if (!response.ok) {
@@ -1454,10 +1557,8 @@ async function excluirFoto() {
             throw new Error(error.error || 'Erro ao excluir foto');
         }
         
-        // Limpa a variável global
         fotoCapturada = null;
         
-        // Remove da UI imediatamente
         const preview = document.getElementById('fotoPreviewRecebido');
         const img = document.getElementById('fotoImgRecebido');
         const btnExcluir = document.getElementById('btnExcluirFoto');
@@ -1466,10 +1567,7 @@ async function excluirFoto() {
         if (img) img.src = '';
         if (btnExcluir) btnExcluir.style.display = 'none';
         
-        // Atualiza o status da S.A. local
-        if (saAtual) {
-            saAtual.foto = null;
-        }
+        if (saAtual) saAtual.foto = null;
         
         mostrarToast('🗑️ Foto excluída com sucesso!', 'sucesso');
         
@@ -1481,14 +1579,8 @@ async function excluirFoto() {
 
 window.excluirFoto = excluirFoto;
 
-// ============================================
-// ENVIAR FOTO PARA O R2 (VIA API PROXY)
-// ============================================
-
 async function enviarFotoParaR2(imagemDataURL) {
     const numero = document.getElementById('saNumero')?.textContent?.replace('#', '') || '0000';
-    
-    console.log('📸 Iniciando envio de foto para S.A.', numero);
     
     if (!imagemDataURL || imagemDataURL.length < 100) {
         mostrarToast('❌ Imagem inválida ou muito pequena', 'erro');
@@ -1499,43 +1591,29 @@ async function enviarFotoParaR2(imagemDataURL) {
         mostrarToast('⏳ Enviando foto...', 'info');
         
         const imagemComprimida = await comprimirImagem(imagemDataURL, 0.7);
-        
         const nomeArquivo = `foto_${numero}_${Date.now()}.jpg`;
-        console.log('📸 Nome do arquivo:', nomeArquivo);
         
         const resultadoUpload = await uploadParaR2(imagemComprimida, 'fotos', nomeArquivo);
         
         if (!resultadoUpload.success) {
-            console.error('❌ Falha no upload:', resultadoUpload.error);
             throw new Error(resultadoUpload.error || 'Erro ao fazer upload da foto');
         }
         
         const urlFoto = resultadoUpload.url;
-        console.log('✅ Foto enviada para R2:', urlFoto);
-        
-        console.log('📤 Salvando URL no banco...');
         
         const response = await fetch(`${API_URL}/sa/${numero}/foto`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 foto_url: urlFoto,
                 data_captura: new Date().toISOString()
             })
         });
         
-        console.log('📤 Resposta do servidor:', response.status);
-        
         if (!response.ok) {
             const error = await response.json();
-            console.error('❌ Erro do servidor:', error);
             throw new Error(error.error || 'Erro ao salvar foto');
         }
-        
-        const result = await response.json();
-        console.log('✅ Resposta do servidor:', result);
         
         mostrarToast('✅ Foto salva com sucesso!', 'sucesso');
         
@@ -1554,7 +1632,7 @@ async function enviarFotoParaR2(imagemDataURL) {
 }
 
 // ============================================
-// VERIFICAR ASSINATURAS
+// VERIFICAR ASSINATURAS (polling)
 // ============================================
 
 async function verificarAssinaturas() {
@@ -1566,15 +1644,10 @@ async function verificarAssinaturas() {
     
     try {
         const response = await fetch(`${API_URL}/sa/${numero}`);
-        if (!response.ok) {
-            console.warn('⚠️ Erro ao buscar S.A. para verificar assinaturas');
-            return;
-        }
+        if (!response.ok) return;
         
         const sa = await response.json();
         saAtual = sa;
-        
-        console.log(`🔄 Verificando assinaturas para S.A. ${numero}. Status atual: ${sa.status}`);
         
         if (sa.assinaturas) {
             if (sa.assinaturas.entregue) {
@@ -1585,15 +1658,9 @@ async function verificarAssinaturas() {
             }
         }
         
-        if (sa.foto) {
-            atualizarFotoUI(sa.foto);
-        }
+        if (sa.foto) atualizarFotoUI(sa.foto);
         
         atualizarBotoesAcao(sa);
-        
-        if (sa.status === 'assinado' || sa.status === 'ASSINADO') {
-            console.log('✅ Status atualizado para ASSINADO!');
-        }
         
     } catch (error) {
         console.error('❌ Erro ao verificar assinaturas:', error);
@@ -1612,8 +1679,6 @@ function atualizarBotoesAcao(sa) {
     
     const btnAntigo = btnContainer.querySelector('.btn-atendida-protheus');
     if (btnAntigo) btnAntigo.remove();
-    
-    console.log(`🔄 Atualizando botões para status: ${sa.status}`);
     
     btnFinalizar.style.display = 'block';
     btnFinalizar.style.width = '100%';
@@ -1680,13 +1745,11 @@ function atualizarBotoesAcao(sa) {
         btnAtendida.addEventListener('mouseenter', function() {
             this.style.background = '#3182CE';
             this.style.transform = 'translateY(-2px)';
-            this.style.boxShadow = '0 8px 25px rgba(66, 153, 225, 0.4)';
         });
         
         btnAtendida.addEventListener('mouseleave', function() {
             this.style.background = '#4299E1';
             this.style.transform = 'none';
-            this.style.boxShadow = '0 4px 15px rgba(66, 153, 225, 0.3)';
         });
         
         btnContainer.appendChild(btnAtendida);
@@ -1694,7 +1757,6 @@ function atualizarBotoesAcao(sa) {
     }
     
     if (sa.status === 'ASSINADO' || sa.status === 'assinado') {
-        console.log('✅ S.A. assinada, habilitando botão finalizar');
         btnFinalizar.textContent = '✅ FINALIZAR S.A.';
         btnFinalizar.disabled = false;
         btnFinalizar.style.opacity = '1';
@@ -1709,7 +1771,6 @@ function atualizarBotoesAcao(sa) {
     const temAssinaturas = sa.assinaturas?.entregue && sa.assinaturas?.recebido;
     
     if (temAssinaturas) {
-        console.log('✅ Ambas assinaturas presentes, habilitando finalizar');
         btnFinalizar.textContent = '✅ FINALIZAR S.A.';
         btnFinalizar.disabled = false;
         btnFinalizar.style.opacity = '1';
@@ -1719,7 +1780,6 @@ function atualizarBotoesAcao(sa) {
         btnFinalizar.style.boxShadow = '0 4px 15px rgba(72, 187, 120, 0.3)';
         btnFinalizar.style.transform = 'none';
     } else {
-        console.log('⏳ Aguardando assinaturas');
         btnFinalizar.textContent = '⏳ Aguardando assinaturas';
         btnFinalizar.disabled = true;
         btnFinalizar.style.opacity = '0.6';
@@ -1732,7 +1792,7 @@ function atualizarBotoesAcao(sa) {
 }
 
 // ============================================
-// EXPORTAR PDF DO PAINEL
+// EXPORTAR PDF
 // ============================================
 
 let saSelecionadaParaExportar = null;
@@ -1778,9 +1838,7 @@ async function exportarSAPainel() {
         janela.document.write(conteudoPDF);
         janela.document.close();
         
-        setTimeout(function() {
-            janela.print();
-        }, 500);
+        setTimeout(function() { janela.print(); }, 500);
         
         mostrarToast('✅ PDF gerado com sucesso!', 'sucesso');
         
@@ -1792,10 +1850,6 @@ async function exportarSAPainel() {
 
 window.exportarSAPainel = exportarSAPainel;
 window.selecionarSAExportar = selecionarSAExportar;
-
-// ============================================
-// GERAR CONTEÚDO DO PDF
-// ============================================
 
 function gerarConteudoPDF(sa) {
     const dataAtual = new Date().toLocaleString('pt-BR');
@@ -1824,11 +1878,7 @@ function gerarConteudoPDF(sa) {
             `;
         });
     } else {
-        itensHTML = `
-            <tr>
-                <td colspan="7" style="text-align: center; color: #999;">Nenhum item cadastrado</td>
-            </tr>
-        `;
+        itensHTML = `<tr><td colspan="7" style="text-align: center; color: #999;">Nenhum item cadastrado</td></tr>`;
     }
     
     const entregue = sa.assinaturas?.entregue || null;
@@ -1853,15 +1903,11 @@ function gerarConteudoPDF(sa) {
             </div>
         `;
     } else {
-        assinaturasHTML = `
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #333; text-align: center; color: #999;">
-                <p>⚠️ Assinaturas pendentes</p>
-            </div>
-        `;
+        assinaturasHTML = `<div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #333; text-align: center; color: #999;"><p>⚠️ Assinaturas pendentes</p></div>`;
     }
     
-    const descontoLabel = sa.gerar_desconto === 'SIM' 
-        ? '✅ SIM - Será descontado em folha' 
+    const descontoLabel = sa.gerar_desconto === 'SIM'
+        ? '✅ SIM - Será descontado em folha'
         : '❌ NÃO - Não será descontado';
     
     return `
@@ -1872,137 +1918,25 @@ function gerarConteudoPDF(sa) {
             <title>S.A. Emergencial #${numeroFormatado}</title>
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { 
-                    font-family: 'Arial', sans-serif; 
-                    padding: 40px; 
-                    color: #333;
-                    background: #fff;
-                }
-                .documento {
-                    max-width: 1000px;
-                    margin: 0 auto;
-                    padding: 30px;
-                    border: 1px solid #ddd;
-                    border-radius: 8px;
-                    background: #fff;
-                }
-                .header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    border-bottom: 3px solid #1a237e;
-                    padding-bottom: 20px;
-                    margin-bottom: 25px;
-                }
-                .header h1 {
-                    font-size: 24px;
-                    color: #1a237e;
-                    margin: 0;
-                }
-                .header .numero {
-                    background: #1a237e;
-                    color: white;
-                    padding: 8px 20px;
-                    border-radius: 20px;
-                    font-weight: bold;
-                    font-size: 18px;
-                }
-                .status-badge {
-                    display: inline-block;
-                    padding: 4px 16px;
-                    border-radius: 20px;
-                    font-weight: bold;
-                    font-size: 14px;
-                    background: #EBF8FF;
-                    color: #2A69AC;
-                    border: 1px solid #90CDF4;
-                }
-                .status-badge.atendida {
-                    background: #E8F4FD;
-                    color: #1a56a0;
-                    border-color: #7ec8e3;
-                }
-                .info-grid {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 15px;
-                    margin-bottom: 25px;
-                    background: #f8f9fa;
-                    padding: 20px;
-                    border-radius: 8px;
-                }
-                .info-grid .item {
-                    display: flex;
-                    flex-direction: column;
-                }
-                .info-grid .item .label {
-                    font-size: 11px;
-                    text-transform: uppercase;
-                    color: #666;
-                    font-weight: bold;
-                    letter-spacing: 0.5px;
-                }
-                .info-grid .item .value {
-                    font-size: 15px;
-                    font-weight: 600;
-                    margin-top: 2px;
-                }
-                .section-title {
-                    font-size: 16px;
-                    font-weight: bold;
-                    color: #1a237e;
-                    margin: 20px 0 10px;
-                    padding-bottom: 8px;
-                    border-bottom: 2px solid #eee;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    font-size: 13px;
-                    margin: 10px 0 20px;
-                }
-                table th {
-                    background: #1a237e;
-                    color: white;
-                    padding: 10px 12px;
-                    text-align: left;
-                    font-weight: 600;
-                }
-                table td {
-                    padding: 8px 12px;
-                    border-bottom: 1px solid #eee;
-                }
-                table tr:nth-child(even) {
-                    background: #f8f9fa;
-                }
-                .termo {
-                    background: #f8f9fa;
-                    padding: 15px 20px;
-                    border-radius: 8px;
-                    font-size: 12px;
-                    line-height: 1.6;
-                    margin: 20px 0;
-                    border-left: 4px solid #1a237e;
-                }
-                .termo p {
-                    margin: 5px 0;
-                }
-                .footer {
-                    margin-top: 30px;
-                    padding-top: 15px;
-                    border-top: 2px solid #eee;
-                    text-align: center;
-                    font-size: 11px;
-                    color: #999;
-                }
-                .assinaturas-container {
-                    margin-top: 25px;
-                }
-                @media print {
-                    body { padding: 20px; }
-                    .documento { border: none; padding: 0; }
-                    .no-print { display: none; }
-                }
+                body { font-family: 'Arial', sans-serif; padding: 40px; color: #333; background: #fff; }
+                .documento { max-width: 1000px; margin: 0 auto; padding: 30px; border: 1px solid #ddd; border-radius: 8px; }
+                .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1a237e; padding-bottom: 20px; margin-bottom: 25px; }
+                .header h1 { font-size: 24px; color: #1a237e; margin: 0; }
+                .header .numero { background: #1a237e; color: white; padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 18px; }
+                .status-badge { display: inline-block; padding: 4px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; background: #EBF8FF; color: #2A69AC; border: 1px solid #90CDF4; }
+                .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; background: #f8f9fa; padding: 20px; border-radius: 8px; }
+                .info-grid .item { display: flex; flex-direction: column; }
+                .info-grid .item .label { font-size: 11px; text-transform: uppercase; color: #666; font-weight: bold; letter-spacing: 0.5px; }
+                .info-grid .item .value { font-size: 15px; font-weight: 600; margin-top: 2px; }
+                .section-title { font-size: 16px; font-weight: bold; color: #1a237e; margin: 20px 0 10px; padding-bottom: 8px; border-bottom: 2px solid #eee; }
+                table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 20px; }
+                table th { background: #1a237e; color: white; padding: 10px 12px; text-align: left; font-weight: 600; }
+                table td { padding: 8px 12px; border-bottom: 1px solid #eee; }
+                table tr:nth-child(even) { background: #f8f9fa; }
+                .termo { background: #f8f9fa; padding: 15px 20px; border-radius: 8px; font-size: 12px; line-height: 1.6; margin: 20px 0; border-left: 4px solid #1a237e; }
+                .termo p { margin: 5px 0; }
+                .footer { margin-top: 30px; padding-top: 15px; border-top: 2px solid #eee; text-align: center; font-size: 11px; color: #999; }
+                @media print { body { padding: 20px; } .documento { border: none; padding: 0; } .no-print { display: none; } }
             </style>
         </head>
         <body>
@@ -2014,70 +1948,27 @@ function gerarConteudoPDF(sa) {
                     </div>
                     <div class="numero">#${numeroFormatado}</div>
                 </div>
-                
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                    <span class="status-badge atendida">🔄 ATENDIDA PROTHEUS</span>
+                    <span class="status-badge">🔄 ATENDIDA PROTHEUS</span>
                     <span style="font-size: 13px; color: #1a237e; font-weight: 600;">${tipoInfo.label}</span>
                     <span style="font-size: 12px; color: #666;">Gerado em: ${dataAtual}</span>
                 </div>
-                
                 <div class="info-grid">
-                    <div class="item">
-                        <span class="label">Solicitante</span>
-                        <span class="value">${sa.solicitante || '-'}</span>
-                    </div>
-                    <div class="item">
-                        <span class="label">Data da Solicitação</span>
-                        <span class="value">${formatarDataHora(sa.data_solicitacao)}</span>
-                    </div>
-                    <div class="item">
-                        <span class="label">💰 Gerar Desconto</span>
-                        <span class="value">${descontoLabel}</span>
-                    </div>
-                    <div class="item">
-                        <span class="label">Colaborador</span>
-                        <span class="value">${sa.colaborador?.nome || 'Aguardando'}</span>
-                    </div>
-                    <div class="item">
-                        <span class="label">Matrícula</span>
-                        <span class="value">${sa.colaborador?.matricula || '-'}</span>
-                    </div>
-                    <div class="item">
-                        <span class="label">CPF</span>
-                        <span class="value">${sa.colaborador?.cpf || '-'}</span>
-                    </div>
-                    <div class="item">
-                        <span class="label">Função</span>
-                        <span class="value">${sa.colaborador?.funcao || '-'}</span>
-                    </div>
-                    <div class="item">
-                        <span class="label">Filial</span>
-                        <span class="value">${sa.colaborador?.filial || '-'}</span>
-                    </div>
-                    <div class="item">
-                        <span class="label">Centro de Custo</span>
-                        <span class="value">${sa.colaborador?.centro_custo || '-'}</span>
-                    </div>
+                    <div class="item"><span class="label">Solicitante</span><span class="value">${sa.solicitante || '-'}</span></div>
+                    <div class="item"><span class="label">Data da Solicitação</span><span class="value">${formatarDataHora(sa.data_solicitacao)}</span></div>
+                    <div class="item"><span class="label">💰 Gerar Desconto</span><span class="value">${descontoLabel}</span></div>
+                    <div class="item"><span class="label">Colaborador</span><span class="value">${sa.colaborador?.nome || 'Aguardando'}</span></div>
+                    <div class="item"><span class="label">Matrícula</span><span class="value">${sa.colaborador?.matricula || '-'}</span></div>
+                    <div class="item"><span class="label">CPF</span><span class="value">${sa.colaborador?.cpf || '-'}</span></div>
+                    <div class="item"><span class="label">Função</span><span class="value">${sa.colaborador?.funcao || '-'}</span></div>
+                    <div class="item"><span class="label">Filial</span><span class="value">${sa.colaborador?.filial || '-'}</span></div>
+                    <div class="item"><span class="label">Centro de Custo</span><span class="value">${sa.colaborador?.centro_custo || '-'}</span></div>
                 </div>
-                
                 <div class="section-title">📦 Itens Solicitados</div>
                 <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 8%;">#</th>
-                            <th style="width: 15%;">Código</th>
-                            <th style="width: 30%;">Descrição</th>
-                            <th style="width: 10%;">UND</th>
-                            <th style="width: 10%;">QTD</th>
-                            <th style="width: 10%;">Armazém</th>
-                            <th style="width: 12%;">C.A</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${itensHTML}
-                    </tbody>
+                    <thead><tr><th>#</th><th>Código</th><th>Descrição</th><th>UND</th><th>QTD</th><th>Armazém</th><th>C.A</th></tr></thead>
+                    <tbody>${itensHTML}</tbody>
                 </table>
-                
                 <div class="section-title">📜 Termo de Responsabilidade</div>
                 <div class="termo">
                     <p><strong>NR 06</strong> - 6.7. CABE AO EMPREGADO QUANTO AO EPI: USAR, UTILIZANDO-O APENAS PARA A FINALIDADE A QUE SE DESTINA; RESPONSABILIZAR-SE PELA GUARDA E CONSERVAÇÃO; COMUNICAR AO EMPREGADOR QUALQUER ALTERAÇÃO QUE O TORNE IMPRÓPRIO PARA USO.</p>
@@ -2085,25 +1976,16 @@ function gerarConteudoPDF(sa) {
                     <p><strong>CLT</strong> - ART. 462, § 1º - EM CASO DE DANO CAUSADO PELO EMPREGADO, O DESCONTO SERÁ LÍCITO, DESDE QUE ESTA POSSIBILIDADE TENHA SIDO ACORDADA OU NA OCORRÊNCIA DE DOLO DO EMPREGADO.</p>
                     <p style="margin-top: 10px; font-weight: bold;">Declaro que recebi os equipamentos acima descritos e estou ciente das obrigações contidas na NR 06 e NR 01.</p>
                 </div>
-                
-                <div class="assinaturas-container">
-                    <div class="section-title">✍️ Assinaturas</div>
-                    ${assinaturasHTML}
-                </div>
-                
+                <div class="section-title">✍️ Assinaturas</div>
+                ${assinaturasHTML}
                 <div class="footer">
                     <p>Documento gerado automaticamente pelo sistema SICGM - S.A. Emergencial</p>
                     <p>Este documento é uma via válida para comprovação de atendimento</p>
                 </div>
             </div>
-            
             <div style="text-align: center; margin-top: 20px;" class="no-print">
-                <button onclick="window.print()" style="background: #1a237e; color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px;">
-                    🖨️ Imprimir / Salvar PDF
-                </button>
-                <button onclick="window.close()" style="background: #718096; color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; margin-left: 10px;">
-                    ✕ Fechar
-                </button>
+                <button onclick="window.print()" style="background: #1a237e; color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px;">🖨️ Imprimir / Salvar PDF</button>
+                <button onclick="window.close()" style="background: #718096; color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; margin-left: 10px;">✕ Fechar</button>
             </div>
         </body>
         </html>
@@ -2127,8 +2009,6 @@ async function carregarListaSA() {
         const sas = await response.json();
         sasCarregadas = sas;
         
-        console.log('📋 S.A. carregadas:', sas.length);
-        
         for (const sa of sas) {
             try {
                 const detalhesResponse = await fetch(`${API_URL}/sa/${sa.numero}`);
@@ -2146,47 +2026,13 @@ async function carregarListaSA() {
             }
         }
         
-        console.log('📊 S.A. com contagem de itens:', sas.map(s => `${s.numero}: ${s._itensCount} itens`));
-        
-        const podeCriar = usuarioPodeCriarSA(dadosSessao?.matricula);
-        
         if (sas.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <p>📭 Nenhuma S.A. Emergencial encontrada</p>
-                    ${podeCriar ? `
-                        <button class="btn-primary" onclick="criarNovaSA()" style="margin-top: 10px;">
-                            ➕ Criar Nova S.A.
-                        </button>
-                    ` : `
-                        <p style="font-size: 0.9em; color: #718096; margin-top: 10px;">
-                            🔒 Você não tem permissão para criar S.A. Aguarde uma ser criada.
-                        </p>
-                    `}
-                </div>
-            `;
+            container.innerHTML = `<div class="empty-state"><p>📭 Nenhuma S.A. Emergencial encontrada</p></div>`;
             return;
         }
         
         renderizarListaSA(sas);
         configurarFiltros(sas);
-        
-        const btnNovaSA = document.getElementById('btnNovaSA');
-        if (btnNovaSA) {
-            if (podeCriar) {
-                btnNovaSA.style.display = 'inline-flex';
-                btnNovaSA.textContent = '➕ Nova S.A.';
-                btnNovaSA.onclick = criarNovaSA;
-            } else {
-                btnNovaSA.style.display = 'none';
-            }
-        }
-        
-        const btnExportar = document.getElementById('btnExportarPDFPainel');
-        if (btnExportar) {
-            btnExportar.style.display = 'none';
-            saSelecionadaParaExportar = null;
-        }
         
     } catch (error) {
         console.error('❌ Erro ao carregar S.A.:', error);
@@ -2202,7 +2048,7 @@ async function carregarListaSA() {
 window.carregarListaSA = carregarListaSA;
 
 // ============================================
-// RENDERIZAR LISTA DE S.A. COM FILTROS
+// RENDERIZAR LISTA
 // ============================================
 
 function renderizarListaSA(sas, filtros = {}) {
@@ -2213,25 +2059,16 @@ function renderizarListaSA(sas, filtros = {}) {
     
     if (filtros.numero) {
         const num = filtros.numero.toString().trim();
-        sasFiltradas = sasFiltradas.filter(sa => 
-            sa.numero.toString().includes(num)
-        );
+        sasFiltradas = sasFiltradas.filter(sa => sa.numero.toString().includes(num));
     }
-    
     if (filtros.solicitante) {
         const termo = filtros.solicitante.toLowerCase().trim();
-        sasFiltradas = sasFiltradas.filter(sa => 
-            (sa.solicitante || '').toLowerCase().includes(termo)
-        );
+        sasFiltradas = sasFiltradas.filter(sa => (sa.solicitante || '').toLowerCase().includes(termo));
     }
-    
     if (filtros.matriculaSolicitante) {
         const termo = filtros.matriculaSolicitante.toLowerCase().trim();
-        sasFiltradas = sasFiltradas.filter(sa => 
-            (sa.criado_por || '').toLowerCase().includes(termo)
-        );
+        sasFiltradas = sasFiltradas.filter(sa => (sa.criado_por || '').toLowerCase().includes(termo));
     }
-    
     if (filtros.colaborador) {
         const termo = filtros.colaborador.toLowerCase().trim();
         sasFiltradas = sasFiltradas.filter(sa => 
@@ -2239,7 +2076,6 @@ function renderizarListaSA(sas, filtros = {}) {
             (sa.colaborador_nome || '').toLowerCase().includes(termo)
         );
     }
-    
     if (filtros.matriculaColaborador) {
         const termo = filtros.matriculaColaborador.toLowerCase().trim();
         sasFiltradas = sasFiltradas.filter(sa => 
@@ -2247,32 +2083,21 @@ function renderizarListaSA(sas, filtros = {}) {
             (sa.colaborador_matricula || '').toLowerCase().includes(termo)
         );
     }
-    
     if (filtros.status) {
-        sasFiltradas = sasFiltradas.filter(sa => 
-            (sa.status || '').toLowerCase() === filtros.status.toLowerCase()
-        );
+        sasFiltradas = sasFiltradas.filter(sa => (sa.status || '').toLowerCase() === filtros.status.toLowerCase());
     }
-    
     if (filtros.tipo_sa) {
-        sasFiltradas = sasFiltradas.filter(sa => 
-            (sa.tipo_sa || 'EMERGENCIAL') === filtros.tipo_sa
-        );
+        sasFiltradas = sasFiltradas.filter(sa => (sa.tipo_sa || 'EMERGENCIAL') === filtros.tipo_sa);
     }
-    
     if (filtros.desconto) {
-        sasFiltradas = sasFiltradas.filter(sa => 
-            (sa.gerar_desconto || 'NAO') === filtros.desconto
-        );
+        sasFiltradas = sasFiltradas.filter(sa => (sa.gerar_desconto || 'NAO') === filtros.desconto);
     }
-    
     if (filtros.dataInicio) {
         sasFiltradas = sasFiltradas.filter(sa => {
             const data = sa.data_solicitacao || sa.criado_em || '';
             return data >= filtros.dataInicio;
         });
     }
-    
     if (filtros.dataFim) {
         sasFiltradas = sasFiltradas.filter(sa => {
             const data = sa.data_solicitacao || sa.criado_em || '';
@@ -2289,9 +2114,7 @@ function renderizarListaSA(sas, filtros = {}) {
         container.innerHTML = `
             <div class="empty-state">
                 <p>🔍 Nenhuma S.A. encontrada com os filtros aplicados</p>
-                <button class="btn-limpar-filtros" onclick="limparFiltrosSA()" style="margin-top: 10px;">
-                    ✕ Limpar Filtros
-                </button>
+                <button class="btn-limpar-filtros" onclick="limparFiltrosSA()" style="margin-top: 10px;">✕ Limpar Filtros</button>
             </div>
         `;
         return;
@@ -2324,7 +2147,6 @@ function renderizarListaSA(sas, filtros = {}) {
         }
         
         const qtdItens = sa._itensCount || 0;
-        
         const tipo = sa.tipo_sa || 'EMERGENCIAL';
         const tipoInfo = tipoMap[tipo] || tipoMap['EMERGENCIAL'];
         
@@ -2346,21 +2168,18 @@ function renderizarListaSA(sas, filtros = {}) {
         
         const nomeSolicitante = sa.solicitante || '-';
         const matriculaSolicitante = sa.criado_por || '-';
-        
         const descontoLabel = sa.gerar_desconto === 'SIM' ? '💰 SIM' : '💰 NÃO';
         
-        const podeExcluir = perfilUsuario === 'GESTAO' && 
-            sa.status !== 'FINALIZADA' && 
-            sa.status !== 'finalizado' && 
-            sa.status !== 'ATENDIDA_PROTHEUS' && 
-            sa.status !== 'atendida_protheus';
+        const podeExcluir = perfilUsuario === 'GESTAO' &&
+            sa.status !== 'FINALIZADA' && sa.status !== 'finalizado' &&
+            sa.status !== 'ATENDIDA_PROTHEUS' && sa.status !== 'atendida_protheus';
         
         const podeExportar = sa.status === 'ATENDIDA_PROTHEUS' || sa.status === 'atendida_protheus';
         
         html += `
-            <div class="sa-card" onclick="abrirSA('${sa.numero}')" 
+            <div class="sa-card" onclick="abrirSA('${sa.numero}')"
                  onmouseenter="${podeExportar ? `selecionarSAExportar('${sa.numero}')` : ''}"
-                 onmouseleave="${podeExportar ? `document.getElementById('btnExportarPDFPainel').style.display = 'none'; saSelecionadaParaExportar = null;` : ''}">
+                 onmouseleave="${podeExportar ? `document.getElementById('btnExportarPDFPainel')?.style.display = 'none'; saSelecionadaParaExportar = null;` : ''}">
                 <div class="sa-card-header">
                     <span class="sa-card-numero">#${String(sa.numero).padStart(4, '0')}</span>
                     <span class="sa-card-status ${statusClass}">${statusIcon} ${statusText}</span>
@@ -2419,6 +2238,8 @@ function configurarFiltros(sas) {
         { value: 'NAO', label: '💰 NÃO - Sem desconto' }
     ];
     
+    const podeCriar = usuarioPodeCriarSA(dadosSessao?.matricula);
+    
     filtrosContainer.innerHTML = `
         <div class="filtro-item">
             <label>🔢 Nº S.A.</label>
@@ -2466,10 +2287,14 @@ function configurarFiltros(sas) {
             <label>📅 Data Fim</label>
             <input type="date" id="filtro-data-fim" onchange="aplicarFiltrosSA()">
         </div>
-        <div class="filtro-item filtro-acoes">
-            <button class="btn-limpar-filtros" onclick="limparFiltrosSA()">✕ Limpar Filtros</button>
+
+        <div class="filtro-acoes">
+            <button class="btn-limpar-filtros" onclick="limparFiltrosSA()">✕ Limpar</button>
+            <button class="btn-voltar-home" onclick="redirecionarParaHome()">🏠 Início</button>
+            ${podeCriar ? `<button class="btn-nova-sa" id="btnNovaSA" onclick="criarNovaSA()">➕ Nova S.A.</button>` : ''}
         </div>
-        <div class="filtro-item filtro-contador">
+
+        <div class="filtro-contador">
             <span id="filtro-contador">Mostrando ${sas.length} de ${sas.length} S.A.</span>
         </div>
     `;
@@ -2478,7 +2303,7 @@ function configurarFiltros(sas) {
 window.configurarFiltros = configurarFiltros;
 
 // ============================================
-// APLICAR FILTROS
+// APLICAR / LIMPAR FILTROS
 // ============================================
 
 function aplicarFiltrosSA() {
@@ -2500,24 +2325,16 @@ function aplicarFiltrosSA() {
 
 window.aplicarFiltrosSA = aplicarFiltrosSA;
 
-// ============================================
-// LIMPAR FILTROS
-// ============================================
-
 function limparFiltrosSA() {
     const inputs = document.querySelectorAll('#filtros-container input');
     inputs.forEach(input => {
-        if (input.type === 'text' || input.type === 'number') {
-            input.value = '';
-        } else if (input.type === 'date') {
+        if (input.type === 'text' || input.type === 'number' || input.type === 'date') {
             input.value = '';
         }
     });
     
     const selects = document.querySelectorAll('#filtros-container select');
-    selects.forEach(select => {
-        select.value = '';
-    });
+    selects.forEach(select => { select.value = ''; });
     
     aplicarFiltrosSA();
 }
@@ -2525,7 +2342,7 @@ function limparFiltrosSA() {
 window.limparFiltrosSA = limparFiltrosSA;
 
 // ============================================
-// ABRIR S.A. PARA EDIÇÃO/VISUALIZAÇÃO
+// ABRIR / REMOVER S.A.
 // ============================================
 
 function abrirSA(numero) {
@@ -2540,17 +2357,11 @@ function abrirSA(numero) {
 
 window.abrirSA = abrirSA;
 
-// ============================================
-// REMOVER S.A.
-// ============================================
-
 async function removerSA(numero) {
     if (!confirm(`⚠️ Tem certeza que deseja REMOVER a S.A. #${String(numero).padStart(4, '0')}?`)) return;
     
     try {
-        const response = await fetch(`${API_URL}/sa/${numero}`, {
-            method: 'DELETE'
-        });
+        const response = await fetch(`${API_URL}/sa/${numero}`, { method: 'DELETE' });
         
         if (!response.ok) {
             const error = await response.json();
@@ -2568,11 +2379,10 @@ async function removerSA(numero) {
 window.removerSA = removerSA;
 
 // ============================================
-// CARREGAR S.A. NO FORMULÁRIO (CORRIGIDO)
+// CARREGAR S.A. NO FORMULÁRIO
 // ============================================
 
 async function carregarSAFormulario() {
-    // 🔥 USA authService em vez de sessionStorage
     if (!dadosSessao) {
         if (typeof authService !== 'undefined' && authService) {
             const user = authService.getUserData();
@@ -2586,7 +2396,6 @@ async function carregarSAFormulario() {
                 perfilUsuario = user.perfil || 'OPERACIONAL';
             }
         }
-        
         if (!dadosSessao) {
             window.location.href = '../login.html';
             return;
@@ -2609,8 +2418,6 @@ async function carregarSAFormulario() {
         const sa = await response.json();
         saAtual = sa;
         
-        console.log('📋 S.A. carregada:', sa.numero, '| Status:', sa.status, '| Tipo:', sa.tipo_sa);
-        
         document.getElementById('saNumero').textContent = `#${sa.numero}`;
         
         if (sa.status !== 'FINALIZADA' && sa.status !== 'ATENDIDA_PROTHEUS' && sa.status !== 'finalizado' && sa.status !== 'atendida_protheus' && dadosSessao) {
@@ -2622,23 +2429,18 @@ async function carregarSAFormulario() {
         document.getElementById('dataSolicitacao').value = sa.data_solicitacao || getDataBrasil();
         
         if (sa.tipo_sa) {
-            const radios = document.querySelectorAll('input[name="tipo_sa"]');
-            radios.forEach(radio => {
+            document.querySelectorAll('input[name="tipo_sa"]').forEach(radio => {
                 radio.checked = (radio.value === sa.tipo_sa);
             });
         }
         
         if (sa.gerar_desconto) {
-            const radios = document.querySelectorAll('input[name="gerar_desconto"]');
-            radios.forEach(radio => {
+            document.querySelectorAll('input[name="gerar_desconto"]').forEach(radio => {
                 radio.checked = (radio.value === sa.gerar_desconto);
             });
         } else {
-            const radios = document.querySelectorAll('input[name="gerar_desconto"]');
-            radios.forEach(radio => {
-                if (radio.value === 'NAO') {
-                    radio.checked = true;
-                }
+            document.querySelectorAll('input[name="gerar_desconto"]').forEach(radio => {
+                if (radio.value === 'NAO') radio.checked = true;
             });
         }
         
@@ -2665,7 +2467,7 @@ async function carregarSAFormulario() {
                     <td>
                         <select class="item-armazem">
                             <option value="">Selecione</option>
-                            ${['01','02','03','04','05','06','07','08','09','10','11','12'].map(a => 
+                            ${['01','02','03','04','05','06','07','08','09','10','11','12'].map(a =>
                                 `<option value="${a}" ${item.armazem === a ? 'selected' : ''}>${a}</option>`
                             ).join('')}
                         </select>
@@ -2683,29 +2485,21 @@ async function carregarSAFormulario() {
         if (entreguePorNome) {
             entreguePorNome.innerHTML = `<strong>${dadosSessao?.nome || 'Aguardando'}</strong>`;
         }
-        
         if (recebidoPorNome) {
             const nomeColab = document.getElementById('colaborador')?.value || 'Aguardando';
             recebidoPorNome.innerHTML = `<strong>${nomeColab}</strong>`;
         }
         
         if (sa.assinaturas) {
-            if (sa.assinaturas.entregue) {
-                atualizarAssinaturaUI('entregue', sa.assinaturas.entregue);
-            }
-            if (sa.assinaturas.recebido) {
-                atualizarAssinaturaUI('recebido', sa.assinaturas.recebido);
-            }
+            if (sa.assinaturas.entregue) atualizarAssinaturaUI('entregue', sa.assinaturas.entregue);
+            if (sa.assinaturas.recebido) atualizarAssinaturaUI('recebido', sa.assinaturas.recebido);
         }
         
-        if (sa.foto) {
-            atualizarFotoUI(sa.foto);
-        }
+        if (sa.foto) atualizarFotoUI(sa.foto);
         
         atualizarBotoesAcao(sa);
         
-        const botoesAssinar = document.querySelectorAll('.btn-assinar');
-        botoesAssinar.forEach(btn => {
+        document.querySelectorAll('.btn-assinar').forEach(btn => {
             if (perfilUsuario === 'VISUALIZACAO') {
                 btn.disabled = true;
                 btn.textContent = '🔒 Apenas Visualização';
@@ -2728,16 +2522,11 @@ async function carregarSAFormulario() {
 }
 
 // ============================================
-// FUNÇÕES DE NAVEGAÇÃO
+// NAVEGAÇÃO
 // ============================================
 
-function irParaTopo() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function irParaFim() {
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-}
+function irParaTopo() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function irParaFim() { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }
 
 function controlarBotoesNavegacao() {
     const btnTopo = document.getElementById('btnTopo');
@@ -2752,10 +2541,6 @@ function controlarBotoesNavegacao() {
     btnFim.classList.toggle('visivel', scrollY + alturaVisivel < alturaTotal - 100);
 }
 
-// ============================================
-// CONFIGURAR BOTÕES DE ASSINATURA
-// ============================================
-
 function configurarBotoesAssinatura() {
     document.querySelectorAll('.btn-assinar, .btn-reassinar').forEach(btn => {
         btn.addEventListener('click', function(e) {
@@ -2766,7 +2551,7 @@ function configurarBotoesAssinatura() {
 }
 
 // ============================================
-// INICIALIZAÇÃO (CORRIGIDO)
+// INICIALIZAÇÃO
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -2778,12 +2563,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         carregarMateriaisSA()
     ]);
     
-    // 🔥 CHAMA carregarDadosUsuario() que agora usa authService
     const sessao = carregarDadosUsuario();
-    if (!sessao) {
-        console.log('❌ Falha ao carregar sessão, redirecionando...');
-        return;
-    }
+    if (!sessao) return;
     
     inicializarPopup();
     configurarBotoesAssinatura();
@@ -2792,34 +2573,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     const isFormulario = pathname.includes('formulario.html');
     const isIndex = pathname.includes('index.html') || pathname.endsWith('/sa-emergencial/');
     
-    console.log('📍 Página atual:', pathname, '| IsFormulario:', isFormulario, '| IsIndex:', isIndex);
-    
     if (isIndex) {
-        console.log('📋 Carregando lista de S.A.');
         await carregarListaSA();
-        
-        const btnNovaSA = document.getElementById('btnNovaSA');
-        if (btnNovaSA) {
-            const podeCriar = usuarioPodeCriarSA(dadosSessao.matricula);
-            if (podeCriar) {
-                btnNovaSA.style.display = 'inline-flex';
-                btnNovaSA.textContent = '➕ Nova S.A.';
-                btnNovaSA.onclick = criarNovaSA;
-            } else {
-                btnNovaSA.style.display = 'none';
-            }
-        }
-        
     } else if (isFormulario) {
-        console.log('📝 Carregando formulário de S.A.');
         await carregarSAFormulario();
         configurarPopupDescricao();
     }
     
     window.addEventListener('scroll', controlarBotoesNavegacao);
-    window.addEventListener('load', function() {
-        setTimeout(controlarBotoesNavegacao, 500);
-    });
+    window.addEventListener('load', () => setTimeout(controlarBotoesNavegacao, 500));
     window.addEventListener('resize', controlarBotoesNavegacao);
     
     document.addEventListener('click', function(e) {
@@ -2864,4 +2626,12 @@ window.aplicarFiltrosSA = aplicarFiltrosSA;
 window.limparFiltrosSA = limparFiltrosSA;
 window.getTipoSASelecionado = getTipoSASelecionado;
 window.getGerarDescontoSelecionado = getGerarDescontoSelecionado;
-window.abrirPaginaAssinatura = abrirPaginaAssinatura;
+
+// Modal de assinatura
+window.abrirModalAssinatura = abrirModalAssinatura;
+window.fecharModalAssinatura = fecharModalAssinatura;
+window.limparAssinaturaModal = limparAssinaturaModal;
+window.confirmarAssinaturaModal = confirmarAssinaturaModal;
+window.abrirPaginaAssinatura = abrirPaginaAssinatura; // fallback
+
+console.log('✅ sa-emergencial.js carregado com sucesso (v2 - modal de assinatura)');

@@ -1,5 +1,5 @@
 // ============================================
-// DASHBOARD PENDÊNCIA DE REQUISIÇÃO - v5
+// DASHBOARD PENDÊNCIA DE REQUISIÇÃO - v7
 // Lógica: MGM (Σ QTD. APLICADA da devolucao_compilada) × qtdrealizada (previsto_realizado)
 //
 // REQUISITAR → qtdMGM > qtdRealizada  (falta subir o sistêmico)
@@ -10,12 +10,9 @@
 //   - devolucao_compilada.txt (R2)   → MGM (usado fisicamente)
 //   - previsto_realizado.txt (R2)    → requisitado no sistêmico
 //   - programacao_siago.txt (R2)     → etapas formais (visual)
-//
-// QTD. DMA NOVO é ignorado (só rastreio, não entra na conta)
-// mgm-online-completo (D1) não é usado nesta versão (futuro)
 // ============================================
 
-console.log('🚀 dashboards-pendencia-requisicao.js carregado! (v5 - devolucao_compilada × previsto_realizado)');
+console.log('🚀 dashboards-pendencia-requisicao.js carregado! (v7 - grid redimensionado)');
 
 const ARQUIVOS_R2 = {
     movimentosSiago:    `${API_URL}/proxy/movimentos-siago`,
@@ -29,11 +26,11 @@ const ARQUIVOS_R2 = {
 // ============================================
 
 let dadosCarregadosMGM = false;
-let pendenciasConsolidadas = [];   // [{ obra, codigo, qtdMGM, qtdRealizada, falta, sobra, status, ... }]
+let pendenciasConsolidadas = [];
 let dadosFiltradosMGM = [];
-let dadosEtapasPorObra = {};       // { obra: { etapasMGM: [...], ... } }
+let dadosEtapasPorObra = {};
 let filtroStatusMGMAtivo = null;
-let itemSelecionadoMGM = null;     // { obra }
+let itemSelecionadoMGM = null;
 let filtroEtapasMinimo = 0;
 
 const DATA_CORTE_INICIO_OBRA = '2026-07-01';
@@ -50,23 +47,17 @@ function getEtapasPorObraData() {
     return window.__etapasPorObra || {};
 }
 
-// Converte string numérica com vírgula ou ponto decimal para float.
-// Suporta "1.234,56" e "1234.56" e "1234,56".
 function parseNumeroBR(valor) {
     if (valor === null || valor === undefined) return 0;
     let s = String(valor).trim();
     if (!s) return 0;
-    // Remove espaços e possíveis caracteres de moeda
     s = s.replace(/\s/g, '').replace(/[R$]/g, '');
-    // Caso tenha vírgula E ponto: o último separador é o decimal
     const temVirgula = s.includes(',');
     const temPonto = s.includes('.');
     if (temVirgula && temPonto) {
         if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
-            // Formato pt-BR: 1.234,56
             s = s.replace(/\./g, '').replace(',', '.');
         } else {
-            // Formato en-US: 1,234.56
             s = s.replace(/,/g, '');
         }
     } else if (temVirgula) {
@@ -76,7 +67,6 @@ function parseNumeroBR(valor) {
     return isNaN(n) ? 0 : n;
 }
 
-// Converte data "DD.MM.YYYY", "DD/MM/YYYY" ou "YYYY-MM-DD" → "YYYY-MM-DD"
 function parseDataGenerica(str) {
     if (!str) return null;
     const s = String(str).trim();
@@ -89,7 +79,6 @@ function parseDataGenerica(str) {
     return null;
 }
 
-// Mantido para compatibilidade (programacao_siago usa DD/MM/YYYY ou YYYY-MM-DD)
 function parseDataSiago(str) {
     return parseDataGenerica(str);
 }
@@ -140,16 +129,14 @@ function mostrarToast(mensagem, tipo = 'info') {
 }
 
 // ============================================
-// PARSER — DEVOLUÇÃO COMPILADA (= MGM)
-// Colunas: OBRA, DATA, CÓDIGO, DESCRIÇÃO, QTD. APLICADA, QTD. DMA NOVO, ARQUIVO
-// Agrega por obra+codigo:  Σ QTD. APLICADA, lista de datas (MGMs), descrição, unidade
+// PARSERS
 // ============================================
 
 function parsearDevolucaoCompilada(texto) {
     console.log('🔄 Parseando devolucao_compilada.txt...');
     const linhas = texto.split(/\r?\n/);
     if (linhas.length < 2) {
-        console.warn('⚠️ devolucao_compilada.txt vazio ou sem cabeçalho');
+        console.warn('⚠️ devolucao_compilada.txt vazio');
         return { mgmMap: {}, etapasPorObra: {} };
     }
 
@@ -164,12 +151,12 @@ function parsearDevolucaoCompilada(texto) {
     };
 
     if (idx.obra < 0 || idx.codigo < 0 || idx.qtdAplicada < 0 || idx.data < 0) {
-        console.error('❌ Cabeçalho inesperado em devolucao_compilada:', cabecalho);
+        console.error('❌ Cabeçalho inesperado:', cabecalho);
         return { mgmMap: {}, etapasPorObra: {} };
     }
 
-    const mgmMap = {};           // chave: "obra|codigo"
-    const etapasPorObra = {};    // chave: obra → { etapasMGM: [{ numero, data, itens: [] }] }
+    const mgmMap = {};
+    const etapasPorObra = {};
     let totalLinhas = 0;
     let linhasIgnoradasZero = 0;
 
@@ -193,18 +180,11 @@ function parsearDevolucaoCompilada(texto) {
         const dataISO = parseDataGenerica(dataOriginal);
         const descricao = (c[idx.descricao] || '').trim();
 
-        // Agrega MGM por obra+codigo
         const chave = `${obra}|${codigo}`;
         if (!mgmMap[chave]) {
             mgmMap[chave] = {
-                obra,
-                codigo,
-                descricao,
-                unidade: '',           // devolucao_compilada não traz unidade → preenche depois via previsto
-                qtdMGM: 0,
-                qtdDMA: 0,
-                datas: [],
-                arquivos: new Set()
+                obra, codigo, descricao, unidade: '',
+                qtdMGM: 0, qtdDMA: 0, datas: [], arquivos: new Set()
             };
         }
         mgmMap[chave].qtdMGM += qtdAplicada;
@@ -216,7 +196,6 @@ function parsearDevolucaoCompilada(texto) {
         }
         mgmMap[chave].arquivos.add(`${obra}|${dataOriginal}`);
 
-        // Agrupa itens por obra+data (cada data = uma MGM)
         if (!etapasPorObra[obra]) {
             etapasPorObra[obra] = { obra, etapasMGM: [], _mapa: {} };
         }
@@ -224,7 +203,7 @@ function parsearDevolucaoCompilada(texto) {
         const chaveData = dataISO || dataOriginal || 'SEM_DATA';
         if (!grupoObra._mapa[chaveData]) {
             grupoObra._mapa[chaveData] = {
-                numero: chaveData,           // string YYYY-MM-DD (ou "SEM_DATA")
+                numero: chaveData,
                 data: dataISO || '',
                 dataOriginal,
                 qtdItens: 0,
@@ -233,18 +212,13 @@ function parsearDevolucaoCompilada(texto) {
             };
             grupoObra.etapasMGM.push(grupoObra._mapa[chaveData]);
         }
-        grupoObra._mapa[chaveData].itens.push({
-            codigo,
-            descricao,
-            qtdAplicada
-        });
+        grupoObra._mapa[chaveData].itens.push({ codigo, descricao, qtdAplicada });
         grupoObra._mapa[chaveData].qtdItens += 1;
         grupoObra._mapa[chaveData].qtdAplicadaTotal += qtdAplicada;
 
         totalLinhas++;
     }
 
-    // Converte Set de datas em array ordenado e limpa _mapa
     Object.keys(mgmMap).forEach(k => {
         mgmMap[k].datas.sort();
         delete mgmMap[k].arquivos;
@@ -254,15 +228,9 @@ function parsearDevolucaoCompilada(texto) {
         etapasPorObra[o].etapasMGM.sort((a, b) => (a.data || '').localeCompare(b.data || ''));
     });
 
-    console.log(`✅ devolucao_compilada: ${totalLinhas} linhas válidas | ${Object.keys(mgmMap).length} combinações obra+codigo | ${Object.keys(etapasPorObra).length} obras`);
-    console.log(`   🔇 ${linhasIgnoradasZero} linhas ignoradas (QTD. APLICADA = 0 ou vazia)`);
+    console.log(`✅ devolucao_compilada: ${totalLinhas} linhas | ${Object.keys(mgmMap).length} combinações | ${Object.keys(etapasPorObra).length} obras`);
     return { mgmMap, etapasPorObra };
 }
-
-// ============================================
-// PARSER — PREVISTO REALIZADO
-// Colunas: num_obra, cod_material, descricao, und_medida, qtdprevista, qtdrealizada, val_material, val_requisitado, nome
-// ============================================
 
 function parsearPrevistoRealizado(texto) {
     console.log('🔄 Parseando previsto_realizado.txt...');
@@ -293,12 +261,10 @@ function parsearPrevistoRealizado(texto) {
         const qtdPrevista = parseNumeroBR(c[idx.qtdprevista]);
         if (!mapa[chave]) {
             mapa[chave] = {
-                obra,
-                codigo,
+                obra, codigo,
                 descricao: (c[idx.descricao] || '').trim(),
                 unidade: (c[idx.und_medida] || 'UN').trim(),
-                qtdPrevista: 0,
-                qtdRealizada: 0,
+                qtdPrevista: 0, qtdRealizada: 0,
                 valorUnitario: parseNumeroBR(c[idx.val_material]),
                 valorRequisitado: 0,
                 nome: (c[idx.nome] || '').trim()
@@ -309,23 +275,12 @@ function parsearPrevistoRealizado(texto) {
         mapa[chave].valorRequisitado += parseNumeroBR(c[idx.val_requisitado]);
         totalLinhas++;
     }
-    console.log(`✅ previsto_realizado: ${totalLinhas} linhas | ${Object.keys(mapa).length} combinações obra+codigo`);
+    console.log(`✅ previsto_realizado: ${totalLinhas} linhas | ${Object.keys(mapa).length} combinações`);
     return mapa;
 }
 
-// ============================================
-// CONSOLIDAÇÃO POR OBRA
-// Regras:
-//   qtdMGM       = Σ QTD. APLICADA (devolucao_compilada) = usado fisicamente
-//   qtdRealizada = previsto_realizado.qtdrealizada      = requisitado no sistêmico
-//
-//   qtdMGM > qtdRealizada → 🔴 REQUISITAR (falta subir o sistêmico)
-//   qtdRealizada > qtdMGM → 🟠 DEVOLVER   (sobra, precisa baixar)
-//   |diferença| <= TOLERANCIA_QTD → ✅ OK
-// ============================================
-
 function consolidarPorObra(mgmMap, previstoMap) {
-    console.log('🔄 Consolidando (MGM × previsto_realizado)...');
+    console.log('🔄 Consolidando...');
     const pendencias = [];
     const todasChaves = new Set([
         ...Object.keys(mgmMap || {}),
@@ -344,34 +299,21 @@ function consolidarPorObra(mgmMap, previstoMap) {
         const qtdMGM = mgm?.qtdMGM || 0;
         const qtdRealizada = prev?.qtdRealizada || 0;
 
-        // falta requisitar → MGM > Realizada → precisa SUBIR o sistêmico
-        // devolver (sobra) → Realizada > MGM → precisa BAIXAR o sistêmico
         const falta = Math.max(0, qtdMGM - qtdRealizada);
         const sobra = Math.max(0, qtdRealizada - qtdMGM);
-        const diferenca = qtdMGM - qtdRealizada;   // com sinal, útil para debug
+        const diferenca = qtdMGM - qtdRealizada;
 
         let status;
-        if (falta > TOLERANCIA_QTD) {
-            status = 'REQUISITAR';
-        } else if (sobra > TOLERANCIA_QTD) {
-            status = 'DEVOLVER';
-        } else {
-            status = 'OK';
-        }
+        if (falta > TOLERANCIA_QTD) status = 'REQUISITAR';
+        else if (sobra > TOLERANCIA_QTD) status = 'DEVOLVER';
+        else status = 'OK';
 
         pendencias.push({
-            obra,
-            obraFormatada: formatarObra(obra),
-            codigo,
-            descricao,
-            unidade,
-            qtdMGM,
-            qtdRealizada,
+            obra, obraFormatada: formatarObra(obra),
+            codigo, descricao, unidade,
+            qtdMGM, qtdRealizada,
             qtdPrevista: prev?.qtdPrevista || 0,
-            diferenca,
-            falta,
-            sobra,
-            status,
+            diferenca, falta, sobra, status,
             valorUnitario: prev?.valorUnitario || 0,
             valorRequisitado: prev?.valorRequisitado || 0,
             nome: prev?.nome || '',
@@ -381,16 +323,8 @@ function consolidarPorObra(mgmMap, previstoMap) {
     });
 
     console.log(`✅ ${pendencias.length} pendências geradas`);
-    console.log(`   🔴 Requisitar (falta subir):   ${pendencias.filter(p => p.status === 'REQUISITAR').length}`);
-    console.log(`   🟠 Devolver  (precisa baixar): ${pendencias.filter(p => p.status === 'DEVOLVER').length}`);
-    console.log(`   ✅ OK (MGM ≈ Realizada):        ${pendencias.filter(p => p.status === 'OK').length}`);
-
     return { pendencias };
 }
-
-// ============================================
-// PROGRAMAÇÃO SIAGO (etapas formais — apenas visual)
-// ============================================
 
 function parsearProgramacaoSiago(texto) {
     console.log('🔄 Parseando programacao_siago.txt...');
@@ -516,15 +450,11 @@ function construirObrasPermitidas() {
     const todasObras = new Set();
     pendenciasConsolidadas.forEach(p => todasObras.add(normalizarObra(p.obra)));
     const permitidas = new Set();
-    let semProgramacao = 0, cortadas = 0;
     todasObras.forEach(obraNorm => {
         if (!obraNorm) return;
         const cls = classificarObra(obraNorm);
         if (cls.status === 'valida') permitidas.add(obraNorm);
-        else if (cls.status === 'sem_programacao') semProgramacao++;
-        else cortadas++;
     });
-    console.log(`✅ ${permitidas.size} obras permitidas | ${cortadas} cortadas | ${semProgramacao} sem programação`);
     return permitidas;
 }
 
@@ -539,14 +469,14 @@ function aplicarFiltroInicioObraFrontEnd() {
 }
 
 // ============================================
-// CARREGAMENTO (R2) — devolucao_compilada + previsto_realizado + programacao_siago
+// CARREGAMENTO
 // ============================================
 
 async function carregarArquivoR2(url, nomeArquivo) {
     console.log(`📥 Carregando ${nomeArquivo}...`);
     try {
         const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const texto = await response.text();
         console.log(`✅ ${nomeArquivo} carregado (${texto.split('\n').length} linhas)`);
         return texto;
@@ -557,7 +487,7 @@ async function carregarArquivoR2(url, nomeArquivo) {
 }
 
 async function carregarDadosMGM() {
-    console.log('🚀 Iniciando carregamento (devolucao_compilada × previsto_realizado)...');
+    console.log('🚀 Iniciando carregamento...');
     try {
         if (dadosCarregadosMGM) {
             renderizarDashboardMGM();
@@ -571,8 +501,7 @@ async function carregarDadosMGM() {
         ]);
 
         if (textoProgramacao) {
-            const etapasPorObra = parsearProgramacaoSiago(textoProgramacao);
-            window.__etapasPorObra = etapasPorObra;
+            window.__etapasPorObra = parsearProgramacaoSiago(textoProgramacao);
         } else {
             window.__etapasPorObra = {};
         }
@@ -582,7 +511,7 @@ async function carregarDadosMGM() {
         const { pendencias } = consolidarPorObra(mgmMap, previstoMap);
 
         pendenciasConsolidadas = pendencias;
-        dadosEtapasPorObra = etapasMGM;   // etapas MGM agrupadas por obra+data
+        dadosEtapasPorObra = etapasMGM;
         dadosFiltradosMGM = [...pendenciasConsolidadas];
         dadosCarregadosMGM = true;
 
@@ -700,7 +629,7 @@ function limparFiltrosMGM() {
 }
 
 // ============================================
-// RENDERIZAÇÃO — DASHBOARD
+// RENDERIZAÇÃO
 // ============================================
 
 function renderizarDashboardMGM() {
@@ -754,82 +683,68 @@ function renderizarKPIsMGM(pendencias) {
     const ok = pendencias.filter(p => p.status === 'OK');
 
     const obrasSet = new Set(pendencias.map(p => p.obra));
-    const obrasDevolver = new Set(devolver.map(p => p.obra));
-    const obrasRequisitar = new Set(requisitar.map(p => p.obra));
-    const obrasOk = new Set(ok.map(p => p.obra));
 
-    let qtdTotalDevolver = 0, valorTotalDevolver = 0;
-    devolver.forEach(p => {
-        qtdTotalDevolver += p.sobra || 0;
-        valorTotalDevolver += (p.sobra || 0) * (p.valorUnitario || 0);
-    });
+    let qtdTotalDevolver = 0;
+    devolver.forEach(p => { qtdTotalDevolver += p.sobra || 0; });
 
-    let qtdTotalRequisitar = 0, valorTotalRequisitar = 0;
-    requisitar.forEach(p => {
-        qtdTotalRequisitar += p.falta || 0;
-        valorTotalRequisitar += (p.falta || 0) * (p.valorUnitario || 0);
-    });
+    let qtdTotalRequisitar = 0;
+    requisitar.forEach(p => { qtdTotalRequisitar += p.falta || 0; });
 
     const totalEtapasMGM = Object.values(dadosEtapasPorObra).reduce(
         (acc, o) => acc + (o.etapasMGM?.length || 0), 0
     );
 
     const isActive = (status) => filtroStatusMGMAtivo === status;
-    const fmtBRL = (v) => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     container.innerHTML = `
         <div class="kpi-card kpi-card-mgm status-total ${isActive('TOTAL') ? 'active-filter' : ''}" 
-             data-status="TOTAL" onclick="aplicarFiltroStatusMGM('TOTAL')" style="cursor: pointer;">
+             data-status="TOTAL" onclick="aplicarFiltroStatusMGM('TOTAL')">
             <div class="kpi-icon">📦</div>
             <div class="kpi-value">${total}</div>
-            <div class="kpi-label">Total de Pendências</div>
+            <div class="kpi-label">Total Pendências</div>
         </div>
         
         <div class="kpi-card kpi-card-mgm status-sobra ${isActive('DEVOLVER') ? 'active-filter' : ''}" 
-             data-status="DEVOLVER" onclick="aplicarFiltroStatusMGM('DEVOLVER')" 
-             style="cursor: pointer; border-color: ${isActive('DEVOLVER') ? '#D69E2E' : '#E2E8F0'};">
+             data-status="DEVOLVER" onclick="aplicarFiltroStatusMGM('DEVOLVER')"
+             style="border-color: ${isActive('DEVOLVER') ? '#D69E2E' : '#E2E8F0'};">
             <div class="kpi-icon">🟠</div>
             <div class="kpi-value" style="color: #D69E2E;">${devolver.length}</div>
-            <div class="kpi-label">🟠 Devolver (${qtdTotalDevolver.toFixed(0)} un)</div>
-            <div class="kpi-sublabel" style="font-size: 10px; color: #A0AEC0; margin-top: 2px;">${fmtBRL(valorTotalDevolver)}</div>
+            <div class="kpi-label">🟠 Devolver</div>
         </div>
         
         <div class="kpi-card kpi-card-mgm status-falta ${isActive('REQUISITAR') ? 'active-filter' : ''}" 
-             data-status="REQUISITAR" onclick="aplicarFiltroStatusMGM('REQUISITAR')" 
-             style="cursor: pointer; border-color: ${isActive('REQUISITAR') ? '#E53E3E' : '#E2E8F0'};">
+             data-status="REQUISITAR" onclick="aplicarFiltroStatusMGM('REQUISITAR')"
+             style="border-color: ${isActive('REQUISITAR') ? '#E53E3E' : '#E2E8F0'};">
             <div class="kpi-icon">🔴</div>
             <div class="kpi-value" style="color: #E53E3E;">${requisitar.length}</div>
-            <div class="kpi-label">🔴 Requisitar (${qtdTotalRequisitar.toFixed(0)} un)</div>
-            <div class="kpi-sublabel" style="font-size: 10px; color: #A0AEC0; margin-top: 2px;">${fmtBRL(valorTotalRequisitar)}</div>
+            <div class="kpi-label">🔴 Requisitar</div>
         </div>
         
         <div class="kpi-card kpi-card-mgm status-baixado ${isActive('OK') ? 'active-filter' : ''}" 
-             data-status="OK" onclick="aplicarFiltroStatusMGM('OK')" 
-             style="cursor: pointer; border-color: ${isActive('OK') ? '#48BB78' : '#E2E8F0'};">
+             data-status="OK" onclick="aplicarFiltroStatusMGM('OK')"
+             style="border-color: ${isActive('OK') ? '#48BB78' : '#E2E8F0'};">
             <div class="kpi-icon">✅</div>
             <div class="kpi-value" style="color: #48BB78;">${ok.length}</div>
-            <div class="kpi-label">✅ OK (MGM = Realizado)</div>
+            <div class="kpi-label">✅ OK</div>
         </div>
         
         <div class="kpi-card kpi-card-mgm" style="cursor: default; background: #F7FAFC;">
             <div class="kpi-icon">🏗️</div>
             <div class="kpi-value" style="color: #2D3748;">${obrasSet.size}</div>
-            <div class="kpi-label">Obras Impactadas</div>
-            <div class="kpi-sublabel" style="font-size: 10px; color: #A0AEC0; margin-top: 2px;">
-                🟠 ${obrasDevolver.size} | 🔴 ${obrasRequisitar.size} | ✅ ${obrasOk.size}
-            </div>
+            <div class="kpi-label">Obras</div>
         </div>
         
         <div class="kpi-card kpi-card-mgm" style="cursor: default; background: #EBF8FF; border-color: #4299E1;">
             <div class="kpi-icon">📋</div>
             <div class="kpi-value" style="color: #4299E1;">${totalEtapasMGM}</div>
-            <div class="kpi-label">Etapas MGM (total)</div>
+            <div class="kpi-label">Etapas MGM</div>
         </div>
     `;
 }
 
 // ============================================
-// LISTA AGRUPADA POR OBRA
+// LISTA AGRUPADA POR OBRA — GRID REDIMENSIONADO
+// (mantém o layout de colunas do original, mas mais compacto)
 // ============================================
 
 function renderizarListaObrasMGM(pendencias) {
@@ -851,11 +766,10 @@ function renderizarListaObrasMGM(pendencias) {
         const obra = p.obra;
         if (!grupos[obra]) {
             grupos[obra] = {
-                obra,
-                obraFormatada: p.obraFormatada,
+                obra, obraFormatada: p.obraFormatada,
                 itens: [],
-                numDevolver: 0, qtdDevolver: 0, valorDevolver: 0,
-                numRequisitar: 0, qtdRequisitar: 0, valorRequisitar: 0,
+                numDevolver: 0, qtdDevolver: 0,
+                numRequisitar: 0, qtdRequisitar: 0,
                 numOk: 0,
                 numEtapasMGM: 0,
                 etapasInfoSiago: null
@@ -865,11 +779,9 @@ function renderizarListaObrasMGM(pendencias) {
         if (p.status === 'DEVOLVER') {
             grupos[obra].numDevolver++;
             grupos[obra].qtdDevolver += p.sobra || 0;
-            grupos[obra].valorDevolver += (p.sobra || 0) * (p.valorUnitario || 0);
         } else if (p.status === 'REQUISITAR') {
             grupos[obra].numRequisitar++;
             grupos[obra].qtdRequisitar += p.falta || 0;
-            grupos[obra].valorRequisitar += (p.falta || 0) * (p.valorUnitario || 0);
         } else {
             grupos[obra].numOk++;
         }
@@ -881,23 +793,22 @@ function renderizarListaObrasMGM(pendencias) {
         grupos[obra].etapasInfoSiago = getEtapasPorObra(obra);
     });
 
-    let html = `
-        <div class="list-header" style="display: grid; grid-template-columns: 90px 1fr 55px 70px 70px 60px 55px; gap: 4px; padding: 6px 10px; background: #F7FAFC; border-radius: 6px; font-weight: 600; font-size: 10px; color: #4A5568; border-bottom: 2px solid #E2E8F0; margin-bottom: 4px;">
-            <span>Obra</span>
-            <span>Itens / Etapas</span>
-            <span style="text-align: right;">Total</span>
-            <span style="text-align: center; color: #D69E2E;">🟠 Dev.</span>
-            <span style="text-align: center; color: #E53E3E;">🔴 Req.</span>
-            <span style="text-align: center; color: #48BB78;">✅ OK</span>
-            <span style="text-align: center;">Status</span>
-        </div>
-    `;
-
     const listaOrdenada = Object.values(grupos).sort((a, b) => {
         const scoreA = (a.numRequisitar > 0 ? 1000 : 0) + (a.numDevolver > 0 ? 500 : 0) + a.itens.length;
         const scoreB = (b.numRequisitar > 0 ? 1000 : 0) + (b.numDevolver > 0 ? 500 : 0) + b.itens.length;
         return scoreB - scoreA;
     });
+
+    // Header do grid — colunas alinhadas com os itens
+    let html = `
+        <div class="list-header">
+            <span>Obra / Etapas</span>
+            <span style="text-align:center;">Itens</span>
+            <span style="text-align:center; color: #D69E2E;">🟠 Dev</span>
+            <span style="text-align:center; color: #E53E3E;">🔴 Req</span>
+            <span style="text-align:center; color: #48BB78;">✅ OK</span>
+        </div>
+    `;
 
     listaOrdenada.forEach(grupo => {
         const isActive = itemSelecionadoMGM && itemSelecionadoMGM.obra === grupo.obra;
@@ -919,37 +830,39 @@ function renderizarListaObrasMGM(pendencias) {
             statusClass = 'status-atendido';
         }
 
-        const etapasSiagoInfo = grupo.etapasInfoSiago;
+        // Indicador de etapas compacto
         let etapasBadge = '';
+        const etapasSiagoInfo = grupo.etapasInfoSiago;
         if (grupo.numEtapasMGM > 0 || etapasSiagoInfo) {
             const validas = etapasSiagoInfo?.etapas_validas ?? 0;
             const totalSiago = etapasSiagoInfo?.total_etapas ?? 0;
-            etapasBadge = `<span class="obra-etapas-indicator has-etapas" title="MGM: ${grupo.numEtapasMGM} | Siago: ${validas}/${totalSiago}">📋 MGM:${grupo.numEtapasMGM} · SIA:${validas}/${totalSiago}</span>`;
+            etapasBadge = `<span class="obra-etapas-indicator has-etapas" title="MGM: ${grupo.numEtapasMGM} | Siago: ${validas}/${totalSiago}">MGM:${grupo.numEtapasMGM}</span>`;
         } else {
-            etapasBadge = `<span class="obra-etapas-indicator no-etapas">📭</span>`;
+            etapasBadge = `<span class="obra-etapas-indicator no-etapas" title="Sem etapas">—</span>`;
         }
+
+        const bordaCor = temRequisitar ? '#E53E3E' : temDevolver ? '#D69E2E' : '#48BB78';
 
         html += `
             <div class="item-group-item ${isActive ? 'active' : ''} ${statusClass}" 
-                 onclick="selecionarObraMGM('${grupo.obra}')" 
-                 style="display: grid; grid-template-columns: 90px 1fr 55px 70px 70px 60px 55px; gap: 4px; padding: 8px 10px; border-bottom: 1px solid #F7FAFC; cursor: pointer; border-radius: 6px; transition: all 0.15s;
-                        ${temRequisitar ? 'border-left: 4px solid #E53E3E;' : temDevolver ? 'border-left: 4px solid #D69E2E;' : 'border-left: 4px solid #48BB78;'}">
-                <span class="item-code" style="font-size: 11px;">
-                    ${grupo.obraFormatada}<br>${etapasBadge}
+                 onclick="selecionarObraMGM('${grupo.obra}')"
+                 style="border-left-color: ${bordaCor};">
+                <span class="item-obra-cell">
+                    <strong>${grupo.obraFormatada}</strong>
+                    ${etapasBadge}
                 </span>
-                <span class="item-desc" style="font-size: 11px; display: flex; align-items: center;">
-                    ${grupo.itens.length} item(ns)
+                <span class="item-itens-cell">${grupo.itens.length}</span>
+                <span class="item-dev-cell" style="color: ${temDevolver ? '#D69E2E' : '#CBD5E0'};">
+                    ${temDevolver ? grupo.qtdDevolver.toFixed(0) : '—'}
                 </span>
-                <span style="text-align: right; font-weight: 700; color: #2B6CB0; font-size: 11px;">${grupo.itens.length}</span>
-                <span style="text-align: center; font-weight: 600; color: ${temDevolver ? '#D69E2E' : '#A0AEC0'}; font-size: 10px;">
-                    ${temDevolver ? grupo.qtdDevolver.toFixed(0) : '-'}
+                <span class="item-req-cell" style="color: ${temRequisitar ? '#E53E3E' : '#CBD5E0'};">
+                    ${temRequisitar ? grupo.qtdRequisitar.toFixed(0) : '—'}
                 </span>
-                <span style="text-align: center; font-weight: 600; color: ${temRequisitar ? '#E53E3E' : '#A0AEC0'}; font-size: 10px;">
-                    ${temRequisitar ? grupo.qtdRequisitar.toFixed(0) : '-'}
+                <span class="item-ok-cell" style="color: ${grupo.numOk > 0 ? '#48BB78' : '#CBD5E0'};">
+                    ${grupo.numOk > 0 ? grupo.numOk : '—'}
                 </span>
-                <span style="text-align: center; font-weight: 600; color: #48BB78; font-size: 10px;">${grupo.numOk}</span>
-                <span style="text-align: center;">
-                    <span class="badge-status ${statusClass}" style="font-size: 9px; padding: 2px 6px;">${statusBadge}</span>
+                <span class="item-status-cell">
+                    <span class="badge-status ${statusClass}">${statusBadge}</span>
                 </span>
             </div>
         `;
@@ -1031,7 +944,6 @@ function selecionarObraMGM(obra) {
         itemSelecionadoMGM = { obra };
     }
     renderizarDetalhesObraMGM(itemSelecionadoMGM);
-
     document.querySelectorAll('#itemListMGM .item-group-item').forEach(el => el.classList.remove('active'));
     if (itemSelecionadoMGM) {
         document.querySelectorAll('#itemListMGM .item-group-item').forEach(el => {
@@ -1081,9 +993,8 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         <div class="detail-header">
             <div class="detail-title">🏗️ ${obraFormatada}</div>
             <div class="detail-subtitle">
-                📦 ${itensObra.length} item(ns) analisados · 
-                📋 ${etapasMGM.length} MGM aplicada(s)
-                ${etapasSiago ? ` · 🗂️ ${etapasSiago.etapas_validas}/${etapasSiago.total_etapas} etapas Siago válidas` : ''}
+                📦 ${itensObra.length} item(ns) · 📋 ${etapasMGM.length} MGM
+                ${etapasSiago ? ` · 🗂️ ${etapasSiago.etapas_validas}/${etapasSiago.total_etapas} Siago` : ''}
             </div>
         </div>
         
@@ -1104,21 +1015,21 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         
         <div class="detail-summary">
             <div class="summary-item" style="background: #FEFCBF; border-left: 4px solid #D69E2E;">
-                <span class="summary-label">🟠 Devolver (qtd)</span>
+                <span class="summary-label">🟠 Devolver</span>
                 <span class="summary-value" style="color: #D69E2E; font-weight: 700;">${qtdDevolver.toFixed(0)} un</span>
             </div>
             <div class="summary-item" style="background: #FED7D7; border-left: 4px solid #E53E3E;">
-                <span class="summary-label">🔴 Requisitar (qtd)</span>
+                <span class="summary-label">🔴 Requisitar</span>
                 <span class="summary-value" style="color: #E53E3E; font-weight: 700;">${qtdRequisitar.toFixed(0)} un</span>
             </div>
         </div>
         <div class="detail-summary">
             <div class="summary-item" style="background: #FFFAF0; border-left: 4px solid #D69E2E;">
-                <span class="summary-label">💰 Valor a devolver</span>
+                <span class="summary-label">💰 A devolver</span>
                 <span class="summary-value" style="color: #D69E2E; font-weight: 700;">${fmtBRL(valorDevolver)}</span>
             </div>
             <div class="summary-item" style="background: #FFF5F5; border-left: 4px solid #E53E3E;">
-                <span class="summary-label">💰 Valor a requisitar</span>
+                <span class="summary-label">💰 A requisitar</span>
                 <span class="summary-value" style="color: #E53E3E; font-weight: 700;">${fmtBRL(valorRequisitar)}</span>
             </div>
         </div>
@@ -1153,7 +1064,7 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
             <div class="detail-item ${statusClass}">
                 <div class="item-code-detail">${item.codigo}</div>
                 <div class="item-desc-detail" title="${item.descricao}">${item.descricao}</div>
-                <div class="item-qtd-detail" title="MGM aplicada × Requisitado">${item.qtdMGM.toFixed(2)} × ${item.qtdRealizada.toFixed(2)}</div>
+                <div class="item-qtd-detail" title="MGM × Requisitado">${item.qtdMGM.toFixed(2)} × ${item.qtdRealizada.toFixed(2)}</div>
                 <div class="item-status-detail ${statusClass}">${statusBadge}</div>
                 <div class="item-mov-detail" style="font-size: 9px; color: #718096;">
                     ${item.valorUnitario ? fmtBRL(valorDif) : ''}
@@ -1164,26 +1075,23 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
     });
     html += `</div>`;
 
-    // ===== ETAPAS MGM (secundário) =====
     if (etapasMGM.length > 0) {
         html += `
             <div class="detail-etapas-section">
-                <div class="section-title">📋 Etapas MGM (execução) — ${etapasMGM.length}</div>
+                <div class="section-title">📋 Etapas MGM — ${etapasMGM.length}</div>
                 <div class="etapas-info">
                     <div class="etapas-badges">
         `;
         etapasMGM.forEach(e => {
             const dataFmt = formatarData(e.data) || formatarData(e.dataOriginal);
-            html += `<span class="etapa-badge etapa-pendente" title="MGM ${dataFmt} · ${e.qtdItens} itens · ${e.qtdAplicadaTotal.toFixed(2)} qtd aplicada">📋 ${dataFmt} (${e.qtdItens})</span>`;
+            html += `<span class="etapa-badge etapa-pendente" title="MGM ${dataFmt} · ${e.qtdItens} itens · ${e.qtdAplicadaTotal.toFixed(2)} qtd">📋 ${dataFmt} (${e.qtdItens})</span>`;
         });
         html += `</div></div></div>`;
     }
 
-    // ===== ETAPAS SIAGO (secundário) =====
     if (etapasSiago) {
         const percentual = etapasSiago.total_etapas > 0
-            ? Math.round((etapasSiago.etapas_validas / etapasSiago.total_etapas) * 100)
-            : 0;
+            ? Math.round((etapasSiago.etapas_validas / etapasSiago.total_etapas) * 100) : 0;
         let badgesHTML = '';
         etapasSiago.etapas.forEach(etapa => {
             const det = etapasSiago.etapas_detalhes[etapa] || {};
@@ -1238,7 +1146,7 @@ function trocarAbaPrincipal(aba) {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('📋 DOM carregado, iniciando dashboard (v5)...');
+    console.log('📋 DOM carregado, iniciando dashboard (v7)...');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const dashboardContent = document.getElementById('dashboardContent');
     if (!loadingOverlay || !dashboardContent) return;
@@ -1280,4 +1188,4 @@ window.renderizarDashboardMGM = renderizarDashboardMGM;
 window.aplicarFiltroStatusMGM = aplicarFiltroStatusMGM;
 window.aplicarFiltroEtapas = aplicarFiltroEtapas;
 
-console.log('✅ dashboards-pendencia-requisicao.js inicializado! (v5)');
+console.log('✅ dashboards-pendencia-requisicao.js inicializado! (v7)');

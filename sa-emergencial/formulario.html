@@ -6,11 +6,11 @@
     <title>SICGM - Formulário S.A. Emergencial</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
     <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/design-system.css">
     <link rel="stylesheet" href="../css/sa-emergencial.css">
     <link rel="stylesheet" href="../css/chamados.css">
 </head>
 <body>
-    <!-- Botões de navegação -->
     <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
         <span class="btn-navegacao-icone">⬆</span>
         <span class="btn-navegacao-texto">Topo</span>
@@ -22,22 +22,6 @@
 
     <div class="container">
         <div class="form-card">
-            <!-- Logo e Título com Timer -->
-            <div class="header-container">
-                <div class="header-left">
-                    <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
-                    <h1 class="title">🚨 Formulário S.A. Emergencial</h1>
-                </div>
-                <div class="header-timer">
-                </div>
-            </div>
-            
-            <!-- Botão Voltar -->
-            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
-                <button onclick="window.location.href='index.html'" class="btn-voltar-home">⬅ Voltar ao Painel</button>
-            </div>
-
-            <!-- Formulário -->
             <form id="saForm" class="sa-form">
                 <div class="sa-form-header">
                     <div>
@@ -45,8 +29,6 @@
                         <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 5px;">
                             <span class="sa-numero" id="saNumero">#0000</span>
                         </div>
-                    </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     </div>
                 </div>
 
@@ -63,9 +45,7 @@
                         </div>
                     </div>
 
-                    <!-- ============================================ -->
-                    <!-- TIPO DE S.A. E GERAR DESCONTO                -->
-                    <!-- ============================================ -->
+                    <!-- Tipo de S.A. -->
                     <div class="form-row">
                         <div class="form-group" style="grid-column: 1 / -1;">
                             <label style="margin-bottom: 10px;">📌 Tipo de S.A. *</label>
@@ -83,13 +63,10 @@
                                     ⏳ S.A. AGUARDANDO NOTA
                                 </label>
                             </div>
-                            <small style="color: #718096; font-size: 0.8em;">⚠️ Selecione apenas uma opção</small>
                         </div>
                     </div>
 
-                    <!-- ============================================ -->
-                    <!-- GERAR DESCONTO                               -->
-                    <!-- ============================================ -->
+                    <!-- Gerar Desconto -->
                     <div class="form-row">
                         <div class="form-group" style="grid-column: 1 / -1;">
                             <label style="margin-bottom: 10px;">💰 Gerar Desconto?</label>
@@ -103,7 +80,6 @@
                                     ❌ NÃO - Não será descontado
                                 </label>
                             </div>
-                            <small style="color: #718096; font-size: 0.8em;">📋 Selecione se esta S.A. vai gerar desconto em folha do colaborador</small>
                         </div>
                     </div>
 
@@ -184,7 +160,7 @@
 
                     <hr>
 
-                    <!-- Termo de Responsabilidade -->
+                    <!-- Termo -->
                     <div class="termo-responsabilidade">
                         <h3>📜 Termo de Responsabilidade</h3>
                         <div class="termo-text">
@@ -211,8 +187,9 @@
                                 <div class="signature-preview" style="display:none;">
                                     <img class="signature-img" src="" alt="Assinatura">
                                 </div>
-                                <button type="button" class="btn-assinar" onclick="abrirPaginaAssinatura('entregue'); return false;">✍️ Assinar</button>
-                                <button type="button" class="btn-reassinar" onclick="abrirPaginaAssinatura('entregue'); return false;" style="display:none;">🔄 Reassinar</button>
+                                <!-- 🔥 MUDOU: onclick agora chama abrirModalAssinatura -->
+                                <button type="button" class="btn-assinar" onclick="abrirModalAssinatura('entregue'); return false;">✍️ Assinar</button>
+                                <button type="button" class="btn-reassinar" onclick="abrirModalAssinatura('entregue'); return false;" style="display:none;">🔄 Reassinar</button>
                             </div>
                             <div class="assinatura-box" data-tipo="recebido">
                                 <h4>📥 Recebido por</h4>
@@ -223,11 +200,9 @@
                                 <div class="signature-preview" style="display:none;">
                                     <img class="signature-img" src="" alt="Assinatura">
                                 </div>
-                                
-                                <!-- BOTÃO DE FOTO -->
+
                                 <button type="button" class="btn-foto" onclick="capturarFoto('recebido'); return false;">📸 Foto do Colaborador</button>
-                                
-                                <!-- PREVIEW DA FOTO COM BOTÃO EXCLUIR -->
+
                                 <div class="foto-preview" id="fotoPreviewRecebido" style="display:none; margin-top: 10px;">
                                     <img class="foto-img" id="fotoImgRecebido" src="" alt="Foto do Colaborador" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 2px solid #48BB78;">
                                     <div style="display: flex; gap: 8px; margin-top: 6px; align-items: center; justify-content: center;">
@@ -237,10 +212,13 @@
                                         </button>
                                     </div>
                                 </div>
-                                
-                                <button type="button" class="btn-assinar" onclick="abrirPaginaAssinatura('recebido'); return false;">✍️ Assinar</button>
-                                <button type="button" class="btn-reassinar" onclick="abrirPaginaAssinatura('recebido'); return false;" style="display:none;">🔄 Reassinar</button>
+
+                                <!-- 🔥 MUDOU: onclick agora chama abrirModalAssinatura -->
+                                <button type="button" class="btn-assinar" onclick="abrirModalAssinatura('recebido'); return false;">✍️ Assinar</button>
+                                <button type="button" class="btn-reassinar" onclick="abrirModalAssinatura('recebido'); return false;" style="display:none;">🔄 Reassinar</button>
                             </div>
+                        </div>
+                    </div>
 
                     <!-- Botões de Ação -->
                     <button type="button" class="btn-finalizar" onclick="finalizarSA()">✅ FINALIZAR S.A.</button>
@@ -255,21 +233,57 @@
     <div id="popup-overlay" class="popup-overlay"></div>
 
     <!-- ============================================ -->
+    <!-- 🔥 MODAL DE ASSINATURA (embutido)             -->
+    <!-- ============================================ -->
+    <div id="modalAssinatura" class="modal-assinatura-overlay">
+        <div class="modal-assinatura-container">
+            <div class="modal-assinatura-header">
+                <h2>
+                    ✍️ <span id="assinaturaTipoLabel">Assinatura</span>
+                </h2>
+                <button type="button" class="modal-assinatura-fechar" onclick="fecharModalAssinatura()" title="Fechar">✕</button>
+            </div>
+            <div class="modal-assinatura-body">
+                <div class="modal-assinatura-info">
+                    <p><strong>📋 S.A.:</strong> <span id="assinaturaNumero">#0000</span></p>
+                    <p><strong>👤 Signatário:</strong> <span id="assinaturaNome">-</span></p>
+                </div>
+
+                <div class="modal-assinatura-campo">
+                    <label for="assinaturaNomeInput">Nome completo do signatário *</label>
+                    <input type="text" id="assinaturaNomeInput" placeholder="Digite seu nome completo" autocomplete="off">
+                </div>
+
+                <div class="modal-assinatura-area" id="assinaturaArea">
+                    <canvas id="assinaturaCanvas"></canvas>
+                    <div class="modal-assinatura-placeholder" id="assinaturaPlaceholder">
+                        ✍️ Assine aqui com o dedo ou mouse
+                    </div>
+                </div>
+
+                <div class="modal-assinatura-status" id="assinaturaStatus" style="display:none;"></div>
+            </div>
+            <div class="modal-assinatura-footer">
+                <button type="button" class="btn-limpar-assinatura" onclick="limparAssinaturaModal()">🧹 Limpar</button>
+                <button type="button" class="btn-cancelar-assinatura" onclick="fecharModalAssinatura()">✕ Cancelar</button>
+                <button type="button" class="btn-confirmar-assinatura" onclick="confirmarAssinaturaModal()">✅ Confirmar Assinatura</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
     <!-- 🔥 FIREBASE SDK                              -->
     <!-- ============================================ -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-    <!-- ============================================ -->
-    <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
-    <!-- ============================================ -->
-    <script src="../js/firebase-config.js"></script>   
-    <script src="../js/config.js"></script>  
-    <script src="../js/auth-service.js"></script>      
-    <script src="../js/auth-helper.js"></script>  
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/auth-service.js"></script>
+    <script src="../js/auth-helper.js"></script>
     <script src="../js/script.js"></script>
-    <script src="../js/auth-global.js"></script>  
-    <Script src="../js/login.js"></script>      
+    <script src="../js/auth-global.js"></script>
+    <script src="../js/login.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
     <script src="../js/sa-emergencial.js"></script>
     <script src="../js/chamados.js" defer></script>

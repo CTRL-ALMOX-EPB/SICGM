@@ -45,12 +45,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // MONTAR SENHA COMPLETA
     // ============================================
     function montarSenhaCompleta(matricula) {
-        const matriculaLimpa = matricula.trim();
-        return `ctrl-${matriculaLimpa}`;
+        return `ctrl-${matricula.trim()}`;
     }
 
     // ============================================
-    // SUBMIT DO FORMULÁRIO
+    // SUBMIT
     // ============================================
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -77,10 +76,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const senhaCompleta = montarSenhaCompleta(matriculaDigitada);
-        console.log(`🔐 Tentando login com matrícula: ${matriculaDigitada}`);
+        console.log(`🔐 Tentando login: ${matriculaDigitada}`);
 
         if (typeof authService === 'undefined' || !authService) {
-            mensagemErro.textContent = '⚠️ Erro ao carregar o serviço de autenticação. Recarregue a página.';
+            mensagemErro.textContent = '⚠️ Erro ao carregar o serviço de autenticação.';
             mensagemErro.className = 'mensagem-erro';
             return;
         }
@@ -91,13 +90,20 @@ document.addEventListener('DOMContentLoaded', function() {
             mensagemSucesso.textContent = '✅ Login realizado! Redirecionando...';
             mensagemSucesso.style.display = 'block';
 
-            console.log(`✅ Usuário logado: ${result.user.nome}`);
-            console.log(`📝 Perfil: ${result.user.perfil}`);
+            console.log(`✅ Usuário: ${result.user.nome} | Perfil: ${result.user.perfil}`);
 
-            // O authService.login() já garantiu a sessão. Redireciona direto.
-            redirecionarPorPerfil(result.user.perfil);
+            // Salva dados no localStorage para a home unificada ler
+            localStorage.setItem('nomeUsuario', result.user.nome || 'Usuário');
+            localStorage.setItem('matriculaUsuario', result.user.matricula || matriculaDigitada);
+            localStorage.setItem('perfilUsuario', result.user.perfil || 'GESTAO');
+            localStorage.setItem('emailUsuario', emailCompleto);
+
+            // 🔥 REDIRECIONA TODOS PARA A HOME UNIFICADA
+            setTimeout(() => {
+                window.location.href = 'home-unificada.html';
+            }, 600);
         } else {
-            mensagemErro.textContent = result.error || '❌ Matrícula inválida. Verifique e tente novamente.';
+            mensagemErro.textContent = result.error || '❌ Matrícula inválida.';
             mensagemErro.className = 'mensagem-erro';
             senhaInput.value = '';
             senhaInput.focus();
@@ -121,7 +127,6 @@ document.addEventListener('DOMContentLoaded', function() {
         font-size: 18px;
         padding: 5px;
         opacity: 0.6;
-        transition: opacity 0.3s;
     `;
 
     const passwordWrapper = senhaInput.parentElement;
@@ -135,18 +140,3 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('✅ Login pronto!');
 });
-
-// ============================================
-// REDIRECIONAR POR PERFIL
-// ============================================
-function redirecionarPorPerfil(perfil) {
-    const pages = {
-        'GESTAO': 'home-gestao.html',
-        'OPERACIONAL': 'home-operacional.html',
-        'VISUALIZACAO': 'home-visualizacao.html'
-    };
-
-    const page = pages[perfil] || 'home-operacional.html';
-    console.log(`🔀 Redirecionando para: ${page}`);
-    window.location.href = page;
-}
