@@ -1,8 +1,10 @@
 // ============================================
-// IFRAME-NAV.JS v9
+// IFRAME-NAV.JS v10
 // - Normaliza caminhos
-// - 🔥 Usa "numero=" (não "id=") para o formulário
+// - Usa "numero=" (não "id=") para o formulário
 // - Deduplica segmentos (controles/controles/)
+// - 🔥 NÃO intercepta botão Novo Controle nem sobrescreve funções
+//   (o controles-dcmd.js cuida da navegação via navegarNoIframe)
 // ============================================
 
 (function() {
@@ -13,7 +15,7 @@
         return;
     }
 
-    console.log('🔗 iframe-nav.js v9 carregado em:', window.location.pathname);
+    console.log('🔗 iframe-nav.js v10 carregado em:', window.location.pathname);
 
     // ============================================
     // BASE PATH
@@ -33,7 +35,7 @@
     }
 
     // ============================================
-    // NORMALIZA LINK (dedupe de segmentos, remove basePath)
+    // NORMALIZA LINK
     // ============================================
     function normalizarLink(linkOriginal) {
         try {
@@ -53,7 +55,6 @@
                 }
             }
 
-            // Deduplica segmentos consecutivos
             let segmentos = pathname.split('/').filter(Boolean);
             const unicos = [];
             for (let i = 0; i < segmentos.length; i++) {
@@ -119,55 +120,25 @@
     }, true);
 
     // ============================================
-    // OVERRIDE DO BOTÃO btnNovoControle
+    // 🔕 INTERCEPTAÇÃO DO BOTÃO NOVO CONTROLE — DESATIVADA
+    // O controles-dcmd.js chama criarNovoControle(), que faz POST
+    // e depois chama abrirFormularioEmAba() → navegarNoIframe(url).
+    // Se a v10 interceptasse o clique, abriria uma aba "vazia" (sem numero=).
     // ============================================
     function interceptarBotaoNovoControle() {
-        const btn = document.getElementById('btnNovoControle');
-        if (!btn) return;
-        if (btn.dataset.__iframeNavDone) return;
-        btn.dataset.__iframeNavDone = '1';
-
-        const btnClone = btn.cloneNode(true);
-        btn.parentNode.replaceChild(btnClone, btn);
-
-        btnClone.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-
-            const tipoAtivo = document.querySelector('.tipo-btn.active')?.dataset.tipo || 'aditivo';
-            const link = `controles/formulario.html?tipo=${tipoAtivo}`;
-
-            console.log('🎯 Novo Controle interceptado:', link);
-            pedirAbrirAba(link, 'Novo Controle');
-        }, true);
-
-        console.log('✅ Botão Novo Controle interceptado');
+        // Desativado intencionalmente. Ver controles-dcmd.js → criarNovoControle().
+        return;
     }
 
     // ============================================
-    // 🔥 OVERRIDE DE abrirControle() — USA "numero=" (não "id=")
+    // 🔕 SOBRESCREVER FUNÇÕES — DESATIVADO
+    // O controles-dcmd.js já exporta abrirControle() que chama
+    // abrirFormularioEmAba() → navegarNoIframe(url).
+    // Sobrescrever aqui causaria chamada dupla.
     // ============================================
     function sobrescreverFuncoes() {
-        ['abrirControle', 'abrirFormulario', 'abrirEdicao', 'novoControle',
-         'irParaFormulario', 'abrirNovoControle'].forEach(nome => {
-            if (typeof window[nome] === 'function' && !window[nome].__iframeNavOverride) {
-                window[nome] = function(...args) {
-                    // Procura um número (id do controle)
-                    const numero = args.find(a => typeof a === 'number' || (typeof a === 'string' && /^\d+$/.test(a)));
-                    const tipo = document.querySelector('.tipo-btn.active')?.dataset.tipo || 'aditivo';
-
-                    // 🔥 USA "numero=" (o formulário espera esse parâmetro)
-                    let link = `controles/formulario.html?tipo=${tipo}`;
-                    if (numero) link += `&numero=${numero}`;
-
-                    console.log(`🎯 ${nome}() interceptado → pedindo aba:`, link);
-                    pedirAbrirAba(link, `Controle ${numero || 'Novo'}`);
-                };
-                window[nome].__iframeNavOverride = true;
-                console.log(`✅ Função ${nome}() sobrescrita (usa numero=)`);
-            }
-        });
+        // Desativado intencionalmente.
+        return;
     }
 
     // ============================================
@@ -190,8 +161,8 @@
     // APLICA
     // ============================================
     function aplicar() {
-        sobrescreverFuncoes();
-        interceptarBotaoNovoControle();
+        sobrescreverFuncoes();          // no-op (mantido para compatibilidade)
+        interceptarBotaoNovoControle(); // no-op
     }
 
     if (document.readyState === 'loading') {
@@ -203,7 +174,19 @@
     setTimeout(aplicar, 1000);
     setTimeout(aplicar, 2500);
 
+    // ============================================
+    // API PÚBLICA (para ser usada pelo controles-dcmd.js e outros)
+    // ============================================
     window.navegarNoIframe = pedirAbrirAba;
 
-    console.log('✅ iframe-nav.js v9 pronto');
+    // Aliases para compatibilidade com iframe-nav.js v4 (outras páginas podem chamar)
+    window.solicitarNovaAba = function (id, titulo, url) {
+        pedirAbrirAba(url || id, titulo);
+    };
+    window.navegarNaAbaAtual = function (url, titulo) {
+        // v10 não implementa navegação "na aba atual" — trata como nova aba
+        pedirAbrirAba(url, titulo);
+    };
+
+    console.log('✅ iframe-nav.js v10 pronto');
 })();

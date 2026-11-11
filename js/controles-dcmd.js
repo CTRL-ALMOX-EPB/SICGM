@@ -136,8 +136,14 @@ window.agendarFiltroData = agendarFiltroData;
 // HELPERS DE NAVEGAÇÃO EM ABAS
 // ============================================
 
+/**
+ * Abre o formulário do controle em uma NOVA ABA.
+ * Compatível com:
+ *  - iframe-nav.js v9  → window.navegarNoIframe(link, titulo)
+ *  - iframe-nav.js v4  → window.solicitarNovaAba(id, titulo, url)
+ *  - fallback          → window.location.href
+ */
 function abrirFormularioEmAba(numero, tipo, focarObra) {
-    // Calcula a URL ABSOLUTA baseada no local deste iframe (controles/index.html)
     const url = new URL(
         `formulario.html?numero=${numero}&tipo=${tipo}${focarObra ? '&focarObra=true' : ''}`,
         window.location.href
@@ -145,11 +151,18 @@ function abrirFormularioEmAba(numero, tipo, focarObra) {
 
     const titulo = `Controle #${String(numero).padStart(4, '0')}`;
 
+    // 1) v9
+    if (typeof window.navegarNoIframe === 'function') {
+        window.navegarNoIframe(url, titulo);
+        return;
+    }
+    // 2) v4
     if (typeof window.solicitarNovaAba === 'function') {
         window.solicitarNovaAba(url, titulo, url);
-    } else {
-        window.location.href = url;
+        return;
     }
+    // 3) fallback
+    window.location.href = url;
 }
 
 // ============================================
