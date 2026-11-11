@@ -33,7 +33,8 @@ const DEPARTAMENTOS_GESTAO = {
         cor: '#3d8bfd',
         funcoes: [
             { id: 'contagem-diaria-dcmd', nome: 'Contagem Diária', icone: '🧮', link: 'contagem-diaria/index.html', status: 'disponivel', descricao: 'Registre contagens' },
-            { id: 'mgm-list-dcmd', nome: 'Lista MGM', icone: '📋', link: 'mgm-list/index.html', status: 'disponivel', descricao: 'Lista de materiais' },
+            { id: 'sita-dcmd', nome: 'SITA', icone: '📋', link: 'sita/index.html', status: 'disponivel', descricao: 'Programação e esteira de obras' },
+            { id: 'separacao-dcmd', nome: 'Separação', icone: '📦', link: 'sita/separacao.html', status: 'disponivel', descricao: 'Listas de separação' },
             { id: 'indicadores-dcmd', nome: 'Indicadores', icone: '📈', link: 'power-bi/index.html', status: 'disponivel', descricao: 'Business Intelligence' },
             { id: 'painel-controles', nome: 'Painel de Controles', icone: '🖥️', link: 'controles/index.html', status: 'disponivel', descricao: 'Aditivos e movimentações' },
             { id: 'dashboards-dcmd', nome: 'Dashboards', icone: '🎛️', status: 'disponivel', descricao: 'Dashboards do sistema', temDropdown: true, dropdownItems: [] },
@@ -84,7 +85,8 @@ const DEPARTAMENTOS_OPERACIONAL = {
         cor: '#3d8bfd',
         funcoes: [
             { id: 'contagem-diaria-dcmd', nome: 'Contagem Diária', icone: '🧮', link: 'contagem-diaria/index.html', status: 'disponivel', descricao: 'Registre contagens' },
-            { id: 'mgm-list-dcmd', nome: 'Lista MGM', icone: '📋', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
+            { id: 'sita-dcmd', nome: 'SITA', icone: '📋', link: 'sita/index.html', status: 'disponivel', descricao: 'Programação e esteira de obras' },
+            { id: 'separacao-dcmd', nome: 'Separação', icone: '📦', link: 'sita/separacao.html', status: 'disponivel', descricao: 'Listas de separação' },
             { id: 'indicadores-dcmd', nome: 'Indicadores', icone: '📈', link: 'power-bi/index.html', status: 'disponivel', descricao: 'Business Intelligence' },
             { id: 'painel-controles', nome: 'Painel de Controles', icone: '🖥️', link: 'controles/index.html', status: 'disponivel', descricao: 'Gerencie pendências' },
             { id: 'dashboards-operacional', nome: 'Dashboards', icone: '🎛️', status: 'disponivel', descricao: 'Dashboards', temDropdown: true, dropdownItems: [] },
@@ -135,7 +137,8 @@ const DEPARTAMENTOS_VISUALIZACAO = {
         cor: '#3d8bfd',
         funcoes: [
             { id: 'contagem-diaria-dcmd', nome: 'Contagem Diária', icone: '📊', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'mgm-list-dcmd', nome: 'Lista MGM', icone: '📋', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
+            { id: 'sita-dcmd', nome: 'SITA', icone: '📋', link: 'sita/index.html', status: 'disponivel', descricao: 'Programação e esteira de obras' },
+            { id: 'separacao-dcmd', nome: 'Separação', icone: '📦', link: 'sita/separacao.html', status: 'disponivel', descricao: 'Listas de separação' },
             { id: 'painel-controles', nome: 'Painel de Controles', icone: '🖥️', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
             { id: 'dashboards-visualizacao', nome: 'Dashboards', icone: '📊', status: 'disponivel', descricao: 'Dashboards', temDropdown: true, dropdownItems: [] },
             { id: 'relatorios-dcmd', nome: 'Relatórios', icone: '📈', status: 'disponivel', descricao: 'Relatórios', temDropdown: true, dropdownItems: [

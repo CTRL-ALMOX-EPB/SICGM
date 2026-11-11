@@ -3,177 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MGM - Formulário</title>
-    
-    <!-- CSS Base -->
+    <title>SITA — Programação</title>
     <link rel="stylesheet" href="../css/base.css">
-    
-    <!-- CSS Contagem Diária (reutiliza estilos) -->
-    <link rel="stylesheet" href="../css/contagem-diaria.css">
+    <link rel="stylesheet" href="../css/design-system.css">
+    <link rel="stylesheet" href="../css/sita-index.css">
 </head>
 <body>
-    <div class="container">
-        <div class="form-card">
-            
-            <!-- Logo e Título DENTRO do card -->
-            <div class="header-container">
-                <img src="../assets/img/logo-control.png" alt="Logo MGM" class="logo-empresa">
-                <h1 class="title">MGM</h1>
-            </div>
-            
-            <!-- Botão Voltar ao Início Baseado no Perfil -->
-            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
-                <button onclick="redirecionarParaHome()" class="btn-voltar-home">
-                    🏠 Voltar ao Início
-                </button>
-            </div>
-            
-            <form id="mgmForm">
-
-                <div class="form-row">
-                    <!-- Separador -->
-                    <div class="form-group">
-                        <label for="separador">Separador</label>
-                        <input 
-                            type="text" 
-                            id="separador" 
-                            name="separador" 
-                            placeholder="Nome do separador"
-                            required
-                        >
-                        <div class="matricula-field">
-                            <label for="matricula-separador">Matrícula</label>
-                            <input 
-                                type="text" 
-                                id="matricula-separador" 
-                                name="matricula-separador" 
-                                placeholder="Matrícula"
-                                required
-                            >
-                        </div>
-                    </div>
-
-                    <!-- Encarregado -->
-                    <div class="form-group">
-                        <label for="encarregado">Encarregado</label>
-                        <input 
-                            type="text" 
-                            id="encarregado" 
-                            name="encarregado" 
-                            placeholder="Nome do encarregado"
-                            required
-                        >
-                        <div class="matricula-field">
-                            <label for="matricula-encarregado">Matrícula</label>
-                            <input 
-                                type="text" 
-                                id="matricula-encarregado" 
-                                name="matricula-encarregado" 
-                                placeholder="Matrícula"
-                                required
-                            >
-                        </div>
-                    </div>
-
-                    <!-- Conferente -->
-                    <div class="form-group">
-                        <label for="conferente">Conferente</label>
-                        <input 
-                            type="text" 
-                            id="conferente" 
-                            name="conferente" 
-                            placeholder="Nome do conferente"
-                            required
-                        >
-                        <div class="matricula-field">
-                            <label for="matricula-conferente">Matrícula</label>
-                            <input 
-                                type="text" 
-                                id="matricula-conferente" 
-                                name="matricula-conferente" 
-                                placeholder="Matrícula"
-                                required
-                            >
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Seção Obra e Data lado a lado -->
-                <div class="obra-data-row">
-                    <!-- Número da Obra -->
-                    <div class="obra-field">
-                        <label for="numero-obra">Número da Obra</label>
-                        <input 
-                            type="text" 
-                            id="numero-obra" 
-                            name="numero-obra" 
-                            placeholder="Digite o número da obra"
-                            required
-                        >
-                    </div>
-
-                    <!-- Data -->
-                    <div class="data-field">
-                        <label for="data">Data</label>
-                        <input 
-                            type="date" 
-                            id="data" 
-                            name="data" 
-                            required
-                        >
-                    </div>
-                </div>
-
-                <!-- Seção de Materiais -->
-                <div class="materiais-section">
-                    <h2 class="section-title">Materiais</h2>
-                    
-                    <!-- Container onde os materiais serão adicionados -->
-                    <div id="materiais-container">
-                        <!-- Os materiais serão inseridos aqui dinamicamente -->
-                    </div>
-                    
-                    <!-- Botão Adicionar Material -->
-                    <button type="button" id="btn-add-material" class="btn-add-material">
-                        + Adicionar Material
-                    </button>
-                </div>
-
-                <button type="submit" class="submit-btn">Enviar</button>
-            </form>
-            
-        </div><!-- Fecha form-card -->
-        
-        <!-- Rodapé com link de voltar (fallback) -->
-        <div style="text-align: center; margin-top: 1rem;">
-            <button onclick="redirecionarParaHome()" style="
-                background: transparent;
-                color: #4299E1;
-                border: none;
-                cursor: pointer;
-                font-weight: 500;
-                font-size: 14px;
-                text-decoration: underline;
-            ">
-                ← Voltar para Home
-            </button>
+<div class="sita-app">
+    <header class="sita-header">
+        <div class="sita-header-left">
+            <img src="../assests/img/logo-control.png" alt="Control" class="sita-logo" onerror="this.style.display='none'">
+            <h1>SITA <small>Programação</small></h1>
         </div>
-    </div><!-- Fecha container -->
+        <div class="sita-header-right">
+            <a href="#" onclick="abrirSubSita('esteira.html', 'SITA - Esteira'); return false;" class="sita-btn-outline">🚦 Esteira</a>
+            <a href="#" onclick="abrirSubSita('despacho.html', 'SITA - Despacho'); return false;" class="sita-btn-outline">📤 Despacho</a>
+            <button class="sita-btn-primary" onclick="abrirNovaObra()">➕ Nova Obra</button>
+        </div>
+    </header>
 
-    <!-- Scripts -->
-    <!-- ============================================ -->
-    <!-- 🔥 FIREBASE SDK                              -->
-    <!-- ============================================ -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <div class="sita-toolbar">
+        <div class="sita-view-toggle">
+            <button class="view-btn active" data-view="semanal" onclick="mudarVisao('semanal')">Semanal</button>
+            <button class="view-btn" data-view="mensal" onclick="mudarVisao('mensal')">Mensal</button>
+        </div>
 
-    <!-- ============================================ -->
-    <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
-    <!-- ============================================ -->
-    <script src="../js/firebase-config.js"></script>   <!-- 1. Configura o Firebase -->
-    <script src="../js/auth-service.js"></script>      <!-- 2. Cria o authService -->
-    <script src="../js/auth-global.js"></script>       <!-- 3. Verifica sessão na página -->
-    <script src="../js/auth-helper.js"></script>       <!-- 4. 🔥 FUNÇÕES AUXILIARES -->
-    <script src="../js/script.js"></script>            <!-- 5. Funções globais -->
+        <div class="sita-nav">
+            <button onclick="navegar(-1)">◀</button>
+            <span id="sitaPeriodo">...</span>
+            <button onclick="navegar(1)">▶</button>
+            <button onclick="irHoje()">Hoje</button>
+        </div>
+
+        <div class="sita-busca">
+            <input type="text" id="sitaBusca" placeholder="🔍 Buscar obra..." oninput="buscar(this.value)">
+            <div id="sitaBuscaResultados" class="busca-resultados"></div>
+        </div>
+    </div>
+
+    <div id="sitaCalendario" class="sita-calendario"></div>
+
+    <div id="sitaLegenda" class="sita-legenda"></div>
+</div>
+
+<!-- Modal nova obra -->
+<div id="modalNovaObra" class="sita-modal-overlay">
+    <div class="sita-modal">
+        <div class="sita-modal-header">
+            <h3>➕ Nova Obra</h3>
+            <button onclick="fecharNovaObra()">✕</button>
+        </div>
+        <div class="sita-modal-body">
+            <label>Nº da Obra *</label>
+            <input type="text" id="novaObraNumero" placeholder="0012501791">
+
+            <label>Data Programada *</label>
+            <input type="date" id="novaObraData">
+
+            <label>Encarregado</label>
+            <input type="text" id="novaObraEncarregado" placeholder="Nome do encarregado">
+
+            <label>Observação inicial</label>
+            <textarea id="novaObraObs" rows="3" placeholder="Opcional"></textarea>
+
+            <label class="sita-check">
+                <input type="checkbox" id="novaObraUrgente">
+                <span>Fora da Programação</span>
+            </label>
+        </div>
+        <div class="sita-modal-footer">
+            <button class="sita-btn-outline" onclick="fecharNovaObra()">Cancelar</button>
+            <button class="sita-btn-primary" onclick="salvarNovaObra()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div id="sitaToast" class="sita-toast"></div>
+
+<script src="../js/auth-service.js"></script>
+<script src="../js/sita-config.js"></script>
+<script src="../js/sita-auth.js"></script>
+<script src="../js/sita-api.js"></script>
+<script src="../js/sita-nav.js"></script>
+<script src="../js/sita-index.js"></script>
 </body>
 </html>

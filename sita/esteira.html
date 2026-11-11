@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SITA — Esteira</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/sita-esteira.css">
+</head>
+<body>
+<div class="sita-app">
+    <header class="sita-header">
+        <h1>🚦 Esteira <small>por dia</small></h1>
+        <a href="index.html" class="sita-btn-outline">← Voltar</a>
+    </header>
+
+    <div class="esteira-toolbar">
+        <button onclick="mudarDia(-1)">◀</button>
+        <input type="date" id="diaInput" onchange="render()">
+        <button onclick="mudarDia(1)">▶</button>
+        <span id="esteiraTotal"></span>
+    </div>
+
+    <div id="esteira" class="esteira-grid"></div>
+</div>
+
+<script src="../js/auth-service.js"></script>
+<script src="../js/sita-config.js"></script>
+<script src="../js/sita-auth.js"></script>
+<script src="../js/sita-api.js"></script>
+<script src="../js/sita-esteira.js"></script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SITA — Separação</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/sita-separacao.css">
+</head>
+<body>
+<div class="sita-app">
+    <header class="sita-header">
+        <h1>📦 Separação <small>minhas obras</small></h1>
+        <a href="#" onclick="abrirSubSita('index.html', 'SITA'); return false;" class="sita-btn-outline">← Voltar</a>
+    </header>
+
+    <div id="sepHint" class="sep-hint" style="display:none;"></div>
+    <div id="sepLista" class="sep-lista"></div>
+
+    <!-- Painel lateral -->
+    <div id="sepDrawer" class="sep-drawer" style="display:none;">
+        <div class="sep-drawer-inner" id="sepDrawerInner"></div>
+    </div>
+</div>
+
+<script src="../js/auth-service.js"></script>
+<script src="../js/sita-config.js"></script>
+<script src="../js/sita-auth.js"></script>
+<script src="../js/sita-api.js"></script>
+<script src="../js/sita-nav.js"></script>
+<script src="../js/sita-separacao.js"></script>
+</body>
+</html>
