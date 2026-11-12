@@ -5,29 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SITA — Esteira</title>
     <link rel="stylesheet" href="../css/base.css">
-    <link rel="stylesheet" href="../css/sita-esteira.css">
+    <link rel="stylesheet" href="../css/design-system.css">
+    <link rel="stylesheet" href="../css/sita.css">
 </head>
-<body>
+<body data-page="esteira">
 <div class="sita-app">
-    <header class="sita-header">
-        <h1>🚦 Esteira <small>por dia</small></h1>
-        <a href="index.html" class="sita-btn-outline">← Voltar</a>
-    </header>
+    <div class="page-header">
+        <div class="header-left">
+            <img src="../assests/img/logo-control.png" alt="Control" class="logo-empresa" onerror="this.style.display='none'">
+            <h1>🚦 Esteira <small>Kanban por dia</small></h1>
+        </div>
+    </div>
 
     <div class="esteira-toolbar">
-        <button onclick="mudarDia(-1)">◀</button>
-        <input type="date" id="diaInput" onchange="render()">
-        <button onclick="mudarDia(1)">▶</button>
+        <button onclick="SitaEsteira.mudarDia(-1)">◀</button>
+        <input type="date" id="diaInput" onchange="SitaEsteira.render()">
+        <button onclick="SitaEsteira.mudarDia(1)">▶</button>
+        <label class="sita-check-inline" style="margin-left:.5rem">
+            <input type="checkbox" id="esteiraOcultarArq" onchange="SitaEsteira.render()">
+            <span>Ocultar arquivados</span>
+        </label>
         <span id="esteiraTotal"></span>
     </div>
 
     <div id="esteira" class="esteira-grid"></div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/firebase-init.js"></script>
+<script src="../js/config.js"></script>
 <script src="../js/auth-service.js"></script>
-<script src="../js/sita-config.js"></script>
-<script src="../js/sita-auth.js"></script>
-<script src="../js/sita-api.js"></script>
-<script src="../js/sita-esteira.js"></script>
+<script src="../js/sita.js"></script>
 </body>
 </html>

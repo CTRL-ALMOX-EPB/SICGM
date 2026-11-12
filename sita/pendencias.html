@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SITA — Pendências</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/design-system.css">
+    <link rel="stylesheet" href="../css/sita.css">
+</head>
+<body data-page="pendencias">
+<div class="sita-app">
+    <div class="page-header">
+        <div class="header-left">
+            <img src="../assests/img/logo-control.png" alt="Control" class="logo-empresa" onerror="this.style.display='none'">
+            <h1>⚠️ Pendências <small>tratativas de itens não devolvidos</small></h1>
+        </div>
+    </div>
+
+    <div class="pen-toolbar">
+        <div class="pen-filter">
+            <label>Status:</label>
+            <select id="penStatus" onchange="SitaPendencias.carregar()">
+                <option value="ABERTA">🔴 Abertas</option>
+                <option value="RESOLVIDA">🟢 Resolvidas</option>
+            </select>
+        </div>
+        <div class="pen-filter">
+            <label>Obra:</label>
+            <input type="text" id="penObra" placeholder="Nº obra" oninput="SitaPendencias.carregarDebounced()">
+        </div>
+        <div class="pen-filter">
+            <label>De:</label>
+            <input type="date" id="penDataIni" onchange="SitaPendencias.carregar()">
+        </div>
+        <div class="pen-filter">
+            <label>Até:</label>
+            <input type="date" id="penDataFim" onchange="SitaPendencias.carregar()">
+        </div>
+        <div class="pen-filter" style="flex:1">
+            <label>Buscar:</label>
+            <input type="text" id="penBusca" placeholder="Código, descrição, obs..." oninput="SitaPendencias.carregarDebounced()" style="width:100%">
+        </div>
+        <button class="btn-limpar-filtros" onclick="SitaPendencias.limpar()">✕ Limpar</button>
+    </div>
+
+    <div id="penInfo" class="pen-info"></div>
+    <div id="penLista" class="pen-lista"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/firebase-init.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/auth-service.js"></script>
+<script src="../js/sita.js"></script>
+</body>
+</html>

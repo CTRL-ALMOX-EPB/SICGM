@@ -27,23 +27,28 @@ const DEPARTAMENTOS_GESTAO = {
             { id: 'despacho-obras-gestao', nome: 'Despacho de Obras', icone: '📦', link: 'despacho/index.html', status: 'disponivel', descricao: 'Vincule obras' }
         ]
     },
-    'DCMD': {
-        nome: 'DCMD', titulo: 'Departamento de Construção e Manutenção da Distribuição',
-        descricao: 'Contagens, MGM, Painel de Controles e relatórios.',
-        cor: '#3d8bfd',
-        funcoes: [
-            { id: 'contagem-diaria-dcmd', nome: 'Contagem Diária', icone: '🧮', link: 'contagem-diaria/index.html', status: 'disponivel', descricao: 'Registre contagens' },
-            { id: 'sita-dcmd', nome: 'SITA', icone: '📋', link: 'sita/index.html', status: 'disponivel', descricao: 'Programação e esteira de obras' },
-            { id: 'separacao-dcmd', nome: 'Separação', icone: '📦', link: 'sita/separacao.html', status: 'disponivel', descricao: 'Listas de separação' },
-            { id: 'indicadores-dcmd', nome: 'Indicadores', icone: '📈', link: 'power-bi/index.html', status: 'disponivel', descricao: 'Business Intelligence' },
-            { id: 'painel-controles', nome: 'Painel de Controles', icone: '🖥️', link: 'controles/index.html', status: 'disponivel', descricao: 'Aditivos e movimentações' },
-            { id: 'dashboards-dcmd', nome: 'Dashboards', icone: '🎛️', status: 'disponivel', descricao: 'Dashboards do sistema', temDropdown: true, dropdownItems: [] },
-            { id: 'relatorios-dcmd', nome: 'Relatórios', icone: '📄', status: 'disponivel', descricao: 'Contagem e busca trafo', temDropdown: true, dropdownItems: [
-                { nome: 'Relatório de Contagem', link: 'relatorios/relatorio-contagem.html', badge: 'Ativo' },
-                { nome: 'Busca Trafo', link: 'relatorios/busca-trafo.html', badge: 'Novo' }
-            ]}
-        ]
-    },
+'DCMD': {
+    nome: 'DCMD', titulo: 'Departamento de Construção e Manutenção da Distribuição',
+    descricao: 'Contagens, SITA, Painel de Controles e relatórios.',
+    cor: '#3d8bfd',
+    funcoes: [
+        { id: 'contagem-diaria-dcmd', nome: 'Contagem Diária', icone: '🧮', link: 'contagem-diaria/index.html', status: 'disponivel', descricao: 'Registre contagens' },
+        { id: 'sita-dcmd', nome: 'SITA', icone: '📋', status: 'disponivel', descricao: 'Sistema de Programação', temDropdown: true, dropdownItems: [
+            { nome: 'Programação',  link: 'sita/index.html',       badge: 'Ativo' },
+            { nome: 'Esteira',      link: 'sita/esteira.html',     badge: 'Ativo' },
+            { nome: 'Despacho',     link: 'sita/despacho.html',    badge: 'Ativo' },
+            { nome: 'Separação',    link: 'sita/separacao.html',   badge: 'Ativo' },
+            { nome: 'Pendências',   link: 'sita/pendencias.html',  badge: 'Ativo' }
+        ]},
+        { id: 'indicadores-dcmd', nome: 'Indicadores', icone: '📈', link: 'power-bi/index.html', status: 'disponivel', descricao: 'Business Intelligence' },
+        { id: 'painel-controles', nome: 'Painel de Controles', icone: '🖥️', link: 'controles/index.html', status: 'disponivel', descricao: 'Aditivos e movimentações' },
+        { id: 'dashboards-dcmd', nome: 'Dashboards', icone: '🎛️', status: 'disponivel', descricao: 'Dashboards do sistema', temDropdown: true, dropdownItems: [] },
+        { id: 'relatorios-dcmd', nome: 'Relatórios', icone: '📄', status: 'disponivel', descricao: 'Contagem e busca trafo', temDropdown: true, dropdownItems: [
+            { nome: 'Relatório de Contagem', link: 'relatorios/relatorio-contagem.html', badge: 'Ativo' },
+            { nome: 'Busca Trafo', link: 'relatorios/busca-trafo.html', badge: 'Novo' }
+        ]}
+    ]
+},
     'DMPC': {
         nome: 'DMPC', titulo: 'Departamento de Materiais Próprios Control',
         descricao: 'Contagem semanal, S.A. emergencial e relatórios.',
@@ -85,8 +90,6 @@ const DEPARTAMENTOS_OPERACIONAL = {
         cor: '#3d8bfd',
         funcoes: [
             { id: 'contagem-diaria-dcmd', nome: 'Contagem Diária', icone: '🧮', link: 'contagem-diaria/index.html', status: 'disponivel', descricao: 'Registre contagens' },
-            { id: 'sita-dcmd', nome: 'SITA', icone: '📋', link: 'sita/index.html', status: 'disponivel', descricao: 'Programação e esteira de obras' },
-            { id: 'separacao-dcmd', nome: 'Separação', icone: '📦', link: 'sita/separacao.html', status: 'disponivel', descricao: 'Listas de separação' },
             { id: 'indicadores-dcmd', nome: 'Indicadores', icone: '📈', link: 'power-bi/index.html', status: 'disponivel', descricao: 'Business Intelligence' },
             { id: 'painel-controles', nome: 'Painel de Controles', icone: '🖥️', link: 'controles/index.html', status: 'disponivel', descricao: 'Gerencie pendências' },
             { id: 'dashboards-operacional', nome: 'Dashboards', icone: '🎛️', status: 'disponivel', descricao: 'Dashboards', temDropdown: true, dropdownItems: [] },
@@ -137,8 +140,6 @@ const DEPARTAMENTOS_VISUALIZACAO = {
         cor: '#3d8bfd',
         funcoes: [
             { id: 'contagem-diaria-dcmd', nome: 'Contagem Diária', icone: '📊', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'sita-dcmd', nome: 'SITA', icone: '📋', link: 'sita/index.html', status: 'disponivel', descricao: 'Programação e esteira de obras' },
-            { id: 'separacao-dcmd', nome: 'Separação', icone: '📦', link: 'sita/separacao.html', status: 'disponivel', descricao: 'Listas de separação' },
             { id: 'painel-controles', nome: 'Painel de Controles', icone: '🖥️', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
             { id: 'dashboards-visualizacao', nome: 'Dashboards', icone: '📊', status: 'disponivel', descricao: 'Dashboards', temDropdown: true, dropdownItems: [] },
             { id: 'relatorios-dcmd', nome: 'Relatórios', icone: '📈', status: 'disponivel', descricao: 'Relatórios', temDropdown: true, dropdownItems: [
