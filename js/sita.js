@@ -1,6 +1,5 @@
 // ============================================================
 // SITA v2 — JS CONSOLIDADO (arquivo único)
-// Todas as páginas do SITA em um só arquivo.
 // Auto-detecção via <body data-page="...">
 // Páginas: index | esteira | despacho | documento | separacao | pendencias
 // ============================================================
@@ -12,12 +11,18 @@ window.SITA_CONFIG = {
     API_URL: 'https://sicgm-sita.alefe-gomes-72f.workers.dev',
 
     ETAPAS: {
-        1: { nome: 'Programação',       cor: '#3d8bfd', icone: '📋', tag: 'PROGRAMADO'   },
-        2: { nome: 'Lista de Separação', cor: '#7d5bbe', icone: '📝', tag: 'PROGRAMADO'   },
-        3: { nome: 'Separado',          cor: '#ff9800', icone: '📦', tag: 'EM_SEPARACAO' },
-        4: { nome: 'Conferência',       cor: '#f0ad4e', icone: '🔍', tag: 'SEPARADO'     },
-        5: { nome: 'Expedido',          cor: '#28a745', icone: '🚚', tag: 'EXPEDIDO'     },
-        6: { nome: 'Devolvido',         cor: '#6b7a8f', icone: '↩️', tag: 'DEVOLVIDO'   }
+        1: { nome: 'Programação',       cor: '#3d8bfd', tag: 'PROGRAMADO'   },
+        2: { nome: 'Lista de Separação', cor: '#ff9800', tag: 'PROGRAMADO'   },
+        3: { nome: 'Separado',          cor: '#28a745', tag: 'EM_SEPARACAO' },
+        4: { nome: 'Conferência',       cor: '#f0ad4e', tag: 'SEPARADO'     },
+        5: { nome: 'Expedido',          cor: '#7d5bbe', tag: 'EXPEDIDO'     },
+        6: { nome: 'Devolvido',         cor: '#d97b9b', tag: 'DEVOLVIDO'   }
+    },
+
+    CORES: {
+        emSeparacao: '#a7d7a7',
+        foraProg:    '#dc3545',
+        arquivado:   '#6b7a8f'
     },
 
     SUBETAPAS: {
@@ -42,7 +47,7 @@ window.SITA_CONFIG = {
 };
 
 // ============================================================
-// 2. AUTH (adapta ao authService do SICGM)
+// 2. AUTH
 // ============================================================
 window.SitaAuth = {
     usuario() {
@@ -104,6 +109,10 @@ window.SitaAPI = {
     atualizarItem:   (numero, id, body) => SitaAPI._fetch(`/api/documentos/${numero}/itens/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
     removerItem:     (numero, id)    => SitaAPI._fetch(`/api/documentos/${numero}/itens/${id}`, { method: 'DELETE' }),
     criarItensBulk:  (numero, itens) => SitaAPI._fetch(`/api/documentos/${numero}/itens/bulk`, { method: 'POST', body: JSON.stringify({ itens }) }),
+    salvarTudoBulk:  (numero, cabecalho, itens, itens_removidos) => SitaAPI._fetch(`/api/documentos/${numero}/itens/bulk`, {
+        method: 'PUT',
+        body: JSON.stringify({ cabecalho, itens, itens_removidos })
+    }),
 
     listarSistemicos: (numero)       => SitaAPI._fetch(`/api/documentos/${numero}/sistemicos`),
     criarSistemico:   (numero, body) => SitaAPI._fetch(`/api/documentos/${numero}/sistemicos`, { method: 'POST', body: JSON.stringify(body) }),
@@ -129,49 +138,29 @@ window.SitaAPI = {
     importarLote: (linhas) => SitaAPI._fetch('/api/programacao/importar-lote', { method: 'POST', body: JSON.stringify({ linhas }) }),
     buscaProgramacao: (q)  => SitaAPI._fetch(`/api/programacao/busca?q=${encodeURIComponent(q)}`),
 
-    posicaoEstoque:  () => fetch(`${SITA_CONFIG.API_URL}/api/proxy/posicao-estoque`).then(r => r.text()),
+    async posicaoEstoque() {
+        const url = `${SITA_CONFIG.API_URL}/api/proxy/posicao-estoque`;
+        const res = await fetch(url);
+        const txt = await res.text();
+        if (!res.ok) {
+            let errMsg = res.statusText;
+            try { errMsg = JSON.parse(txt).error || errMsg; } catch (_) {}
+            throw new Error(`HTTP ${res.status}: ${errMsg}`);
+        }
+        const t = (txt || '').trim();
+        if (t.startsWith('{') && t.includes('"error"')) {
+            let errMsg = 'erro desconhecido';
+            try { errMsg = JSON.parse(t).error || errMsg; } catch (_) {}
+            throw new Error(`Worker erro: ${errMsg}`);
+        }
+        return txt;
+    },
     movimentosSiago: () => fetch(`${SITA_CONFIG.API_URL}/api/proxy/movimentos-siago`).then(r => r.text()),
     aditivosRepApv:  () => fetch(`${SITA_CONFIG.API_URL}/api/proxy/aditivos-rep-apv`).then(r => r.text())
 };
 
 // ============================================================
-// 4. NAVEGAÇÃO
-// ============================================================
-window.abrirSubSita = function(pagina, titulo, tabId) {
-    const link = `sita/${pagina}`;
-    const tab = tabId || `sita-${pagina.replace('.html','').replace(/[\/?=&]/g,'-')}`;
-
-    if (window.parent !== window) {
-        window.parent.postMessage({
-            type: 'SICGM_ABRIR_ABA',
-            link: link,
-            titulo: titulo || 'SITA',
-            tabId: tab
-        }, '*');
-    } else {
-        window.location.href = pagina;
-    }
-};
-
-window.abrirDocumentoSita = function(numero) {
-    const pagina = `documento.html?numero=${numero}`;
-    const titulo = `SITA · Doc #${String(numero).padStart(4, '0')}`;
-    const tabId = `sita-doc-${numero}`;
-
-    if (window.parent !== window) {
-        window.parent.postMessage({
-            type: 'SICGM_ABRIR_ABA',
-            link: `sita/${pagina}`,
-            titulo: titulo,
-            tabId: tabId
-        }, '*');
-    } else {
-        window.location.href = pagina;
-    }
-};
-
-// ============================================================
-// 5. HELPERS GLOBAIS
+// 4. HELPERS
 // ============================================================
 window.SitaHelpers = {
     iso(d) {
@@ -211,11 +200,122 @@ window.SitaHelpers = {
         };
         const b = map[st] || { cls: 'badge-pend', label: '—' };
         return `<span class="badge-status ${b.cls}">${b.label}</span>`;
+    },
+    dentroDeDezDias(dataISO) {
+        if (!dataISO) return false;
+        try {
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            const alvo = new Date(dataISO + 'T00:00:00');
+            alvo.setHours(0, 0, 0, 0);
+            const diffDias = Math.floor((alvo - hoje) / (1000 * 60 * 60 * 24));
+            return diffDias >= 0 && diffDias <= 10;
+        } catch (_) { return false; }
     }
 };
 
 // ============================================================
-// 6. MÓDULO: INDEX (calendário)
+// 5. ENCARREGADOS UNIFICADOS
+// ============================================================
+window.ENCARREGADOS_SITA = [
+    { equipe: 'CRL 01', nome: 'ERITON MARCELO GONCALVES DA SILVA', matricula: '170829' },
+    { equipe: 'CRL 02', nome: 'ANTONIO MIGUEL DA SILVA', matricula: '170427' },
+    { equipe: 'CRL 03', nome: 'MEYDSON MENDONCA DA SILVA', matricula: '170855' },
+    { equipe: 'CRL 04', nome: 'ROBERTO PEREIRA VILLAR', matricula: '171392' },
+    { equipe: 'CRL 05', nome: 'ALCIDES HENRIQUE DE ARAUJO', matricula: '171220' },
+    { equipe: 'CRL 06', nome: 'BRENO MIGUEL DOS SANTOS', matricula: '171049' },
+    { equipe: 'CRL 07', nome: 'ERIVANIO ANANIAS DA SILVA', matricula: '170267' },
+    { equipe: 'CRL 08', nome: 'FRANCINALDO JOSE DO NASCIMENTO', matricula: '11010' },
+    { equipe: 'CRL 09', nome: 'TANCREDO AURELIANO DOS SANTOS', matricula: '171391' },
+    { equipe: 'CRL 10', nome: 'ROBSON KLEBER GABRIEL DOS SANTOS', matricula: '171149' },
+    { equipe: 'CRL 11', nome: 'EDILSON LEONCIO ALVES', matricula: '171254' },
+    { equipe: 'CRL 12', nome: 'LUCIANO MIGUEL BARBOSA', matricula: '170459' },
+    { equipe: 'CRL 13', nome: 'PAULO SERGIO DO NASCIMENTO', matricula: '170868' },
+    { equipe: 'CRL 14', nome: 'DAMIAO GOMES DOS SANTOS', matricula: '170265' },
+    { equipe: 'CRL 15', nome: 'JOSE VALENTIM SANTOS', matricula: '170685' },
+    { equipe: 'CRL 16', nome: 'REGINALDO JOSE DE OLIVEIRA JUNIOR', matricula: '171349' },
+    { equipe: 'CRL 17', nome: 'EDNALDO DOS SANTOS SILVA JUNIOR', matricula: '170612' },
+    { equipe: 'CRL 18', nome: 'DEMILSON BRAZ DOS SANTOS', matricula: '12660' },
+    { equipe: 'CRL 19', nome: 'JOSE FLAVIO JUVENAL BARBOSA', matricula: '171280' },
+    { equipe: 'CRL 81', nome: 'MARCOS MANOEL DA SILVA', matricula: '171286' },
+    { equipe: 'CRL 82', nome: 'NELSON FIRMINO DE MELO', matricula: '171335' },
+    { equipe: 'CRL 83', nome: 'JOSE EMERSON RODRIGUES GONCALVES', matricula: '170982' },
+    { equipe: 'CRL 84', nome: 'RIUSTON BENTO DA SILVA', matricula: '170139' },
+    { equipe: 'CRL 85', nome: 'DESMOBILIZADA', matricula: '' },
+    { equipe: 'CRL 86', nome: 'ANDERSON LUCAS DE ARAUJO', matricula: '170936' },
+    { equipe: 'LDLM ITA 03', nome: 'JOSE JAILSON MONTEIRO DO NASCIMENTO', matricula: '170871' },
+    { equipe: 'LDLM JPS 01', nome: 'DANILO DE ALBUQUERQUE LEITE', matricula: '170309' },
+    { equipe: 'LDLM JPS 02', nome: 'GIORGETHOM CORREIA PAULINO', matricula: '170386' },
+    { equipe: 'LDLM JPS 05', nome: 'GENESIS BARBOSA DO NASCIMENTO', matricula: '170848' },
+    { equipe: 'LDLM JPS 06', nome: 'PAULO ALVES DE MASSENA', matricula: '170742' },
+    { equipe: 'LDLM MMG 04', nome: 'TRAJANO DE PAULA NETO', matricula: '170844' },
+    { equipe: 'LV 01', nome: 'GUTEMBERG DA SILVA FERREIRA', matricula: '16841' },
+    { equipe: 'LV 02', nome: 'MANOEL COSTA DA SILVA', matricula: '16870' },
+    { equipe: 'LV 03', nome: 'ANTONIO OLIVEIRA NETO', matricula: '170216' },
+    { equipe: 'LV 04', nome: 'LINDOMAR DE MELO SANTOS', matricula: '16871' },
+    { equipe: 'LV 05', nome: 'ANTONIO DIAS PACHECO JUNIOR', matricula: '170749' },
+    { equipe: 'LV 06', nome: 'SEVERINO RAMOS PEREIRA DA SILVA', matricula: '170864' },
+    { equipe: 'LV 87', nome: 'LEANDRO DE MELO ROCHA', matricula: '170333' },
+    { equipe: 'LV 88', nome: 'JUNIOR CESAR DE ARAUJO', matricula: '171080' },
+    { equipe: 'PD 02', nome: 'WAGNER SOARES NUNES', matricula: '170186' },
+    { equipe: 'PD 03', nome: 'ANTONIO MARCOS TAVARES DA SILVA', matricula: '170004' },
+    { equipe: 'PD 04', nome: 'JOSE MACIEL DA SILVA', matricula: '170194' },
+    { equipe: 'PD 05', nome: 'JOAO MARCOS DA SILVA SA', matricula: '170190' },
+    { equipe: 'PD 06', nome: 'ALEXANDRE LUIZ RIBEIRO', matricula: '170006' },
+    { equipe: 'PD 07 LT', nome: 'JOSENILDO LEITE PESSOA JUNIOR', matricula: '170188' },
+    { equipe: 'PD 08', nome: 'SILVANO GONCALO DE FARIAS', matricula: '170008' },
+    { equipe: 'DESMOBILIZADA', nome: 'ROMARIO FERREIRA DO NASCIMENTO', matricula: '171302' },
+    { equipe: 'DESMOBILIZADA', nome: 'WALISSON LIRA DE LIMA', matricula: '171198' },
+    { equipe: 'DESMOBILIZADA', nome: 'JOSE MAYKE SOUZA DOS SANTOS', matricula: '016819' }
+];
+
+window.SitaHelpers.getDadosEncarregado = function(nomeOuMatricula) {
+    if (!nomeOuMatricula) return null;
+    const s = String(nomeOuMatricula).trim().toUpperCase();
+    return ENCARREGADOS_SITA.find(e =>
+        e.nome.toUpperCase() === s || e.matricula === s
+    ) || null;
+};
+
+window.SitaHelpers.gerarOptionsEncarregados = function(valorSelecionado = '') {
+    const sel = String(valorSelecionado || '').trim().toUpperCase();
+    let html = '<option value="">Selecione...</option>';
+    ENCARREGADOS_SITA.forEach(e => {
+        const selected = (e.nome.toUpperCase() === sel) ? ' selected' : '';
+        const mat = e.matricula ? ` · Mat: ${e.matricula}` : '';
+        html += `<option value="${e.nome}" data-equipe="${e.equipe}" data-matricula="${e.matricula}"${selected}>${e.equipe} — ${e.nome}${mat}</option>`;
+    });
+    return html;
+};
+
+// ============================================================
+// 6. NAVEGAÇÃO
+// ============================================================
+window.abrirSubSita = function(pagina, titulo, tabId) {
+    const link = `sita/${pagina}`;
+    const tab = tabId || `sita-${pagina.replace('.html','').replace(/[\/?=&]/g,'-')}`;
+
+    if (window.parent !== window) {
+        window.parent.postMessage({ type: 'SICGM_ABRIR_ABA', link, titulo: titulo || 'SITA', tabId: tab }, '*');
+    } else {
+        window.location.href = pagina;
+    }
+};
+
+window.abrirDocumentoSita = function(numero) {
+    const pagina = `documento.html?numero=${numero}`;
+    const titulo = `SITA · Doc #${String(numero).padStart(4, '0')}`;
+    const tabId = `sita-doc-${numero}`;
+
+    if (window.parent !== window) {
+        window.parent.postMessage({ type: 'SICGM_ABRIR_ABA', link: `sita/${pagina}`, titulo, tabId }, '*');
+    } else {
+        window.location.href = pagina;
+    }
+};
+
+// ============================================================
+// 7. MÓDULO: INDEX
 // ============================================================
 window.SitaIndex = {
     visaoAtual: 'semanal',
@@ -230,8 +330,12 @@ window.SitaIndex = {
         const cont = document.getElementById('sitaLegenda');
         if (!cont) return;
         cont.innerHTML = Object.entries(SITA_CONFIG.ETAPAS).map(([n, e]) =>
-            `<span class="legenda-item"><span class="legenda-cor" style="background:${e.cor}"></span>${e.icone} ${e.nome}</span>`
-        ).join('') + `<span class="legenda-item"><span class="legenda-cor" style="background:#94a3b8"></span>✅ Arquivado</span>`;
+            `<span class="legenda-item"><span class="legenda-cor" style="background:${e.cor}"></span>${e.nome}</span>`
+        ).join('') + `
+            <span class="legenda-item"><span class="legenda-cor" style="background:${SITA_CONFIG.CORES.emSeparacao}"></span>Em separação</span>
+            <span class="legenda-item"><span class="legenda-cor" style="background:${SITA_CONFIG.CORES.foraProg}"></span>Fora de programação</span>
+            <span class="legenda-item"><span class="legenda-cor" style="background:${SITA_CONFIG.CORES.arquivado}"></span>Arquivado</span>
+        `;
     },
 
     mudarVisao(v) {
@@ -292,13 +396,16 @@ window.SitaIndex = {
 
     pillHTML(doc) {
         const arquivado = doc.status === 'ARQUIVADO';
-        const e = SITA_CONFIG.ETAPAS[doc.etapa_atual] || { cor: '#64748b', icone: '📋' };
-        const cor = arquivado ? '#94a3b8' : e.cor;
-        const icone = arquivado ? '✅' : e.icone;
-        const urgent = doc.is_urgente ? '🚨' : '';
-        return `<div class="pill ${arquivado ? 'pill-arquivado' : ''}" style="background:${cor}" onclick="abrirDocumentoSita(${doc.numero})">
-            <span>${urgent} ${doc.obra}</span>
-            <span class="pill-dot">${icone}</span>
+        const urgente = doc.is_urgente === 1 || doc.is_urgente === true;
+        const e = SITA_CONFIG.ETAPAS[doc.etapa_atual] || { cor: '#6b7a8f' };
+
+        let cor = e.cor;
+        if (arquivado) cor = SITA_CONFIG.CORES.arquivado;
+        else if (urgente) cor = SITA_CONFIG.CORES.foraProg;
+        else if (doc.etapa_atual === 3 && doc.tag === 'EM_SEPARACAO') cor = SITA_CONFIG.CORES.emSeparacao;
+
+        return `<div class="pill" style="background:${cor}" onclick="abrirDocumentoSita(${doc.numero})">
+            <span>${doc.obra}</span>
         </div>`;
     },
 
@@ -363,36 +470,107 @@ window.SitaIndex = {
     abrirNovaObra() {
         document.getElementById('novaObraNumero').value = '';
         document.getElementById('novaObraData').value = SitaHelpers.iso(new Date());
-        document.getElementById('novaObraEncarregado').value = '';
+        document.getElementById('novaObraEncarregado').innerHTML = SitaHelpers.gerarOptionsEncarregados();
+        document.getElementById('novaObraMatricula').value = '';
+        document.getElementById('novaObraEquipe').value = '';
         document.getElementById('novaObraObs').value = '';
-        document.getElementById('novaObraUrgente').checked = false;
         document.getElementById('modalNovaObra').classList.add('ativo');
     },
 
-    fecharNovaObra() {
-        document.getElementById('modalNovaObra').classList.remove('ativo');
+    fecharNovaObra() { document.getElementById('modalNovaObra').classList.remove('ativo'); },
+
+    aoMudarEncarregado() {
+        const sel = document.getElementById('novaObraEncarregado');
+        const dados = SitaHelpers.getDadosEncarregado(sel.value);
+        document.getElementById('novaObraMatricula').value = dados?.matricula || '';
+        document.getElementById('novaObraEquipe').value = dados?.equipe || '';
+    },
+
+    aoMudarData() {
+        const data = document.getElementById('novaObraData').value;
+        const foraProg = SitaHelpers.dentroDeDezDias(data);
+        const aviso = document.getElementById('novaObraAviso');
+        if (foraProg) {
+            aviso.style.display = 'block';
+            aviso.textContent = '🚨 Data em até 10 dias — a obra será marcada como FORA DA PROGRAMAÇÃO automaticamente.';
+        } else {
+            aviso.style.display = 'none';
+        }
     },
 
     async salvarNovaObra() {
         const obra = document.getElementById('novaObraNumero').value.trim();
         const data = document.getElementById('novaObraData').value;
+        const encarregadoSel = document.getElementById('novaObraEncarregado').value;
         if (!obra || !data) return SitaHelpers.toast('Preencha obra e data', 'erro');
+
+        const dados = SitaHelpers.getDadosEncarregado(encarregadoSel);
+        const isUrgente = SitaHelpers.dentroDeDezDias(data);
+
         try {
             await SitaAPI.criar({
-                obra, data_programacao: data,
-                encarregado: document.getElementById('novaObraEncarregado').value.trim(),
+                obra,
+                data_programacao: data,
+                encarregado: dados?.nome || encarregadoSel || '',
+                matricula_encarregado: dados?.matricula || '',
+                equipe_encarregado: dados?.equipe || '',
                 obs_inicial: document.getElementById('novaObraObs').value.trim(),
-                is_urgente: document.getElementById('novaObraUrgente').checked
+                is_urgente: isUrgente ? 1 : 0
             });
             SitaHelpers.toast('Obra criada!', 'sucesso');
             this.fecharNovaObra();
+            this.render();
+        } catch (e) { SitaHelpers.toast(e.message, 'erro'); }
+    },
+
+    abrirImportarLote() {
+        document.getElementById('loteTexto').value = '';
+        document.getElementById('loteResultado').innerHTML = '';
+        document.getElementById('modalImportarLote').classList.add('ativo');
+    },
+
+    fecharImportarLote() { document.getElementById('modalImportarLote').classList.remove('ativo'); },
+
+    async processarImportarLote() {
+        const texto = document.getElementById('loteTexto').value.trim();
+        if (!texto) return SitaHelpers.toast('Cole os dados primeiro', 'erro');
+
+        const linhas = texto.split('\n').filter(l => l.trim() !== '');
+        const parsed = [];
+
+        for (const linha of linhas) {
+            const partes = linha.split('\t');
+            if (partes.length < 2) continue;
+            const obra = partes[0]?.trim();
+            const dataBr = partes[1]?.trim();
+            const obs = partes[2]?.trim() || '';
+            if (!obra || !dataBr) continue;
+
+            const dp = dataBr.split('/');
+            if (dp.length !== 3) continue;
+            const iso = `${dp[2]}-${dp[1].padStart(2,'0')}-${dp[0].padStart(2,'0')}`;
+            parsed.push({ obra, data_programacao: iso, obs });
+        }
+
+        if (parsed.length === 0) return SitaHelpers.toast('Nenhuma linha válida', 'erro');
+
+        try {
+            const resp = await SitaAPI.importarLote(parsed);
+            const res = document.getElementById('loteResultado');
+            res.innerHTML = `
+                <div class="lote-resumo">
+                    <div><strong>✅ Criados:</strong> ${resp.criados}</div>
+                    ${resp.forcados_urgente > 0 ? `<div><strong>🚨 Forçados fora de programação:</strong> ${resp.forcados_urgente}</div>` : ''}
+                    ${resp.erros && resp.erros.length > 0 ? `<div class="lote-erros"><strong>⚠️ Erros:</strong><ul>${resp.erros.map(e => `<li>${e.linha.obra || '?'}: ${e.motivo}</li>`).join('')}</ul></div>` : ''}
+                </div>
+            `;
             this.render();
         } catch (e) { SitaHelpers.toast(e.message, 'erro'); }
     }
 };
 
 // ============================================================
-// 7. MÓDULO: ESTEIRA
+// 8. MÓDULO: ESTEIRA
 // ============================================================
 window.SitaEsteira = {
     init() {
@@ -405,9 +583,7 @@ window.SitaEsteira = {
         document.getElementById('diaInput').value = SitaHelpers.iso(d);
         this.render();
     },
-    ocultarArq() {
-        return document.getElementById('esteiraOcultarArq')?.checked || false;
-    },
+    ocultarArq() { return document.getElementById('esteiraOcultarArq')?.checked || false; },
     async render() {
         const data = document.getElementById('diaInput').value;
         const json = await SitaAPI.esteira(data);
@@ -429,7 +605,7 @@ window.SitaEsteira = {
             html += `
                 <div class="esteira-col">
                     <div class="esteira-col-header" style="background:${e.cor}">
-                        <span>${e.icone} ${e.nome}</span>
+                        <span>${e.nome}</span>
                         <span>${docs.length}</span>
                     </div>
                     <div class="esteira-col-body">
@@ -442,6 +618,14 @@ window.SitaEsteira = {
     },
     cardHTML(doc) {
         const arquivado = doc.status === 'ARQUIVADO';
+        const urgente = doc.is_urgente === 1 || doc.is_urgente === true;
+        const e = SITA_CONFIG.ETAPAS[doc.etapa_atual] || { cor: '#6b7a8f' };
+
+        let cor = e.cor;
+        if (arquivado) cor = SITA_CONFIG.CORES.arquivado;
+        else if (urgente) cor = SITA_CONFIG.CORES.foraProg;
+        else if (doc.etapa_atual === 3 && doc.tag === 'EM_SEPARACAO') cor = SITA_CONFIG.CORES.emSeparacao;
+
         const subs = doc.subetapas || [];
         const subsHTML = subs.length > 0 ? `
             <div class="esteira-card-subs">
@@ -455,11 +639,8 @@ window.SitaEsteira = {
             </div>
         ` : '';
         return `
-            <div class="esteira-card ${arquivado ? 'esteira-card-arq' : ''}" onclick="abrirDocumentoSita(${doc.numero})">
-                <div class="esteira-card-num">
-                    ${doc.obra} ${doc.is_urgente ? '🚨' : ''}
-                    ${arquivado ? '✅' : ''}
-                </div>
+            <div class="esteira-card ${arquivado ? 'esteira-card-arq' : ''}" style="border-left-color:${cor}" onclick="abrirDocumentoSita(${doc.numero})">
+                <div class="esteira-card-num">${doc.obra}</div>
                 <div class="esteira-card-sub">#${String(doc.numero).padStart(4,'0')} · ${doc.data_programacao}</div>
                 ${subsHTML}
             </div>
@@ -468,7 +649,7 @@ window.SitaEsteira = {
 };
 
 // ============================================================
-// 8. MÓDULO: DESPACHO
+// 9. MÓDULO: DESPACHO
 // ============================================================
 window.SitaDespacho = {
     listaSeparadores: [],
@@ -492,12 +673,8 @@ window.SitaDespacho = {
                 const p = (u.perfil || '').toUpperCase();
                 return p === 'SEPARADOR' || p === 'OPERACIONAL' || p === 'GESTAO';
             });
-            this.listaSeparadores = filtrados.map(u => ({
-                nome: u.nome, matricula: u.matricula, perfil: u.perfil
-            }));
-        } catch (e) {
-            this.listaSeparadores = [];
-        }
+            this.listaSeparadores = filtrados.map(u => ({ nome: u.nome, matricula: u.matricula, perfil: u.perfil }));
+        } catch (e) { this.listaSeparadores = []; }
     },
 
     async render() {
@@ -561,11 +738,10 @@ window.SitaDespacho = {
 };
 
 // ============================================================
-// 9. MÓDULO: SEPARAÇÃO
+// 10. MÓDULO: SEPARAÇÃO
 // ============================================================
 window.SitaSeparacao = {
     docAtual: null,
-
     async init() { this.carregarLista(); },
 
     async carregarLista() {
@@ -640,7 +816,7 @@ window.SitaSeparacao = {
                             <th style="width:70px">Base</th>
                             <th style="width:70px">Aditivo</th>
                             <th style="width:90px">Separada</th>
-                            <th style="width:80px">Pendente</th>
+                            <th style="width:80px">Falta</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -658,9 +834,9 @@ window.SitaSeparacao = {
                                         onchange="SitaSeparacao.salvarSeparada(${it.id}, parseFloat(this.value)||0)">
                                 </td>
                                 <td>
-                                    <input type="number" class="input-tabela num" value="${it.qtd_pendente || 0}" step="any" min="0"
+                                    <input type="number" class="input-tabela num" value="${it.qtd_falta || 0}" step="any" min="0"
                                         ${devolvida ? 'disabled' : ''}
-                                        onchange="SitaSeparacao.salvarPendente(${it.id}, parseFloat(this.value)||0)">
+                                        onchange="SitaSeparacao.salvarFalta(${it.id}, parseFloat(this.value)||0)">
                                 </td>
                             </tr>
                         `).join('')}
@@ -680,17 +856,14 @@ window.SitaSeparacao = {
         this.docAtual = null;
         this.carregarLista();
     },
-
     async salvarSeparada(itemId, valor) {
         try { await SitaAPI.atualizarItem(this.docAtual.numero, itemId, { qtd_separada: valor }); }
         catch (e) { alert(e.message); }
     },
-
-    async salvarPendente(itemId, valor) {
-        try { await SitaAPI.atualizarItem(this.docAtual.numero, itemId, { qtd_pendente: valor }); }
+    async salvarFalta(itemId, valor) {
+        try { await SitaAPI.atualizarItem(this.docAtual.numero, itemId, { qtd_falta: valor }); }
         catch (e) { alert(e.message); }
     },
-
     async devolverLista() {
         if (!confirm('Confirmar devolução da lista como SEPARADA?')) return;
         try {
@@ -702,18 +875,15 @@ window.SitaSeparacao = {
 };
 
 // ============================================================
-// 10. MÓDULO: PENDÊNCIAS
+// 11. MÓDULO: PENDÊNCIAS
 // ============================================================
 window.SitaPendencias = {
     debounceTimer: null,
-
     init() { this.carregar(); },
-
     carregarDebounced() {
         clearTimeout(this.debounceTimer);
         this.debounceTimer = setTimeout(() => this.carregar(), 400);
     },
-
     limpar() {
         document.getElementById('penObra').value = '';
         document.getElementById('penDataIni').value = '';
@@ -834,7 +1004,7 @@ window.SitaPendencias = {
 };
 
 // ============================================================
-// 11. MÓDULO: DOCUMENTO
+// 12. MÓDULO: DOCUMENTO
 // ============================================================
 window.SitaDocumento = {
     numeroDoc: null,
@@ -878,7 +1048,9 @@ window.SitaDocumento = {
         document.getElementById('docHeader').innerHTML = `
             <div class="doc-header-obra">
                 <span class="doc-obra-num">${this.docAtual.obra} ${this.docAtual.is_urgente ? '🚨' : ''} ${arquivado ? '✅' : ''}</span>
-                <span class="doc-etapa-tag" style="background:${arquivado ? '#94a3b8' : etapa.cor}">${arquivado ? '✅ Arquivado' : etapa.icone + ' ' + etapa.nome}</span>
+                <span class="doc-etapa-tag" style="background:${arquivado ? SITA_CONFIG.CORES.arquivado : etapa.cor}">
+                    ${arquivado ? 'Arquivado' : etapa.nome}
+                </span>
             </div>
             <div class="doc-header-meta">
                 <span>📅 ${this.docAtual.data_programacao}</span>
@@ -891,8 +1063,8 @@ window.SitaDocumento = {
         for (let n = 1; n <= 6; n++) {
             const e = SITA_CONFIG.ETAPAS[n];
             const cls = n === this.docAtual.etapa_atual ? 'ativo' : (n < this.docAtual.etapa_atual ? 'completo' : '');
-            const style = n === this.docAtual.etapa_atual ? `style="background:${arquivado ? '#94a3b8' : e.cor}"` : '';
-            stepper += `<div class="step ${cls}" ${style}><span class="step-icon">${e.icone}</span>${e.nome}</div>`;
+            const style = n === this.docAtual.etapa_atual ? `style="background:${arquivado ? SITA_CONFIG.CORES.arquivado : e.cor}"` : '';
+            stepper += `<div class="step ${cls}" ${style}>${e.nome}</div>`;
         }
         document.getElementById('docStepper').innerHTML = stepper;
 
@@ -903,12 +1075,11 @@ window.SitaDocumento = {
     async renderEtapa() {
         const cont = document.getElementById('tab-etapa');
         const etapa = this.docAtual.etapa_atual;
-        const e = SITA_CONFIG.ETAPAS[etapa];
         const arquivado = this.docAtual.status === 'ARQUIVADO';
 
         if (etapa === 1) {
             cont.innerHTML = `
-                <h3 class="etapa-titulo">${e.icone} Etapa 1 — Programação</h3>
+                <h3 class="etapa-titulo">Etapa 1 — Programação</h3>
                 <div class="etapa-form">
                     <div><label>Obra</label><input type="text" id="e1Obra" value="${this.docAtual.obra}" ${arquivado ? 'disabled' : ''}></div>
                     <div><label>Data</label><input type="date" id="e1Data" value="${this.docAtual.data_programacao}" ${arquivado ? 'disabled' : ''}></div>
@@ -985,7 +1156,6 @@ window.SitaDocumento = {
             html += `
                 <div class="e6-etapa-item ${concluiu ? 'ok' : ''}">
                     <div class="e6-etapa-head">
-                        <span class="e6-etapa-icon">${e.icone}</span>
                         <span class="e6-etapa-nome">${n}. ${e.nome}</span>
                         <span class="e6-etapa-badge">${concluiu ? '✓ Concluída' : '○ Pendente'}</span>
                     </div>
@@ -1018,32 +1188,61 @@ window.SitaDocumento = {
 };
 
 // ============================================================
-// 12. ETAPA 2 — LISTA DE SEPARAÇÃO
+// 13. ETAPA 2 — LISTA DE SEPARAÇÃO
 // ============================================================
 window.Etapa2 = {
-    doc: null, itens: [], codigosValidos: null, popupEl: null, nomeUsuario: '',
+    doc: null,
+    itens: [],
+    itensRemovidos: [],
+    materiaisMap: null,
+    sujo: false,
+    popupEl: null,
 
     async render(container, docAtual) {
         this.doc = docAtual;
-        this.itens = docAtual.itens || [];
-        this.nomeUsuario = SitaAuth.nome();
+        this.itens = (docAtual.itens || []).map(x => ({ ...x }));
+        this.itensRemovidos = [];
+        this.sujo = false;
 
         container.innerHTML = `
-            <h3 class="etapa-titulo">📝 Etapa 2 — Lista de Separação</h3>
+            <h3 class="etapa-titulo">Etapa 2 — Lista de Separação</h3>
 
             <div class="mgm-cabecalho">
                 <div class="mgm-cab-row">
-                    <div class="mgm-cab-col"><label>👤 Separador</label><input type="text" id="e2Separador" value="${docAtual.separador || ''}" placeholder="Nome do separador"></div>
-                    <div class="mgm-cab-col"><label>📅 Data de Separação</label><input type="date" id="e2DataSeparacao" value="${docAtual.data_separacao || ''}"></div>
-                    <div class="mgm-cab-col"><label>🚚 Caminhão</label><input type="text" id="e2Caminhao" value="${docAtual.caminhao || ''}" placeholder="Placa ou identificação"></div>
+                    <div class="mgm-cab-col">
+                        <label>👤 Separador</label>
+                        <input type="text" id="e2Separador" value="${docAtual.separador || ''}" readonly placeholder="Definido pelo despacho">
+                    </div>
+                    <div class="mgm-cab-col">
+                        <label>📅 Data de Separação</label>
+                        <input type="date" id="e2DataSeparacao" value="${docAtual.data_separacao || ''}">
+                    </div>
+                    <div class="mgm-cab-col">
+                        <label>🚚 Caminhão</label>
+                        <input type="text" id="e2Caminhao" value="${docAtual.caminhao || ''}" placeholder="Placa ou identificação">
+                    </div>
                 </div>
                 <div class="mgm-cab-row">
-                    <div class="mgm-cab-col"><label>👔 Encarregado</label><input type="text" id="e2Encarregado" value="${docAtual.encarregado || ''}" placeholder="Nome do encarregado"></div>
-                    <div class="mgm-cab-col"><label>🆔 Matrícula</label><input type="text" id="e2Matricula" value="${docAtual.matricula_encarregado || ''}" placeholder="Matrícula" readonly></div>
-                    <div class="mgm-cab-col"><label>👥 Equipe</label><input type="text" id="e2Equipe" value="${docAtual.equipe_encarregado || ''}" placeholder="Equipe" readonly></div>
+                    <div class="mgm-cab-col">
+                        <label>👔 Encarregado</label>
+                        <select id="e2Encarregado" onchange="Etapa2.aoMudarEncarregado()">
+                            ${SitaHelpers.gerarOptionsEncarregados(docAtual.encarregado || '')}
+                        </select>
+                    </div>
+                    <div class="mgm-cab-col">
+                        <label>🆔 Matrícula</label>
+                        <input type="text" id="e2Matricula" value="${docAtual.matricula_encarregado || ''}" readonly placeholder="Matrícula">
+                    </div>
+                    <div class="mgm-cab-col">
+                        <label>👥 Equipe</label>
+                        <input type="text" id="e2Equipe" value="${docAtual.equipe_encarregado || ''}" readonly placeholder="Equipe">
+                    </div>
                 </div>
                 <div class="mgm-cab-row full">
-                    <div class="mgm-cab-col"><label>📝 Observação</label><textarea id="e2Observacao" rows="2" placeholder="Ex: Conferido por: João">${docAtual.obs_inicial || ''}</textarea></div>
+                    <div class="mgm-cab-col">
+                        <label>📝 Observação</label>
+                        <textarea id="e2Observacao" rows="2" placeholder="Ex: Conferido por: João">${docAtual.obs_inicial || ''}</textarea>
+                    </div>
                 </div>
             </div>
 
@@ -1053,29 +1252,28 @@ window.Etapa2 = {
                 <button class="btn-limpar-filtros" onclick="Etapa2.adicionarLinha()">➕ Adicionar Item</button>
                 <button class="btn-limpar-filtros" onclick="Etapa2.compararOrcamento()">📊 Comparar com Orçamento</button>
                 <span class="e2-info" id="e2Info">${this.itens.length} item(ns)</span>
+                <span class="e2-sujo-badge" id="e2SujoBadge" style="display:none">⚠ alterações não salvas</span>
             </div>
 
             <div class="bulk-actions-container" id="e2BulkActions"></div>
 
             <div class="tabela-wrapper">
                 <div class="table-responsive">
-                    <table class="relatorio-tabela">
+                    <table class="relatorio-tabela e2-tabela-itens">
                         <thead>
                             <tr>
-                                <th style="width:36px">#</th>
-                                <th style="width:100px">Código</th>
+                                <th style="width:40px">#</th>
+                                <th style="width:80px">Código</th>
                                 <th>Descrição</th>
-                                <th style="width:50px">UN</th>
-                                <th style="width:70px">QTD</th>
-                                <th style="width:80px">Aditivo Saída</th>
-                                <th style="width:80px">Aditivo Campo</th>
-                                <th style="width:70px">RMA</th>
+                                <th style="width:55px">UN</th>
+                                <th style="width:75px">QTD</th>
+                                <th style="width:85px">Aditivo Saída</th>
+                                <th style="width:85px">Aditivo Campo</th>
                                 <th style="width:80px">Separada</th>
                                 <th style="width:80px">Aplicada</th>
-                                <th style="width:70px">DMA</th>
-                                <th style="width:80px">Pendente</th>
-                                <th style="width:90px">Status</th>
-                                <th style="width:40px"></th>
+                                <th style="width:75px">DMA</th>
+                                <th style="width:75px">Falta</th>
+                                <th style="width:45px"></th>
                             </tr>
                         </thead>
                         <tbody id="e2Body"></tbody>
@@ -1085,52 +1283,90 @@ window.Etapa2 = {
 
             <div class="e2-subetapas" id="e2Subetapas"></div>
             <div class="e2-aviso" id="e2Aviso"></div>
+
+            <div class="e2-salvar-bar">
+                <span class="e2-salvar-info" id="e2SalvarInfo"></span>
+                <button class="btn-filtrar btn-success" onclick="Etapa2.salvarLista()" id="e2BtnSalvar" disabled>
+                    💾 Salvar Lista
+                </button>
+            </div>
         `;
 
         this.renderItens();
         this.renderSubetapas();
         this.renderBulkActions();
         this.configurarCabecalho();
-        this.carregarCodigosValidos();
         this.inicializarPopup();
+        this.atualizarBotaoSalvar();
+
+        await this.carregarCodigosValidos();
+
+        window.removeEventListener('beforeunload', this._beforeUnloadHandler);
+        window.addEventListener('beforeunload', this._beforeUnloadHandler = (e) => {
+            if (this.sujo) { e.preventDefault(); e.returnValue = ''; }
+        });
     },
 
     configurarCabecalho() {
-        const campos = [['e2Separador','separador'],['e2DataSeparacao','data_separacao'],['e2Caminhao','caminhao'],['e2Encarregado','encarregado'],['e2Observacao','obs_inicial']];
-        campos.forEach(([id, campo]) => {
+        const campos = ['e2DataSeparacao', 'e2Caminhao', 'e2Observacao'];
+        campos.forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
-            el.addEventListener('change', async () => {
-                try { await SitaAPI.atualizar(this.doc.numero, { [campo]: el.value.trim() }); }
-                catch (e) { alert('Erro ao salvar cabeçalho: ' + e.message); }
-            });
+            el.addEventListener('input', () => this.marcarSujo());
         });
+    },
+
+    aoMudarEncarregado() {
+        const sel = document.getElementById('e2Encarregado');
+        const dados = SitaHelpers.getDadosEncarregado(sel.value);
+        document.getElementById('e2Matricula').value = dados?.matricula || '';
+        document.getElementById('e2Equipe').value = dados?.equipe || '';
+        this.marcarSujo();
+    },
+
+    marcarSujo() {
+        this.sujo = true;
+        const badge = document.getElementById('e2SujoBadge');
+        if (badge) badge.style.display = 'inline';
+        this.atualizarBotaoSalvar();
+    },
+
+    limparSujo() {
+        this.sujo = false;
+        const badge = document.getElementById('e2SujoBadge');
+        if (badge) badge.style.display = 'none';
+        this.atualizarBotaoSalvar();
+    },
+
+    atualizarBotaoSalvar() {
+        const btn = document.getElementById('e2BtnSalvar');
+        if (btn) btn.disabled = !this.sujo;
+        const info = document.getElementById('e2SalvarInfo');
+        if (info) info.textContent = this.sujo ? '⚠ Você tem alterações não salvas' : '';
     },
 
     renderItens() {
         const tbody = document.getElementById('e2Body');
         const arr = this.itens || [];
         if (arr.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="14" class="text-center text-muted" style="padding:1.5rem">Nenhum item. Importe um Excel ou adicione manualmente.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" class="text-center text-muted" style="padding:1.5rem">Nenhum item. Importe um Excel ou adicione manualmente.</td></tr>`;
             document.getElementById('e2Info').textContent = '0 itens';
             return;
         }
         tbody.innerHTML = arr.map((it, idx) => `
-            <tr data-id="${it.id}">
+            <tr data-id="${it.id || ''}" data-idx="${idx}">
                 <td class="text-center text-muted">${idx + 1}</td>
-                <td><input type="text" class="input-tabela" value="${it.codigo || ''}" oninput="Etapa2.aoDigitarCodigo(this, ${it.id})" onblur="Etapa2.aoSairCodigo(this, ${it.id})"></td>
-                <td><input type="text" class="input-tabela" value="${(it.descricao || '').replace(/"/g, '&quot;')}" readonly onclick="Etapa2.mostrarPopup(this)"></td>
-                <td><input type="text" class="input-tabela text-center" value="${it.unidade || ''}" readonly></td>
-                <td><input type="number" class="input-tabela num" value="${it.qtd_programada || 0}" step="any" min="0" onchange="Etapa2.aoEditarCampo(${it.id}, 'qtd_programada', parseFloat(this.value)||0)"></td>
-                <td><input type="number" class="input-tabela num" value="${it.qtd_aditivo_saida || 0}" step="any" min="0" onchange="Etapa2.aoEditarCampo(${it.id}, 'qtd_aditivo_saida', parseFloat(this.value)||0)"></td>
-                <td><input type="number" class="input-tabela num" value="${it.qtd_aditivo_campo || 0}" step="any" min="0" onchange="Etapa2.aoEditarCampo(${it.id}, 'qtd_aditivo_campo', parseFloat(this.value)||0)"></td>
-                <td><input type="number" class="input-tabela num" value="${it.qtd_rma || ''}" step="any" min="0" onchange="Etapa2.aoEditarCampo(${it.id}, 'qtd_rma', parseFloat(this.value)||0)"></td>
-                <td><input type="number" class="input-tabela num" value="${it.qtd_separada || ''}" step="any" min="0" onchange="Etapa2.aoEditarCampo(${it.id}, 'qtd_separada', parseFloat(this.value)||0)"></td>
-                <td><input type="number" class="input-tabela num" value="${it.qtd_aplicada || ''}" step="any" min="0" onchange="Etapa2.aoEditarCampo(${it.id}, 'qtd_aplicada', parseFloat(this.value)||0)"></td>
-                <td><input type="number" class="input-tabela num" value="${it.qtd_dma || ''}" step="any" min="0" onchange="Etapa2.aoEditarCampo(${it.id}, 'qtd_dma', parseFloat(this.value)||0)"></td>
-                <td><input type="number" class="input-tabela num" value="${it.qtd_pendente || ''}" step="any" min="0" onchange="Etapa2.aoEditarCampo(${it.id}, 'qtd_pendente', parseFloat(this.value)||0)"></td>
-                <td>${SitaHelpers.badgeStatus(it.status_item)}</td>
-                <td><button class="btn-remove-item" onclick="Etapa2.removerItem(${it.id})" title="Remover">✕</button></td>
+                <td><input type="text" class="input-tabela" value="${it.codigo || ''}" oninput="Etapa2.aoDigitarCodigo(this, ${idx})" onblur="Etapa2.aoSairCodigo(this, ${idx})"></td>
+                <td><input type="text" class="input-tabela input-descricao" value="${(it.descricao || '').replace(/"/g, '&quot;')}" readonly onclick="Etapa2.mostrarPopup(this)"></td>
+                <td><input type="text" class="input-tabela input-unidade text-center" value="${it.unidade || ''}" readonly></td>
+                <td><input type="number" class="input-tabela num" value="${it.qtd_programada || 0}" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_programada', parseFloat(this.value)||0)"></td>
+                <td><input type="number" class="input-tabela num" value="${it.qtd_aditivo_saida || 0}" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_aditivo_saida', parseFloat(this.value)||0)"></td>
+                <td><input type="number" class="input-tabela num" value="${it.qtd_aditivo_campo || 0}" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_aditivo_campo', parseFloat(this.value)||0)"></td>
+                <td><input type="number" class="input-tabela num" value="${it.qtd_separada || ''}" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_separada', parseFloat(this.value)||0)"></td>
+                <td><input type="number" class="input-tabela num" value="${it.qtd_aplicada || ''}" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_aplicada', parseFloat(this.value)||0)"></td>
+                <td><input type="number" class="input-tabela num" value="${it.qtd_devolvida || ''}" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_devolvida', parseFloat(this.value)||0)"></td>
+                <td><input type="number" class="input-tabela num" value="${it.qtd_falta || ''}" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_falta', parseFloat(this.value)||0)"></td>
+                <td><button class="btn-remove-item" onclick="Etapa2.removerItemPorIdx(${idx})" title="Remover">🗑</button></td>
             </tr>
         `).join('');
         document.getElementById('e2Info').textContent = `${arr.length} item(ns)`;
@@ -1138,70 +1374,226 @@ window.Etapa2 = {
         this.configurarPasteEmMassa();
     },
 
+    // ===== VALIDAÇÃO DE DUPLICADOS =====
+    codigoDuplicado(codigo, idxIgnorar) {
+        if (!codigo) return false;
+        const cod = String(codigo).trim().toUpperCase();
+        return this.itens.some((it, i) => i !== idxIgnorar && String(it.codigo || '').trim().toUpperCase() === cod);
+    },
+
+    marcarDuplicado(input, duplicado) {
+        if (duplicado) {
+            input.classList.add('input-erro');
+            input.style.borderColor = '#ef4444';
+            input.style.backgroundColor = '#fef2f2';
+            input.title = '⚠️ Código duplicado nesta lista';
+        } else {
+            input.classList.remove('input-erro');
+            input.style.borderColor = '';
+            input.style.backgroundColor = '';
+            input.title = '';
+        }
+    },
+
+    // ===== MATERIAIS =====
     async carregarCodigosValidos() {
-        if (this.codigosValidos) return;
+        if (this.materiaisMap && this.materiaisMap.size > 0) return;
         try {
             const texto = await SitaAPI.posicaoEstoque();
-            const linhas = texto.split('\n').slice(1);
-            const set = new Set();
-            for (const l of linhas) {
-                const cod = (l.split('\t')[0] || '').trim();
-                if (cod) set.add(cod);
+            if (!texto || !texto.trim()) { this.materiaisMap = new Map(); return; }
+
+            const t = texto.trim();
+            if (t.startsWith('{') && t.includes('"error"')) {
+                console.warn('⚠️ Worker retornou erro na posição de estoque:', t);
+                this.materiaisMap = new Map();
+                return;
             }
-            this.codigosValidos = set;
-        } catch (e) { console.warn('Posição de estoque indisponível:', e.message); }
+
+            const linhas = t.split(/\r?\n/);
+            const map = new Map();
+
+            let separador = '\t';
+            if (!linhas[0].includes('\t')) {
+                if (linhas[0].includes(';')) separador = ';';
+                else if (linhas[0].includes(',')) separador = ',';
+            }
+
+            let idxCodigo = 0, idxDescricao = 2, idxUnidade = 3;
+            const cab = linhas[0].split(separador).map(c => c.trim().toLowerCase());
+            const findByCandidates = (cands, fallback) => {
+                for (const cand of cands) {
+                    const i = cab.findIndex(h => h === cand || h.includes(cand));
+                    if (i !== -1) return i;
+                }
+                return fallback;
+            };
+            if (cab.length > 1) {
+                idxCodigo = findByCandidates(['codmat', 'codigo', 'cod_material'], 0);
+                idxDescricao = findByCandidates(['dscmat', 'descricao', 'desc'], 2);
+                idxUnidade = findByCandidates(['codund_mda_mat', 'und_medida', 'unidade', 'und'], 3);
+                console.log(`📋 Colunas detectadas: cod=${idxCodigo}, desc=${idxDescricao}, und=${idxUnidade}`);
+            }
+
+            const normalizarUnidade = (v) => String(v || '').trim().toUpperCase() || 'UN';
+
+            let linhasLidas = 0;
+            for (let i = 0; i < linhas.length; i++) {
+                const linha = linhas[i];
+                if (!linha || !linha.trim()) continue;
+                if (i === 0) continue;
+
+                const partes = linha.split(separador);
+                const codBruto = (partes[idxCodigo] || '').trim();
+                const codLimpo = codBruto.replace(/[^0-9]/g, '');
+                if (!codLimpo) continue;
+
+                let descricao = (partes[idxDescricao] || '').trim();
+                let unidade = normalizarUnidade(partes[idxUnidade]);
+
+                if (!unidade || unidade === 'UN') {
+                    const ehUnidade = (s) => {
+                        const v = String(s || '').trim();
+                        return v.length >= 1 && v.length <= 5 && /^[A-Z]+$/.test(v.toUpperCase());
+                    };
+                    for (const idx of [idxUnidade, idxUnidade - 1, idxUnidade + 1, idxDescricao + 1, idxDescricao + 2]) {
+                        if (idx >= 0 && idx < partes.length && ehUnidade(partes[idx])) {
+                            unidade = normalizarUnidade(partes[idx]);
+                            break;
+                        }
+                    }
+                }
+
+                map.set(codLimpo, {
+                    descricao,
+                    unidade,
+                    codreg: (partes[idxCodigo + 1] || '').trim()
+                });
+                linhasLidas++;
+            }
+
+            this.materiaisMap = map;
+            console.log(`✅ ${map.size} materiais carregados de ${linhasLidas} linhas. 90547?`, map.has('90547'));
+        } catch (e) {
+            console.warn('⚠️ Posição de estoque indisponível:', e.message);
+            this.materiaisMap = new Map();
+        }
     },
 
-    aoDigitarCodigo(input, id) { input.classList.remove('input-erro', 'input-ok'); },
+    aoDigitarCodigo(input, idx) {
+        input.classList.remove('input-erro', 'input-ok');
+    },
 
-    async aoSairCodigo(input, id) {
-        const cod = input.value.trim();
-        const it = this.itens.find(x => x.id === id);
+    async aoSairCodigo(input, idx) {
+        const cod = String(input.value || '').trim().replace(/[^0-9]/g, '');
+        input.value = cod;
+        const it = this.itens[idx];
         if (!it) return;
         it.codigo = cod;
-        if (!cod) { await this.salvarItem(id, { codigo: '' }); return; }
-        if (this.codigosValidos && !this.codigosValidos.has(cod)) {
-            input.classList.add('input-erro');
-            alert(`❌ Código ${cod} não existe na posição de estoque`);
-        } else {
-            input.classList.add('input-ok');
-            setTimeout(() => input.classList.remove('input-ok'), 1200);
+
+        if (!cod) {
+            it.descricao = '';
+            it.unidade = '';
+            const row = input.closest('tr');
+            const descInput = row.querySelector('.input-descricao');
+            const undInput = row.querySelector('.input-unidade');
+            if (descInput) descInput.value = '';
+            if (undInput) undInput.value = '';
+            this.marcarDuplicado(input, false);
+            this.marcarSujo();
+            return;
         }
-        await this.salvarItem(id, { codigo: cod });
+
+        if (!this.materiaisMap || this.materiaisMap.size === 0) await this.carregarCodigosValidos();
+
+        // Verifica duplicado PRIMEIRO
+        const duplicado = this.codigoDuplicado(cod, idx);
+
+        const mat = this.materiaisMap?.get(cod);
+        if (!mat) {
+            input.classList.add('input-erro');
+            SitaHelpers.toast(`❌ Código ${cod} não existe na posição de estoque`, 'erro');
+            return;
+        }
+
+        it.descricao = mat.descricao || '';
+        it.unidade = mat.unidade || 'UN';
+        const row = input.closest('tr');
+        const descInput = row.querySelector('.input-descricao');
+        const undInput = row.querySelector('.input-unidade');
+        if (descInput) descInput.value = it.descricao;
+        if (undInput) undInput.value = it.unidade;
+
+        if (duplicado) {
+            this.marcarDuplicado(input, true);
+            SitaHelpers.toast(`⚠️ Código ${cod} já está na lista (duplicado)`, 'aviso');
+        } else {
+            this.marcarDuplicado(input, false);
+            input.classList.add('input-ok');
+            setTimeout(() => input.classList.remove('input-ok'), 800);
+        }
+        this.marcarSujo();
     },
 
-    aoEditarCampo(id, campo, valor) {
-        const it = this.itens.find(x => x.id === id);
+    aoEditarCampo(idx, campo, valor) {
+        const it = this.itens[idx];
         if (!it) return;
         it[campo] = valor;
-        this.salvarItem(id, { [campo]: valor });
+        this.marcarSujo();
     },
 
-    async salvarItem(id, body) {
-        try { await SitaAPI.atualizarItem(this.doc.numero, id, body); }
-        catch (e) { alert('Erro ao salvar item: ' + e.message); }
+    adicionarLinha() { this.adicionarLinhaSemRerender(); },
+
+    adicionarLinhaSemRerender() {
+        const novo = {
+            id: null,
+            codigo: '', descricao: '', unidade: '',
+            qtd_programada: 0, qtd_aditivo_saida: 0, qtd_aditivo_campo: 0,
+            qtd_separada: 0, qtd_falta: 0, qtd_expedida: 0, qtd_aplicada: 0, qtd_devolvida: 0,
+            status_item: 'OK'
+        };
+        this.itens.push(novo);
+        const idx = this.itens.length - 1;
+
+        const tbody = document.getElementById('e2Body');
+        if (tbody.querySelector('td[colspan]')) tbody.innerHTML = '';
+
+        const tr = document.createElement('tr');
+        tr.dataset.idx = idx;
+        tr.innerHTML = `
+            <td class="text-center text-muted">${idx + 1}</td>
+            <td><input type="text" class="input-tabela" value="" oninput="Etapa2.aoDigitarCodigo(this, ${idx})" onblur="Etapa2.aoSairCodigo(this, ${idx})"></td>
+            <td><input type="text" class="input-tabela input-descricao" value="" readonly onclick="Etapa2.mostrarPopup(this)"></td>
+            <td><input type="text" class="input-tabela input-unidade text-center" value="" readonly></td>
+            <td><input type="number" class="input-tabela num" value="0" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_programada', parseFloat(this.value)||0)"></td>
+            <td><input type="number" class="input-tabela num" value="0" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_aditivo_saida', parseFloat(this.value)||0)"></td>
+            <td><input type="number" class="input-tabela num" value="0" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_aditivo_campo', parseFloat(this.value)||0)"></td>
+            <td><input type="number" class="input-tabela num" value="0" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_separada', parseFloat(this.value)||0)"></td>
+            <td><input type="number" class="input-tabela num" value="0" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_aplicada', parseFloat(this.value)||0)"></td>
+            <td><input type="number" class="input-tabela num" value="0" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_devolvida', parseFloat(this.value)||0)"></td>
+            <td><input type="number" class="input-tabela num" value="0" step="any" min="0" oninput="Etapa2.aoEditarCampo(${idx}, 'qtd_falta', parseFloat(this.value)||0)"></td>
+            <td><button class="btn-remove-item" onclick="Etapa2.removerItemPorIdx(${idx})" title="Remover">🗑</button></td>
+        `;
+        tbody.appendChild(tr);
+
+        setTimeout(() => {
+            const inp = tr.querySelector('.input-tabela');
+            if (inp) inp.focus();
+        }, 30);
+
+        document.getElementById('e2Info').textContent = `${this.itens.length} item(ns)`;
+        this.configurarNavegacaoTeclado();
+        this.configurarPasteEmMassa();
+        this.marcarSujo();
     },
 
-    async adicionarLinha() {
-        try {
-            await SitaAPI.criarItem(this.doc.numero, { codigo: '', descricao: '', unidade: '', qtd_programada: 0 });
-            await this.recarregar();
-        } catch (e) { alert(e.message); }
-    },
-
-    async removerItem(id) {
-        if (!confirm('Remover este item?')) return;
-        try { await SitaAPI.removerItem(this.doc.numero, id); await this.recarregar(); }
-        catch (e) { alert(e.message); }
-    },
-
-    async recarregar() {
-        const doc = await SitaAPI.buscar(this.doc.numero);
-        this.doc = doc;
-        this.itens = doc.itens || [];
+    removerItemPorIdx(idx) {
+        const it = this.itens[idx];
+        if (!it) return;
+        if (!confirm(`Remover item "${it.codigo || '(sem código)'}"?`)) return;
+        if (it.id) this.itensRemovidos.push(it.id);
+        this.itens.splice(idx, 1);
         this.renderItens();
-        this.renderSubetapas();
-        this.renderBulkActions();
+        this.marcarSujo();
     },
 
     configurarNavegacaoTeclado() {
@@ -1228,16 +1620,7 @@ window.Etapa2 = {
                 const nextInput = nextRow.children[cellIdx]?.querySelector('input, select');
                 if (nextInput) { nextInput.focus(); nextInput.select?.(); return; }
             }
-            const currentCol = Array.from(row.children).indexOf(target.closest('td'));
-            Etapa2.adicionarLinha().then(() => {
-                setTimeout(() => {
-                    const tbody = document.getElementById('e2Body');
-                    const rows = tbody.querySelectorAll('tr');
-                    const lastRow = rows[rows.length - 1];
-                    const lastInput = lastRow?.children[currentCol]?.querySelector('input');
-                    if (lastInput) { lastInput.focus(); lastInput.select?.(); }
-                }, 250);
-            });
+            Etapa2.adicionarLinhaSemRerender();
             return;
         }
 
@@ -1295,44 +1678,48 @@ window.Etapa2 = {
         Etapa2._aplicarPaste(linhas, target);
     },
 
-    async _aplicarPaste(linhas, elementoAlvo) {
-        const tbody = document.getElementById('e2Body');
+    _aplicarPaste(linhas, elementoAlvo) {
         const rowAlvo = elementoAlvo.closest('tr');
         const colIdx = Array.from(rowAlvo.children).indexOf(elementoAlvo.closest('td'));
-        const mapColToField = { 1:'codigo', 4:'qtd_programada', 5:'qtd_aditivo_saida', 6:'qtd_aditivo_campo', 7:'qtd_rma', 8:'qtd_separada', 9:'qtd_aplicada', 10:'qtd_dma', 11:'qtd_pendente' };
+        const mapColToField = { 1:'codigo', 4:'qtd_programada', 5:'qtd_aditivo_saida', 6:'qtd_aditivo_campo', 7:'qtd_separada', 8:'qtd_aplicada', 9:'qtd_devolvida', 10:'qtd_falta' };
         const campo = mapColToField[colIdx];
         if (!campo) { alert('Cole em uma coluna editável'); return; }
 
-        let idxRow = Array.from(tbody.querySelectorAll('tr')).indexOf(rowAlvo);
-        const valorAtual = elementoAlvo.value.trim();
-        if (valorAtual !== '') idxRow++;
+        let idxRow = Array.from(document.querySelectorAll('#e2Body tr')).indexOf(rowAlvo);
+        if (elementoAlvo.value.trim() !== '') idxRow++;
 
-        const linhasAtuais = tbody.querySelectorAll('tr').length;
-        const precisamos = (idxRow + linhas.length) - linhasAtuais;
-        for (let k = 0; k < precisamos; k++) await this.adicionarLinha();
-
-        await this.recarregar();
-        const rows = document.getElementById('e2Body').querySelectorAll('tr');
-
-        let cont = 0;
+        let duplicados = [];
         for (let i = 0; i < linhas.length; i++) {
             const valor = linhas[i].trim();
             if (!valor) continue;
-            const row = rows[idxRow + i];
-            if (!row) continue;
-            const itemId = parseInt(row.dataset.id);
-            let valorFinal = valor;
-            if (['qtd_programada','qtd_aditivo_saida','qtd_aditivo_campo','qtd_rma','qtd_separada','qtd_aplicada','qtd_dma','qtd_pendente'].includes(campo)) {
-                const num = parseFloat(valor.replace(',', '.').replace(/[^\d.-]/g, ''));
-                valorFinal = isNaN(num) ? 0 : num;
-            } else if (campo === 'codigo') {
-                valorFinal = valor.replace(/[^0-9]/g, '');
+            while (idxRow + i >= this.itens.length) {
+                this.itens.push({
+                    id: null, codigo: '', descricao: '', unidade: '',
+                    qtd_programada: 0, qtd_aditivo_saida: 0, qtd_aditivo_campo: 0,
+                    qtd_separada: 0, qtd_falta: 0, qtd_expedida: 0, qtd_aplicada: 0, qtd_devolvida: 0,
+                    status_item: 'OK'
+                });
             }
-            await SitaAPI.atualizarItem(this.doc.numero, itemId, { [campo]: valorFinal });
-            cont++;
+            const it = this.itens[idxRow + i];
+            if (campo === 'codigo') {
+                const cod = valor.replace(/[^0-9]/g, '');
+                if (this.codigoDuplicado(cod, idxRow + i)) duplicados.push(cod);
+                it.codigo = cod;
+                const mat = this.materiaisMap?.get(it.codigo);
+                if (mat) { it.descricao = mat.descricao; it.unidade = mat.unidade; }
+            } else {
+                const num = parseFloat(valor.replace(',', '.').replace(/[^\d.-]/g, ''));
+                it[campo] = isNaN(num) ? 0 : num;
+            }
         }
-        await this.recarregar();
-        alert(`✅ ${cont} valor(es) colados`);
+        this.renderItens();
+        this.marcarSujo();
+
+        if (duplicados.length > 0) {
+            SitaHelpers.toast(`⚠️ ${duplicados.length} código(s) duplicado(s) colado(s): ${duplicados.join(', ')}`, 'aviso');
+        } else {
+            SitaHelpers.toast(`✅ ${linhas.length} valor(es) colados`, 'sucesso');
+        }
     },
 
     inicializarPopup() {
@@ -1368,27 +1755,29 @@ window.Etapa2 = {
         if (this.doc.etapa_atual !== 2) { cont.innerHTML = ''; return; }
         cont.innerHTML = `
             <span class="bulk-title">⚡ Ações em Massa</span>
-            <div class="bulk-row"><label>RMA:</label><input type="number" id="e2BulkRma" step="any" min="0" placeholder="0"><button class="btn-filtrar btn-sm" onclick="Etapa2.aplicarBulk('qtd_rma', 'e2BulkRma')">Aplicar</button></div>
+            <div class="bulk-row"><label>QTD:</label><input type="number" id="e2BulkQtd" step="any" min="0" placeholder="0"><button class="btn-filtrar btn-sm" onclick="Etapa2.aplicarBulk('qtd_programada', 'e2BulkQtd')">Aplicar</button></div>
             <div class="bulk-row"><label>Separada:</label><input type="number" id="e2BulkSeparada" step="any" min="0" placeholder="0"><button class="btn-filtrar btn-sm" onclick="Etapa2.aplicarBulk('qtd_separada', 'e2BulkSeparada')">Aplicar</button></div>
             <div class="bulk-row"><label>Aplicada:</label><input type="number" id="e2BulkAplicada" step="any" min="0" placeholder="0"><button class="btn-filtrar btn-sm" onclick="Etapa2.aplicarBulk('qtd_aplicada', 'e2BulkAplicada')">Aplicar</button></div>
             <button class="btn-limpar-filtros btn-sm" onclick="Etapa2.limparQtds()">🧹 Limpar Qtds</button>
         `;
     },
 
-    async aplicarBulk(campo, inputId) {
+    aplicarBulk(campo, inputId) {
         const val = parseFloat(document.getElementById(inputId)?.value);
         if (isNaN(val)) { alert('Digite um valor'); return; }
         if (!confirm(`Aplicar ${val} em todos os itens?`)) return;
-        for (const it of this.itens) await SitaAPI.atualizarItem(this.doc.numero, it.id, { [campo]: val });
-        await this.recarregar();
+        this.itens.forEach(it => { it[campo] = val; });
+        this.renderItens();
+        this.marcarSujo();
     },
 
-    async limparQtds() {
+    limparQtds() {
         if (!confirm('Limpar todas as quantidades?')) return;
-        for (const it of this.itens) {
-            await SitaAPI.atualizarItem(this.doc.numero, it.id, { qtd_rma: 0, qtd_separada: 0, qtd_aplicada: 0, qtd_dma: 0, qtd_pendente: 0 });
-        }
-        await this.recarregar();
+        this.itens.forEach(it => {
+            it.qtd_programada = 0; it.qtd_separada = 0; it.qtd_aplicada = 0; it.qtd_devolvida = 0; it.qtd_falta = 0;
+        });
+        this.renderItens();
+        this.marcarSujo();
     },
 
     async importarExcel(event) {
@@ -1409,16 +1798,13 @@ window.Etapa2 = {
 
             const norm = (v) => String(v || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]/g, '');
             const cabecalho = this.extrairCabecalho(raw, norm);
-            if (cabecalho.obra) {
-                await SitaAPI.atualizar(this.doc.numero, {
-                    obra: cabecalho.obra,
-                    separador: cabecalho.separador || this.doc.separador,
-                    data_separacao: cabecalho.data_separacao || this.doc.data_separacao,
-                    encarregado: cabecalho.encarregado || this.doc.encarregado,
-                    caminhao: cabecalho.caminhao || this.doc.caminhao,
-                    obs_inicial: cabecalho.observacao || this.doc.obs_inicial
-                });
+            if (cabecalho.encarregado) {
+                const sel = document.getElementById('e2Encarregado');
+                const enc = ENCARREGADOS_SITA.find(e => e.nome.toUpperCase().includes(cabecalho.encarregado.toUpperCase()));
+                if (enc) { sel.value = enc.nome; this.aoMudarEncarregado(); }
             }
+            if (cabecalho.caminhao) document.getElementById('e2Caminhao').value = cabecalho.caminhao;
+            this.marcarSujo();
 
             let headerRow = -1, headerNorm = [];
             for (let i = 0; i < Math.min(raw.length, 20); i++) {
@@ -1444,31 +1830,37 @@ window.Etapa2 = {
 
             const parseNum = (v) => { if (v === undefined || v === null || v === '') return 0; if (typeof v === 'number') return v; const n = parseFloat(String(v).replace(',', '.').replace(/[^\d.-]/g, '')); return isNaN(n) ? 0 : n; };
 
-            const itens = [];
+            let adicionados = 0;
+            let duplicados = [];
             for (let i = headerRow + 1; i < raw.length; i++) {
                 const row = raw[i] || [];
                 const codRaw = String(row[col.codigo] || '').trim();
                 if (!codRaw || norm(codRaw) === 'CODIGO') continue;
                 const cod = codRaw.replace(/[^0-9]/g, '');
                 if (!cod) continue;
-                itens.push({
+                if (this.codigoDuplicado(cod, -1)) duplicados.push(cod);
+                this.itens.push({
+                    id: null,
                     codigo: cod,
                     descricao: col.descricao !== -1 ? String(row[col.descricao] || '').trim() : '',
                     unidade: col.unidade !== -1 ? String(row[col.unidade] || '').trim() : '',
                     qtd_programada: col.rma !== -1 ? parseNum(row[col.rma]) : 0,
-                    qtd_rma: col.rma !== -1 ? parseNum(row[col.rma]) : 0,
                     qtd_separada: col.separada !== -1 ? parseNum(row[col.separada]) : 0,
                     qtd_aplicada: col.aplicada !== -1 ? parseNum(row[col.aplicada]) : 0,
                     qtd_aditivo_saida: col.aditivoSaida !== -1 ? parseNum(row[col.aditivoSaida]) : 0,
                     qtd_aditivo_campo: col.aditivoCampo !== -1 ? parseNum(row[col.aditivoCampo]) : 0,
-                    qtd_dma: col.dma !== -1 ? parseNum(row[col.dma]) : 0,
-                    qtd_pendente: col.pendente !== -1 ? parseNum(row[col.pendente]) : 0
+                    qtd_devolvida: col.dma !== -1 ? parseNum(row[col.dma]) : 0,
+                    qtd_falta: col.pendente !== -1 ? parseNum(row[col.pendente]) : 0,
+                    status_item: 'OK'
                 });
+                adicionados++;
             }
-            if (itens.length === 0) { alert('⚠️ Nenhum item válido.'); return; }
-            await SitaAPI.criarItensBulk(this.doc.numero, itens);
-            await this.recarregar();
-            alert(`✅ ${itens.length} itens importados!`);
+            this.renderItens();
+            this.marcarSujo();
+
+            let msg = `✅ ${adicionados} itens importados. Clique em "Salvar Lista" para persistir.`;
+            if (duplicados.length > 0) msg += `\n⚠️ ${duplicados.length} duplicado(s): ${duplicados.join(', ')}`;
+            alert(msg);
         } catch (e) { console.error(e); alert('❌ Erro ao importar: ' + e.message); }
     },
 
@@ -1481,7 +1873,6 @@ window.Etapa2 = {
             for (let c = 0; c < row.length; c++) {
                 const cel = String(row[c] || '').trim();
                 const celN = norm(cel);
-                if (celN.includes('SEPARADOR') && !res.separador) res.separador = this._proxValor(row, c, isRotulo, isCabecalho);
                 if (celN.includes('ENCARREGADO') && !res.encarregado) res.encarregado = this._proxValor(row, c, isRotulo, isCabecalho);
                 if (celN.includes('CAMINHAO') && !res.caminhao) res.caminhao = this._proxValor(row, c, isRotulo, isCabecalho);
                 if (celN.includes('NROBRA') || celN.includes('NUMOBRA')) {
@@ -1503,6 +1894,10 @@ window.Etapa2 = {
 
     async compararOrcamento() {
         if (this.itens.length === 0) { alert('Adicione itens antes de comparar.'); return; }
+        if (this.sujo) {
+            if (!confirm('Você tem alterações não salvas. Deseja salvar antes de comparar?')) return;
+            await this.salvarLista();
+        }
         try {
             const resp = await SitaAPI._fetch(`/api/documentos/${this.doc.numero}/comparar-orcamento`, { method: 'POST' });
             await this.recarregar();
@@ -1550,11 +1945,83 @@ window.Etapa2 = {
             else await SitaAPI.reabrirSubetapa(this.doc.numero, codigo);
             await this.recarregar();
         } catch (e) { alert(e.message); }
+    },
+
+    async salvarLista() {
+        if (!this.sujo) return;
+
+        const codigosVistos = new Set();
+        const duplicados = [];
+        for (const it of this.itens) {
+            const cod = String(it.codigo || '').trim();
+            if (!cod) continue;
+            if (codigosVistos.has(cod)) duplicados.push(cod);
+            codigosVistos.add(cod);
+        }
+        if (duplicados.length > 0) {
+            const continuar = confirm(`⚠️ Existem códigos DUPLICADOS na lista:\n\n${duplicados.join(', ')}\n\nDeseja salvar mesmo assim?`);
+            if (!continuar) return;
+        }
+
+        const cabecalho = {
+            obra: this.doc.obra,
+            data_programacao: this.doc.data_programacao,
+            obs_inicial: document.getElementById('e2Observacao')?.value.trim() || '',
+            encarregado: document.getElementById('e2Encarregado')?.value || '',
+            matricula_encarregado: document.getElementById('e2Matricula')?.value || '',
+            equipe_encarregado: document.getElementById('e2Equipe')?.value || '',
+            caminhao: document.getElementById('e2Caminhao')?.value.trim() || '',
+            data_separacao: document.getElementById('e2DataSeparacao')?.value || ''
+        };
+
+        const itensParaEnviar = this.itens.map(it => ({
+            id: it.id || null,
+            codigo: it.codigo || '',
+            descricao: it.descricao || '',
+            unidade: it.unidade || '',
+            qtd_programada: parseFloat(it.qtd_programada) || 0,
+            qtd_aditivo_saida: parseFloat(it.qtd_aditivo_saida) || 0,
+            qtd_aditivo_campo: parseFloat(it.qtd_aditivo_campo) || 0,
+            qtd_separada: parseFloat(it.qtd_separada) || 0,
+            qtd_falta: parseFloat(it.qtd_falta) || 0,
+            qtd_expedida: parseFloat(it.qtd_expedida) || 0,
+            qtd_aplicada: parseFloat(it.qtd_aplicada) || 0,
+            qtd_devolvida: parseFloat(it.qtd_devolvida) || 0,
+            status_item: it.status_item || 'OK',
+            observacao: it.observacao || ''
+        }));
+
+        try {
+            const btn = document.getElementById('e2BtnSalvar');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
+
+            const resp = await SitaAPI.salvarTudoBulk(this.doc.numero, cabecalho, itensParaEnviar, this.itensRemovidos);
+
+            SitaHelpers.toast(`✅ Lista salva! ${resp.atualizados || 0} atualizados, ${resp.criados || 0} criados, ${resp.removidos || 0} removidos.`, 'sucesso');
+
+            await this.recarregar();
+            this.limparSujo();
+        } catch (e) {
+            alert('❌ Erro ao salvar: ' + e.message);
+        } finally {
+            const btn = document.getElementById('e2BtnSalvar');
+            if (btn) { btn.disabled = !this.sujo; btn.textContent = '💾 Salvar Lista'; }
+        }
+    },
+
+    async recarregar() {
+        const doc = await SitaAPI.buscar(this.doc.numero);
+        this.doc = doc;
+        this.itens = (doc.itens || []).map(x => ({ ...x }));
+        this.itensRemovidos = [];
+        this.renderItens();
+        this.renderSubetapas();
+        this.renderBulkActions();
     }
 };
 
 // ============================================================
-// 13. ETAPA 3 — SEPARADO
+// 14. ETAPA 3 — SEPARADO
 // ============================================================
 window.Etapa3 = {
     doc: null, itens: [], nomeUsuario: '',
@@ -1581,7 +2048,7 @@ window.Etapa3 = {
                 ${docAtual.separador ? `<span class="e3-sep">👷 Separador (matrícula): <strong>${docAtual.separador}</strong></span>` : ''}
             </div>
 
-            <h3 class="etapa-titulo">📦 Etapa 3 — Separado</h3>
+            <h3 class="etapa-titulo">Etapa 3 — Separado</h3>
 
             <div class="e3-rma-box ${rmaBase ? 'ok' : 'pendente'}">
                 <div class="e3-rma-title">${rmaBase ? '✅ RMA Base registrado' : '⚠️ RMA Base obrigatório'}</div>
@@ -1606,7 +2073,7 @@ window.Etapa3 = {
                                 <th style="width:80px">QTD Base</th>
                                 <th style="width:80px">Aditivo Saída</th>
                                 <th style="width:90px">Separada</th>
-                                <th style="width:90px">Pendente</th>
+                                <th style="width:90px">Falta</th>
                                 <th style="width:100px">Status</th>
                             </tr>
                         </thead>
@@ -1643,7 +2110,7 @@ window.Etapa3 = {
                 <td><input type="number" class="input-tabela num" value="${it.qtd_programada || 0}" readonly></td>
                 <td><input type="number" class="input-tabela num" value="${it.qtd_aditivo_saida || 0}" readonly></td>
                 <td><input type="number" class="input-tabela num" value="${it.qtd_separada || 0}" readonly></td>
-                <td><input type="number" class="input-tabela num" value="${it.qtd_pendente || 0}" readonly></td>
+                <td><input type="number" class="input-tabela num" value="${it.qtd_falta || 0}" readonly></td>
                 <td>${SitaHelpers.badgeStatus(it.status_item)}</td>
             </tr>
         `).join('');
@@ -1722,9 +2189,7 @@ window.Etapa3 = {
         this._abrirModalSistemico('RMA', 'BASE', 'Registrar RMA Base (obrigatório)');
     },
 
-    abrirModalAditivo() {
-        this._abrirModalAditivoSaida();
-    },
+    abrirModalAditivo() { this._abrirModalAditivoSaida(); },
 
     _abrirModalSistemico(tipo, subtipo, titulo) {
         const antigo = document.getElementById('e3ModalSistemico');
@@ -1763,9 +2228,7 @@ window.Etapa3 = {
         const obs = document.getElementById('e3SistObs')?.value.trim();
         if (!numero) { alert('Informe o nº do documento'); return; }
         try {
-            await SitaAPI.criarSistemico(this.doc.numero, {
-                tipo, subtipo, numero_documento: numero, data_documento: data || null, observacao: obs
-            });
+            await SitaAPI.criarSistemico(this.doc.numero, { tipo, subtipo, numero_documento: numero, data_documento: data || null, observacao: obs });
             document.getElementById('e3ModalSistemico')?.remove();
             await this.recarregar();
         } catch (e) { alert(e.message); }
@@ -1837,7 +2300,7 @@ window.Etapa3 = {
 };
 
 // ============================================================
-// 14. ETAPA 4 — CONFERÊNCIA
+// 15. ETAPA 4 — CONFERÊNCIA
 // ============================================================
 window.Etapa4 = {
     doc: null, itens: [], nomeUsuario: '',
@@ -1864,7 +2327,7 @@ window.Etapa4 = {
                 ${docAtual.separador ? `<span class="e3-sep">👷 Separador: <strong>${docAtual.separador}</strong></span>` : ''}
             </div>
 
-            <h3 class="etapa-titulo">🔍 Etapa 4 — Conferência</h3>
+            <h3 class="etapa-titulo">Etapa 4 — Conferência</h3>
 
             ${jaConferido ? `
                 <div class="e4-confirmado-box">
@@ -1897,7 +2360,6 @@ window.Etapa4 = {
                                 <th>Descrição</th>
                                 <th style="width:50px">UN</th>
                                 <th style="width:80px">QTD</th>
-                                <th style="width:90px">RMA</th>
                                 <th style="width:90px">Separada</th>
                                 <th style="width:100px">Status</th>
                             </tr>
@@ -1920,7 +2382,7 @@ window.Etapa4 = {
         const tbody = document.getElementById('e4Body');
         const arr = this.itens || [];
         if (arr.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted" style="padding:1.5rem">Nenhum item.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:1.5rem">Nenhum item.</td></tr>`;
             return;
         }
         tbody.innerHTML = arr.map((it, idx) => `
@@ -1930,7 +2392,6 @@ window.Etapa4 = {
                 <td><input type="text" class="input-tabela" value="${(it.descricao || '').replace(/"/g, '&quot;')}" readonly></td>
                 <td><input type="text" class="input-tabela text-center" value="${it.unidade || ''}" readonly></td>
                 <td><input type="number" class="input-tabela num" value="${it.qtd_programada || 0}" readonly></td>
-                <td><input type="number" class="input-tabela num" value="${it.qtd_rma || 0}" readonly></td>
                 <td><input type="number" class="input-tabela num" value="${it.qtd_separada || 0}" readonly></td>
                 <td>${SitaHelpers.badgeStatus(it.status_item)}</td>
             </tr>
@@ -1962,7 +2423,7 @@ window.Etapa4 = {
 };
 
 // ============================================================
-// 15. ETAPA 5 — EXPEDIDO
+// 16. ETAPA 5 — EXPEDIDO
 // ============================================================
 window.Etapa5 = {
     doc: null, itens: [],
@@ -1971,16 +2432,13 @@ window.Etapa5 = {
         this.doc = docAtual;
         this.itens = docAtual.itens || [];
 
-        const perfilUser = (SitaAuth.perfil && SitaAuth.perfil() || '').toUpperCase();
-        const ehBackoffice = perfilUser === 'BACKOFFICE' || perfilUser === 'GESTAO';
-
         container.innerHTML = `
             <div class="e3-tag-wrap">
                 <span class="e3-tag tag-expedido">🚚 EXPEDIDO</span>
                 ${docAtual.separador ? `<span class="e3-sep">👷 Separador: <strong>${docAtual.separador}</strong></span>` : ''}
             </div>
 
-            <h3 class="etapa-titulo">🚚 Etapa 5 — Expedido</h3>
+            <h3 class="etapa-titulo">Etapa 5 — Expedido</h3>
 
             <div class="mgm-cabecalho">
                 <div class="mgm-cab-row">
@@ -2170,7 +2628,7 @@ window.Etapa5 = {
 };
 
 // ============================================================
-// 16. ETAPA 6 — DEVOLVIDO
+// 17. ETAPA 6 — DEVOLVIDO
 // ============================================================
 window.Etapa6 = {
     doc: null, itens: [], tratativas: [],
@@ -2208,7 +2666,7 @@ window.Etapa6 = {
                 ${arquivado ? `<span class="e3-sep text-success text-bold">📁 Documento concluído em ${docAtual.atualizado_em ? new Date(docAtual.atualizado_em).toLocaleDateString('pt-BR') : '—'}</span>` : ''}
             </div>
 
-            <h3 class="etapa-titulo">↩️ Etapa 6 — Devolvido</h3>
+            <h3 class="etapa-titulo">Etapa 6 — Devolvido</h3>
 
             ${arquivado ? `
                 <div class="e4-confirmado-box">
@@ -2306,7 +2764,7 @@ window.Etapa6 = {
                     <td><input type="number" class="input-tabela num" value="${dev}" step="any" min="0" ${(!ehDev || arquivado) ? 'disabled' : ''}
                         onchange="Etapa6.salvarQtd(${it.id}, 'qtd_devolvida', parseFloat(this.value)||0)"></td>
                     <td><span class="e6-nao-dev ${naoDev > 0 ? 'alerta' : 'zero'}">${naoDev.toFixed(2)}</span></td>
-                    <td><input type="number" class="input-tabela num" value="${it.qtd_dma || 0}" readonly></td>
+                    <td><input type="number" class="input-tabela num" value="${it.qtd_devolvida || 0}" readonly></td>
                 </tr>
             `;
         }).join('');
@@ -2446,9 +2904,7 @@ window.Etapa6 = {
         const obs = document.getElementById('e6DmaObs')?.value.trim();
         if (!numero) { alert('Informe o nº do documento'); return; }
         try {
-            await SitaAPI.criarSistemico(this.doc.numero, {
-                tipo: 'DMA', subtipo: null, numero_documento: numero, data_documento: data || null, observacao: obs
-            });
+            await SitaAPI.criarSistemico(this.doc.numero, { tipo: 'DMA', subtipo: null, numero_documento: numero, data_documento: data || null, observacao: obs });
             document.getElementById('e6ModalDMA')?.remove();
             await this.recarregar();
         } catch (e) { alert(e.message); }
@@ -2474,7 +2930,7 @@ window.Etapa6 = {
 };
 
 // ============================================================
-// 17. INICIALIZAÇÃO (auto-detecção via <body data-page="...">)
+// 18. INICIALIZAÇÃO
 // ============================================================
 (function initSita() {
     document.addEventListener('DOMContentLoaded', () => {

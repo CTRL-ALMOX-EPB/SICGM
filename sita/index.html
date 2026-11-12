@@ -18,6 +18,7 @@
         <div class="header-right">
             <a href="#" onclick="abrirSubSita('esteira.html', 'SITA - Esteira'); return false;" class="btn-voltar-home">🚦 Esteira</a>
             <a href="#" onclick="abrirSubSita('despacho.html', 'SITA - Despacho'); return false;" class="btn-voltar-home">📤 Despacho</a>
+            <button class="btn-limpar-filtros" onclick="SitaIndex.abrirImportarLote()">📥 Importar Lote</button>
             <button class="btn-filtrar" onclick="SitaIndex.abrirNovaObra()">➕ Nova Obra</button>
         </div>
     </div>
@@ -60,20 +61,59 @@
         <div class="modal-body">
             <label>Nº da Obra *</label>
             <input type="text" id="novaObraNumero" placeholder="0012501791">
+
             <label>Data Programada *</label>
-            <input type="date" id="novaObraData">
+            <input type="date" id="novaObraData" onchange="SitaIndex.aoMudarData()">
+
+            <div id="novaObraAviso" class="nova-obra-aviso" style="display:none"></div>
+
             <label>Encarregado</label>
-            <input type="text" id="novaObraEncarregado" placeholder="Nome do encarregado">
+            <select id="novaObraEncarregado" onchange="SitaIndex.aoMudarEncarregado()">
+                <option value="">Selecione...</option>
+            </select>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div>
+                    <label>Matrícula</label>
+                    <input type="text" id="novaObraMatricula" readonly>
+                </div>
+                <div>
+                    <label>Equipe</label>
+                    <input type="text" id="novaObraEquipe" readonly>
+                </div>
+            </div>
+
             <label>Observação inicial</label>
             <textarea id="novaObraObs" rows="3" placeholder="Opcional"></textarea>
-            <label class="sita-check">
-                <input type="checkbox" id="novaObraUrgente">
-                <span>Fora da Programação</span>
-            </label>
         </div>
         <div class="modal-foot">
             <button class="btn-limpar-filtros" onclick="SitaIndex.fecharNovaObra()">Cancelar</button>
             <button class="btn-filtrar" onclick="SitaIndex.salvarNovaObra()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Importar Lote -->
+<div id="modalImportarLote" class="modal-overlay">
+    <div class="modal-box" style="max-width:640px">
+        <div class="modal-head">
+            <h3>📥 Importar Lote</h3>
+            <button class="btn-fechar" onclick="SitaIndex.fecharImportarLote()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="lote-hint">
+                Cole as colunas do Excel abaixo (separadas por <strong>TAB</strong>):<br>
+                <code>Nº Obra</code> | <code>Data (dd/mm/aaaa)</code> | <code>Obs (opcional)</code>
+                <br><br>
+                <strong>⚠️ Obras com data em até 10 dias serão marcadas automaticamente como FORA DA PROGRAMAÇÃO.</strong>
+            </div>
+            <textarea id="loteTexto" class="lote-textarea" placeholder="0012501791	03/01/2026	Obs aqui...
+0012501792	15/02/2026"></textarea>
+            <div id="loteResultado"></div>
+        </div>
+        <div class="modal-foot">
+            <button class="btn-limpar-filtros" onclick="SitaIndex.fecharImportarLote()">Fechar</button>
+            <button class="btn-filtrar" onclick="SitaIndex.processarImportarLote()">📥 Processar</button>
         </div>
     </div>
 </div>

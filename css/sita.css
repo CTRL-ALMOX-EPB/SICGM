@@ -283,27 +283,20 @@
 }
 
 .pill {
-    padding: 6px 9px;
+    padding: 8px 12px;
     border-radius: var(--radius-sm);
     color: #fff;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: transform 0.15s;
+    text-align: center;
+    transition: transform 0.15s, box-shadow 0.15s;
     font-family: inherit;
 }
 
 .pill:hover {
     transform: translateY(-1px);
     box-shadow: var(--sombra-md);
-}
-
-.pill .pill-dot {
-    font-size: 10px;
-    opacity: 0.85;
 }
 
 .pill.pill-arquivado {
@@ -505,6 +498,8 @@
     cursor: pointer;
     border-left: 3px solid var(--cor-borda-forte);
     transition: all 0.15s;
+        border-left-width: 4px;
+    border-left-style: solid;
 }
 
 .esteira-card:hover {
@@ -1063,10 +1058,10 @@
 .step {
     flex: 1;
     min-width: 100px;
-    padding: 8px;
+    padding: 12px 8px;
     border-radius: var(--radius-md);
     text-align: center;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--texto-suave);
     transition: all 0.15s;
@@ -1076,21 +1071,12 @@
 .step.ativo {
     color: #fff;
     font-weight: 700;
-}
-
-.step.ativo .step-icon {
-    font-size: 20px;
+    font-size: 12px;
 }
 
 .step.completo {
     color: var(--cor-sucesso);
     background: var(--cor-sucesso-claro);
-}
-
-.step-icon {
-    font-size: 16px;
-    display: block;
-    margin-bottom: 4px;
 }
 
 .doc-tabs {
@@ -2250,5 +2236,533 @@
     
     .e3-footer button {
         width: 100%;
+    }
+}
+
+/* ============================================
+   MODAL IMPORTAR LOTE
+   ============================================ */
+.lote-textarea {
+    width: 100%;
+    min-height: 160px;
+    padding: 10px 12px;
+    border: 2px solid var(--cor-borda);
+    border-radius: var(--radius-md);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    resize: vertical;
+    box-sizing: border-box;
+    line-height: 1.5;
+}
+
+.lote-textarea:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(61, 139, 253, 0.12);
+}
+
+.lote-hint {
+    font-size: 12px;
+    color: var(--texto-secundario);
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.lote-hint code {
+    background: var(--cor-fundo);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--texto-principal);
+}
+
+.lote-resumo {
+    background: var(--cor-sucesso-claro);
+    border: 1px solid #6ee7b7;
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #065f46;
+}
+
+.lote-erros {
+    margin-top: 8px;
+    background: var(--cor-erro-claro);
+    border: 1px solid #fca5a5;
+    border-radius: var(--radius-md);
+    padding: 8px 12px;
+    color: #991b1b;
+}
+
+.lote-erros ul {
+    margin: 4px 0 0 20px;
+    padding: 0;
+    font-size: 12px;
+}
+
+/* Aviso fora da programação no modal de nova obra */
+.nova-obra-aviso {
+    background: var(--cor-erro-claro);
+    border: 1px solid #fca5a5;
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #991b1b;
+    font-weight: 600;
+    margin-top: 8px;
+    line-height: 1.5;
+}
+
+/* ============================================
+   SELECTS dentro de modais e formulários
+   ============================================ */
+.modal-body select,
+.sita-modal-body select,
+.mgm-cab-col select,
+.etapa-form select,
+select.input-tabela,
+select.form-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--cor-borda);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--texto-principal);
+    background-color: #fff;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%236b7a8f%22%20d%3D%22M6%208L2%204h8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    padding-right: 34px;
+}
+
+.modal-body select:hover,
+.sita-modal-body select:hover,
+.mgm-cab-col select:hover,
+.etapa-form select:hover {
+    border-color: var(--cor-borda-forte);
+}
+
+.modal-body select:focus,
+.sita-modal-body select:focus,
+.mgm-cab-col select:focus,
+.etapa-form select:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(61, 139, 253, 0.12);
+}
+
+.modal-body select:disabled,
+.sita-modal-body select:disabled,
+.mgm-cab-col select:disabled,
+.etapa-form select:disabled {
+    background-color: var(--cor-fundo);
+    color: var(--texto-secundario);
+    cursor: not-allowed;
+    opacity: 0.75;
+}
+
+/* ============================================
+   Labels e inputs dentro do modal (consistência)
+   ============================================ */
+.modal-body label,
+.sita-modal-body label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--texto-secundario);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 4px;
+}
+
+.modal-body input,
+.modal-body textarea,
+.sita-modal-body input,
+.sita-modal-body textarea {
+    margin-bottom: 12px;
+}
+
+/* Inputs readonly dentro do modal (matrícula, equipe) */
+.modal-body input[readonly],
+.sita-modal-body input[readonly] {
+    background-color: var(--cor-fundo);
+    color: var(--texto-secundario);
+    cursor: default;
+}
+
+/* Grid de 2 colunas (matrícula + equipe) dentro do modal */
+.modal-body .modal-grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.modal-body .modal-grid-2col > div {
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-body .modal-grid-2col input {
+    margin-bottom: 0;
+}
+
+/* Aviso de D-10 (fora da programação) */
+.nova-obra-aviso {
+    background: var(--cor-erro-claro);
+    border: 1px solid #fca5a5;
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #991b1b;
+    font-weight: 600;
+    margin: -4px 0 12px 0;
+    line-height: 1.5;
+}
+
+/* ============================================
+   Modal Importar Lote
+   ============================================ */
+.lote-textarea {
+    width: 100%;
+    min-height: 160px;
+    padding: 10px 12px;
+    border: 2px solid var(--cor-borda);
+    border-radius: var(--radius-md);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    resize: vertical;
+    box-sizing: border-box;
+    line-height: 1.5;
+    color: var(--texto-principal);
+    background: #fff;
+}
+
+.lote-textarea:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(61, 139, 253, 0.12);
+}
+
+.lote-hint {
+    font-size: 12px;
+    color: var(--texto-secundario);
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+.lote-hint code {
+    background: var(--cor-fundo);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--texto-principal);
+    border: 1px solid var(--cor-borda);
+}
+
+.lote-resumo {
+    background: var(--cor-sucesso-claro);
+    border: 1px solid #6ee7b7;
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #065f46;
+    margin-top: 12px;
+    line-height: 1.6;
+}
+
+.lote-resumo > div + div {
+    margin-top: 4px;
+}
+
+.lote-erros {
+    margin-top: 8px;
+    background: var(--cor-erro-claro);
+    border: 1px solid #fca5a5;
+    border-radius: var(--radius-md);
+    padding: 8px 12px;
+    color: #991b1b;
+}
+
+.lote-erros ul {
+    margin: 4px 0 0 20px;
+    padding: 0;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* ============================================
+   MODAL — fix de alinhamento geral
+   ============================================ */
+.modal-box {
+    display: flex;
+    flex-direction: column;
+    max-height: 92vh;
+}
+
+.modal-body {
+    overflow-y: auto;
+    max-height: calc(92vh - 140px);
+}
+
+.modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: var(--cor-borda-forte);
+    border-radius: 3px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--texto-suave);
+}
+
+/* ============================================
+   ETAPA 2 — barra de salvar + badge de alterações
+   ============================================ */
+.e2-sujo-badge {
+    background: var(--cor-aviso-claro);
+    color: #92400e;
+    font-size: .72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 99px;
+    margin-left: 8px;
+    white-space: nowrap;
+}
+
+.e2-salvar-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
+    background: #fff;
+    border-top: 2px solid var(--cor-primaria);
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    box-shadow: 0 -4px 12px rgba(0,0,0,.08);
+}
+
+.e2-salvar-info {
+    font-size: .85rem;
+    color: var(--cor-erro);
+    font-weight: 600;
+}
+
+.e2-salvar-bar .btn-success {
+    padding: 10px 20px;
+    font-size: .9rem;
+    min-width: 180px;
+    justify-content: center;
+}
+
+.e2-salvar-bar .btn-success:disabled {
+    background: #cbd5e0 !important;
+    border-color: #cbd5e0 !important;
+    color: #94a3b8 !important;
+    cursor: not-allowed;
+    opacity: 1;
+}
+
+/* Select de encarregado no cabeçalho MGM */
+.mgm-cab-col select {
+    padding: 8px 12px;
+    border: 2px solid var(--cor-borda);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+    background: #fff;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%236b7a8f%22%20d%3D%22M6%208L2%204h8z%22/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
+    padding-right: 34px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.mgm-cab-col select:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(61, 139, 253, 0.12);
+}
+
+.mgm-cab-col input[readonly] {
+    background: var(--cor-fundo);
+    color: var(--texto-secundario);
+    cursor: default;
+}
+
+/* ============================================
+   ETAPA 2 — Tabela de itens com bordas e colunas ajustadas
+   ============================================ */
+.e2-tabela-itens {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.e2-tabela-itens thead th {
+    padding: 12px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--texto-secundario);
+    background: #f8fafc;
+    border: 1px solid var(--cor-borda);
+    border-right: 1px solid #dde3ec;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.e2-tabela-itens thead th:last-child {
+    border-right: none;
+}
+
+.e2-tabela-itens tbody td {
+    padding: 4px 4px;
+    border: 1px solid var(--cor-borda);
+    border-right: 1px solid #dde3ec;
+    vertical-align: middle;
+    background: #fff;
+}
+
+.e2-tabela-itens tbody td:last-child {
+    border-right: none;
+}
+
+.e2-tabela-itens tbody tr:hover td {
+    background: #f9fafb;
+}
+
+/* Inputs dentro da tabela com borda visível */
+.e2-tabela-itens .input-tabela {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    font-size: 12px;
+    font-family: inherit;
+    box-sizing: border-box;
+    background: #fff;
+    transition: all 0.15s;
+}
+
+.e2-tabela-itens .input-tabela:hover {
+    border-color: #9ca3af;
+}
+
+.e2-tabela-itens .input-tabela:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(61, 139, 253, 0.12);
+}
+
+.e2-tabela-itens .input-tabela.num {
+    text-align: right;
+}
+
+.e2-tabela-itens .input-tabela[readonly] {
+    background: #f9fafb;
+    color: #4b5563;
+    border-color: #e5e7eb;
+    cursor: default;
+}
+
+/* Descrição: campo largo, texto quebrando */
+.e2-tabela-itens .input-descricao {
+    min-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+/* Input de código: monoespaçado para melhor legibilidade */
+.e2-tabela-itens td:nth-child(2) .input-tabela {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* Input UN: centralizado e curto */
+.e2-tabela-itens .input-unidade {
+    text-align: center;
+    font-weight: 700;
+    color: var(--texto-secundario);
+}
+
+/* Inputs com erro (código inválido ou duplicado) */
+.e2-tabela-itens .input-tabela.input-erro {
+    border-color: #ef4444 !important;
+    background: #fef2f2 !important;
+    color: #991b1b;
+}
+
+.e2-tabela-itens .input-tabela.input-ok {
+    border-color: #10b981 !important;
+    background: #f0fdf4 !important;
+}
+
+/* Botão remover */
+.e2-tabela-itens .btn-remove-item {
+    background: #fff;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 6px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s;
+    width: 100%;
+}
+
+.e2-tabela-itens .btn-remove-item:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+    transform: scale(1.05);
+}
+
+/* Primeira coluna (#) mais discreta */
+.e2-tabela-itens tbody td:first-child {
+    background: #f9fafb;
+    font-weight: 600;
+    color: #6b7280;
+    text-align: center;
+}
+
+/* Responsividade: ajustar larguras em telas menores */
+@media (max-width: 1200px) {
+    .e2-tabela-itens {
+        font-size: 11px;
+    }
+    
+    .e2-tabela-itens thead th {
+        padding: 8px 4px;
+        font-size: 10px;
+    }
+    
+    .e2-tabela-itens .input-tabela {
+        padding: 4px 6px;
+        font-size: 11px;
     }
 }
