@@ -1,5 +1,7 @@
 // ============================================
-// ADMIN.JS - PAINEL DE ADMINISTRAÇÃO
+// ADMIN.JS - v5
+// 🔧 CORREÇÃO: aguarda authService.waitForInit() em carregarDados
+// 🔧 CORREÇÃO: mensagens de erro mais claras
 // ============================================
 
 let dadosCache = null;
@@ -36,6 +38,11 @@ function verificarAcessoAdmin() {
 // ============================================
 async function carregarDados() {
     if (!verificarAcessoAdmin()) return;
+    
+    // 🔧 CORREÇÃO: aguarda authService estar pronto
+    if (typeof authService !== 'undefined' && authService.waitForInit) {
+        await authService.waitForInit();
+    }
     
     const loading = document.getElementById('loading');
     const conteudo = document.getElementById('conteudo');

@@ -1,10 +1,12 @@
 // ============================================
-// AUTH-SERVICE.JS - SESSÃO DURA VIA KV
-// ============================================
+// AUTH-SERVICE.JS - v5
 // - sessionStorage como cache local (segurança)
 // - KV do Worker como fonte da verdade da sessão
 // - Firebase (LOCAL) como "quem sou eu" após fechar aba
 // - Token só morre em logout explícito
+// - 🔧 CORREÇÃO: restoreSessionFromKV aceita fallback de e-mail em localStorage
+// - 🔧 CORREÇÃO: getUserData não retorna null se houver erro de parse
+// - 🔧 CORREÇÃO: logout limpa KV mesmo sem user local
 // ============================================
 
 class AuthService {
@@ -21,6 +23,7 @@ class AuthService {
 
         this.KEY_TOKEN = 'auth_token';
         this.KEY_EXPIRY = 'session_expiry';
+        this.KEY_LAST_EMAIL = 'auth_last_email';
 
         this._logoutInProgress = false;
         this._initPromise = this._init();
@@ -32,7 +35,7 @@ class AuthService {
     async _init() {
         const start = Date.now();
         while (!window.__FIREBASE_INITIALIZED__) {
-            if (Date.now() - start > 5000) {
+            if (Date.now() - start > 8000) {
                 console.error('❌ Timeout esperando Firebase.');
                 return false;
             }
@@ -72,6 +75,9 @@ class AuthService {
         try {
             sessionStorage.setItem(this.KEY_TOKEN, btoa(JSON.stringify(payload)));
             sessionStorage.setItem(this.KEY_EXPIRY, String(payload.exp));
+            if (payload.email) {
+                try { localStorage.setItem(this.KEY_LAST_EMAIL, payload.email); } catch (_) {}
+            }
             return true;
         } catch (e) {
             console.error('❌ Erro ao salvar sessão local:', e);
@@ -83,15 +89,19 @@ class AuthService {
         try {
             const t = sessionStorage.getItem(this.KEY_TOKEN);
             if (!t) return null;
-            return JSON.parse(atob(t));
-        } catch {
+            const parsed = JSON.parse(atob(t));
+            if (!parsed || typeof parsed !== 'object') return null;
+            return parsed;
+        } catch (e) {
+            console.warn('⚠️ Token local corrompido — limpando.');
+            this._clearLocal();
             return null;
         }
     }
 
     _clearLocal() {
-        sessionStorage.removeItem(this.KEY_TOKEN);
-        sessionStorage.removeItem(this.KEY_EXPIRY);
+        try { sessionStorage.removeItem(this.KEY_TOKEN); } catch (_) {}
+        try { sessionStorage.removeItem(this.KEY_EXPIRY); } catch (_) {}
     }
 
     // ============================================
@@ -148,13 +158,25 @@ class AuthService {
     // RESTAURAR A PARTIR DO KV
     // ============================================
     async restoreSessionFromKV() {
-        if (!this.auth || !this.auth.currentUser) {
-            console.log('ℹ️ Sem user do Firebase — impossível restaurar sem relogin.');
-            return false;
+        // Determina o e-mail: prioriza Firebase, depois localStorage
+        let email = null;
+
+        if (this.auth && this.auth.currentUser && this.auth.currentUser.email) {
+            email = this.auth.currentUser.email;
+        } else {
+            try {
+                const lastEmail = localStorage.getItem(this.KEY_LAST_EMAIL);
+                if (lastEmail) {
+                    email = lastEmail;
+                    console.log(`🔍 Usando e-mail em cache local: ${email}`);
+                }
+            } catch (_) {}
         }
 
-        const email = this.auth.currentUser.email;
-        if (!email) return false;
+        if (!email) {
+            console.log('ℹ️ Sem e-mail (Firebase nem cache local) — impossível restaurar.');
+            return false;
+        }
 
         try {
             console.log(`🔄 Consultando KV para ${email}...`);
@@ -172,8 +194,10 @@ class AuthService {
             const data = await r.json();
 
             if (!data.active || !data.sessao) {
-                console.warn('⚠️ KV não reconhece sessão ativa — encerrando Firebase.');
-                try { await this.auth.signOut(); } catch {}
+                console.warn('⚠️ KV não reconhece sessão ativa.');
+                if (this.auth && this.auth.currentUser) {
+                    try { await this.auth.signOut(); } catch (_) {}
+                }
                 return false;
             }
 
@@ -224,8 +248,23 @@ class AuthService {
     }
 
     getUserData() {
-        if (!this.isLoggedIn()) return null;
-        return this._readLocal();
+        try {
+            if (!this.isLoggedIn()) return null;
+            const p = this._readLocal();
+            if (!p) return null;
+
+            // Garante campos mínimos (não retorna objeto quebrado)
+            return {
+                email: p.email || '',
+                nome: p.nome || '',
+                matricula: p.matricula || '',
+                perfil: p.perfil || 'OPERACIONAL',
+                exp: p.exp || 0
+            };
+        } catch (e) {
+            console.error('❌ getUserData:', e);
+            return null;
+        }
     }
 
     clearSession() {
@@ -239,13 +278,22 @@ class AuthService {
         this._logoutInProgress = true;
         try {
             const p = this._readLocal();
+            let emailToRemove = null;
 
             if (p && p.email) {
+                emailToRemove = p.email;
+            } else {
+                try {
+                    emailToRemove = localStorage.getItem(this.KEY_LAST_EMAIL);
+                } catch (_) {}
+            }
+
+            if (emailToRemove) {
                 try {
                     await fetch(`${this.WORKER_URL}/sessions/remove`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: p.email })
+                        body: JSON.stringify({ email: emailToRemove })
                     });
                     console.log('✅ Sessão removida do KV.');
                 } catch (e) {
@@ -255,10 +303,14 @@ class AuthService {
 
             this._clearLocal();
 
-            try { await this.auth.signOut(); } catch {}
+            try {
+                try { localStorage.removeItem(this.KEY_LAST_EMAIL); } catch (_) {}
+                if (this.auth) await this.auth.signOut();
+            } catch (_) {}
 
             return true;
         } catch (error) {
+            console.error('❌ logout:', error);
             this._clearLocal();
             return false;
         } finally {

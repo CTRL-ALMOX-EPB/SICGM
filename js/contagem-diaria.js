@@ -2,6 +2,9 @@
 // CÓDIGO ESPECÍFICO PARA PÁGINA DE CONTAGEM DIÁRIA
 // CORRIGIDO: AGORA DIFERENCIA NULL DE 0
 // E SEPARA BOBINAS EXTERNAS (Diária) DE BOBINAS INTERNAS (Semanal)
+// + GUARDS DEFENSIVOS: nunca quebra se elementos do form não existirem
+// + INICIALIZAÇÃO EM DOMContentLoaded: garante #nome/#matricula/#data no DOM
+// + CORREÇÃO: buscarQuantidadeAnterior usa getDataBrasil() sob demanda
 // ============================================
 
 // Verificar se estamos na página de contagem diária
@@ -269,14 +272,6 @@ if (document.getElementById('contagemForm')) {
             return null;
         }
     }
-    
-    // ============================================
-    // PREENCHER DATA AUTOMATICAMENTE
-    // ============================================
-    
-    const dataInput = document.getElementById('data');
-    const dataFormatada = getDataBrasil();
-    if (dataInput) dataInput.value = dataFormatada;
     
     // ============================================
     // FUNÇÕES DE DEPÓSITO
@@ -698,7 +693,7 @@ if (document.getElementById('contagemForm')) {
             }
         }
         
-        loading.style.display = 'none';
+        if (loading) loading.style.display = 'none';
     }
     
     // ============================================
@@ -889,7 +884,6 @@ if (document.getElementById('contagemForm')) {
     // ============================================
     
     function abrirModalBaixa(tipo, index, tipoMaterial) {
-        // Buscar o item baseado no tipo
         let seletor = '';
         if (tipoMaterial === 'trafo') {
             seletor = `.trafo-item[data-index="${index}"]`;
@@ -903,7 +897,6 @@ if (document.getElementById('contagemForm')) {
         
         const item = document.querySelector(seletor);
         
-        // Buscar o ID de forma correta
         let idRegistro = null;
         if (item) {
             idRegistro = item.dataset.id || null;
@@ -919,7 +912,6 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
-        // Buscar os inputs baseado no tipo
         let codigoInput, descricaoInput, tombamentoInput;
         const prefixo = tipoMaterial === 'bobina_externa' ? 'bobina-externa' : 
                         tipoMaterial === 'bobina_interna' ? 'bobina-interna' : 
@@ -952,34 +944,43 @@ if (document.getElementById('contagemForm')) {
         const modalCancelar = document.getElementById('modal-cancelar');
         const modalError = document.getElementById('modal-error');
         
-        if (tipoMaterial === 'trafo') {
-            modalIcon.textContent = '⚡';
-            modalTitle.textContent = 'Dar Baixa no Trafo';
-        } else if (tipoMaterial === 'bobina_externa' || tipoMaterial === 'bobina_interna') {
-            modalIcon.textContent = '🧵';
-            modalTitle.textContent = 'Dar Baixa na Bobina';
-        } else {
-            modalIcon.textContent = '📦';
-            modalTitle.textContent = 'Dar Baixa no Item';
+        if (!modal) {
+            mostrarToast('❌ Modal de baixa não encontrado no HTML.', 'erro');
+            return;
         }
         
-        modalCodigo.textContent = codigo || '-';
-        modalDescricao.textContent = descricao || '-';
+        if (tipoMaterial === 'trafo') {
+            if (modalIcon) modalIcon.textContent = '⚡';
+            if (modalTitle) modalTitle.textContent = 'Dar Baixa no Trafo';
+        } else if (tipoMaterial === 'bobina_externa' || tipoMaterial === 'bobina_interna') {
+            if (modalIcon) modalIcon.textContent = '🧵';
+            if (modalTitle) modalTitle.textContent = 'Dar Baixa na Bobina';
+        } else {
+            if (modalIcon) modalIcon.textContent = '📦';
+            if (modalTitle) modalTitle.textContent = 'Dar Baixa no Item';
+        }
+        
+        if (modalCodigo) modalCodigo.textContent = codigo || '-';
+        if (modalDescricao) modalDescricao.textContent = descricao || '-';
         
         if (tombamento) {
-            modalTombamento.textContent = tombamento;
-            modalTombamentoRow.style.display = 'block';
+            if (modalTombamento) modalTombamento.textContent = tombamento;
+            if (modalTombamentoRow) modalTombamentoRow.style.display = 'block';
         } else {
-            modalTombamentoRow.style.display = 'none';
+            if (modalTombamentoRow) modalTombamentoRow.style.display = 'none';
         }
         
-        modalInputNObra.value = '';
-        modalInputObservacao.value = '';
-        modalInputNObra.classList.remove('input-error');
-        modalError.classList.remove('show');
-        modalError.style.display = 'none';
-        modalConfirmar.disabled = false;
-        modalConfirmar.textContent = '✅ Confirmar Baixa';
+        if (modalInputNObra) modalInputNObra.value = '';
+        if (modalInputObservacao) modalInputObservacao.value = '';
+        if (modalInputNObra) modalInputNObra.classList.remove('input-error');
+        if (modalError) {
+            modalError.classList.remove('show');
+            modalError.style.display = 'none';
+        }
+        if (modalConfirmar) {
+            modalConfirmar.disabled = false;
+            modalConfirmar.textContent = '✅ Confirmar Baixa';
+        }
         
         baixaPendente = {
             tipo: tipo,
@@ -996,36 +997,44 @@ if (document.getElementById('contagemForm')) {
         document.body.style.overflow = 'hidden';
         
         setTimeout(() => {
-            modalInputNObra.focus();
+            if (modalInputNObra) modalInputNObra.focus();
         }, 300);
         
-        modalConfirmar.onclick = function() {
-            confirmarBaixa();
-        };
-        
-        modalCancelar.onclick = function() {
-            fecharModalBaixa();
-        };
-        
-        modalInputNObra.onkeydown = function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                modalInputObservacao.focus();
-            }
-            if (e.key === 'Escape') {
-                fecharModalBaixa();
-            }
-        };
-        
-        modalInputObservacao.onkeydown = function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
+        if (modalConfirmar) {
+            modalConfirmar.onclick = function() {
                 confirmarBaixa();
-            }
-            if (e.key === 'Escape') {
+            };
+        }
+        
+        if (modalCancelar) {
+            modalCancelar.onclick = function() {
                 fecharModalBaixa();
-            }
-        };
+            };
+        }
+        
+        if (modalInputNObra) {
+            modalInputNObra.onkeydown = function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (modalInputObservacao) modalInputObservacao.focus();
+                }
+                if (e.key === 'Escape') {
+                    fecharModalBaixa();
+                }
+            };
+        }
+        
+        if (modalInputObservacao) {
+            modalInputObservacao.onkeydown = function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmarBaixa();
+                }
+                if (e.key === 'Escape') {
+                    fecharModalBaixa();
+                }
+            };
+        }
         
         modal.onclick = function(e) {
             if (e.target === modal) {
@@ -1044,29 +1053,40 @@ if (document.getElementById('contagemForm')) {
         const modalError = document.getElementById('modal-error');
         const modalConfirmar = document.getElementById('modal-confirmar');
         
+        if (!modalInputNObra) {
+            mostrarToast('❌ Campo Nº da Obra não encontrado.', 'erro');
+            return;
+        }
+        
         const nObra = modalInputNObra.value.trim();
-        const observacao = modalInputObservacao.value.trim();
+        const observacao = modalInputObservacao ? modalInputObservacao.value.trim() : '';
         
         if (!nObra) {
             modalInputNObra.classList.add('input-error');
-            modalError.textContent = '⚠️ O Nº da Obra é obrigatório para dar baixa.';
-            modalError.classList.add('show');
-            modalError.style.display = 'block';
+            if (modalError) {
+                modalError.textContent = '⚠️ O Nº da Obra é obrigatório para dar baixa.';
+                modalError.classList.add('show');
+                modalError.style.display = 'block';
+            }
             modalInputNObra.focus();
             return;
         }
         
         if (nObra.length < 2) {
             modalInputNObra.classList.add('input-error');
-            modalError.textContent = '⚠️ Digite um Nº de obra válido (mínimo 2 caracteres).';
-            modalError.classList.add('show');
-            modalError.style.display = 'block';
+            if (modalError) {
+                modalError.textContent = '⚠️ Digite um Nº de obra válido (mínimo 2 caracteres).';
+                modalError.classList.add('show');
+                modalError.style.display = 'block';
+            }
             modalInputNObra.focus();
             return;
         }
         
-        modalConfirmar.disabled = true;
-        modalConfirmar.textContent = '⏳ Processando...';
+        if (modalConfirmar) {
+            modalConfirmar.disabled = true;
+            modalConfirmar.textContent = '⏳ Processando...';
+        }
         
         if (!baixaPendente) {
             mostrarToast('❌ Erro: dados pendentes não encontrados.', 'erro');
@@ -1084,7 +1104,7 @@ if (document.getElementById('contagemForm')) {
     
     function fecharModalBaixa() {
         const modal = document.getElementById('modal-baixa');
-        modal.classList.remove('active');
+        if (modal) modal.classList.remove('active');
         document.body.style.overflow = '';
         
         const modalInputNObra = document.getElementById('modal-n-obra');
@@ -1092,13 +1112,19 @@ if (document.getElementById('contagemForm')) {
         const modalError = document.getElementById('modal-error');
         const modalConfirmar = document.getElementById('modal-confirmar');
         
-        modalInputNObra.value = '';
-        modalInputObservacao.value = '';
-        modalInputNObra.classList.remove('input-error');
-        modalError.classList.remove('show');
-        modalError.style.display = 'none';
-        modalConfirmar.disabled = false;
-        modalConfirmar.textContent = '✅ Confirmar Baixa';
+        if (modalInputNObra) {
+            modalInputNObra.value = '';
+            modalInputNObra.classList.remove('input-error');
+        }
+        if (modalInputObservacao) modalInputObservacao.value = '';
+        if (modalError) {
+            modalError.classList.remove('show');
+            modalError.style.display = 'none';
+        }
+        if (modalConfirmar) {
+            modalConfirmar.disabled = false;
+            modalConfirmar.textContent = '✅ Confirmar Baixa';
+        }
         
         baixaPendente = null;
     }
@@ -1273,7 +1299,6 @@ if (document.getElementById('contagemForm')) {
         try {
             console.log(`🔴 Executando baixa: ID ${id}, Obra: ${nObra}, Tipo: ${tipoMaterial}`);
     
-            // Buscar o item baseado no tipoMaterial
             let seletor = '';
             if (tipoMaterial === 'trafo') {
                 seletor = `.trafo-item[data-index="${index}"]`;
@@ -1289,7 +1314,6 @@ if (document.getElementById('contagemForm')) {
             const codigo = item ? item.dataset.codigo : '';
             const deposito = item ? item.dataset.deposito : depositoAtual;
             
-            // Buscar inputs baseado no tipo
             const prefixo = tipoMaterial === 'bobina_externa' ? 'bobina-externa' : 
                             tipoMaterial === 'bobina_interna' ? 'bobina-interna' : 
                             tipo;
@@ -1311,7 +1335,8 @@ if (document.getElementById('contagemForm')) {
                 und = document.getElementById(`${prefixo}-und-${index}`)?.value || 'UN';
             }
             
-            const nome = document.getElementById('nome')?.value || '';
+            const nomeEl = document.getElementById('nome');
+            const nome = nomeEl ? nomeEl.value : (window.dadosSessao?.nome || '');
     
             const obsFinal = `Baixa para obra: ${nObra}` +
                 (baixaPendente && baixaPendente.observacao ? ` - ${baixaPendente.observacao}` : '');
@@ -1477,8 +1502,11 @@ if (document.getElementById('contagemForm')) {
         } catch (error) {
             console.error('❌ Erro ao executar baixa:', error);
             mostrarToast(`❌ Erro de conexão ao dar baixa: ${error.message}`, 'erro');
-            document.getElementById('modal-confirmar').disabled = false;
-            document.getElementById('modal-confirmar').textContent = '✅ Confirmar Baixa';
+            const modalConfirmar = document.getElementById('modal-confirmar');
+            if (modalConfirmar) {
+                modalConfirmar.disabled = false;
+                modalConfirmar.textContent = '✅ Confirmar Baixa';
+            }
         }
     }
     
@@ -1511,7 +1539,12 @@ if (document.getElementById('contagemForm')) {
             const url = `../${homePage}`;
             
             console.log(`🔀 Navegando para: ${url}`);
-            window.location.href = url;
+            
+            if (typeof window.navegarNaAbaAtual === 'function') {
+                window.navegarNaAbaAtual(url, 'Início');
+            } else {
+                window.location.href = url;
+            }
             
         } catch (error) {
             console.error('❌ Erro ao redirecionar:', error);
@@ -1520,7 +1553,7 @@ if (document.getElementById('contagemForm')) {
     }
 
     // ============================================
-    // FUNÇÃO PARA CARREGAR DADOS DO USUÁRIO
+    // FUNÇÃO PARA CARREGAR DADOS DO USUÁRIO (com guards)
     // ============================================
 
     function carregarDadosUsuarioSessao() {
@@ -1541,8 +1574,11 @@ if (document.getElementById('contagemForm')) {
                 return carregarColaboradoresArquivo();
             }
 
-            document.getElementById('nome').value = user.nome || '';
-            document.getElementById('matricula').value = user.matricula || '';
+            // guards: só preenche se o campo existir
+            const elNome = document.getElementById('nome');
+            const elMatricula = document.getElementById('matricula');
+            if (elNome) elNome.value = user.nome || '';
+            if (elMatricula) elMatricula.value = user.matricula || '';
             
             console.log('✅ Dados do usuário carregados do authService:', user.nome);
             return true;
@@ -1554,7 +1590,7 @@ if (document.getElementById('contagemForm')) {
     }
 
     // ============================================
-    // FUNÇÃO DE FALLBACK PARA COLABORADORES
+    // FUNÇÃO DE FALLBACK PARA COLABORADORES (com guards)
     // ============================================
 
     async function carregarColaboradoresArquivo() {
@@ -1598,21 +1634,27 @@ if (document.getElementById('contagemForm')) {
             }
             
             if (usuarioEncontrado) {
-                document.getElementById('nome').value = usuarioEncontrado.nome;
-                document.getElementById('matricula').value = usuarioEncontrado.matricula;
+                const elNome = document.getElementById('nome');
+                const elMatricula = document.getElementById('matricula');
+                if (elNome) elNome.value = usuarioEncontrado.nome;
+                if (elMatricula) elMatricula.value = usuarioEncontrado.matricula;
                 console.log('✅ Dados do usuário carregados do arquivo (fallback):', usuarioEncontrado.nome);
                 return true;
             } else {
-                document.getElementById('nome').removeAttribute('readonly');
-                document.getElementById('matricula').removeAttribute('readonly');
+                const elNome = document.getElementById('nome');
+                const elMatricula = document.getElementById('matricula');
+                if (elNome) elNome.removeAttribute('readonly');
+                if (elMatricula) elMatricula.removeAttribute('readonly');
                 console.warn('⚠️ Nenhum colaborador encontrado. Campos liberados para edição.');
                 return false;
             }
             
         } catch (error) {
             console.error('❌ Erro ao carregar colaboradores:', error);
-            document.getElementById('nome').removeAttribute('readonly');
-            document.getElementById('matricula').removeAttribute('readonly');
+            const elNome = document.getElementById('nome');
+            const elMatricula = document.getElementById('matricula');
+            if (elNome) elNome.removeAttribute('readonly');
+            if (elMatricula) elMatricula.removeAttribute('readonly');
             return false;
         }
     }
@@ -1705,8 +1747,8 @@ if (document.getElementById('contagemForm')) {
             
         } catch (error) {
             console.error('Erro ao carregar materiais:', error);
-            document.getElementById('loading-materiais').innerHTML = 
-                '❌ Erro ao carregar materiais. Verifique o arquivo materiais.txt';
+            const el = document.getElementById('loading-materiais');
+            if (el) el.innerHTML = '❌ Erro ao carregar materiais. Verifique o arquivo materiais.txt';
         }
     }
     
@@ -2038,7 +2080,7 @@ if (document.getElementById('contagemForm')) {
             }
         }
         
-        loading.style.display = 'none';
+        if (loading) loading.style.display = 'none';
         ativarTipoContagem('diaria');
     }
     
@@ -3962,6 +4004,7 @@ if (document.getElementById('contagemForm')) {
         }
     }
     
+    // 🔧 CORREÇÃO: usa os IDs corretos do DOM (qtd-trafos-${index}, n-obra-trafos-${index})
     function salvarDadosTrafosAtuais() {
         const trafoItems = document.querySelectorAll('.trafo-item');
         trafoItems.forEach((item) => {
@@ -4208,6 +4251,8 @@ if (document.getElementById('contagemForm')) {
     // ============================================
     // BUSCAR QUANTIDADE ANTERIOR
     // ============================================
+    // 🔧 CORREÇÃO PRINCIPAL: usa getDataBrasil() sob demanda em vez de dataFormatada
+    //    (elimina o ReferenceError: dataFormatada is not defined)
     
     async function buscarQuantidadeAnterior(codigo, idUnico, tombamento, tipoMaterial) {
         const inputAnterior = document.getElementById(`qtd-anterior-${idUnico}`);
@@ -4237,9 +4282,13 @@ if (document.getElementById('contagemForm')) {
         }
         
         try {
+            // 🔧 CORREÇÃO: getDataBrasil() sob demanda (a variável dataFormatada
+            // não existe mais neste escopo após a refatoração do DOMContentLoaded)
+            const dataAtual = getDataBrasil();
+
             const body = { 
                 codigo: codigo, 
-                data_atual: dataFormatada,
+                data_atual: dataAtual,
                 tipo_material: tipoMaterial || 'concreto',
                 deposito: depositoAtual
             };
@@ -4312,6 +4361,7 @@ if (document.getElementById('contagemForm')) {
     
     function mostrarMensagem(texto, tipo) {
         const mensagemDiv = document.getElementById('mensagem');
+        if (!mensagemDiv) return;
         mensagemDiv.textContent = texto;
         mensagemDiv.className = 'mensagem ' + tipo;
         mensagemDiv.style.display = 'block';
@@ -4323,16 +4373,20 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÕES DE FILTRO
+    // FUNÇÕES DE FILTRO (com guards)
     // ============================================
     
     function aplicarFiltro() {
-        const texto = document.getElementById('filtro-texto').value.toLowerCase().trim();
-        const tipo = document.getElementById('filtro-tipo').value;
+        const elTexto = document.getElementById('filtro-texto');
+        const elTipo = document.getElementById('filtro-tipo');
+        const elContagem = document.getElementById('filtro-contagem');
+        
+        const texto = elTexto ? elTexto.value.toLowerCase().trim() : '';
+        const tipo = elTipo ? elTipo.value : 'todos';
         
         const subdivisaoAtiva = document.querySelector('.tab-principal-content.active');
         if (!subdivisaoAtiva) {
-            document.getElementById('filtro-contagem').textContent = 'Mostrando 0 itens';
+            if (elContagem) elContagem.textContent = 'Mostrando 0 itens';
             return;
         }
         
@@ -4344,7 +4398,7 @@ if (document.getElementById('contagemForm')) {
                 item.classList.remove('filtro-oculto');
                 visiveis++;
             });
-            document.getElementById('filtro-contagem').textContent = `Mostrando ${visiveis} itens`;
+            if (elContagem) elContagem.textContent = `Mostrando ${visiveis} itens`;
             return;
         }
         
@@ -4379,14 +4433,16 @@ if (document.getElementById('contagemForm')) {
             }
         });
         
-        document.getElementById('filtro-contagem').textContent = `Mostrando ${visiveis} itens`;
+        if (elContagem) elContagem.textContent = `Mostrando ${visiveis} itens`;
     }
     
     function limparFiltro() {
-        document.getElementById('filtro-texto').value = '';
-        document.getElementById('filtro-tipo').value = 'todos';
+        const elTexto = document.getElementById('filtro-texto');
+        const elTipo = document.getElementById('filtro-tipo');
+        if (elTexto) elTexto.value = '';
+        if (elTipo) elTipo.value = 'todos';
         aplicarFiltro();
-        document.getElementById('filtro-texto').focus();
+        if (elTexto) elTexto.focus();
     }   
     
     // ============================================
@@ -4474,7 +4530,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ENVIAR FORMULÁRIO
+    // ENVIAR FORMULÁRIO (com guards — corrige erro da linha 4494)
     // ============================================
     
     document.getElementById('contagemForm').addEventListener('submit', async (e) => {
@@ -4491,9 +4547,14 @@ if (document.getElementById('contagemForm')) {
         
         const botaoSubmit = e.target.querySelector('.submit-btn');
         
-        const nome = document.getElementById('nome').value;
-        const matricula = document.getElementById('matricula').value;
-        const data = document.getElementById('data').value;
+        // guards: usa dadosSessao se o input oculto não existir/estiver vazio
+        const nomeEl = document.getElementById('nome');
+        const matriculaEl = document.getElementById('matricula');
+        const dataEl = document.getElementById('data');
+        
+        const nome = (nomeEl && nomeEl.value.trim()) || (window.dadosSessao?.nome) || '';
+        const matricula = (matriculaEl && matriculaEl.value.trim()) || (window.dadosSessao?.matricula) || '';
+        const data = (dataEl && dataEl.value) || getDataBrasil();
         
         if (!nome.trim()) {
             mostrarToast('❌ Por favor, preencha o nome!', 'erro');
@@ -5426,8 +5487,10 @@ if (document.getElementById('contagemForm')) {
         // ENVIAR
         try {
             enviandoDados = true;
-            botaoSubmit.disabled = true;
-            botaoSubmit.textContent = 'Enviando...';
+            if (botaoSubmit) {
+                botaoSubmit.disabled = true;
+                botaoSubmit.textContent = 'Enviando...';
+            }
             
             let totalContagem = 0;
             let totalBuscaTrafo = 0;
@@ -5547,8 +5610,10 @@ if (document.getElementById('contagemForm')) {
             
         } finally {
             enviandoDados = false;
-            botaoSubmit.disabled = false;
-            botaoSubmit.textContent = '📝 Registrar Contagem';
+            if (botaoSubmit) {
+                botaoSubmit.disabled = false;
+                botaoSubmit.textContent = '📝 Registrar Contagem';
+            }
         }
     });
     
@@ -5660,22 +5725,43 @@ if (document.getElementById('contagemForm')) {
     window.redirecionarParaHome = redirecionarParaHome;
     
     // ============================================
-    // INICIALIZAR
+    // INICIALIZAR (aguardar DOM completo)
     // ============================================
     
-    carregarDadosUsuarioSessao();
-    carregarMateriais();
-    carregarPosicaoEstoqueGlobal();
+    function iniciarContagemDiaria() {
+        console.log('🚀 Iniciando Contagem Diária (DOM completo)...');
+        
+        // 1) Carrega dados do usuário (agora #nome existe no DOM)
+        carregarDadosUsuarioSessao();
+        
+        // 2) Garante #data preenchida (com guard)
+        const dataInputInit = document.getElementById('data');
+        if (dataInputInit && !dataInputInit.value) {
+            dataInputInit.value = getDataBrasil();
+        }
+        
+        // 3) Carrega materiais + posição de estoque
+        carregarMateriais();
+        carregarPosicaoEstoqueGlobal();
+        
+        // 4) Ativa depósito 1050 após o carregamento inicial
+        setTimeout(() => {
+            ativarDeposito('1050');
+        }, 500);
+        
+        // 5) Eventos de scroll
+        window.addEventListener('scroll', controlarBotoesNavegacao);
+        window.addEventListener('load', function() {
+            setTimeout(controlarBotoesNavegacao, 500);
+        });
+        window.addEventListener('resize', controlarBotoesNavegacao);
+    }
     
-    setTimeout(() => {
-        ativarDeposito('1050');
-    }, 500);
-    
-    window.addEventListener('scroll', controlarBotoesNavegacao);
-    window.addEventListener('load', function() {
-        setTimeout(controlarBotoesNavegacao, 500);
-    });
-    window.addEventListener('resize', controlarBotoesNavegacao);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', iniciarContagemDiaria);
+    } else {
+        iniciarContagemDiaria();
+    }
     
     // ============================================
     // POP-UP DE DESCRIÇÃO
