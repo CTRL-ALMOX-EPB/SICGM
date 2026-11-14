@@ -1,8 +1,11 @@
 // ============================================
-// SICGM - HOME UNIFICADA v8
+// SICGM - HOME UNIFICADA v9
+// Perfis + Departamentos
 // ============================================
 
-let perfilUsuario = 'GESTAO';
+let perfilUsuario = 'VISUALIZACAO';
+let perfisUsuario = [];
+let departamentosUsuario = [];
 let dadosDepartamentos = {};
 let usuarioLogado = null;
 
@@ -10,179 +13,78 @@ const abasAbertas = [];
 let abaAtiva = null;
 
 // ============================================
-// 1. DADOS POR PERFIL
+// 1. DADOS POR DEPARTAMENTO (fixos)
 // ============================================
-
-const DEPARTAMENTOS_GESTAO = {
+const DEPARTAMENTOS_BASE = {
     'GESTAO': {
         nome: 'GESTÃO', titulo: 'Gestão Estratégica do Setor',
         descricao: 'Acompanhamento de indicadores, planejamento e estrutura organizacional.',
-        cor: '#3d8bfd',
+        cor: '#3d8bfd', restrito: true,
         funcoes: [
-            { id: 'estrutura-setor', nome: 'Estrutura do Setor', icone: '🏗️', link: 'gestao/estrutura-setor.html', status: 'disponivel', descricao: 'Organograma e alocação' },
-            { id: 'indicadores-gestao', nome: 'Indicadores', icone: '📊', status: 'disponivel', descricao: "BI's gerenciais", temDropdown: true, dropdownItems: [
-                { nome: 'Pendência de Requisição', link: 'gestao/indicadores.html', badge: 'Ativo' }
+            { id: 'estrutura-setor', nome: 'Estrutura do Setor', icone: '🏗️', link: 'gestao/estrutura-setor.html', status: 'disponivel', modulo: 'admin' },
+            { id: 'indicadores-gestao', nome: 'Indicadores', icone: '📊', status: 'disponivel', modulo: 'relatorios', temDropdown: true, dropdownItems: [
+                { nome: 'Pendência de Requisição', link: 'gestao/indicadores.html', modulo: 'relatorios' }
             ]},
-            { id: 'planejamento', nome: 'Planejamento', icone: '📅', link: 'gestao/planejamento.html', status: 'disponivel', descricao: 'Metas e cronogramas' },
-            { id: 'despacho-obras-gestao', nome: 'Despacho de Obras', icone: '📦', link: 'despacho/index.html', status: 'disponivel', descricao: 'Vincule obras' }
+            { id: 'planejamento', nome: 'Planejamento', icone: '📅', link: 'gestao/planejamento.html', status: 'disponivel', modulo: 'admin' },
+            { id: 'admin', nome: 'Administração', icone: '👑', link: 'gestao/admin.html', status: 'disponivel', modulo: 'admin' }
         ]
     },
-'DCMD': {
-    nome: 'DCMD', titulo: 'Departamento de Construção e Manutenção da Distribuição',
-    descricao: 'Contagens, SITA, Painel de Controles e relatórios.',
-    cor: '#3d8bfd',
-    funcoes: [
-        { id: 'contagem-diaria-dcmd', nome: 'Contagem Diária', icone: '🧮', link: 'contagem-diaria/index.html', status: 'disponivel', descricao: 'Registre contagens' },
-        { id: 'sita-dcmd', nome: 'SITA', icone: '📋', status: 'disponivel', descricao: 'Sistema de Programação', temDropdown: true, dropdownItems: [
-            { nome: 'Programação',  link: 'sita/index.html',       badge: 'Ativo' },
-            { nome: 'Esteira',      link: 'sita/esteira.html',     badge: 'Ativo' },
-            { nome: 'Despacho',     link: 'sita/despacho.html',    badge: 'Ativo' },
-            { nome: 'Separação',    link: 'sita/separacao.html',   badge: 'Ativo' },
-            { nome: 'Pendências',   link: 'sita/pendencias.html',  badge: 'Ativo' }
-        ]},
-        { id: 'indicadores-dcmd', nome: 'Indicadores', icone: '📈', link: 'power-bi/index.html', status: 'disponivel', descricao: 'Business Intelligence' },
-        { id: 'painel-controles', nome: 'Painel de Controles', icone: '🖥️', link: 'controles/index.html', status: 'disponivel', descricao: 'Aditivos e movimentações' },
-        { id: 'dashboards-dcmd', nome: 'Dashboards', icone: '🎛️', status: 'disponivel', descricao: 'Dashboards do sistema', temDropdown: true, dropdownItems: [] },
-        { id: 'relatorios-dcmd', nome: 'Relatórios', icone: '📄', status: 'disponivel', descricao: 'Contagem e busca trafo', temDropdown: true, dropdownItems: [
-            { nome: 'Relatório de Contagem', link: 'relatorios/relatorio-contagem.html', badge: 'Ativo' },
-            { nome: 'Busca Trafo', link: 'relatorios/busca-trafo.html', badge: 'Novo' }
-        ]}
-    ]
-},
+    'DCMD': {
+        nome: 'DCMD', titulo: 'Construção e Manutenção da Distribuição',
+        descricao: 'Contagens, SITA, Painel de Controles e relatórios.',
+        cor: '#3d8bfd', restrito: false,
+        funcoes: [
+            { id: 'contagem-diaria-dcmd', nome: 'Contagem Diária', icone: '🧮', link: 'contagem-diaria/index.html', status: 'disponivel', modulo: 'contagem' },
+            { id: 'sita-dcmd', nome: 'SITA', icone: '📋', status: 'disponivel', modulo: 'sita', temDropdown: true, dropdownItems: [
+                { nome: 'Programação', link: 'sita/index.html', modulo: 'programacao' },
+                { nome: 'Esteira', link: 'sita/esteira.html', modulo: 'sita' },
+                { nome: 'Despacho', link: 'sita/despacho.html', modulo: 'despacho' },
+                { nome: 'Separação', link: 'sita/separacao.html', modulo: 'sita' },
+                { nome: 'Pendências', link: 'sita/pendencias.html', modulo: 'pendencias' }
+            ]},
+            { id: 'indicadores-dcmd', nome: 'Indicadores', icone: '📈', link: 'power-bi/index.html', status: 'disponivel', modulo: 'relatorios' },
+            { id: 'painel-controles', nome: 'Painel de Controles', icone: '🖥️', link: 'controles/index.html', status: 'disponivel', modulo: 'contagem' },
+            { id: 'dashboards-dcmd', nome: 'Dashboards', icone: '🎛️', status: 'disponivel', modulo: 'relatorios', temDropdown: true, dropdownItems: [] },
+            { id: 'relatorios-dcmd', nome: 'Relatórios', icone: '📄', status: 'disponivel', modulo: 'relatorios', temDropdown: true, dropdownItems: [
+                { nome: 'Relatório de Contagem', link: 'relatorios/relatorio-contagem.html', modulo: 'relatorios' },
+                { nome: 'Busca Trafo', link: 'relatorios/busca-trafo.html', modulo: 'relatorios' }
+            ]}
+        ]
+    },
     'DMPC': {
-        nome: 'DMPC', titulo: 'Departamento de Materiais Próprios Control',
+        nome: 'DMPC', titulo: 'Materiais Próprios Control',
         descricao: 'Contagem semanal, S.A. emergencial e relatórios.',
-        cor: '#28a745',
+        cor: '#28a745', restrito: false,
         funcoes: [
-            { id: 'contagem-dmpc', nome: 'Contagem DMPC', icone: '📦', link: 'contagem-diaria/contagem-dmpc.html', status: 'disponivel', descricao: 'Contagem semanal de EPIs' },
-            { id: 'sa-emergencial-dmpc', nome: 'S.A. Emergencial', icone: '🚨', link: 'sa-emergencial/index.html', status: 'disponivel', descricao: 'Atendimento emergencial' },
-            { id: 'relatorios-dmpc', nome: 'Relatórios', icone: '📈', link: '#', status: 'desenvolvimento', descricao: 'Em desenvolvimento' }
+            { id: 'contagem-dmpc', nome: 'Contagem DMPC', icone: '📦', link: 'contagem-diaria/contagem-dmpc.html', status: 'disponivel', modulo: 'contagem' },
+            { id: 'sa-emergencial-dmpc', nome: 'S.A. Emergencial', icone: '🚨', link: 'sa-emergencial/index.html', status: 'disponivel', modulo: 'contagem' },
+            { id: 'relatorios-dmpc', nome: 'Relatórios', icone: '📈', link: '#', status: 'desenvolvimento', modulo: 'relatorios' }
         ]
     },
     'DECP': {
-        nome: 'DECP', titulo: 'Departamento de Combate a Perdas',
+        nome: 'DECP', titulo: 'Combate a Perdas',
         descricao: 'Contagens, kits e medidores.',
-        cor: '#ff9800',
+        cor: '#ff9800', restrito: false,
         funcoes: [
-            { id: 'contagem-diaria-decp', nome: 'Contagem Diária', icone: '📊', link: '#', status: 'desenvolvimento', descricao: 'Em desenvolvimento' },
-            { id: 'solicitacao-kit-decp', nome: 'Solicitação de Kit', icone: '📦', link: '#', status: 'desenvolvimento', descricao: 'Em desenvolvimento' },
-            { id: 'medidores-reforma-decp', nome: 'Medidores - Reforma', icone: '🔧', link: '#', status: 'desenvolvimento', descricao: 'Em desenvolvimento' },
-            { id: 'relatorios-decp', nome: 'Relatórios', icone: '📈', link: '#', status: 'desenvolvimento', descricao: 'Em desenvolvimento' }
+            { id: 'contagem-diaria-decp', nome: 'Contagem Diária', icone: '📊', link: '#', status: 'desenvolvimento', modulo: 'contagem' },
+            { id: 'solicitacao-kit-decp', nome: 'Solicitação de Kit', icone: '📦', link: '#', status: 'desenvolvimento', modulo: 'contagem' },
+            { id: 'medidores-reforma-decp', nome: 'Medidores - Reforma', icone: '🔧', link: '#', status: 'desenvolvimento', modulo: 'contagem' },
+            { id: 'relatorios-decp', nome: 'Relatórios', icone: '📈', link: '#', status: 'desenvolvimento', modulo: 'relatorios' }
         ]
     },
     'DEOP': {
-        nome: 'DEOP', titulo: 'Departamento Operacional',
+        nome: 'DEOP', titulo: 'Operacional',
         descricao: 'Contagens, kits e medidores.',
-        cor: '#6f42c1',
+        cor: '#6f42c1', restrito: false,
         funcoes: [
-            { id: 'contagem-diaria-deop', nome: 'Contagem Diária', icone: '📊', link: '#', status: 'desenvolvimento', descricao: 'Em desenvolvimento' },
-            { id: 'solicitacao-kit-deop', nome: 'Solicitação de Kit', icone: '📦', link: '#', status: 'desenvolvimento', descricao: 'Em desenvolvimento' },
-            { id: 'medidores-reforma-deop', nome: 'Medidores - Reforma', icone: '🔧', link: '#', status: 'desenvolvimento', descricao: 'Em desenvolvimento' },
-            { id: 'relatorios-deop', nome: 'Relatórios', icone: '📈', link: '#', status: 'desenvolvimento', descricao: 'Em desenvolvimento' }
+            { id: 'contagem-diaria-deop', nome: 'Contagem Diária', icone: '📊', link: '#', status: 'desenvolvimento', modulo: 'contagem' },
+            { id: 'solicitacao-kit-deop', nome: 'Solicitação de Kit', icone: '📦', link: '#', status: 'desenvolvimento', modulo: 'contagem' },
+            { id: 'medidores-reforma-deop', nome: 'Medidores - Reforma', icone: '🔧', link: '#', status: 'desenvolvimento', modulo: 'contagem' },
+            { id: 'relatorios-deop', nome: 'Relatórios', icone: '📈', link: '#', status: 'desenvolvimento', modulo: 'relatorios' }
         ]
     }
 };
 
-const DEPARTAMENTOS_OPERACIONAL = {
-    'DCMD': {
-        nome: 'DCMD', titulo: 'Departamento de Construção e Manutenção da Distribuição',
-        descricao: 'Funções para Operacional no DCMD.',
-        cor: '#3d8bfd',
-        funcoes: [
-            { id: 'contagem-diaria-dcmd', nome: 'Contagem Diária', icone: '🧮', link: 'contagem-diaria/index.html', status: 'disponivel', descricao: 'Registre contagens' },
-            { id: 'indicadores-dcmd', nome: 'Indicadores', icone: '📈', link: 'power-bi/index.html', status: 'disponivel', descricao: 'Business Intelligence' },
-            { id: 'painel-controles', nome: 'Painel de Controles', icone: '🖥️', link: 'controles/index.html', status: 'disponivel', descricao: 'Gerencie pendências' },
-            { id: 'dashboards-operacional', nome: 'Dashboards', icone: '🎛️', status: 'disponivel', descricao: 'Dashboards', temDropdown: true, dropdownItems: [] },
-            { id: 'relatorios-dcmd', nome: 'Relatórios', icone: '📈', status: 'disponivel', descricao: 'Contagem e busca trafo', temDropdown: true, dropdownItems: [
-                { nome: 'Relatório de Contagem', link: 'relatorios/relatorio-contagem.html', badge: 'Ativo' },
-                { nome: 'Busca Trafo', link: 'relatorios/busca-trafo.html', badge: 'Novo' }
-            ]}
-        ]
-    },
-    'DMPC': {
-        nome: 'DMPC', titulo: 'Departamento de Materiais Próprios Control',
-        descricao: 'Funções para Operacional no DMPC.',
-        cor: '#28a745',
-        funcoes: [
-            { id: 'contagem-diaria-dmpc', nome: 'Contagem Diária', icone: '📊', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'sa-emergencial-dmpc', nome: 'S.A. Emergencial', icone: '🚨', link: 'sa-emergencial/index.html', status: 'disponivel', descricao: 'Atenda os formulários' },
-            { id: 'relatorios-dmpc', nome: 'Relatórios', icone: '📈', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true }
-        ]
-    },
-    'DECP': {
-        nome: 'DECP', titulo: 'Departamento de Combate a Perdas',
-        descricao: 'Funções para Operacional no DECP.',
-        cor: '#ff9800',
-        funcoes: [
-            { id: 'contagem-diaria-decp', nome: 'Contagem Diária', icone: '📊', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'solicitacao-kit-decp', nome: 'Solicitação de Kit', icone: '📦', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'medidores-reforma-decp', nome: 'Medidores - Reforma', icone: '🔧', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'relatorios-decp', nome: 'Relatórios', icone: '📈', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true }
-        ]
-    },
-    'DEOP': {
-        nome: 'DEOP', titulo: 'Departamento Operacional',
-        descricao: 'Funções para Operacional no DEOP.',
-        cor: '#6f42c1',
-        funcoes: [
-            { id: 'contagem-diaria-deop', nome: 'Contagem Diária', icone: '📊', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'solicitacao-kit-deop', nome: 'Solicitação de Kit', icone: '📦', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'medidores-reforma-deop', nome: 'Medidores - Reforma', icone: '🔧', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'relatorios-deop', nome: 'Relatórios', icone: '📈', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true }
-        ]
-    }
-};
-
-const DEPARTAMENTOS_VISUALIZACAO = {
-    'DCMD': {
-        nome: 'DCMD', titulo: 'Departamento de Construção e Manutenção da Distribuição',
-        descricao: 'Funções para Visualização no DCMD.',
-        cor: '#3d8bfd',
-        funcoes: [
-            { id: 'contagem-diaria-dcmd', nome: 'Contagem Diária', icone: '📊', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'painel-controles', nome: 'Painel de Controles', icone: '🖥️', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'dashboards-visualizacao', nome: 'Dashboards', icone: '📊', status: 'disponivel', descricao: 'Dashboards', temDropdown: true, dropdownItems: [] },
-            { id: 'relatorios-dcmd', nome: 'Relatórios', icone: '📈', status: 'disponivel', descricao: 'Relatórios', temDropdown: true, dropdownItems: [
-                { nome: 'Relatório de Contagem', link: 'relatorios/relatorio-contagem.html', badge: 'Visualizar' },
-                { nome: 'Busca Trafo', link: 'relatorios/busca-trafo.html', badge: 'Visualizar' }
-            ]}
-        ]
-    },
-    'DMPC': {
-        nome: 'DMPC', titulo: 'Departamento de Materiais Próprios Control',
-        descricao: 'Funções para Visualização no DMPC.',
-        cor: '#28a745',
-        funcoes: [
-            { id: 'contagem-diaria-dmpc', nome: 'Contagem Diária', icone: '📊', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'sa-emergencial-dmpc', nome: 'S.A. Emergencial', icone: '🚨', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'relatorios-dmpc', nome: 'Relatórios', icone: '📈', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true }
-        ]
-    },
-    'DECP': {
-        nome: 'DECP', titulo: 'Departamento de Combate a Perdas',
-        descricao: 'Funções para Visualização no DECP.',
-        cor: '#ff9800',
-        funcoes: [
-            { id: 'contagem-diaria-decp', nome: 'Contagem Diária', icone: '📊', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'solicitacao-kit-decp', nome: 'Solicitação de Kit', icone: '📦', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'medidores-reforma-decp', nome: 'Medidores - Reforma', icone: '🔧', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'relatorios-decp', nome: 'Relatórios', icone: '📈', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true }
-        ]
-    },
-    'DEOP': {
-        nome: 'DEOP', titulo: 'Departamento Operacional',
-        descricao: 'Funções para Visualização no DEOP.',
-        cor: '#6f42c1',
-        funcoes: [
-            { id: 'contagem-diaria-deop', nome: 'Contagem Diária', icone: '📊', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'solicitacao-kit-deop', nome: 'Solicitação de Kit', icone: '📦', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'medidores-reforma-deop', nome: 'Medidores - Reforma', icone: '🔧', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true },
-            { id: 'relatorios-deop', nome: 'Relatórios', icone: '📈', link: '#', status: 'restrito', descricao: 'Restrito', isRestricted: true }
-        ]
-    }
-};
-
-// Dashboards
 const DASHBOARDS_DISPONIVEIS = [
     { nome: 'Pendência de Requisição', link: 'dashboards/pendencia-requisicao.html' },
     { nome: 'Aditivos Sistêmicos', link: 'dashboards/aditivos-sistemicos.html' },
@@ -198,28 +100,17 @@ const DEPARTAMENTOS_PROCESSOS = [
     { id: 'DEOP', nome: 'DEOP - Operacional' }
 ];
 
-function preencherDashboards() {
-    Object.values(DEPARTAMENTOS_GESTAO).forEach(d => {
-        const dash = d.funcoes.find(f => f.id.includes('dashboard'));
-        if (dash) dash.dropdownItems = DASHBOARDS_DISPONIVEIS.map(x => ({ ...x, badge: 'Ativo' }));
-    });
-    Object.values(DEPARTAMENTOS_OPERACIONAL).forEach(d => {
-        const dash = d.funcoes.find(f => f.id.includes('dashboard'));
-        if (dash) dash.dropdownItems = DASHBOARDS_DISPONIVEIS.map(x => ({ ...x, badge: 'Ativo' }));
-    });
-    Object.values(DEPARTAMENTOS_VISUALIZACAO).forEach(d => {
-        const dash = d.funcoes.find(f => f.id.includes('dashboard'));
-        if (dash) dash.dropdownItems = DASHBOARDS_DISPONIVEIS.map(x => ({ ...x, badge: 'Visualizar' }));
-    });
-}
-preencherDashboards();
+// Preenche dropdowns
+Object.values(DEPARTAMENTOS_BASE).forEach(d => {
+    const dash = d.funcoes.find(f => f.id.includes('dashboard'));
+    if (dash) dash.dropdownItems = DASHBOARDS_DISPONIVEIS.map(x => ({ ...x, badge: 'Ativo' }));
+});
 
 // ============================================
 // 2. INICIALIZAÇÃO
 // ============================================
-
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📋 Home Unificada v8 carregada');
+    console.log('📋 Home Unificada v9');
 
     if (typeof firebase === 'undefined' || !firebase.auth) {
         console.error('❌ Firebase não carregado');
@@ -227,97 +118,121 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     firebase.auth().onAuthStateChanged(function(user) {
-        if (!user) {
-            window.location.href = 'login.html';
-            return;
-        }
+        if (!user) { window.location.href = 'login.html'; return; }
         usuarioLogado = user;
         buscarDadosUsuario(user);
     });
 
     inicializarSinoHome();
-
     window.addEventListener('message', tratarMensagemIframe);
 });
-
-// ============================================
-// COMUNICAÇÃO IFRAME → HOME (v8 - normaliza link)
-// ============================================
 
 function tratarMensagemIframe(event) {
     const data = event.data;
     if (!data || typeof data !== 'object') return;
     if (data.type !== 'SICGM_ABRIR_ABA') return;
-
     const { link, titulo, tabId } = data;
     if (!link || !titulo) return;
-
-    console.log('📨 Home recebeu pedido de nova aba:', { link, titulo });
-
-    // 🔥 NORMALIZA O LINK: garante que é relativo à raiz do projeto
     let linkNormalizado = String(link);
-
-    // Remove protocolo + host se vier por acaso
     if (linkNormalizado.startsWith('http')) {
         try {
             const url = new URL(linkNormalizado);
             linkNormalizado = url.pathname.replace(/^\//, '') + url.search + url.hash;
-        } catch (e) { /* mantém */ }
+        } catch (_) {}
     }
-
-    // Remove o base path se estiver presente (ex: SICGM/controles/...)
     const basePath = (typeof CONFIG !== 'undefined' && CONFIG && CONFIG.BASE_PATH)
-        ? String(CONFIG.BASE_PATH).replace(/\/$/, '')
-        : '';
-
+        ? String(CONFIG.BASE_PATH).replace(/\/$/, '') : '';
     if (basePath && linkNormalizado.startsWith(basePath + '/')) {
         linkNormalizado = linkNormalizado.substring(basePath.length + 1);
     }
-
-    // Remove barras iniciais duplicadas
     linkNormalizado = linkNormalizado.replace(/^\/+/, '');
-
-    console.log('📨 Link normalizado:', linkNormalizado);
-
     abrirAba(linkNormalizado, titulo, tabId || `iframe-${Date.now()}`);
 }
 
 async function buscarDadosUsuario(user) {
     try {
-        const idTokenResult = await user.getIdTokenResult();
-        const perfil = (idTokenResult.claims.perfil || localStorage.getItem('perfilUsuario') || 'GESTAO').toUpperCase();
-        const nome = user.displayName || localStorage.getItem('nomeUsuario') || user.email.split('@')[0];
-        const matricula = localStorage.getItem('matriculaUsuario') || user.uid.substring(0, 6);
+        // Tenta pelo authService (sessionStorage)
+        let dados = null;
+        if (typeof authService !== 'undefined' && authService.isLoggedIn && authService.isLoggedIn()) {
+            dados = authService.getUserData();
+        }
 
-        configurarInterface(perfil, nome, matricula);
+        // Fallback: busca no KV
+        if (!dados || !dados.perfis || dados.perfis.length === 0) {
+            const r = await fetch(`${authService.WORKER_URL}/usuarios/me`, {
+                headers: { 'X-User-Email': user.email }
+            });
+            if (r.ok) dados = await r.json();
+        }
+
+        // Último fallback: localStorage
+        if (!dados) {
+            dados = {
+                email: user.email,
+                nome: user.displayName || localStorage.getItem('nomeUsuario') || user.email.split('@')[0],
+                matricula: localStorage.getItem('matriculaUsuario') || '---',
+                perfil: localStorage.getItem('perfilUsuario') || 'VISUALIZACAO',
+                perfis: JSON.parse(localStorage.getItem('perfisUsuario') || '[]'),
+                departamentos: JSON.parse(localStorage.getItem('departamentosUsuario') || '[]')
+            };
+        }
+
+        configurarInterface(dados);
     } catch (err) {
-        console.warn('⚠️ Usando localStorage:', err);
-        configurarInterface(
-            (localStorage.getItem('perfilUsuario') || 'GESTAO').toUpperCase(),
-            localStorage.getItem('nomeUsuario') || 'Usuário',
-            localStorage.getItem('matriculaUsuario') || '---'
-        );
+        console.error('❌ buscarDadosUsuario:', err);
+        configurarInterface({
+            email: user.email,
+            nome: localStorage.getItem('nomeUsuario') || 'Usuário',
+            matricula: localStorage.getItem('matriculaUsuario') || '---',
+            perfil: localStorage.getItem('perfilUsuario') || 'VISUALIZACAO',
+            perfis: JSON.parse(localStorage.getItem('perfisUsuario') || '[]'),
+            departamentos: JSON.parse(localStorage.getItem('departamentosUsuario') || '[]')
+        });
     }
 }
 
-function configurarInterface(perfil, nome, matricula) {
-    perfilUsuario = perfil;
-    console.log('👤 Perfil:', perfilUsuario);
+function configurarInterface(dados) {
+    perfilUsuario = (dados.perfil || 'VISUALIZACAO').toUpperCase();
+    perfisUsuario = Array.isArray(dados.perfis) && dados.perfis.length > 0
+        ? dados.perfis
+        : [{ perfil: perfilUsuario, departamentos: dados.departamentos || [] }];
+    departamentosUsuario = dados.departamentos || [];
 
-    document.getElementById('headerNomeUser').textContent = nome;
-    document.getElementById('headerMatUser').textContent = `Matrícula: ${matricula}`;
+    console.log('👤 Perfil principal:', perfilUsuario, '| Perfis:', perfisUsuario);
 
+    document.getElementById('headerNomeUser').textContent = dados.nome || 'Usuário';
+    document.getElementById('headerMatUser').textContent = `Matrícula: ${dados.matricula || '---'}`;
+
+    // Departamentos visíveis
+    const ehGestao = perfisUsuario.some(p => p.perfil === 'GESTAO');
+    const setDeptos = new Set();
+    perfisUsuario.forEach(p => {
+        (p.departamentos || []).forEach(d => {
+            if (ehGestao || d !== 'GESTAO') setDeptos.add(d);
+        });
+    });
+    if (ehGestao) setDeptos.add('GESTAO');
+
+    dadosDepartamentos = {};
+    Array.from(setDeptos).forEach(id => {
+        if (DEPARTAMENTOS_BASE[id]) dadosDepartamentos[id] = DEPARTAMENTOS_BASE[id];
+    });
+
+    // Badge
     const badgePerfil = document.getElementById('headerPerfilUser');
-    badgePerfil.textContent = perfilUsuario;
-    if (perfilUsuario === 'OPERACIONAL') badgePerfil.style.background = '#28a745';
-    if (perfilUsuario === 'VISUALIZACAO') badgePerfil.style.background = '#3d8bfd';
+    const deptosArr = Array.from(setDeptos);
+    const deptosLabel = deptosArr.length > 2
+        ? `${deptosArr[0]} +${deptosArr.length - 1}`
+        : deptosArr.join(' · ') || '—';
+    badgePerfil.textContent = `${perfilUsuario} · ${deptosLabel}`;
+    if (window.PERFIS_SICGM?.[perfilUsuario]?.cor) {
+        badgePerfil.style.background = window.PERFIS_SICGM[perfilUsuario].cor;
+    } else if (perfilUsuario === 'OPERACIONAL') badgePerfil.style.background = '#28a745';
+    else if (perfilUsuario === 'VISUALIZACAO') badgePerfil.style.background = '#3d8bfd';
 
+    // Admin button
     const adminBtn = document.getElementById('headerAdminBtn');
-    if (perfilUsuario !== 'GESTAO') adminBtn.style.display = 'none';
-
-    if (perfilUsuario === 'GESTAO') dadosDepartamentos = DEPARTAMENTOS_GESTAO;
-    else if (perfilUsuario === 'OPERACIONAL') dadosDepartamentos = DEPARTAMENTOS_OPERACIONAL;
-    else dadosDepartamentos = DEPARTAMENTOS_VISUALIZACAO;
+    if (adminBtn) adminBtn.style.display = ehGestao ? 'inline-flex' : 'none';
 
     renderizarSidebar();
     renderizarAbas();
@@ -326,7 +241,6 @@ function configurarInterface(perfil, nome, matricula) {
 // ============================================
 // 3. SIDEBAR
 // ============================================
-
 function renderizarSidebar() {
     const sidebar = document.getElementById('sidebar');
     sidebar.innerHTML = '';
@@ -336,10 +250,7 @@ function renderizarSidebar() {
     titulo.textContent = 'Departamentos';
     sidebar.appendChild(titulo);
 
-    const ordem = perfilUsuario === 'GESTAO'
-        ? ['GESTAO', 'DCMD', 'DMPC', 'DECP', 'DEOP']
-        : ['DCMD', 'DMPC', 'DECP', 'DEOP'];
-
+    const ordem = ['GESTAO', 'DCMD', 'DMPC', 'DECP', 'DEOP'];
     ordem.forEach(deptoId => {
         const depto = dadosDepartamentos[deptoId];
         if (!depto) return;
@@ -362,6 +273,9 @@ function renderizarSidebar() {
         submenu.id = `submenu-${deptoId}`;
 
         depto.funcoes.forEach(func => {
+            // Filtro por módulo (se authService disponível)
+            if (func.modulo && typeof authService !== 'undefined' && authService.podeAcessar && !authService.podeAcessar(func.modulo)) return;
+
             if (func.temDropdown) {
                 const sub = document.createElement('div');
                 sub.className = 'sub-item has-children';
@@ -373,10 +287,7 @@ function renderizarSidebar() {
                     </div>
                     <i class="fa-solid fa-chevron-right sub-chevron"></i>
                 `;
-                sub.onclick = (e) => {
-                    e.stopPropagation();
-                    toggleSubSubmenu(deptoId, func);
-                };
+                sub.onclick = (e) => { e.stopPropagation(); toggleSubSubmenu(deptoId, func); };
                 submenu.appendChild(sub);
 
                 const subsub = document.createElement('div');
@@ -384,18 +295,17 @@ function renderizarSidebar() {
                 subsub.id = `subsub-${deptoId}-${func.id}`;
 
                 (func.dropdownItems || []).forEach(itemOpt => {
+                    if (itemOpt.modulo && typeof authService !== 'undefined' && authService.podeAcessar && !authService.podeAcessar(itemOpt.modulo)) return;
                     const ssItem = document.createElement('div');
                     ssItem.className = 'sub-sub-item';
                     ssItem.innerHTML = `<i class="fa-solid fa-circle"></i><span>${itemOpt.nome}</span>`;
                     ssItem.onclick = (e) => {
                         e.stopPropagation();
                         if (itemOpt.disabled) { alert('Em breve!'); return; }
-                        const tabId = `${deptoId}-${func.id}-${itemOpt.nome}`;
-                        abrirAba(itemOpt.link, itemOpt.nome, tabId);
+                        abrirAba(itemOpt.link, itemOpt.nome, `${deptoId}-${func.id}-${itemOpt.nome}`);
                     };
                     subsub.appendChild(ssItem);
                 });
-
                 submenu.appendChild(subsub);
             } else {
                 const sub = document.createElement('div');
@@ -403,29 +313,24 @@ function renderizarSidebar() {
                 sub.innerHTML = `<i class="fa-solid fa-angle-right"></i><span>${func.nome}</span>`;
                 sub.onclick = (e) => {
                     e.stopPropagation();
-                    if (func.isRestricted) { alert('⚠️ Funcionalidade restrita para este perfil.'); return; }
                     if (func.status !== 'disponivel') { alert('⚙️ Funcionalidade em desenvolvimento.'); return; }
-                    const tabId = `${deptoId}-${func.id}`;
-                    abrirAba(func.link, func.nome, tabId);
+                    abrirAba(func.link, func.nome, `${deptoId}-${func.id}`);
                 };
                 submenu.appendChild(sub);
             }
         });
-
         sidebar.appendChild(submenu);
     });
 
     const chamados = document.createElement('div');
     chamados.className = 'sidebar-fixed-item';
     chamados.innerHTML = `<i class="fa-solid fa-headset"></i> <span>Chamados</span>`;
-    chamados.onclick = () => {
-        abrirAba('chamados/index.html', 'Chamados', 'chamados-fixo');
-    };
+    chamados.onclick = () => abrirAba('chamados/index.html', 'Chamados', 'chamados-fixo');
     sidebar.appendChild(chamados);
 
+    // Ajuda
     const ajudaWrap = document.createElement('div');
     ajudaWrap.id = 'ajuda-wrap';
-
     const ajuda = document.createElement('div');
     ajuda.className = 'sidebar-fixed-item has-children';
     ajuda.id = 'ajuda-item';
@@ -442,22 +347,16 @@ function renderizarSidebar() {
     const ajudaSub = document.createElement('div');
     ajudaSub.className = 'depto-submenu';
     ajudaSub.id = 'ajuda-submenu';
-
     DEPARTAMENTOS_PROCESSOS.forEach(dep => {
         const sub = document.createElement('div');
         sub.className = 'sub-item';
         sub.innerHTML = `<i class="fa-solid fa-angle-right"></i><span>${dep.nome}</span>`;
         sub.onclick = (e) => {
             e.stopPropagation();
-            abrirAba(
-                `processos/index.html?depto=${dep.id}`,
-                `Ajuda ${dep.id}`,
-                `ajuda-${dep.id}`
-            );
+            abrirAba(`processos/index.html?depto=${dep.id}`, `Ajuda ${dep.id}`, `ajuda-${dep.id}`);
         };
         ajudaSub.appendChild(sub);
     });
-
     ajudaWrap.appendChild(ajudaSub);
     sidebar.appendChild(ajudaWrap);
 }
@@ -465,9 +364,10 @@ function renderizarSidebar() {
 function toggleDepartamento(deptoId) {
     const item = document.querySelector(`.depto-item[data-depto="${deptoId}"]`);
     const submenu = document.getElementById(`submenu-${deptoId}`);
+    if (!item || !submenu) return;
     const isExpanded = item.classList.contains('expanded');
 
-    document.querySelectorAll('.depto-item').forEach(el => el.classList.remove('expanded'));
+    document.querySelectorAll('.depto-item').forEach(el => el.classList.remove('expanded', 'active'));
     document.querySelectorAll('.depto-submenu').forEach(el => el.classList.remove('open'));
     document.querySelectorAll('.sub-item').forEach(el => el.classList.remove('expanded'));
     document.querySelectorAll('.sub-submenu').forEach(el => el.classList.remove('open'));
@@ -478,21 +378,18 @@ function toggleDepartamento(deptoId) {
     if (ajudaItem) ajudaItem.classList.remove('expanded');
 
     if (!isExpanded) {
-        item.classList.add('expanded');
+        item.classList.add('expanded', 'active');
         submenu.classList.add('open');
-        document.querySelectorAll('.depto-item').forEach(el => el.classList.remove('active'));
-        item.classList.add('active');
     }
 }
 
 function toggleSubSubmenu(deptoId, func) {
     const subItem = document.getElementById(`sub-${deptoId}-${func.id}`);
     const subSub = document.getElementById(`subsub-${deptoId}-${func.id}`);
+    if (!subItem || !subSub) return;
     const isExpanded = subItem.classList.contains('expanded');
-
     document.querySelectorAll('.sub-item').forEach(el => el.classList.remove('expanded'));
     document.querySelectorAll('.sub-submenu').forEach(el => el.classList.remove('open'));
-
     if (!isExpanded) {
         subItem.classList.add('expanded');
         subSub.classList.add('open');
@@ -503,37 +400,23 @@ function toggleAjudaSubmenu() {
     const sub = document.getElementById('ajuda-submenu');
     const item = document.getElementById('ajuda-item');
     if (!sub || !item) return;
-
     const isOpen = sub.classList.contains('open');
-
     document.querySelectorAll('.depto-item').forEach(el => el.classList.remove('expanded'));
     document.querySelectorAll('.depto-submenu').forEach(el => el.classList.remove('open'));
     document.querySelectorAll('.sub-item').forEach(el => el.classList.remove('expanded'));
     document.querySelectorAll('.sub-submenu').forEach(el => el.classList.remove('open'));
-
-    if (!isOpen) {
-        sub.classList.add('open');
-        item.classList.add('expanded');
-    }
+    if (!isOpen) { sub.classList.add('open'); item.classList.add('expanded'); }
 }
 
 // ============================================
-// 4. SISTEMA DE ABAS
+// 4. ABAS
 // ============================================
-
 function abrirAba(link, titulo, tabId) {
-    // Normaliza o link também (garantia extra)
     let linkFinal = String(link || '').replace(/^\/+/, '');
-
     const existente = abasAbertas.find(a => a.link === linkFinal);
-    if (existente) {
-        ativarAba(existente.id);
-        return;
-    }
-
+    if (existente) { ativarAba(existente.id); return; }
     abasAbertas.push({ id: tabId, titulo, link: linkFinal });
     abaAtiva = tabId;
-
     renderizarAbas();
     mostrarIframe(linkFinal);
 }
@@ -541,13 +424,8 @@ function abrirAba(link, titulo, tabId) {
 function renderizarAbas() {
     const tabsBar = document.getElementById('tabsBar');
     tabsBar.innerHTML = '';
-
-    if (abasAbertas.length === 0) {
-        tabsBar.classList.add('empty');
-        return;
-    }
+    if (abasAbertas.length === 0) { tabsBar.classList.add('empty'); return; }
     tabsBar.classList.remove('empty');
-
     abasAbertas.forEach(aba => {
         const btn = document.createElement('button');
         btn.className = 'tab-btn' + (abaAtiva === aba.id ? ' active' : '');
@@ -565,7 +443,6 @@ function renderizarAbas() {
 function ativarAba(tabId) {
     const aba = abasAbertas.find(a => a.id === tabId);
     if (!aba) return;
-
     abaAtiva = tabId;
     renderizarAbas();
     mostrarIframe(aba.link);
@@ -574,15 +451,12 @@ function ativarAba(tabId) {
 function fecharAba(tabId) {
     const idx = abasAbertas.findIndex(a => a.id === tabId);
     if (idx === -1) return;
-
     abasAbertas.splice(idx, 1);
-
     if (abaAtiva === tabId) {
         if (abasAbertas.length > 0) {
             abaAtiva = abasAbertas[Math.max(0, idx - 1)].id;
             renderizarAbas();
-            const aba = abasAbertas.find(a => a.id === abaAtiva);
-            mostrarIframe(aba.link);
+            mostrarIframe(abasAbertas.find(a => a.id === abaAtiva).link);
         } else {
             abaAtiva = null;
             renderizarAbas();
@@ -596,11 +470,8 @@ function fecharAba(tabId) {
 function mostrarIframe(link) {
     document.getElementById('empty-state').classList.add('hidden');
     document.getElementById('iframe-container').classList.remove('hidden');
-
     const iframe = document.getElementById('iframe-content');
-    if (iframe.getAttribute('src') !== link) {
-        iframe.setAttribute('src', link);
-    }
+    if (iframe.getAttribute('src') !== link) iframe.setAttribute('src', link);
 }
 
 function mostrarEstadoVazio() {
@@ -610,11 +481,9 @@ function mostrarEstadoVazio() {
 }
 
 // ============================================
-// 5. SINO DE NOTIFICAÇÃO
+// 5. SINO DE NOTIFICAÇÃO (intacto)
 // ============================================
-
 const SINO_CHAMADOS_URL = 'https://chamados.alefe-gomes-72f.workers.dev';
-
 let _sinoInterval = null;
 let _sinoDropdownAberto = false;
 let _sinoCache = [];
@@ -628,20 +497,10 @@ function inicializarSinoHome() {
         e.stopPropagation();
         const dd = document.getElementById('sinoDropdown');
         if (!dd) return;
-        if (dd.style.display === 'block') {
-            dd.style.display = 'none';
-            _sinoDropdownAberto = false;
-        } else {
-            dd.style.display = 'block';
-            _sinoDropdownAberto = true;
-            carregarNotifSino(true);
-        }
+        if (dd.style.display === 'block') { dd.style.display = 'none'; _sinoDropdownAberto = false; }
+        else { dd.style.display = 'block'; _sinoDropdownAberto = true; carregarNotifSino(true); }
     });
-
-    if (marcarTodas) {
-        marcarTodas.addEventListener('click', marcarTodasNotifSino);
-    }
-
+    if (marcarTodas) marcarTodas.addEventListener('click', marcarTodasNotifSino);
     document.addEventListener('click', (e) => {
         const el = document.getElementById('sinoNotificacoes');
         if (el && !el.contains(e.target)) {
@@ -650,7 +509,6 @@ function inicializarSinoHome() {
             _sinoDropdownAberto = false;
         }
     });
-
     contarNotifSino();
     _sinoInterval = setInterval(() => {
         contarNotifSino();
@@ -674,23 +532,20 @@ async function contarNotifSino() {
         if (!r.ok) return;
         const data = await r.json();
         atualizarBadgeSino(data.nao_lidas || 0);
-    } catch (e) {}
+    } catch (_) {}
 }
 
 async function carregarNotifSino(forcar = false) {
     const mat = localStorage.getItem('matriculaUsuario');
     if (!mat) return;
-    if (!forcar && _sinoCache.length > 0) {
-        renderizarListaSino(_sinoCache);
-        return;
-    }
+    if (!forcar && _sinoCache.length > 0) { renderizarListaSino(_sinoCache); return; }
     try {
         const r = await fetch(`${SINO_CHAMADOS_URL}/api/notificacoes?limit=30`, { headers: getHeadersSino() });
         if (!r.ok) throw new Error('Erro');
         const data = await r.json();
         _sinoCache = data.data || [];
         renderizarListaSino(_sinoCache);
-    } catch (e) {
+    } catch (_) {
         const lista = document.getElementById('sinoLista');
         if (lista) lista.innerHTML = '<div class="sino-error">❌ Erro ao carregar</div>';
     }
@@ -699,55 +554,42 @@ async function carregarNotifSino(forcar = false) {
 async function marcarUmaLidaSino(id, e) {
     if (e) { e.stopPropagation(); e.preventDefault(); }
     try {
-        await fetch(`${SINO_CHAMADOS_URL}/api/notificacoes/${id}/ler`, {
-            method: 'PUT',
-            headers: getHeadersSino()
-        });
+        await fetch(`${SINO_CHAMADOS_URL}/api/notificacoes/${id}/ler`, { method: 'PUT', headers: getHeadersSino() });
         const n = _sinoCache.find(x => x.id === id);
         if (n) n.lida = 1;
         renderizarListaSino(_sinoCache);
         contarNotifSino();
-    } catch (e) {}
+    } catch (_) {}
 }
 
 async function marcarTodasNotifSino(e) {
     if (e) { e.stopPropagation(); e.preventDefault(); }
     try {
-        await fetch(`${SINO_CHAMADOS_URL}/api/notificacoes/ler-todas`, {
-            method: 'PUT',
-            headers: getHeadersSino()
-        });
+        await fetch(`${SINO_CHAMADOS_URL}/api/notificacoes/ler-todas`, { method: 'PUT', headers: getHeadersSino() });
         _sinoCache.forEach(n => n.lida = 1);
         renderizarListaSino(_sinoCache);
         contarNotifSino();
-    } catch (e) {}
+    } catch (_) {}
 }
 
 async function clicarNotifSino(id, protocolo, e) {
     if (e) { e.stopPropagation(); e.preventDefault(); }
     await marcarUmaLidaSino(id);
-    if (protocolo) {
-        abrirAba(`chamados/index.html?busca=${encodeURIComponent(protocolo)}`, 'Chamados', 'chamados-fixo');
-    }
+    if (protocolo) abrirAba(`chamados/index.html?busca=${encodeURIComponent(protocolo)}`, 'Chamados', 'chamados-fixo');
 }
 
 function atualizarBadgeSino(naoLidas) {
     const badge = document.getElementById('sinoBadge');
     if (!badge) return;
-    if (naoLidas > 0) {
-        badge.textContent = naoLidas > 99 ? '99+' : naoLidas;
-        badge.style.display = 'flex';
-    } else {
-        badge.style.display = 'none';
-    }
+    if (naoLidas > 0) { badge.textContent = naoLidas > 99 ? '99+' : naoLidas; badge.style.display = 'flex'; }
+    else badge.style.display = 'none';
 }
 
 function formatarTempoRelativoSino(dataStr) {
     if (!dataStr) return '';
     try {
         const data = new Date(dataStr.includes(' ') && !dataStr.includes('T')
-            ? dataStr.replace(' ', 'T') + 'Z'
-            : dataStr);
+            ? dataStr.replace(' ', 'T') + 'Z' : dataStr);
         const diff = (Date.now() - data.getTime()) / 1000;
         if (diff < 60) return 'agora';
         if (diff < 3600) return `${Math.floor(diff / 60)}min`;
@@ -758,38 +600,23 @@ function formatarTempoRelativoSino(dataStr) {
 }
 
 function iconeNotifSino(tipo) {
-    return {
-        'CHAMADO_ABERTO': '🎫',
-        'CHAMADO_RESPONDIDO': '💬',
-        'CHAMADO_FECHADO': '✅',
-        'INFO': 'ℹ️'
-    }[tipo] || '🔔';
+    return { 'CHAMADO_ABERTO': '🎫', 'CHAMADO_RESPONDIDO': '💬', 'CHAMADO_FECHADO': '✅', 'INFO': 'ℹ️' }[tipo] || '🔔';
 }
 
 function escapeHtmlSino(str) {
-    return String(str || '').replace(/[&<>"']/g, m => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[m]));
+    return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
 function renderizarListaSino(lista) {
     const container = document.getElementById('sinoLista');
     if (!container) return;
-
     const info = document.getElementById('sinoInfo');
     const naoLidas = lista.filter(n => !n.lida).length;
     if (info) info.textContent = `${lista.length} notif. • ${naoLidas} não lida${naoLidas !== 1 ? 's' : ''}`;
-
     if (!lista || lista.length === 0) {
-        container.innerHTML = `
-            <div class="sino-empty">
-                <div style="font-size:48px;margin-bottom:10px;">🔔</div>
-                <p>Nenhuma notificação</p>
-                <small>Tudo em dia!</small>
-            </div>`;
+        container.innerHTML = `<div class="sino-empty"><div style="font-size:48px;margin-bottom:10px;">🔔</div><p>Nenhuma notificação</p><small>Tudo em dia!</small></div>`;
         return;
     }
-
     container.innerHTML = lista.map(n => `
         <div class="sino-item ${n.lida ? 'lida' : 'nao-lida'}"
              onclick="window._clicarNotifSino(${n.id}, '${(n.chamado_protocolo || '').replace(/'/g, "\\'")}', event)"
@@ -800,28 +627,22 @@ function renderizarListaSino(lista) {
                 <div class="sino-item-msg">${escapeHtmlSino(n.mensagem || '')}</div>
                 <div class="sino-item-tempo">${formatarTempoRelativoSino(n.criado_em)}</div>
             </div>
-            ${n.lida ? '' : `<button class="sino-item-btn-lida"
-                                    onclick="window._marcarUmaLidaSino(${n.id}, event)"
-                                    title="Marcar como lida">✓</button>`}
+            ${n.lida ? '' : `<button class="sino-item-btn-lida" onclick="window._marcarUmaLidaSino(${n.id}, event)" title="Marcar como lida">✓</button>`}
         </div>
     `).join('');
 }
-
 window._clicarNotifSino = clicarNotifSino;
 window._marcarUmaLidaSino = marcarUmaLidaSino;
 
 // ============================================
 // 6. LOGOUT
 // ============================================
-
-function sair() {
-    if (typeof firebase !== 'undefined' && firebase.auth) {
-        firebase.auth().signOut().then(() => {
-            localStorage.clear();
-            window.location.href = 'login.html';
-        });
-    } else {
-        localStorage.clear();
-        window.location.href = 'login.html';
-    }
+async function sair() {
+    if (!confirm('Deseja sair do sistema?')) return;
+    try {
+        if (typeof authService !== 'undefined') await authService.logout();
+        else if (typeof firebase !== 'undefined' && firebase.auth) await firebase.auth().signOut();
+    } catch (_) {}
+    localStorage.clear();
+    window.location.href = 'login.html';
 }

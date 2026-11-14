@@ -1,5 +1,6 @@
 // ============================================
-// LOGIN.JS - PÁGINA DE LOGIN
+// LOGIN.JS - PÁGINA DE LOGIN (v2)
+// Mantém formato prefixo@dominio + ctrl-MATRICULA
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -13,27 +14,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const mensagemErro = document.getElementById('mensagemErro');
     const mensagemSucesso = document.getElementById('mensagemSucesso');
 
-    // ============================================
-    // PREVIEW DO E-MAIL
-    // ============================================
     function updateEmailPreview() {
         const prefix = emailPrefix.value.trim();
         const domain = emailDomain.value;
-
         if (prefix) {
             emailPreview.innerHTML = `📧 E-mail: <strong>${prefix}@${domain}</strong>`;
         } else {
             emailPreview.innerHTML = '📧 E-mail: seu.nome@control.eng.br';
         }
     }
-
     emailPrefix.addEventListener('input', updateEmailPreview);
     emailDomain.addEventListener('change', updateEmailPreview);
     updateEmailPreview();
 
-    // ============================================
-    // OBTER E-MAIL COMPLETO
-    // ============================================
     function getEmailCompleto() {
         const prefix = emailPrefix.value.trim();
         const domain = emailDomain.value;
@@ -41,19 +34,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${prefix}@${domain}`;
     }
 
-    // ============================================
-    // MONTAR SENHA COMPLETA
-    // ============================================
     function montarSenhaCompleta(matricula) {
         return `ctrl-${matricula.trim()}`;
     }
 
-    // ============================================
-    // SUBMIT
-    // ============================================
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
-
         mensagemErro.textContent = '';
         mensagemErro.className = 'mensagem-erro';
         mensagemSucesso.style.display = 'none';
@@ -63,14 +49,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!emailCompleto) {
             mensagemErro.textContent = '⚠️ Digite a primeira parte do seu e-mail.';
-            mensagemErro.className = 'mensagem-erro';
             emailPrefix.focus();
             return;
         }
-
         if (!matriculaDigitada) {
             mensagemErro.textContent = '⚠️ Digite sua matrícula.';
-            mensagemErro.className = 'mensagem-erro';
             senhaInput.focus();
             return;
         }
@@ -79,8 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log(`🔐 Tentando login: ${matriculaDigitada}`);
 
         if (typeof authService === 'undefined' || !authService) {
-            mensagemErro.textContent = '⚠️ Erro ao carregar o serviço de autenticação.';
-            mensagemErro.className = 'mensagem-erro';
+            mensagemErro.textContent = '⚠️ Erro ao carregar auth-service.';
             return;
         }
 
@@ -90,45 +72,33 @@ document.addEventListener('DOMContentLoaded', function() {
             mensagemSucesso.textContent = '✅ Login realizado! Redirecionando...';
             mensagemSucesso.style.display = 'block';
 
-            console.log(`✅ Usuário: ${result.user.nome} | Perfil: ${result.user.perfil}`);
+            const u = result.user;
+            const perfis = u.perfis || (u.perfil ? [{ perfil: u.perfil, departamentos: [] }] : []);
 
-            // Salva dados no localStorage para a home unificada ler
-            localStorage.setItem('nomeUsuario', result.user.nome || 'Usuário');
-            localStorage.setItem('matriculaUsuario', result.user.matricula || matriculaDigitada);
-            localStorage.setItem('perfilUsuario', result.user.perfil || 'GESTAO');
+            // Salva para a home unificada
+            localStorage.setItem('nomeUsuario', u.nome || 'Usuário');
+            localStorage.setItem('matriculaUsuario', u.matricula || matriculaDigitada);
+            localStorage.setItem('perfilUsuario', u.perfil || perfis[0]?.perfil || 'VISUALIZACAO');
+            localStorage.setItem('perfisUsuario', JSON.stringify(perfis));
+            localStorage.setItem('departamentosUsuario', JSON.stringify(u.departamentos || []));
             localStorage.setItem('emailUsuario', emailCompleto);
 
-            // 🔥 REDIRECIONA TODOS PARA A HOME UNIFICADA
-            setTimeout(() => {
-                window.location.href = 'home-unificada.html';
-            }, 600);
+            setTimeout(() => { window.location.href = 'home-unificada.html'; }, 600);
         } else {
             mensagemErro.textContent = result.error || '❌ Matrícula inválida.';
-            mensagemErro.className = 'mensagem-erro';
             senhaInput.value = '';
             senhaInput.focus();
         }
     });
 
-    // ============================================
-    // MOSTRAR/OCULTAR SENHA
-    // ============================================
+    // Mostrar/ocultar senha
     const togglePassword = document.createElement('button');
     togglePassword.type = 'button';
     togglePassword.textContent = '👁️';
     togglePassword.style.cssText = `
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 18px;
-        padding: 5px;
-        opacity: 0.6;
+        position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+        background: none; border: none; cursor: pointer; font-size: 18px; padding: 5px; opacity: 0.6;
     `;
-
     const passwordWrapper = senhaInput.parentElement;
     passwordWrapper.style.position = 'relative';
     passwordWrapper.appendChild(togglePassword);

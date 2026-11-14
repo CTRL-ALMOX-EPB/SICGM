@@ -2766,3 +2766,217 @@ select.form-select {
         font-size: 11px;
     }
 }
+
+/* ============================================
+   ETAPA 4 — MODAL DE CAMINHÕES
+   ============================================ */
+
+/* Botão + info inline no box de aguardando */
+.e4-caminhoes-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.e4-caminhoes-info {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
+    background: var(--cor-fundo);
+    color: var(--texto-secundario);
+}
+
+.e4-caminhoes-info.ok {
+    background: var(--cor-sucesso-claro);
+    color: #166534;
+}
+
+.e4-caminhoes-info.pendente {
+    background: var(--cor-aviso-claro);
+    color: #92400e;
+}
+
+/* Chips das placas selecionadas */
+.e4-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.e4-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--cor-primaria-clara);
+    color: var(--cor-primaria-escura);
+    border: 1px solid var(--cor-primaria);
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* Hint do botão confirmar */
+.e4-confirmar-hint {
+    font-size: 12px;
+    color: var(--cor-erro);
+    font-weight: 600;
+}
+
+.e4-btn-confirmar[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Box de reabrir conferência (GESTÃO) */
+.e4-reabrir-wrap {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed #bbf7d0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.e4-reabrir-hint {
+    font-size: 12px;
+    color: var(--texto-secundario);
+    font-style: italic;
+}
+
+/* ============================================
+   MODAL DE CAMINHÕES (52 placas + busca)
+   ============================================ */
+.e4-modal-caminhoes {
+    max-width: 720px !important;
+    width: 92% !important;
+}
+
+.e4-cam-busca {
+    margin-bottom: 12px;
+}
+
+.e4-cam-busca input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid var(--cor-borda);
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 13px;
+    box-sizing: border-box;
+    transition: all 0.2s;
+}
+
+.e4-cam-busca input:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(61, 139, 253, 0.12);
+}
+
+.e4-cam-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 4px;
+    margin-bottom: 12px;
+}
+
+.e4-cam-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 2px solid var(--cor-borda);
+    border-radius: var(--radius-md);
+    background: #fff;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: var(--texto-principal);
+    transition: all 0.15s;
+    user-select: none;
+}
+
+.e4-cam-item:hover {
+    border-color: var(--cor-primaria);
+    background: var(--cor-primaria-clara);
+}
+
+.e4-cam-item.selecionado {
+    background: var(--cor-primaria);
+    color: #fff;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 2px 6px rgba(61, 139, 253, 0.3);
+}
+
+.e4-cam-item input[type=checkbox] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.e4-cam-item.selecionado input[type=checkbox] {
+    accent-color: #fff;
+}
+
+.e4-cam-resumo {
+    font-size: 12px;
+    color: var(--texto-secundario);
+    padding: 10px 12px;
+    background: var(--cor-fundo);
+    border-radius: var(--radius-md);
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.e4-cam-resumo strong {
+    color: var(--texto-principal);
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+/* Scrollbar do grid de caminhões */
+.e4-cam-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.e4-cam-grid::-webkit-scrollbar-thumb {
+    background: var(--cor-borda-forte);
+    border-radius: 3px;
+}
+
+.e4-cam-grid::-webkit-scrollbar-thumb:hover {
+    background: var(--texto-suave);
+}
+
+/* Responsivo */
+@media (max-width: 600px) {
+    .e4-cam-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        max-height: 40vh;
+    }
+
+    .e4-cam-item {
+        padding: 8px 10px;
+        font-size: 11px;
+    }
+
+    .e4-chips-wrap {
+        gap: 4px;
+    }
+
+    .e4-chip {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+}

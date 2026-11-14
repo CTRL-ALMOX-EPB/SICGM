@@ -4,31 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - SICGM</title>
-    
+
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/admin.css">
-    <link rel="stylesheet" href="../css/chamados.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="admin-container">
-        <!-- Header com Timer -->
+        <!-- HEADER -->
         <div class="admin-header">
             <h1 class="admin-title">👑 Painel de Administração</h1>
             <div class="header-timer">
                 <div class="admin-actions-header">
-                    <a href="../home-gestao.html" class="btn btn-admin">🏠 Voltar</a>
+                    <a href="../home-unificada.html" class="btn btn-admin">🏠 Voltar</a>
                     <button class="btn btn-refresh" onclick="carregarDados()">🔄 Atualizar</button>
                 </div>
             </div>
         </div>
-        
-        <!-- Loading -->
+
+        <!-- LOADING -->
         <div id="loading" class="loading">⏳ Carregando dados...</div>
-        
-        <!-- Conteúdo -->
+
+        <!-- CONTEÚDO -->
         <div id="conteudo" style="display: none;">
-            
-            <!-- Estatísticas -->
+
+            <!-- ESTATÍSTICAS -->
             <div class="stats-grid" id="statsGrid">
                 <div class="stat-item">
                     <div class="stat-number" id="totalUsers">0</div>
@@ -47,74 +47,99 @@
                     <div class="stat-label">🟢 Online Agora</div>
                 </div>
             </div>
-            
-            <!-- Grid Principal -->
-            <div class="admin-grid">
-                
-                <!-- Card: Todos os Usuários -->
-                <div class="admin-card">
-                    <h2>👥 Todos os Usuários <span class="badge" id="badgeTotal">0</span></h2>
-                    <div class="user-list" id="allUsersList">
-                        <!-- Renderizado via JS -->
+
+            <!-- TOOLBAR -->
+            <div class="admin-toolbar">
+                <input type="text" id="filtroBusca" placeholder="🔍 Buscar por nome, email ou matrícula..." oninput="filtrarUsuarios()">
+                <select id="filtroPerfil" onchange="filtrarUsuarios()">
+                    <option value="">Todos os perfis</option>
+                </select>
+                <select id="filtroDepto" onchange="filtrarUsuarios()">
+                    <option value="">Todos os deptos</option>
+                </select>
+                <button class="btn btn-success" onclick="abrirModalNovo()">➕ Novo Usuário</button>
+            </div>
+
+            <!-- USUÁRIOS -->
+            <div class="admin-card">
+                <h2>👥 Usuários <span class="badge" id="badgeTotal">0</span></h2>
+                <div class="user-list" id="allUsersList"></div>
+            </div>
+
+            <!-- ONLINE -->
+            <div class="admin-card">
+                <h2>🟢 Online Agora <span class="badge" id="badgeOnline">0</span></h2>
+                <div class="user-list" id="onlineUsersList"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- MODAL NOVO/EDITAR USUÁRIO                    -->
+    <!-- ============================================ -->
+    <div id="modalUsuario" class="modal-overlay">
+        <div class="modal-box modal-usuario">
+            <div class="modal-head">
+                <h3 id="modalTitulo">➕ Novo Usuário</h3>
+                <button class="btn-fechar" onclick="fecharModalUsuario()">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <label>E-mail *</label>
+                <input type="email" id="formEmail" placeholder="email@dominio.com" autocomplete="off">
+
+                <label>Nome completo *</label>
+                <input type="text" id="formNome" placeholder="Nome do colaborador">
+
+                <label>Matrícula *</label>
+                <input type="text" id="formMatricula" placeholder="Ex: 171309" autocomplete="off">
+
+                <!-- Preview da senha automática -->
+                <div class="senha-preview" id="senhaPreview">
+                    <label style="margin:0;color:#2c6fdb;font-size:11px;">🔑 Senha que será cadastrada</label>
+                    <div class="senha-preview-valor">
+                        <code id="senhaPreviewTexto">ctrl-&lt;matrícula&gt;</code>
                     </div>
+                    <small style="color:#6b7a8f;font-size:11px;margin-top:4px;display:block;">
+                        A senha é gerada automaticamente a partir da matrícula (mesmo padrão do login).
+                    </small>
                 </div>
-                
-                <!-- Card: Usuários Online -->
-                <div class="admin-card">
-                    <h2>🟢 Online Agora <span class="badge" id="badgeOnline">0</span></h2>
-                    <div class="user-list" id="onlineUsersList">
-                        <!-- Renderizado via JS -->
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="formAtivo" checked> Ativo
+                </label>
+
+                <div class="perfis-section">
+                    <div class="perfis-header">
+                        <label>Perfis e Departamentos *</label>
+                        <button type="button" class="btn-add-perfil" onclick="adicionarPerfil()">➕ Adicionar perfil</button>
                     </div>
+                    <div id="perfisContainer"></div>
                 </div>
-                
-                <!-- Card: Revogar Acesso -->
-                <div class="admin-card">
-                    <h2>🔒 Revogar Acesso</h2>
-                    <p style="color: #718096; font-size: 13px; margin: 5px 0 10px 0;">
-                        Desativa o acesso do usuário imediatamente.
-                    </p>
-                    <div class="admin-actions">
-                        <input type="email" id="revokeEmail" placeholder="email@dominio.com">
-                        <button class="btn btn-danger" onclick="revogarUsuario()">Revogar</button>
-                    </div>
-                    <div id="mensagemRevogar" class="mensagem"></div>
-                </div>
-                
-                <!-- Card: Reativar Acesso -->
-                <div class="admin-card">
-                    <h2>🔓 Reativar Acesso</h2>
-                    <p style="color: #718096; font-size: 13px; margin: 5px 0 10px 0;">
-                        Reativa o acesso de um usuário previamente desativado.
-                    </p>
-                    <div class="admin-actions">
-                        <input type="email" id="reactivateEmail" placeholder="email@dominio.com">
-                        <button class="btn btn-success" onclick="reativarUsuario()">Reativar</button>
-                    </div>
-                    <div id="mensagemReativar" class="mensagem"></div>
-                </div>
-                
+            </div>
+
+            <div class="modal-foot">
+                <button class="btn btn-limpar" onclick="fecharModalUsuario()">Cancelar</button>
+                <button class="btn btn-filtrar" id="btnSalvar" onclick="salvarUsuario()">💾 Salvar</button>
             </div>
         </div>
     </div>
-    
+
     <!-- ============================================ -->
-    <!-- 🔥 FIREBASE SDK                              -->
+    <!-- SCRIPTS (ORDEM IMPORTA!)                    -->
     <!-- ============================================ -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-    <!-- ============================================ -->
-    <!-- 🔥 CONFIGURAÇÕES DO SISTEMA (ORDEM IMPORTA!) -->
-    <!-- ============================================ -->
-    <script src="../js/firebase-config.js"></script>   
-    <script src="../js/config.js"></script>  
-    <script src="../js/auth-service.js"></script>      
-    <script src="../js/auth-helper.js"></script>  
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/firebase-init.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/perfis.js"></script>
+    <script src="../js/auth-service.js"></script>
+    <script src="../js/auth-helper.js"></script>
     <script src="../js/script.js"></script>
-    <script src="../js/auth-global.js"></script>  
-    <Script src="../js/login.js"></script>      
+    <script src="../js/auth-global.js"></script>
     <script src="../js/admin.js"></script>
-    <script src="../js/chamados.js" defer></script>
-    <script src="../js/iframe-nav.js"></script>
 </body>
 </html>

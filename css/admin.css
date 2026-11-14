@@ -1,5 +1,8 @@
 /* ============================================
-   ADMIN.CSS - ESTILOS DO PAINEL ADMIN
+   ADMIN.CSS v3
+   - Layout corrigido (flex nos items)
+   - Toolbar + Modal + Chips
+   - Blindagem de botões clicáveis
    ============================================ */
 
 .admin-container {
@@ -8,6 +11,9 @@
     padding: 20px;
 }
 
+/* ============================================
+   HEADER
+   ============================================ */
 .admin-header {
     display: flex;
     justify-content: space-between;
@@ -22,6 +28,7 @@
 .admin-title {
     color: #2d3748;
     font-size: 24px;
+    margin: 0;
 }
 
 .admin-actions-header {
@@ -30,6 +37,83 @@
     flex-wrap: wrap;
 }
 
+/* ============================================
+   STATS
+   ============================================ */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 15px;
+    background: #f7fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.stat-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #718096;
+    margin-top: 5px;
+}
+
+/* ============================================
+   TOOLBAR
+   ============================================ */
+.admin-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e6ecf3;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.admin-toolbar input[type=text] {
+    flex: 1;
+    min-width: 200px;
+    padding: 9px 12px;
+    border: 2px solid #e6ecf3;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+.admin-toolbar input[type=text]:focus,
+.admin-toolbar select:focus {
+    outline: none;
+    border-color: #3d8bfd;
+    box-shadow: 0 0 0 3px rgba(61,139,253,.12);
+}
+
+.admin-toolbar select {
+    padding: 9px 12px;
+    border: 2px solid #e6ecf3;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    background: #fff;
+    cursor: pointer;
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
 .admin-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -37,32 +121,36 @@
 }
 
 .admin-card {
-    background: white;
+    background: #fff;
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     border: 1px solid #e2e8f0;
+    margin-bottom: 20px;
 }
 
 .admin-card h2 {
     color: #2d3748;
-    margin-top: 0;
-    border-bottom: 2px solid #e2e8f0;
+    margin: 0 0 15px 0;
     padding-bottom: 10px;
     font-size: 18px;
+    border-bottom: 2px solid #e2e8f0;
 }
 
 .admin-card h2 .badge {
     background: #4299E1;
-    color: white;
+    color: #fff;
     padding: 2px 10px;
     border-radius: 20px;
     font-size: 14px;
     margin-left: 8px;
 }
 
+/* ============================================
+   USER LIST
+   ============================================ */
 .user-list {
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
 }
 
@@ -80,20 +168,31 @@
     border-radius: 3px;
 }
 
+/* 🔥 CORREÇÃO PRINCIPAL: flex garante que user-actions não colapse */
 .user-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 8px;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding: 12px 8px !important;
     border-bottom: 1px solid #f7fafc;
+    min-height: 60px;
+    box-sizing: border-box;
 }
 
 .user-item:hover {
     background: #f7fafc;
 }
 
+.user-item:last-child {
+    border-bottom: none;
+}
+
+/* 🔥 user-info ocupa o espaço restante, sem forçar user-actions a sumir */
 .user-info {
-    flex: 1;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden;
 }
 
 .user-name {
@@ -102,12 +201,52 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 5px;
+    gap: 6px;
+    font-size: 14px;
+    margin-bottom: 2px;
 }
 
 .user-email {
     font-size: 12px;
     color: #718096;
+    word-break: break-all;
+}
+
+.user-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+/* 🔥 user-actions não colapsa, fica fixo à direita */
+.user-actions {
+    display: flex !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+    align-items: center !important;
+    align-self: flex-start;
+    min-width: fit-content;
+    min-height: 32px;
+}
+
+/* ============================================
+   CHIPS DE PERFIL
+   ============================================ */
+.chip-perfil {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    line-height: 1.4;
+}
+
+.chip-perfil small {
+    font-weight: 500;
+    opacity: 0.85;
+    font-size: 10px;
 }
 
 .user-perfil {
@@ -117,31 +256,88 @@
     font-weight: 600;
 }
 
-.perfil-GESTAO {
-    background: #48BB78;
-    color: white;
-}
+.perfil-GESTAO      { background: #48BB78; color: #fff; }
+.perfil-BACKOFFICE  { background: #4299E1; color: #fff; }
+.perfil-TECNICA     { background: #9F7AEA; color: #fff; }
+.perfil-SEPARADOR   { background: #ED8936; color: #fff; }
+.perfil-ESTORNADOR  { background: #D53F8C; color: #fff; }
+.perfil-CONFERENTE  { background: #38B2AC; color: #fff; }
+.perfil-VISUALIZACAO{ background: #A0AEC0; color: #fff; }
 
-.perfil-OPERACIONAL {
-    background: #4299E1;
-    color: white;
-}
-
-.perfil-VISUALIZACAO {
-    background: #ED8936;
-    color: white;
-}
-
+/* ============================================
+   STATUS
+   ============================================ */
 .status-ativo {
     color: #48BB78;
     font-weight: 600;
+    font-size: 12px;
+    white-space: nowrap;
 }
 
 .status-inativo {
     color: #FC8181;
     font-weight: 600;
+    font-size: 12px;
+    white-space: nowrap;
 }
 
+/* ============================================
+   BOTÕES (base)
+   ============================================ */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.2s;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.btn:hover {
+    opacity: 0.85;
+}
+
+.btn-danger  { background: #FC8181; color: #fff; }
+.btn-success { background: #48BB78; color: #fff; }
+.btn-refresh { background: #4299E1; color: #fff; }
+.btn-sair    { background: #718096; color: #fff; }
+.btn-admin   { background: #9F7AEA; color: #fff; }
+.btn-admin:hover { background: #805AD5; }
+
+/* 🔥 BOTÕES PEQUENOS (editar/revogar) — sempre clicáveis */
+.btn-sm {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    padding: 6px 10px !important;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer !important;
+    font-size: 14px;
+    transition: transform 0.15s, background 0.15s;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    font-family: inherit;
+    line-height: 1;
+    box-sizing: border-box;
+}
+
+.btn-sm:hover {
+    transform: scale(1.08);
+}
+
+.btn-sm.btn-edit    { background: #ebf3ff; color: #2c6fdb; }
+.btn-sm.btn-danger  { background: #fee2e2; color: #991b1b; }
+.btn-sm.btn-success { background: #d1fae5; color: #065f46; }
+
+/* ============================================
+   AÇÕES ANTIGAS (input + botão inline, se ainda usado)
+   ============================================ */
 .admin-actions {
     display: flex;
     gap: 10px;
@@ -156,87 +352,24 @@
     border-radius: 8px;
     min-width: 200px;
     font-size: 14px;
-    transition: border-color 0.3s;
+    font-family: inherit;
+    box-sizing: border-box;
 }
 
 .admin-actions input:focus {
     border-color: #4299E1;
     outline: none;
+    box-shadow: 0 0 0 3px rgba(66,153,225,.12);
 }
 
-.btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: opacity 0.3s;
-    font-size: 14px;
-}
-
-.btn:hover {
-    opacity: 0.8;
-}
-
-.btn-danger {
-    background: #FC8181;
-    color: white;
-}
-
-.btn-success {
-    background: #48BB78;
-    color: white;
-}
-
-.btn-refresh {
-    background: #4299E1;
-    color: white;
-}
-
-.btn-sair {
-    background: #718096;
-    color: white;
-}
-
-.btn-admin {
-    background: #9F7AEA;
-    color: white;
-}
-
-.btn-admin:hover {
-    background: #805AD5;
-}
-
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
-    margin-bottom: 25px;
-}
-
-.stat-item {
-    text-align: center;
-    padding: 15px;
-    background: #f7fafc;
-    border-radius: 8px;
-}
-
-.stat-number {
-    font-size: 28px;
-    font-weight: 700;
-    color: #2d3748;
-}
-
-.stat-label {
-    font-size: 12px;
-    color: #718096;
-    margin-top: 5px;
-}
-
+/* ============================================
+   LOADING / MENSAGENS
+   ============================================ */
 .loading {
     text-align: center;
     padding: 40px;
     color: #718096;
+    font-size: 14px;
 }
 
 .mensagem {
@@ -268,22 +401,360 @@
     display: block;
 }
 
-@media (max-width: 768px) {
+/* ============================================
+   MODAL
+   ============================================ */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+}
+
+.modal-overlay.ativo {
+    display: flex;
+}
+
+/* 🔥 Garante que o modal fechado não vaze */
+#modalUsuario:not(.ativo) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+#modalUsuario.ativo {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+.modal-box {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    max-height: 92vh;
+}
+
+.modal-usuario {
+    max-width: 640px !important;
+    width: 92% !important;
+}
+
+.modal-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e6ecf3;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f4f7f9;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-head h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #2d3748;
+}
+
+/* 🔥 Botão X sempre no topo e clicável */
+#modalUsuario .btn-fechar {
+    position: relative !important;
+    z-index: 10001 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    border: none;
+    background: none;
+    font-size: 18px;
+    color: #6b7a8f;
+    padding: 4px 10px;
+    border-radius: 6px;
+    line-height: 1;
+}
+
+#modalUsuario .btn-fechar:hover {
+    background: #fee2e2;
+    color: #dc3545;
+}
+
+#modalUsuario.ativo {
+    z-index: 10000;
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: calc(92vh - 140px);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.modal-body label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b7a8f;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-top: 8px;
+}
+
+.modal-body label.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: none;
+    font-size: 13px;
+    color: #1a2b4c;
+    cursor: pointer;
+    margin-top: 12px;
+}
+
+.modal-body input[type=email],
+.modal-body input[type=text],
+.modal-body input[type=password] {
+    padding: 10px 12px;
+    border: 2px solid #e6ecf3;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.modal-body input:focus {
+    outline: none;
+    border-color: #3d8bfd;
+    box-shadow: 0 0 0 3px rgba(61,139,253,.12);
+}
+
+.modal-body input:disabled {
+    background: #f4f7f9;
+    color: #6b7a8f;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   PERFIS DINÂMICOS NO MODAL
+   ============================================ */
+.perfis-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e6ecf3;
+}
+
+.perfis-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.btn-add-perfil {
+    background: #3d8bfd;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+}
+
+.btn-add-perfil:hover {
+    background: #2c6fdb;
+}
+
+.perfil-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px;
+    background: #f4f7f9;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.perfil-select {
+    padding: 8px 12px;
+    border: 2px solid #e6ecf3;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    background: #fff;
+    min-width: 140px;
+}
+
+.deptos-checkboxes {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    min-width: 200px;
+}
+
+.check-depto {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #fff;
+    border: 2px solid #e6ecf3;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    text-transform: none !important;
+    color: #1a2b4c !important;
+    margin-top: 0 !important;
+}
+
+.check-depto input {
+    cursor: pointer;
+    margin: 0;
+}
+
+.check-depto:has(input:checked) {
+    border-color: #3d8bfd;
+    background: #ebf3ff;
+    color: #2c6fdb !important;
+}
+
+.btn-remove-perfil {
+    background: #fee2e2;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    min-width: 34px;
+    min-height: 34px;
+}
+
+.btn-remove-perfil:hover {
+    background: #fecaca;
+}
+
+.modal-foot {
+    padding: 14px 20px;
+    border-top: 1px solid #e6ecf3;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    background: #f4f7f9;
+    border-radius: 0 0 12px 12px;
+}
+
+/* ============================================
+   RESPONSIVO
+   ============================================ */
+@media (max-width: 900px) {
     .admin-grid {
         grid-template-columns: 1fr;
     }
+
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+
     .admin-header {
         flex-direction: column;
         align-items: flex-start;
     }
+
     .admin-actions-header {
         width: 100%;
     }
+
     .admin-actions-header .btn {
         flex: 1;
         text-align: center;
     }
+
+    .admin-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-toolbar input[type=text],
+    .admin-toolbar select,
+    .admin-toolbar .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    .admin-container {
+        padding: 12px;
+    }
+
+    .perfil-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .perfil-select,
+    .deptos-checkboxes {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .modal-foot {
+        flex-direction: column;
+    }
+
+    .modal-foot button {
+        width: 100%;
+    }
+}
+
+/* ============================================
+   PREVIEW DE SENHA AUTOMÁTICA
+   ============================================ */
+.senha-preview {
+    background: #ebf3ff;
+    border: 1px solid #3d8bfd;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 4px;
+    margin-bottom: 8px;
+    transition: opacity 0.2s;
+}
+
+.senha-preview-valor {
+    margin-top: 6px;
+}
+
+.senha-preview code {
+    display: inline-block;
+    background: #fff;
+    color: #2c6fdb;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    border: 1px solid #bee3f8;
+    word-break: break-all;
+}
+
+#formMatricula {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-weight: 600;
+    letter-spacing: 0.3px;
 }

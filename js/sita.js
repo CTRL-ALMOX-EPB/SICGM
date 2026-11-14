@@ -99,6 +99,8 @@ window.SitaAPI = {
     voltar:           (numero, motivo) => SitaAPI._fetch(`/api/documentos/${numero}/voltar`, { method: 'POST', body: JSON.stringify({ motivo }) }),
     concluir:         (numero)      => SitaAPI._fetch(`/api/documentos/${numero}/concluir`, { method: 'POST' }),
     confirmarConferencia: (numero)  => SitaAPI._fetch(`/api/documentos/${numero}/confirmar-conferencia`, { method: 'POST' }),
+    salvarCaminhoes:  (numero, caminhoes) => SitaAPI._fetch(`/api/documentos/${numero}/caminhoes`, { method: 'PUT', body: JSON.stringify({ caminhoes }) }),
+    reabrirConferencia: (numero, motivo) => SitaAPI._fetch(`/api/documentos/${numero}/reabrir-conferencia`, { method: 'POST', body: JSON.stringify({ motivo }) }),
 
     concluirSubetapa: (numero, codigo, obs) => SitaAPI._fetch(`/api/documentos/${numero}/subetapas/${codigo}/concluir`, { method: 'POST', body: JSON.stringify({ observacao: obs }) }),
     reabrirSubetapa:  (numero, codigo)      => SitaAPI._fetch(`/api/documentos/${numero}/subetapas/${codigo}/reabrir`, { method: 'POST' }),
@@ -211,6 +213,29 @@ window.SitaHelpers = {
             const diffDias = Math.floor((alvo - hoje) / (1000 * 60 * 60 * 24));
             return diffDias >= 0 && diffDias <= 10;
         } catch (_) { return false; }
+    },
+
+    // ===== CAMINHÕES =====
+    CAMINHOES: [
+        'QSL5769', 'QSI1C24', 'QSI3509', 'QSJ0117', 'OGG8C91', 'QFL8I77',
+        'QSJ0107', 'OGG7A51', 'OGF9697', 'QSH2J24', 'QSH8D03', 'QSK0J55',
+        'OGG6J91', 'OGG8E41', 'QSH8C33', 'SRZ4B03', 'SRI9A86', 'OGG6J51',
+        'SRZ4B04', 'QSM5B57', 'PHN5141', 'OGG6J61', 'QSH2H84', 'QSI3489',
+        'UBA4A89', 'QSH1C14', 'PHL7111', 'JCW2F63', 'TEC1J04', 'TEC1I37',
+        'QSH8C53', 'QSH2I34', 'JCY5E11', 'OGG8D21', 'QSM5B07', 'QFS4924',
+        'QSL5H37', 'TEC1I64', 'QSH9E63', 'QSK6D58', 'OGG8D61', 'QSJ1B45',
+        'QSH8C83', 'OGG7A41', 'QFL8177', 'OGG7A31', 'SSB2A97', 'SSB2A95',
+        'TEC1I53', 'QSH1C24', 'OGG7A21', 'QSK6358'
+    ],
+
+    parseCaminhoesCSV(csv) {
+        if (!csv) return [];
+        return String(csv).split(',').map(s => s.trim()).filter(Boolean);
+    },
+
+    formatarCaminhoesCSV(csv) {
+        const arr = this.parseCaminhoesCSV(csv);
+        return arr.length === 0 ? '' : arr.join(', ');
     }
 };
 
@@ -1204,6 +1229,8 @@ window.Etapa2 = {
         this.itensRemovidos = [];
         this.sujo = false;
 
+        const caminhaoFormatado = SitaHelpers.formatarCaminhoesCSV(docAtual.caminhao);
+
         container.innerHTML = `
             <h3 class="etapa-titulo">Etapa 2 — Lista de Separação</h3>
 
@@ -1219,7 +1246,7 @@ window.Etapa2 = {
                     </div>
                     <div class="mgm-cab-col">
                         <label>🚚 Caminhão</label>
-                        <input type="text" id="e2Caminhao" value="${docAtual.caminhao || ''}" placeholder="Placa ou identificação">
+                        <input type="text" id="e2Caminhao" value="${caminhaoFormatado}" readonly placeholder="Definido na conferência">
                     </div>
                 </div>
                 <div class="mgm-cab-row">
@@ -1308,7 +1335,7 @@ window.Etapa2 = {
     },
 
     configurarCabecalho() {
-        const campos = ['e2DataSeparacao', 'e2Caminhao', 'e2Observacao'];
+        const campos = ['e2DataSeparacao', 'e2Observacao'];
         campos.forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
@@ -1803,7 +1830,6 @@ window.Etapa2 = {
                 const enc = ENCARREGADOS_SITA.find(e => e.nome.toUpperCase().includes(cabecalho.encarregado.toUpperCase()));
                 if (enc) { sel.value = enc.nome; this.aoMudarEncarregado(); }
             }
-            if (cabecalho.caminhao) document.getElementById('e2Caminhao').value = cabecalho.caminhao;
             this.marcarSujo();
 
             let headerRow = -1, headerNorm = [];
@@ -1970,7 +1996,6 @@ window.Etapa2 = {
             encarregado: document.getElementById('e2Encarregado')?.value || '',
             matricula_encarregado: document.getElementById('e2Matricula')?.value || '',
             equipe_encarregado: document.getElementById('e2Equipe')?.value || '',
-            caminhao: document.getElementById('e2Caminhao')?.value.trim() || '',
             data_separacao: document.getElementById('e2DataSeparacao')?.value || ''
         };
 
@@ -2042,10 +2067,13 @@ window.Etapa3 = {
         const pendentes = subs.filter(s => !s.concluida && !s.ignorada);
         const podeAvancar = pendentes.length === 0;
 
+        const caminhaoFormatado = SitaHelpers.formatarCaminhoesCSV(docAtual.caminhao);
+
         container.innerHTML = `
             <div class="e3-tag-wrap">
                 <span class="e3-tag ${tagCls}">${tagLabel}</span>
                 ${docAtual.separador ? `<span class="e3-sep">👷 Separador (matrícula): <strong>${docAtual.separador}</strong></span>` : ''}
+                ${caminhaoFormatado ? `<span class="e3-sep">🚚 <strong>${caminhaoFormatado}</strong></span>` : '<span class="e3-sep">🚚 <em style="color:var(--texto-suave)">Caminhão definido na conferência</em></span>'}
             </div>
 
             <h3 class="etapa-titulo">Etapa 3 — Separado</h3>
@@ -2304,11 +2332,13 @@ window.Etapa3 = {
 // ============================================================
 window.Etapa4 = {
     doc: null, itens: [], nomeUsuario: '',
+    caminhoesSelecionados: [],
 
     async render(container, docAtual) {
         this.doc = docAtual;
         this.itens = docAtual.itens || [];
         this.nomeUsuario = SitaAuth.nome();
+        this.caminhoesSelecionados = SitaHelpers.parseCaminhoesCSV(docAtual.caminhao);
 
         const jaConferido = !!(docAtual.conferente && docAtual.data_conferencia);
         const tagLabel = jaConferido ? '✓ CONFERIDO' : '🔍 AGUARDANDO CONFERÊNCIA';
@@ -2316,10 +2346,14 @@ window.Etapa4 = {
 
         const perfilUser = (SitaAuth.perfil && SitaAuth.perfil() || '').toUpperCase();
         const podeConferir = !jaConferido && (perfilUser === 'GESTAO' || perfilUser === 'CONFERENTE');
+        const ehGestao = perfilUser === 'GESTAO';
 
         const subs = (docAtual.subetapas || []).filter(s => s.etapa === 4);
         const todasOk = subs.length === 0 || subs.every(s => s.concluida);
         const podeAvancar = jaConferido && todasOk;
+
+        const caminhaoFormatado = SitaHelpers.formatarCaminhoesCSV(docAtual.caminhao);
+        const temCaminhoes = this.caminhoesSelecionados.length > 0;
 
         container.innerHTML = `
             <div class="e3-tag-wrap">
@@ -2336,17 +2370,44 @@ window.Etapa4 = {
                         <span><strong>Conferente:</strong> ${docAtual.conferente}</span>
                         <span><strong>Data:</strong> ${new Date(docAtual.data_conferencia).toLocaleString('pt-BR')}</span>
                     </div>
+                    <div class="e4-confirmado-info" style="margin-top:8px">
+                        <span><strong>🚚 Caminhões:</strong> ${caminhaoFormatado || '<em>—</em>'}</span>
+                    </div>
+                    ${ehGestao ? `
+                        <div class="e4-reabrir-wrap">
+                            <button class="btn-warning" onclick="Etapa4.reabrirConferencia()">🔄 Reabrir Conferência</button>
+                            <span class="e4-reabrir-hint">Apenas GESTÃO — uso raro</span>
+                        </div>
+                    ` : ''}
                 </div>
             ` : podeConferir ? `
                 <div class="e4-aguardando-box">
                     <div class="e4-aguardando-title">🔍 Conferência pendente</div>
-                    <div class="e4-aguardando-hint">Confira os itens abaixo. Ao confirmar, o documento será marcado como <strong>CONFERIDO</strong> e ficará pronto para expedição.</div>
-                    <button class="btn-filtrar e4-btn-confirmar" onclick="Etapa4.confirmar()">🔍 Confirmar Conferência</button>
+                    <div class="e4-aguardando-hint">Confira os itens abaixo e selecione os caminhões que serão utilizados. Só é possível confirmar a conferência com <strong>pelo menos 1 caminhão</strong> selecionado.</div>
+
+                    <div class="e4-caminhoes-actions">
+                        <button class="btn-filtrar" onclick="Etapa4.abrirModalCaminhoes()">🚚 Selecionar Caminhões</button>
+                        <span class="e4-caminhoes-info ${temCaminhoes ? 'ok' : 'pendente'}">
+                            ${temCaminhoes ? `✓ ${this.caminhoesSelecionados.length} caminhão(ões) selecionado(s)` : '⚠ Nenhum caminhão selecionado'}
+                        </span>
+                    </div>
+
+                    ${temCaminhoes ? `
+                        <div class="e4-chips-wrap">
+                            ${this.caminhoesSelecionados.map(p => `<span class="e4-chip">🚚 ${p}</span>`).join('')}
+                        </div>
+                    ` : ''}
+
+                    <button class="btn-filtrar btn-success e4-btn-confirmar" ${temCaminhoes ? '' : 'disabled'} onclick="Etapa4.confirmar()">
+                        🔍 Confirmar Conferência
+                    </button>
+                    ${!temCaminhoes ? `<span class="e4-confirmar-hint">Selecione ao menos 1 caminhão para habilitar</span>` : ''}
                 </div>
             ` : `
                 <div class="e4-bloqueado-box">
                     <div class="e4-bloqueado-title">🔒 Aguardando o conferente</div>
                     <div class="e4-bloqueado-hint">Apenas o conferente responsável ou a GESTÃO podem confirmar esta etapa.</div>
+                    ${caminhaoFormatado ? `<div style="margin-top:8px"><strong>🚚 Caminhões:</strong> ${caminhaoFormatado}</div>` : ''}
                 </div>
             `}
 
@@ -2398,8 +2459,122 @@ window.Etapa4 = {
         `).join('');
     },
 
+    // ===== MODAL DE CAMINHÕES =====
+    abrirModalCaminhoes() {
+        const antigo = document.getElementById('e4ModalCaminhoes');
+        if (antigo) antigo.remove();
+
+        const selecionados = new Set(this.caminhoesSelecionados);
+        const lista = SitaHelpers.CAMINHOES;
+
+        const modal = document.createElement('div');
+        modal.id = 'e4ModalCaminhoes';
+        modal.className = 'modal-overlay ativo';
+        modal.innerHTML = `
+            <div class="modal-box e4-modal-caminhoes">
+                <div class="modal-head">
+                    <h3>🚚 Selecionar Caminhões (${selecionados.size} selecionado(s))</h3>
+                    <button class="btn-fechar" onclick="Etapa4.fecharModalCaminhoes()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="e4-cam-busca">
+                        <input type="text" id="e4CamBusca" placeholder="🔍 Filtrar placa..." oninput="Etapa4.filtrarCaminhoes(this.value)">
+                    </div>
+                    <div class="e4-cam-grid" id="e4CamGrid">
+                        ${lista.map(p => `
+                            <label class="e4-cam-item ${selecionados.has(p) ? 'selecionado' : ''}" data-placa="${p}">
+                                <input type="checkbox" value="${p}" ${selecionados.has(p) ? 'checked' : ''} onchange="Etapa4.toggleCaminhao('${p}', this.checked)">
+                                <span>${p}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                    <div class="e4-cam-resumo" id="e4CamResumo">
+                        ${selecionados.size > 0
+                            ? `Selecionados: <strong>${Array.from(selecionados).join(', ')}</strong>`
+                            : 'Nenhum caminhão selecionado'}
+                    </div>
+                </div>
+                <div class="modal-foot">
+                    <button class="btn-limpar-filtros" onclick="Etapa4.fecharModalCaminhoes()">Cancelar</button>
+                    <button class="btn-limpar-filtros" onclick="Etapa4.limparSelecaoCaminhoes()">🧹 Limpar</button>
+                    <button class="btn-filtrar" onclick="Etapa4.aplicarCaminhoes()">💾 Aplicar Seleção</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        this._selecaoTemp = new Set(selecionados);
+        setTimeout(() => document.getElementById('e4CamBusca')?.focus(), 100);
+    },
+
+    filtrarCaminhoes(termo) {
+        const t = (termo || '').toUpperCase().trim();
+        document.querySelectorAll('#e4CamGrid .e4-cam-item').forEach(el => {
+            const placa = el.dataset.placa || '';
+            el.style.display = (!t || placa.toUpperCase().includes(t)) ? '' : 'none';
+        });
+    },
+
+    toggleCaminhao(placa, marcado) {
+        if (!this._selecaoTemp) this._selecaoTemp = new Set();
+        const el = document.querySelector(`#e4CamGrid .e4-cam-item[data-placa="${placa}"]`);
+        if (marcado) {
+            this._selecaoTemp.add(placa);
+            if (el) el.classList.add('selecionado');
+        } else {
+            this._selecaoTemp.delete(placa);
+            if (el) el.classList.remove('selecionado');
+        }
+        const resumo = document.getElementById('e4CamResumo');
+        if (resumo) {
+            resumo.innerHTML = this._selecaoTemp.size > 0
+                ? `Selecionados: <strong>${Array.from(this._selecaoTemp).join(', ')}</strong>`
+                : 'Nenhum caminhão selecionado';
+        }
+        const titulo = document.querySelector('#e4ModalCaminhoes .modal-head h3');
+        if (titulo) titulo.textContent = `🚚 Selecionar Caminhões (${this._selecaoTemp.size} selecionado(s))`;
+    },
+
+    limparSelecaoCaminhoes() {
+        this._selecaoTemp = new Set();
+        document.querySelectorAll('#e4CamGrid .e4-cam-item').forEach(el => {
+            el.classList.remove('selecionado');
+            const cb = el.querySelector('input[type=checkbox]');
+            if (cb) cb.checked = false;
+        });
+        const resumo = document.getElementById('e4CamResumo');
+        if (resumo) resumo.textContent = 'Nenhum caminhão selecionado';
+        const titulo = document.querySelector('#e4ModalCaminhoes .modal-head h3');
+        if (titulo) titulo.textContent = `🚚 Selecionar Caminhões (0 selecionado(s))`;
+    },
+
+    async aplicarCaminhoes() {
+        const arr = Array.from(this._selecaoTemp || []);
+        if (arr.length === 0) {
+            SitaHelpers.toast('Selecione ao menos 1 caminhão', 'aviso');
+            return;
+        }
+        try {
+            await SitaAPI.salvarCaminhoes(this.doc.numero, arr);
+            this.fecharModalCaminhoes();
+            await this.recarregar();
+            SitaHelpers.toast(`✅ ${arr.length} caminhão(ões) salvo(s)`, 'sucesso');
+        } catch (e) {
+            alert('❌ ' + e.message);
+        }
+    },
+
+    fecharModalCaminhoes() {
+        document.getElementById('e4ModalCaminhoes')?.remove();
+        this._selecaoTemp = null;
+    },
+
+    // ===== CONFIRMAR =====
     async confirmar() {
-        if (!confirm('🔍 Confirmar a conferência deste documento?\n\nApós confirmar, o documento vai para EXPEDIDO e só a GESTÃO poderá reverter.')) return;
+        if (!this.caminhoesSelecionados || this.caminhoesSelecionados.length === 0) {
+            alert('⚠️ Selecione ao menos 1 caminhão antes de confirmar.');
+            return;
+        }
+        if (!confirm(`🔍 Confirmar a conferência deste documento?\n\n🚚 Caminhões: ${this.caminhoesSelecionados.join(', ')}\n\nApós confirmar, o documento vai para EXPEDIDO e só a GESTÃO poderá reverter.`)) return;
         try {
             const resp = await SitaAPI.confirmarConferencia(this.doc.numero);
             alert(`✅ Conferência confirmada por ${resp.conferente}`);
@@ -2407,8 +2582,22 @@ window.Etapa4 = {
         } catch (e) { alert('❌ ' + e.message); }
     },
 
+    // ===== REABRIR (GESTÃO) =====
+    async reabrirConferencia() {
+        const motivo = prompt('Motivo da reabertura (obrigatório para auditoria):');
+        if (!motivo || !motivo.trim()) return;
+        try {
+            await SitaAPI.reabrirConferencia(this.doc.numero, motivo.trim());
+            alert('🔄 Conferência reaberta.');
+            await this.recarregar();
+        } catch (e) { alert('❌ ' + e.message); }
+    },
+
     async avancar() {
         if (!this.doc.conferente || !this.doc.data_conferencia) { alert('Confirme a conferência primeiro.'); return; }
+        if (!this.doc.caminhao || SitaHelpers.parseCaminhoesCSV(this.doc.caminhao).length === 0) {
+            alert('Selecione os caminhões antes de avançar.'); return;
+        }
         try { await SitaAPI.avancar(this.doc.numero); location.reload(); }
         catch (e) { alert(e.message); }
     },
@@ -2432,6 +2621,8 @@ window.Etapa5 = {
         this.doc = docAtual;
         this.itens = docAtual.itens || [];
 
+        const caminhaoFormatado = SitaHelpers.formatarCaminhoesCSV(docAtual.caminhao);
+
         container.innerHTML = `
             <div class="e3-tag-wrap">
                 <span class="e3-tag tag-expedido">🚚 EXPEDIDO</span>
@@ -2442,8 +2633,14 @@ window.Etapa5 = {
 
             <div class="mgm-cabecalho">
                 <div class="mgm-cab-row">
-                    <div class="mgm-cab-col"><label>🚚 Caminhão</label><input type="text" id="e5Caminhao" value="${docAtual.caminhao || ''}" placeholder="Placa ou identificação"></div>
-                    <div class="mgm-cab-col"><label>📅 Data de Expedição</label><input type="date" id="e5DataExpedicao" value="${docAtual.data_expedicao || ''}"></div>
+                    <div class="mgm-cab-col">
+                        <label>🚚 Caminhão</label>
+                        <input type="text" id="e5Caminhao" value="${caminhaoFormatado}" readonly placeholder="Definido na conferência">
+                    </div>
+                    <div class="mgm-cab-col">
+                        <label>📅 Data de Expedição</label>
+                        <input type="date" id="e5DataExpedicao" value="${docAtual.data_expedicao || ''}">
+                    </div>
                 </div>
             </div>
 
@@ -2481,14 +2678,11 @@ window.Etapa5 = {
     },
 
     configurarCabecalho() {
-        ['e5Caminhao', 'e5DataExpedicao'].forEach(id => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            const campo = id === 'e5Caminhao' ? 'caminhao' : 'data_expedicao';
-            el.addEventListener('change', async () => {
-                try { await SitaAPI.atualizar(this.doc.numero, { [campo]: el.value.trim() }); }
-                catch (e) { alert('Erro ao salvar: ' + e.message); }
-            });
+        const el = document.getElementById('e5DataExpedicao');
+        if (!el) return;
+        el.addEventListener('change', async () => {
+            try { await SitaAPI.atualizar(this.doc.numero, { data_expedicao: el.value }); }
+            catch (e) { alert('Erro ao salvar: ' + e.message); }
         });
     },
 
@@ -2660,10 +2854,13 @@ window.Etapa6 = {
         });
         const podeConcluir = todasOk && tratativasOk && !arquivado;
 
+        const caminhaoFormatado = SitaHelpers.formatarCaminhoesCSV(docAtual.caminhao);
+
         container.innerHTML = `
             <div class="e3-tag-wrap">
                 <span class="e3-tag ${tagCls}">${tagLabel}</span>
                 ${arquivado ? `<span class="e3-sep text-success text-bold">📁 Documento concluído em ${docAtual.atualizado_em ? new Date(docAtual.atualizado_em).toLocaleDateString('pt-BR') : '—'}</span>` : ''}
+                ${caminhaoFormatado ? `<span class="e3-sep">🚚 <strong>${caminhaoFormatado}</strong></span>` : ''}
             </div>
 
             <h3 class="etapa-titulo">Etapa 6 — Devolvido</h3>
