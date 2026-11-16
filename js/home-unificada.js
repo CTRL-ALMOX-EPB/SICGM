@@ -88,7 +88,7 @@ const DEPARTAMENTOS_BASE = {
 };
 
 const DASHBOARDS_DISPONIVEIS = [
-    { nome: 'Pendência de Requisição', link: 'dashboards/pendencia-requisicao.html' },
+    { nome: 'Correção de Obras', link: 'dashboards/pendencia-requisicao.html' },
     { nome: 'Aditivos Sistêmicos', link: 'dashboards/aditivos-sistemicos.html' },
     { nome: 'Aditivos Físicos', link: 'dashboards/aditivos-fisicos.html' },
     { nome: 'Pendência de Devolução', link: 'dashboards/pendencia-devolucao.html' },
