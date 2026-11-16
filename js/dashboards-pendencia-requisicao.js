@@ -1,18 +1,14 @@
 // ============================================
-// DASHBOARD PENDÊNCIA DE REQUISIÇÃO - v7
+// DASHBOARD PENDÊNCIA DE REQUISIÇÃO - v8
+// + Exportação Excel (2 abas: REQUISITAR / DEVOLVER)
 // Lógica: MGM (Σ QTD. APLICADA da devolucao_compilada) × qtdrealizada (previsto_realizado)
 //
 // REQUISITAR → qtdMGM > qtdRealizada  (falta subir o sistêmico)
 // DEVOLVER   → qtdRealizada > qtdMGM  (sobra, precisa baixar)
 // OK         → |qtdMGM - qtdRealizada| <= 0.01
-//
-// Fontes:
-//   - devolucao_compilada.txt (R2)   → MGM (usado fisicamente)
-//   - previsto_realizado.txt (R2)    → requisitado no sistêmico
-//   - programacao_siago.txt (R2)     → etapas formais (visual)
 // ============================================
 
-console.log('🚀 dashboards-pendencia-requisicao.js carregado! (v7 - grid redimensionado)');
+console.log('🚀 dashboards-pendencia-requisicao.js carregado! (v8 - com exportação Excel)');
 
 const ARQUIVOS_R2 = {
     movimentosSiago:    `${API_URL}/proxy/movimentos-siago`,
@@ -743,8 +739,7 @@ function renderizarKPIsMGM(pendencias) {
 }
 
 // ============================================
-// LISTA AGRUPADA POR OBRA — GRID REDIMENSIONADO
-// (mantém o layout de colunas do original, mas mais compacto)
+// LISTA AGRUPADA POR OBRA
 // ============================================
 
 function renderizarListaObrasMGM(pendencias) {
@@ -799,7 +794,6 @@ function renderizarListaObrasMGM(pendencias) {
         return scoreB - scoreA;
     });
 
-    // Header do grid — colunas alinhadas com os itens
     let html = `
         <div class="list-header">
             <span>Obra / Etapas</span>
@@ -830,7 +824,6 @@ function renderizarListaObrasMGM(pendencias) {
             statusClass = 'status-atendido';
         }
 
-        // Indicador de etapas compacto
         let etapasBadge = '';
         const etapasSiagoInfo = grupo.etapasInfoSiago;
         if (grupo.numEtapasMGM > 0 || etapasSiagoInfo) {
@@ -991,11 +984,16 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
 
     let html = `
         <div class="detail-header">
-            <div class="detail-title">🏗️ ${obraFormatada}</div>
-            <div class="detail-subtitle">
-                📦 ${itensObra.length} item(ns) · 📋 ${etapasMGM.length} MGM
-                ${etapasSiago ? ` · 🗂️ ${etapasSiago.etapas_validas}/${etapasSiago.total_etapas} Siago` : ''}
+            <div class="detail-header-info">
+                <div class="detail-title">🏗️ ${obraFormatada}</div>
+                <div class="detail-subtitle">
+                    📦 ${itensObra.length} item(ns) · 📋 ${etapasMGM.length} MGM
+                    ${etapasSiago ? ` · 🗂️ ${etapasSiago.etapas_validas}/${etapasSiago.total_etapas} Siago` : ''}
+                </div>
             </div>
+            <button class="btn-exportar-excel" onclick="exportarExcelObra()">
+                📥 Exportar Excel
+            </button>
         </div>
         
         <div class="detail-stats-grid">
@@ -1126,6 +1124,91 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
 }
 
 // ============================================
+// 🆕 EXPORTAR EXCEL — Correção da Obra
+// ============================================
+
+function exportarExcelObra() {
+    if (typeof XLSX === 'undefined') {
+        alert('❌ Biblioteca de Excel não carregada. Recarregue a página.');
+        return;
+    }
+
+    if (!itemSelecionadoMGM || !itemSelecionadoMGM.obra) {
+        alert('⚠️ Selecione uma obra primeiro.');
+        return;
+    }
+
+    const obra = itemSelecionadoMGM.obra;
+    const itensObra = dadosFiltradosMGM.filter(p => p.obra === obra);
+
+    if (itensObra.length === 0) {
+        alert('⚠️ Nenhum item para exportar.');
+        return;
+    }
+
+    const obraFormatada = itensObra[0].obraFormatada;
+    const hoje = new Date();
+    const dataStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+
+    const itensRequisitar = itensObra
+        .filter(p => p.status === 'REQUISITAR')
+        .sort((a, b) => String(a.codigo).localeCompare(String(b.codigo)));
+
+    const dadosRequisitar = itensRequisitar.map(p => ({
+        'OBRA': p.obraFormatada,
+        'CÓDIGO': p.codigo,
+        'DESCRIÇÃO': p.descricao || '',
+        'UND': p.unidade || 'UN',
+        'QTD': Number(p.falta.toFixed(2))
+    }));
+
+    const itensDevolver = itensObra
+        .filter(p => p.status === 'DEVOLVER')
+        .sort((a, b) => String(a.codigo).localeCompare(String(b.codigo)));
+
+    const dadosDevolver = itensDevolver.map(p => ({
+        'OBRA': p.obraFormatada,
+        'CÓDIGO': p.codigo,
+        'DESCRIÇÃO': p.descricao || '',
+        'UND': p.unidade || 'UN',
+        'QTD': Number(p.sobra.toFixed(2))
+    }));
+
+    const wb = XLSX.utils.book_new();
+
+    if (dadosRequisitar.length > 0) {
+        const ws = XLSX.utils.json_to_sheet(dadosRequisitar);
+        ws['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'REQUISITAR');
+    } else {
+        const ws = XLSX.utils.json_to_sheet([{ 'OBRA': obraFormatada, 'CÓDIGO': '—', 'DESCRIÇÃO': 'Nenhum item a requisitar', 'UND': '—', 'QTD': 0 }]);
+        ws['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'REQUISITAR');
+    }
+
+    if (dadosDevolver.length > 0) {
+        const ws = XLSX.utils.json_to_sheet(dadosDevolver);
+        ws['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'DEVOLVER');
+    } else {
+        const ws = XLSX.utils.json_to_sheet([{ 'OBRA': obraFormatada, 'CÓDIGO': '—', 'DESCRIÇÃO': 'Nenhum item a devolver', 'UND': '—', 'QTD': 0 }]);
+        ws['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'DEVOLVER');
+    }
+
+    const obraParaArquivo = String(obraFormatada).replace(/[^\d-]/g, '');
+    const nomeArquivo = `correcao-obra-${obraParaArquivo}-${dataStr}.xlsx`;
+
+    XLSX.writeFile(wb, nomeArquivo);
+
+    console.log(`✅ Excel gerado: ${nomeArquivo} (${itensRequisitar.length} requisitar, ${itensDevolver.length} devolver)`);
+
+    if (typeof mostrarToast === 'function') {
+        mostrarToast(`✅ Excel gerado: ${itensRequisitar.length} requisitar + ${itensDevolver.length} devolver`, 'success');
+    }
+}
+
+// ============================================
 // ABA PRINCIPAL
 // ============================================
 
@@ -1146,7 +1229,7 @@ function trocarAbaPrincipal(aba) {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('📋 DOM carregado, iniciando dashboard (v7)...');
+    console.log('📋 DOM carregado, iniciando dashboard (v8)...');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const dashboardContent = document.getElementById('dashboardContent');
     if (!loadingOverlay || !dashboardContent) return;
@@ -1187,5 +1270,6 @@ window.carregarDadosMGM = carregarDadosMGM;
 window.renderizarDashboardMGM = renderizarDashboardMGM;
 window.aplicarFiltroStatusMGM = aplicarFiltroStatusMGM;
 window.aplicarFiltroEtapas = aplicarFiltroEtapas;
+window.exportarExcelObra = exportarExcelObra;
 
-console.log('✅ dashboards-pendencia-requisicao.js inicializado! (v7)');
+console.log('✅ dashboards-pendencia-requisicao.js inicializado! (v8)');

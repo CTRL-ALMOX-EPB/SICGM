@@ -7,6 +7,29 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/layout-unificado.css">
     <link rel="stylesheet" href="css/chamados.css">
+    <style>
+        /* 🔥 Iframes persistentes: cada aba tem seu próprio iframe */
+        #iframes-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            flex: 1;
+            overflow: hidden;
+        }
+        #iframes-container.hidden { display: none; }
+
+        .sita-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: none;
+            background: #fff;
+        }
+        .sita-iframe.active { display: block; }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -56,9 +79,8 @@
                         <h3>Selecione uma opção no menu lateral</h3>
                         <p>Escolha um departamento ou módulo para começar.</p>
                     </div>
-                    <div id="iframe-container" class="iframe-container hidden">
-                        <iframe id="iframe-content" src="" frameborder="0"></iframe>
-                    </div>
+                    <!-- 🔥 Container dos iframes persistentes -->
+                    <div id="iframes-container" class="hidden"></div>
                 </main>
             </div>
         </div>

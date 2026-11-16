@@ -1,5 +1,6 @@
 // ============================================
-// SICGM - HOME UNIFICADA v9
+// SICGM - HOME UNIFICADA v10
+// Iframes persistentes (suspensão real, sem recarregar)
 // Perfis + Departamentos
 // ============================================
 
@@ -9,7 +10,8 @@ let departamentosUsuario = [];
 let dadosDepartamentos = {};
 let usuarioLogado = null;
 
-const abasAbertas = [];
+// 🔥 Cada aba tem SEU PRÓPRIO iframe — não recarrega ao trocar
+const abasAbertas = [];  // [{ id, titulo, link, iframeEl }]
 let abaAtiva = null;
 
 // ============================================
@@ -100,7 +102,6 @@ const DEPARTAMENTOS_PROCESSOS = [
     { id: 'DEOP', nome: 'DEOP - Operacional' }
 ];
 
-// Preenche dropdowns
 Object.values(DEPARTAMENTOS_BASE).forEach(d => {
     const dash = d.funcoes.find(f => f.id.includes('dashboard'));
     if (dash) dash.dropdownItems = DASHBOARDS_DISPONIVEIS.map(x => ({ ...x, badge: 'Ativo' }));
@@ -110,7 +111,7 @@ Object.values(DEPARTAMENTOS_BASE).forEach(d => {
 // 2. INICIALIZAÇÃO
 // ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📋 Home Unificada v9');
+    console.log('📋 Home Unificada v10 (iframes persistentes)');
 
     if (typeof firebase === 'undefined' || !firebase.auth) {
         console.error('❌ Firebase não carregado');
@@ -151,13 +152,11 @@ function tratarMensagemIframe(event) {
 
 async function buscarDadosUsuario(user) {
     try {
-        // Tenta pelo authService (sessionStorage)
         let dados = null;
         if (typeof authService !== 'undefined' && authService.isLoggedIn && authService.isLoggedIn()) {
             dados = authService.getUserData();
         }
 
-        // Fallback: busca no KV
         if (!dados || !dados.perfis || dados.perfis.length === 0) {
             const r = await fetch(`${authService.WORKER_URL}/usuarios/me`, {
                 headers: { 'X-User-Email': user.email }
@@ -165,7 +164,6 @@ async function buscarDadosUsuario(user) {
             if (r.ok) dados = await r.json();
         }
 
-        // Último fallback: localStorage
         if (!dados) {
             dados = {
                 email: user.email,
@@ -198,12 +196,9 @@ function configurarInterface(dados) {
         : [{ perfil: perfilUsuario, departamentos: dados.departamentos || [] }];
     departamentosUsuario = dados.departamentos || [];
 
-    console.log('👤 Perfil principal:', perfilUsuario, '| Perfis:', perfisUsuario);
-
     document.getElementById('headerNomeUser').textContent = dados.nome || 'Usuário';
     document.getElementById('headerMatUser').textContent = `Matrícula: ${dados.matricula || '---'}`;
 
-    // Departamentos visíveis
     const ehGestao = perfisUsuario.some(p => p.perfil === 'GESTAO');
     const setDeptos = new Set();
     perfisUsuario.forEach(p => {
@@ -218,7 +213,6 @@ function configurarInterface(dados) {
         if (DEPARTAMENTOS_BASE[id]) dadosDepartamentos[id] = DEPARTAMENTOS_BASE[id];
     });
 
-    // Badge
     const badgePerfil = document.getElementById('headerPerfilUser');
     const deptosArr = Array.from(setDeptos);
     const deptosLabel = deptosArr.length > 2
@@ -230,7 +224,6 @@ function configurarInterface(dados) {
     } else if (perfilUsuario === 'OPERACIONAL') badgePerfil.style.background = '#28a745';
     else if (perfilUsuario === 'VISUALIZACAO') badgePerfil.style.background = '#3d8bfd';
 
-    // Admin button
     const adminBtn = document.getElementById('headerAdminBtn');
     if (adminBtn) adminBtn.style.display = ehGestao ? 'inline-flex' : 'none';
 
@@ -273,7 +266,6 @@ function renderizarSidebar() {
         submenu.id = `submenu-${deptoId}`;
 
         depto.funcoes.forEach(func => {
-            // Filtro por módulo (se authService disponível)
             if (func.modulo && typeof authService !== 'undefined' && authService.podeAcessar && !authService.podeAcessar(func.modulo)) return;
 
             if (func.temDropdown) {
@@ -328,7 +320,6 @@ function renderizarSidebar() {
     chamados.onclick = () => abrirAba('chamados/index.html', 'Chamados', 'chamados-fixo');
     sidebar.appendChild(chamados);
 
-    // Ajuda
     const ajudaWrap = document.createElement('div');
     ajudaWrap.id = 'ajuda-wrap';
     const ajuda = document.createElement('div');
@@ -409,23 +400,42 @@ function toggleAjudaSubmenu() {
 }
 
 // ============================================
-// 4. ABAS
+// 4. ABAS — IFrames PERSISTENTES
 // ============================================
+
 function abrirAba(link, titulo, tabId) {
     let linkFinal = String(link || '').replace(/^\/+/, '');
     const existente = abasAbertas.find(a => a.link === linkFinal);
     if (existente) { ativarAba(existente.id); return; }
-    abasAbertas.push({ id: tabId, titulo, link: linkFinal });
+
+    // 🔥 Cria iframe único para esta aba
+    const iframeEl = document.createElement('iframe');
+    iframeEl.src = linkFinal;
+    iframeEl.dataset.tabId = tabId;
+    iframeEl.className = 'sita-iframe';
+    iframeEl.frameBorder = '0';
+
+    const aba = { id: tabId, titulo, link: linkFinal, iframeEl };
+    abasAbertas.push(aba);
     abaAtiva = tabId;
+
+    // Anexa ao container de iframes
+    const containerIframes = document.getElementById('iframes-container');
+    if (containerIframes) {
+        containerIframes.appendChild(iframeEl);
+    }
+
     renderizarAbas();
-    mostrarIframe(linkFinal);
+    mostrarAbaAtiva();
 }
 
 function renderizarAbas() {
     const tabsBar = document.getElementById('tabsBar');
     tabsBar.innerHTML = '';
+
     if (abasAbertas.length === 0) { tabsBar.classList.add('empty'); return; }
     tabsBar.classList.remove('empty');
+
     abasAbertas.forEach(aba => {
         const btn = document.createElement('button');
         btn.className = 'tab-btn' + (abaAtiva === aba.id ? ' active' : '');
@@ -445,18 +455,27 @@ function ativarAba(tabId) {
     if (!aba) return;
     abaAtiva = tabId;
     renderizarAbas();
-    mostrarIframe(aba.link);
+    mostrarAbaAtiva();
 }
 
 function fecharAba(tabId) {
     const idx = abasAbertas.findIndex(a => a.id === tabId);
     if (idx === -1) return;
+
+    const aba = abasAbertas[idx];
+
+    // Remove o iframe do DOM
+    if (aba.iframeEl && aba.iframeEl.parentElement) {
+        aba.iframeEl.parentElement.removeChild(aba.iframeEl);
+    }
+
     abasAbertas.splice(idx, 1);
+
     if (abaAtiva === tabId) {
         if (abasAbertas.length > 0) {
             abaAtiva = abasAbertas[Math.max(0, idx - 1)].id;
             renderizarAbas();
-            mostrarIframe(abasAbertas.find(a => a.id === abaAtiva).link);
+            mostrarAbaAtiva();
         } else {
             abaAtiva = null;
             renderizarAbas();
@@ -467,21 +486,43 @@ function fecharAba(tabId) {
     }
 }
 
-function mostrarIframe(link) {
-    document.getElementById('empty-state').classList.add('hidden');
-    document.getElementById('iframe-container').classList.remove('hidden');
-    const iframe = document.getElementById('iframe-content');
-    if (iframe.getAttribute('src') !== link) iframe.setAttribute('src', link);
+// 🔥 Nova lógica: só mostra/esconde, NÃO recarrega
+function mostrarAbaAtiva() {
+    const emptyState = document.getElementById('empty-state');
+    const iframesContainer = document.getElementById('iframes-container');
+
+    if (!abaAtiva || abasAbertas.length === 0) {
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (iframesContainer) iframesContainer.classList.add('hidden');
+        return;
+    }
+
+    if (emptyState) emptyState.classList.add('hidden');
+    if (iframesContainer) iframesContainer.classList.remove('hidden');
+
+    // Esconde todos, mostra só o ativo
+    abasAbertas.forEach(aba => {
+        if (aba.iframeEl) {
+            if (aba.id === abaAtiva) {
+                aba.iframeEl.style.display = 'block';
+                aba.iframeEl.classList.add('active');
+            } else {
+                aba.iframeEl.style.display = 'none';
+                aba.iframeEl.classList.remove('active');
+            }
+        }
+    });
 }
 
 function mostrarEstadoVazio() {
-    document.getElementById('empty-state').classList.remove('hidden');
-    document.getElementById('iframe-container').classList.add('hidden');
-    document.getElementById('iframe-content').setAttribute('src', '');
+    const emptyState = document.getElementById('empty-state');
+    const iframesContainer = document.getElementById('iframes-container');
+    if (emptyState) emptyState.classList.remove('hidden');
+    if (iframesContainer) iframesContainer.classList.add('hidden');
 }
 
 // ============================================
-// 5. SINO DE NOTIFICAÇÃO (intacto)
+// 5. SINO DE NOTIFICAÇÃO
 // ============================================
 const SINO_CHAMADOS_URL = 'https://chamados.alefe-gomes-72f.workers.dev';
 let _sinoInterval = null;
