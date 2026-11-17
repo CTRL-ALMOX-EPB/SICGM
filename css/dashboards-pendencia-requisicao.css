@@ -1,9 +1,9 @@
 /* ============================================ */
-/* DASHBOARD PENDÊNCIA DE REQUISIÇÃO - v8        */
+/* DASHBOARD PENDÊNCIA DE REQUISIÇÃO - v10       */
+/* + Gráfico de valores (R$) com Consumo previsto */
 /* + Botão Exportar Excel                        */
 /* ============================================ */
 
-/* KPI cards - cores específicas */
 .kpi-card.status-pendente .kpi-value { color: #dc3545; }
 .kpi-card.status-baixado .kpi-value { color: #28a745; }
 .kpi-card.status-total .kpi-value { color: #3d8bfd; }
@@ -11,7 +11,6 @@
 .kpi-card.status-sobra .kpi-value { color: #d69e2e; }
 .kpi-card.status-falta .kpi-value { color: #dc3545; }
 
-/* KPI cards clicáveis */
 .kpi-card-mgm {
     cursor: pointer !important;
     transition: all 0.3s ease;
@@ -63,11 +62,8 @@
 }
 
 /* ============================================ */
-/* LISTA DE OBRAS — GRID REDIMENSIONADO          */
-/* Colunas: Obra | Itens | 🟠 Dev | 🔴 Req | ✅ OK | Status */
+/* LISTA DE OBRAS                                */
 /* ============================================ */
-
-/* Header alinhado com os itens */
 .list-header {
     display: grid;
     grid-template-columns: minmax(180px, 2fr) 45px 60px 60px 50px 70px;
@@ -86,7 +82,6 @@
     align-items: center;
 }
 
-/* Item da obra — grid compacto */
 .item-group-item {
     display: grid;
     grid-template-columns: minmax(180px, 2fr) 45px 60px 60px 50px 70px;
@@ -101,11 +96,9 @@
     border-left: 4px solid transparent;
     width: 100%;
 }
-
 .item-group-item:hover { background: #f4f7f9; }
 .item-group-item.active { background: #ebf3ff; }
 
-/* Célula da obra (com código + etapas) */
 .item-obra-cell {
     display: flex;
     flex-direction: column;
@@ -113,7 +106,6 @@
     min-width: 0;
     overflow: hidden;
 }
-
 .item-obra-cell strong {
     font-weight: 700;
     color: #1a2b4c;
@@ -124,7 +116,6 @@
     display: block;
 }
 
-/* Indicador de etapas */
 .obra-etapas-indicator {
     display: inline-flex;
     align-items: center;
@@ -150,14 +141,12 @@
     color: #a0aec0;
 }
 
-/* Células numéricas — centralizadas */
 .item-itens-cell {
     text-align: center;
     font-weight: 700;
     color: #2c6fdb;
     font-size: 12px;
 }
-
 .item-dev-cell,
 .item-req-cell,
 .item-ok-cell {
@@ -165,14 +154,12 @@
     font-weight: 700;
     font-size: 12px;
 }
-
 .item-status-cell {
     text-align: center;
     display: flex;
     justify-content: center;
 }
 
-/* Badges de status */
 .badge-status {
     font-size: 9px;
     padding: 2px 8px;
@@ -183,33 +170,15 @@
     text-transform: uppercase;
     letter-spacing: 0.2px;
 }
-.badge-status.status-falta {
-    background: #fee2e2;
-    color: #dc3545;
-}
-.badge-status.status-sobra {
-    background: #fef3c7;
-    color: #d69e2e;
-}
-.badge-status.status-misto {
-    background: #fef3c7;
-    color: #d69e2e;
-    border: 1px solid #dc3545;
-}
-.badge-status.status-pendente {
-    background: #fee2e2;
-    color: #dc3545;
-}
-.badge-status.status-atendido {
-    background: #d1fae5;
-    color: #065f46;
-}
+.badge-status.status-falta { background: #fee2e2; color: #dc3545; }
+.badge-status.status-sobra { background: #fef3c7; color: #d69e2e; }
+.badge-status.status-misto { background: #fef3c7; color: #d69e2e; border: 1px solid #dc3545; }
+.badge-status.status-pendente { background: #fee2e2; color: #dc3545; }
+.badge-status.status-atendido { background: #d1fae5; color: #065f46; }
 
 /* ============================================ */
 /* DETALHES DO ITEM                              */
 /* ============================================ */
-
-/* 🔥 v8: header com botão de exportar à direita */
 .detail-header {
     display: flex;
     justify-content: space-between;
@@ -220,25 +189,21 @@
     padding-bottom: 12px;
     border-bottom: 2px solid #e2e8f0;
 }
-
 .detail-header-info {
     flex: 1;
     min-width: 0;
 }
-
 .detail-title {
     font-size: 18px;
     font-weight: 700;
     color: #1a2b4c;
 }
-
 .detail-subtitle {
     font-size: 13px;
     color: #6b7a8f;
     margin-top: 2px;
 }
 
-/* 🆕 Botão Exportar Excel */
 .btn-exportar-excel {
     background: #28a745;
     color: #fff;
@@ -257,17 +222,12 @@
     flex-shrink: 0;
     box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
 }
-
 .btn-exportar-excel:hover {
     background: #218838;
     transform: translateY(-1px);
     box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
 }
-
-.btn-exportar-excel:active {
-    transform: translateY(0);
-}
-
+.btn-exportar-excel:active { transform: translateY(0); }
 .btn-exportar-excel:disabled {
     background: #cbd5e0;
     cursor: not-allowed;
@@ -275,7 +235,6 @@
     box-shadow: none;
 }
 
-/* Stats / Summary */
 .detail-stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -397,6 +356,32 @@
 .bar-fill.bar-sobra { background: linear-gradient(90deg, #d69e2e, #b7791f); }
 
 /* ============================================ */
+/* GRÁFICO DE VALORES (R$)                       */
+/* ============================================ */
+.bar-fill .value-brl {
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+    padding-left: 6px;
+}
+
+.chart-total-footer {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #cbd5e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a2b4c;
+}
+.chart-total-footer .valor-total {
+    color: #3d8bfd;
+    font-size: 15px;
+}
+
+/* ============================================ */
 /* ETAPAS                                        */
 /* ============================================ */
 .etapas-info {
@@ -412,7 +397,6 @@
     text-align: center;
     color: #6b7a8f;
 }
-
 .etapas-resumo {
     display: flex;
     gap: 15px;
@@ -492,7 +476,6 @@
 }
 
 @media (max-width: 768px) {
-    /* Em mobile, o grid vira 2 linhas compactas */
     .list-header { display: none; }
 
     .item-group-item {
@@ -518,7 +501,6 @@
     .detail-stats-grid { grid-template-columns: repeat(2, 1fr); }
     .detail-summary { grid-template-columns: 1fr; }
 
-    /* 🔥 v8: exportar em linha própria */
     .detail-header {
         flex-direction: column;
         align-items: stretch;
@@ -542,27 +524,26 @@
     .etapa-badge { font-size: 10px; padding: 2px 8px; }
 
     .btn-aba-principal { padding: 8px 18px; font-size: 13px; }
+
+    .bar-fill .value-brl { font-size: 9px; }
+    .chart-total-footer { font-size: 12px; }
+    .chart-total-footer .valor-total { font-size: 13px; }
 }
 
 @media (max-width: 480px) {
-    /* Em telas muito pequenas, empilha o grid em 2 linhas dentro de cada item */
     .item-group-item {
         display: flex;
         flex-direction: column;
         gap: 4px;
         padding: 8px 10px;
     }
-
     .item-obra-cell {
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
         width: 100%;
     }
-
     .item-obra-cell strong { font-size: 12px; }
-
-    /* Os números viram uma linha horizontal compacta */
     .item-itens-cell,
     .item-dev-cell,
     .item-req-cell,
@@ -574,8 +555,6 @@
         font-size: 10px;
         padding: 0;
     }
-
-    /* Adiciona rótulos em mobile */
     .item-itens-cell::before { content: '📦 '; }
     .item-dev-cell::before { content: '🟠 '; }
     .item-req-cell::before { content: '🔴 '; }
@@ -597,4 +576,6 @@
     .detail-item .item-mov-detail { font-size: 10px; }
 
     .btn-aba-principal { padding: 6px 14px; font-size: 12px; }
+
+    .bar-fill .value-brl { font-size: 8px; padding-left: 3px; }
 }

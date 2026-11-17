@@ -1,14 +1,13 @@
 // ============================================
-// DASHBOARD PENDÊNCIA DE REQUISIÇÃO - v8
+// DASHBOARD PENDÊNCIA DE REQUISIÇÃO - v10
+// + valorUnitario vem da POSIÇÃO DE ESTOQUE (vlrult_cot)
+// + Gráfico "Valores a Movimentar" (R$) com "Consumo previsto"
+// + Itens sem valor listados apenas no CONSOLE
+// + Cache de posição de estoque em memória
 // + Exportação Excel (2 abas: REQUISITAR / DEVOLVER)
-// Lógica: MGM (Σ QTD. APLICADA da devolucao_compilada) × qtdrealizada (previsto_realizado)
-//
-// REQUISITAR → qtdMGM > qtdRealizada  (falta subir o sistêmico)
-// DEVOLVER   → qtdRealizada > qtdMGM  (sobra, precisa baixar)
-// OK         → |qtdMGM - qtdRealizada| <= 0.01
 // ============================================
 
-console.log('🚀 dashboards-pendencia-requisicao.js carregado! (v8 - com exportação Excel)');
+console.log('🚀 dashboards-pendencia-requisicao.js carregado! (v10)');
 
 const ARQUIVOS_R2 = {
     movimentosSiago:    `${API_URL}/proxy/movimentos-siago`,
@@ -16,6 +15,8 @@ const ARQUIVOS_R2 = {
     previstoRealizado:  `${API_URL}/proxy/previsto-realizado`,
     devolucaoCompilada: `${API_URL}/proxy/devolucao-compilada`
 };
+
+const URL_POSICAO_ESTOQUE = 'https://sicgm-sita.alefe-gomes-72f.workers.dev/api/proxy/posicao-estoque';
 
 // ============================================
 // ESTADO GLOBAL
@@ -28,6 +29,9 @@ let dadosEtapasPorObra = {};
 let filtroStatusMGMAtivo = null;
 let itemSelecionadoMGM = null;
 let filtroEtapasMinimo = 0;
+
+let _posicaoEstoqueMap = null;
+let _posicaoEstoqueCarregada = false;
 
 const DATA_CORTE_INICIO_OBRA = '2026-07-01';
 const TOLERANCIA_QTD = 0.01;
@@ -110,6 +114,13 @@ function formatarData(dataString) {
     return s.substring(0, 10);
 }
 
+function formatarBRL(valor) {
+    return 'R$ ' + (valor || 0).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
 function mostrarToast(mensagem, tipo = 'info') {
     const toastExistente = document.querySelector('.toast-dashboard');
     if (toastExistente) toastExistente.remove();
@@ -122,6 +133,84 @@ function mostrarToast(mensagem, tipo = 'info') {
         toast.style.transition = 'opacity 0.3s';
         setTimeout(() => toast.remove(), 300);
     }, 4000);
+}
+
+// ============================================
+// POSIÇÃO DE ESTOQUE (cache em memória)
+// ============================================
+
+async function carregarPosicaoEstoque() {
+    if (_posicaoEstoqueCarregada && _posicaoEstoqueMap) {
+        console.log('📦 Posição de estoque já carregada (cache)');
+        return _posicaoEstoqueMap;
+    }
+
+    try {
+        console.log('📥 Carregando posição de estoque do SITA...');
+        const res = await fetch(URL_POSICAO_ESTOQUE);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const texto = await res.text();
+        if (!texto || !texto.trim()) throw new Error('Arquivo vazio');
+
+        const t = texto.trim();
+        if (t.startsWith('{') && t.includes('"error"')) {
+            const err = JSON.parse(t);
+            throw new Error(err.error || 'Erro no Worker');
+        }
+
+        _posicaoEstoqueMap = parsePosicaoEstoque(texto);
+        _posicaoEstoqueCarregada = true;
+        console.log(`✅ Posição de estoque: ${_posicaoEstoqueMap.size} materiais`);
+        return _posicaoEstoqueMap;
+    } catch (e) {
+        console.error('❌ Erro ao carregar posição de estoque:', e.message);
+        _posicaoEstoqueMap = new Map();
+        _posicaoEstoqueCarregada = true;
+        return _posicaoEstoqueMap;
+    }
+}
+
+function parsePosicaoEstoque(texto) {
+    const linhas = texto.split(/\r?\n/);
+    const map = new Map();
+    if (linhas.length < 2) return map;
+
+    let separador = '\t';
+    if (!linhas[0].includes('\t')) {
+        if (linhas[0].includes(';')) separador = ';';
+        else if (linhas[0].includes(',')) separador = ',';
+    }
+
+    const cabecalho = linhas[0].split(separador).map(h => h.trim().toLowerCase());
+    const idxCod = cabecalho.findIndex(h => h === 'codmat' || h === 'codigo' || h.includes('codmat'));
+    const idxValor = cabecalho.findIndex(h => h === 'vlrult_cot' || h.includes('vlrult') || h.includes('valor'));
+
+    if (idxCod < 0 || idxValor < 0) {
+        console.error('❌ Cabeçalho posição estoque inesperado:', cabecalho);
+        return map;
+    }
+
+    for (let i = 1; i < linhas.length; i++) {
+        const linha = linhas[i];
+        if (!linha.trim()) continue;
+        const c = linha.split(separador);
+        if (c.length <= idxValor) continue;
+
+        const cod = String(c[idxCod] || '').trim().replace(/[^0-9]/g, '');
+        if (!cod) continue;
+
+        const valor = parseNumeroBR(c[idxValor]);
+        if (valor > 0) map.set(cod, valor);
+    }
+
+    console.log(`✅ Parse posição: ${map.size} itens com valor (de ${linhas.length - 1} linhas)`);
+    return map;
+}
+
+function getValorUnitario(codigo) {
+    if (!_posicaoEstoqueMap) return 0;
+    const cod = String(codigo || '').trim().replace(/[^0-9]/g, '');
+    return _posicaoEstoqueMap.get(cod) || 0;
 }
 
 // ============================================
@@ -154,7 +243,6 @@ function parsearDevolucaoCompilada(texto) {
     const mgmMap = {};
     const etapasPorObra = {};
     let totalLinhas = 0;
-    let linhasIgnoradasZero = 0;
 
     for (let i = 1; i < linhas.length; i++) {
         const linha = linhas[i];
@@ -167,10 +255,7 @@ function parsearDevolucaoCompilada(texto) {
         if (!obra || !codigo) continue;
 
         const qtdAplicada = parseNumeroBR(c[idx.qtdAplicada]);
-        if (qtdAplicada <= 0) {
-            linhasIgnoradasZero++;
-            continue;
-        }
+        if (qtdAplicada <= 0) continue;
 
         const dataOriginal = (c[idx.data] || '').trim();
         const dataISO = parseDataGenerica(dataOriginal);
@@ -276,7 +361,7 @@ function parsearPrevistoRealizado(texto) {
 }
 
 function consolidarPorObra(mgmMap, previstoMap) {
-    console.log('🔄 Consolidando...');
+    console.log('🔄 Consolidando (valor via posição de estoque)...');
     const pendencias = [];
     const todasChaves = new Set([
         ...Object.keys(mgmMap || {}),
@@ -304,13 +389,18 @@ function consolidarPorObra(mgmMap, previstoMap) {
         else if (sobra > TOLERANCIA_QTD) status = 'DEVOLVER';
         else status = 'OK';
 
+        let valorUnitario = getValorUnitario(codigo);
+        if (valorUnitario === 0) {
+            valorUnitario = prev?.valorUnitario || 0;
+        }
+
         pendencias.push({
             obra, obraFormatada: formatarObra(obra),
             codigo, descricao, unidade,
             qtdMGM, qtdRealizada,
             qtdPrevista: prev?.qtdPrevista || 0,
             diferenca, falta, sobra, status,
-            valorUnitario: prev?.valorUnitario || 0,
+            valorUnitario,
             valorRequisitado: prev?.valorRequisitado || 0,
             nome: prev?.nome || '',
             datasMGM: mgm?.datas || [],
@@ -465,6 +555,35 @@ function aplicarFiltroInicioObraFrontEnd() {
 }
 
 // ============================================
+// 🔍 DIAGNÓSTICO — itens sem valor (só console)
+// ============================================
+
+function logarItensSemValor() {
+    const semValor = pendenciasConsolidadas.filter(p => !p.valorUnitario || p.valorUnitario === 0);
+
+    if (semValor.length === 0) {
+        console.log('✅ Todos os itens têm valor unitário definido');
+        return;
+    }
+
+    console.warn(`⚠️ ${semValor.length} item(ns) SEM valor unitário (posição + previsto):`);
+
+    const tabela = semValor.map(p => ({
+        'CÓDIGO': p.codigo,
+        'OBRA': p.obraFormatada,
+        'STATUS': p.status,
+        'UND': p.unidade || 'UN',
+        'DESCRIÇÃO': (p.descricao || '').substring(0, 50),
+        'QTD MGM': p.qtdMGM.toFixed(2),
+        'QTD REALIZADA': p.qtdRealizada.toFixed(2)
+    }));
+
+    console.table(tabela);
+
+    console.log('💡 Para corrigir: cadastre o `vlrult_cot` na posição de estoque (SITA) ou o `val_material` no previsto_realizado');
+}
+
+// ============================================
 // CARREGAMENTO
 // ============================================
 
@@ -493,7 +612,8 @@ async function carregarDadosMGM() {
         const [textoProgramacao, textoPrevisto, textoDevolucao] = await Promise.all([
             carregarArquivoR2(ARQUIVOS_R2.programacaoSiago, 'programacao_siago.txt').catch(() => ''),
             carregarArquivoR2(ARQUIVOS_R2.previstoRealizado, 'previsto_realizado.txt'),
-            carregarArquivoR2(ARQUIVOS_R2.devolucaoCompilada, 'devolucao_compilada.txt')
+            carregarArquivoR2(ARQUIVOS_R2.devolucaoCompilada, 'devolucao_compilada.txt'),
+            carregarPosicaoEstoque()
         ]);
 
         if (textoProgramacao) {
@@ -512,6 +632,9 @@ async function carregarDadosMGM() {
         dadosCarregadosMGM = true;
 
         aplicarFiltroInicioObraFrontEnd();
+
+        // 🔍 Diagnóstico: lista no console (não visual)
+        logarItensSemValor();
 
         const loadingElement = document.getElementById('loadingMGM');
         if (loadingElement) loadingElement.style.display = 'none';
@@ -679,12 +802,6 @@ function renderizarKPIsMGM(pendencias) {
     const ok = pendencias.filter(p => p.status === 'OK');
 
     const obrasSet = new Set(pendencias.map(p => p.obra));
-
-    let qtdTotalDevolver = 0;
-    devolver.forEach(p => { qtdTotalDevolver += p.sobra || 0; });
-
-    let qtdTotalRequisitar = 0;
-    requisitar.forEach(p => { qtdTotalRequisitar += p.falta || 0; });
 
     const totalEtapasMGM = Object.values(dadosEtapasPorObra).reduce(
         (acc, o) => acc + (o.etapasMGM?.length || 0), 0
@@ -868,10 +985,11 @@ function renderizarListaObrasMGM(pendencias) {
 }
 
 // ============================================
-// GRÁFICOS
+// GRÁFICOS — status (contagem) + valores (R$)
 // ============================================
 
 function renderizarGraficosMGM(pendencias) {
+    // ===== Gráfico 1: Status (contagem de itens) =====
     const statusCount = { DEVOLVER: 0, REQUISITAR: 0, OK: 0 };
     pendencias.forEach(p => {
         if (statusCount[p.status] !== undefined) statusCount[p.status]++;
@@ -899,31 +1017,56 @@ function renderizarGraficosMGM(pendencias) {
     const elStatus = document.getElementById('statusChartMGM');
     if (elStatus) elStatus.innerHTML = htmlStatus;
 
-    const obrasSet = new Set(pendencias.map(p => p.obra));
-    const obrasDevolver = new Set(pendencias.filter(p => p.status === 'DEVOLVER').map(p => p.obra));
-    const obrasRequisitar = new Set(pendencias.filter(p => p.status === 'REQUISITAR').map(p => p.obra));
-    const obrasOk = new Set(pendencias.filter(p => p.status === 'OK').map(p => p.obra));
-    const totalObras = obrasSet.size || 1;
+    // ===== Gráfico 2: Valores a Movimentar (R$) =====
+    let valorDevolver = 0;
+    let valorRequisitar = 0;
 
-    let htmlObras = `
+    pendencias.forEach(p => {
+        if (p.status === 'OK') return;
+        if (!p.valorUnitario || p.valorUnitario === 0) return;
+        if (p.status === 'DEVOLVER') {
+            valorDevolver += (p.sobra || 0) * p.valorUnitario;
+        } else if (p.status === 'REQUISITAR') {
+            valorRequisitar += (p.falta || 0) * p.valorUnitario;
+        }
+    });
+
+    const totalMovimentado = valorDevolver + valorRequisitar || 1;
+    const pctDev = (valorDevolver / totalMovimentado) * 100;
+    const pctReq = (valorRequisitar / totalMovimentado) * 100;
+
+    // 🔥 Consumo previsto = o que foi requisitado a mais - o que foi devolvido
+    const consumoPrevisto = valorRequisitar - valorDevolver;
+
+    let htmlValores = `
         <div class="chart-bar-indicator">
-            <span class="label">🔴 Com Falta</span>
-            <div class="bar-track"><div class="bar-fill bar-pendente" style="width: ${(obrasRequisitar.size / totalObras) * 100}%;"><span class="value">${obrasRequisitar.size}</span></div></div>
-            <span class="percent">${((obrasRequisitar.size / totalObras) * 100).toFixed(0)}%</span>
+            <span class="label">🟠 A Devolver</span>
+            <div class="bar-track">
+                <div class="bar-fill bar-sobra" style="width: ${pctDev}%;">
+                    <span class="value-brl">${formatarBRL(valorDevolver)}</span>
+                </div>
+            </div>
+            <span class="percent">${pctDev.toFixed(0)}%</span>
         </div>
         <div class="chart-bar-indicator">
-            <span class="label">🟠 Com Sobra</span>
-            <div class="bar-track"><div class="bar-fill bar-sobra" style="width: ${(obrasDevolver.size / totalObras) * 100}%;"><span class="value">${obrasDevolver.size}</span></div></div>
-            <span class="percent">${((obrasDevolver.size / totalObras) * 100).toFixed(0)}%</span>
+            <span class="label">🔴 A Requisitar</span>
+            <div class="bar-track">
+                <div class="bar-fill bar-pendente" style="width: ${pctReq}%;">
+                    <span class="value-brl">${formatarBRL(valorRequisitar)}</span>
+                </div>
+            </div>
+            <span class="percent">${pctReq.toFixed(0)}%</span>
         </div>
-        <div class="chart-bar-indicator">
-            <span class="label">✅ OK</span>
-            <div class="bar-track"><div class="bar-fill bar-baixado" style="width: ${(obrasOk.size / totalObras) * 100}%;"><span class="value">${obrasOk.size}</span></div></div>
-            <span class="percent">${((obrasOk.size / totalObras) * 100).toFixed(0)}%</span>
+        <div class="chart-total-footer">
+            <span>💰 Consumo previsto:</span>
+            <span class="valor-total" style="color: ${consumoPrevisto < 0 ? '#D69E2E' : '#3d8bfd'};">
+                ${formatarBRL(consumoPrevisto)}
+            </span>
         </div>
     `;
+
     const elValor = document.getElementById('valorChartMGM');
-    if (elValor) elValor.innerHTML = htmlObras;
+    if (elValor) elValor.innerHTML = htmlValores;
 }
 
 // ============================================
@@ -980,7 +1123,6 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
 
     const etapasMGM = dadosEtapasPorObra[obra]?.etapasMGM || [];
     const etapasSiago = getEtapasPorObra(obra);
-    const fmtBRL = (v) => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     let html = `
         <div class="detail-header">
@@ -1024,11 +1166,11 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
         <div class="detail-summary">
             <div class="summary-item" style="background: #FFFAF0; border-left: 4px solid #D69E2E;">
                 <span class="summary-label">💰 A devolver</span>
-                <span class="summary-value" style="color: #D69E2E; font-weight: 700;">${fmtBRL(valorDevolver)}</span>
+                <span class="summary-value" style="color: #D69E2E; font-weight: 700;">${formatarBRL(valorDevolver)}</span>
             </div>
             <div class="summary-item" style="background: #FFF5F5; border-left: 4px solid #E53E3E;">
                 <span class="summary-label">💰 A requisitar</span>
-                <span class="summary-value" style="color: #E53E3E; font-weight: 700;">${fmtBRL(valorRequisitar)}</span>
+                <span class="summary-value" style="color: #E53E3E; font-weight: 700;">${formatarBRL(valorRequisitar)}</span>
             </div>
         </div>
         
@@ -1065,7 +1207,7 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
                 <div class="item-qtd-detail" title="MGM × Requisitado">${item.qtdMGM.toFixed(2)} × ${item.qtdRealizada.toFixed(2)}</div>
                 <div class="item-status-detail ${statusClass}">${statusBadge}</div>
                 <div class="item-mov-detail" style="font-size: 9px; color: #718096;">
-                    ${item.valorUnitario ? fmtBRL(valorDif) : ''}
+                    ${item.valorUnitario ? formatarBRL(valorDif) : ''}
                 </div>
                 ${item.numEtapasMGM > 0 ? `<div class="item-multi-detail" style="font-size: 9px; color: #805AD5; grid-column: 1 / -1;">🔀 ${item.numEtapasMGM} MGM: ${item.datasMGM.join(', ')}</div>` : ''}
             </div>
@@ -1124,7 +1266,7 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
 }
 
 // ============================================
-// 🆕 EXPORTAR EXCEL — Correção da Obra
+// EXPORTAR EXCEL
 // ============================================
 
 function exportarExcelObra() {
@@ -1229,7 +1371,7 @@ function trocarAbaPrincipal(aba) {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('📋 DOM carregado, iniciando dashboard (v8)...');
+    console.log('📋 DOM carregado, iniciando dashboard (v10)...');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const dashboardContent = document.getElementById('dashboardContent');
     if (!loadingOverlay || !dashboardContent) return;
@@ -1272,4 +1414,4 @@ window.aplicarFiltroStatusMGM = aplicarFiltroStatusMGM;
 window.aplicarFiltroEtapas = aplicarFiltroEtapas;
 window.exportarExcelObra = exportarExcelObra;
 
-console.log('✅ dashboards-pendencia-requisicao.js inicializado! (v8)');
+console.log('✅ dashboards-pendencia-requisicao.js inicializado! (v10)');
