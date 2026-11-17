@@ -579,3 +579,29 @@
 
     .bar-fill .value-brl { font-size: 8px; padding-left: 3px; }
 }
+
+/* ============================================ */
+/* 🆕 BOTÃO EXPORTAR EXCEL (GERAL)               */
+/* ============================================ */
+.btn-exportar-geral {
+    background: #28a745 !important;
+    border-color: #28a745 !important;
+    color: #fff !important;
+    margin-left: auto;
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+}
+
+.btn-exportar-geral:hover {
+    background: #218838 !important;
+    border-color: #218838 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+}
+
+@media (max-width: 768px) {
+    .btn-exportar-geral {
+        margin-left: 0;
+        width: 100%;
+        justify-content: center;
+    }
+}
