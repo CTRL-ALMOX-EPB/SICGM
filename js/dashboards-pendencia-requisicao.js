@@ -1,13 +1,14 @@
 // ============================================
-// DASHBOARD PENDÊNCIA DE REQUISIÇÃO - v10
+// DASHBOARD PENDÊNCIA DE REQUISIÇÃO - v11
+// + Exportar Excel (Geral) — todas as obras
 // + valorUnitario vem da POSIÇÃO DE ESTOQUE (vlrult_cot)
 // + Gráfico "Valores a Movimentar" (R$) com "Consumo previsto"
 // + Itens sem valor listados apenas no CONSOLE
 // + Cache de posição de estoque em memória
-// + Exportação Excel (2 abas: REQUISITAR / DEVOLVER)
+// + Exportação Excel por obra (2 abas) — mantida
 // ============================================
 
-console.log('🚀 dashboards-pendencia-requisicao.js carregado! (v10)');
+console.log('🚀 dashboards-pendencia-requisicao.js carregado! (v11)');
 
 const ARQUIVOS_R2 = {
     movimentosSiago:    `${API_URL}/proxy/movimentos-siago`,
@@ -633,7 +634,6 @@ async function carregarDadosMGM() {
 
         aplicarFiltroInicioObraFrontEnd();
 
-        // 🔍 Diagnóstico: lista no console (não visual)
         logarItensSemValor();
 
         const loadingElement = document.getElementById('loadingMGM');
@@ -1035,7 +1035,6 @@ function renderizarGraficosMGM(pendencias) {
     const pctDev = (valorDevolver / totalMovimentado) * 100;
     const pctReq = (valorRequisitar / totalMovimentado) * 100;
 
-    // 🔥 Consumo previsto = o que foi requisitado a mais - o que foi devolvido
     const consumoPrevisto = valorRequisitar - valorDevolver;
 
     let htmlValores = `
@@ -1266,7 +1265,7 @@ function renderizarDetalhesObraMGM(itemSelecionado) {
 }
 
 // ============================================
-// EXPORTAR EXCEL
+// EXPORTAR EXCEL — POR OBRA (2 abas)
 // ============================================
 
 function exportarExcelObra() {
@@ -1297,7 +1296,7 @@ function exportarExcelObra() {
         .sort((a, b) => String(a.codigo).localeCompare(String(b.codigo)));
 
     const dadosRequisitar = itensRequisitar.map(p => ({
-        'OBRA': p.obraFormatada,
+        'OBRA': p.obra,
         'CÓDIGO': p.codigo,
         'DESCRIÇÃO': p.descricao || '',
         'UND': p.unidade || 'UN',
@@ -1309,7 +1308,7 @@ function exportarExcelObra() {
         .sort((a, b) => String(a.codigo).localeCompare(String(b.codigo)));
 
     const dadosDevolver = itensDevolver.map(p => ({
-        'OBRA': p.obraFormatada,
+        'OBRA': p.obra,
         'CÓDIGO': p.codigo,
         'DESCRIÇÃO': p.descricao || '',
         'UND': p.unidade || 'UN',
@@ -1320,33 +1319,141 @@ function exportarExcelObra() {
 
     if (dadosRequisitar.length > 0) {
         const ws = XLSX.utils.json_to_sheet(dadosRequisitar);
-        ws['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
+        ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
         XLSX.utils.book_append_sheet(wb, ws, 'REQUISITAR');
     } else {
-        const ws = XLSX.utils.json_to_sheet([{ 'OBRA': obraFormatada, 'CÓDIGO': '—', 'DESCRIÇÃO': 'Nenhum item a requisitar', 'UND': '—', 'QTD': 0 }]);
-        ws['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
+        const ws = XLSX.utils.json_to_sheet([{ 'OBRA': obra, 'CÓDIGO': '—', 'DESCRIÇÃO': 'Nenhum item a requisitar', 'UND': '—', 'QTD': 0 }]);
+        ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
         XLSX.utils.book_append_sheet(wb, ws, 'REQUISITAR');
     }
 
     if (dadosDevolver.length > 0) {
         const ws = XLSX.utils.json_to_sheet(dadosDevolver);
-        ws['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
+        ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
         XLSX.utils.book_append_sheet(wb, ws, 'DEVOLVER');
     } else {
-        const ws = XLSX.utils.json_to_sheet([{ 'OBRA': obraFormatada, 'CÓDIGO': '—', 'DESCRIÇÃO': 'Nenhum item a devolver', 'UND': '—', 'QTD': 0 }]);
-        ws['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
+        const ws = XLSX.utils.json_to_sheet([{ 'OBRA': obra, 'CÓDIGO': '—', 'DESCRIÇÃO': 'Nenhum item a devolver', 'UND': '—', 'QTD': 0 }]);
+        ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
         XLSX.utils.book_append_sheet(wb, ws, 'DEVOLVER');
     }
 
-    const obraParaArquivo = String(obraFormatada).replace(/[^\d-]/g, '');
-    const nomeArquivo = `correcao-obra-${obraParaArquivo}-${dataStr}.xlsx`;
+    const nomeArquivo = `correcao-obra-${obra}-${dataStr}.xlsx`;
 
     XLSX.writeFile(wb, nomeArquivo);
 
-    console.log(`✅ Excel gerado: ${nomeArquivo} (${itensRequisitar.length} requisitar, ${itensDevolver.length} devolver)`);
+    console.log(`✅ Excel por obra gerado: ${nomeArquivo} (${itensRequisitar.length} requisitar, ${itensDevolver.length} devolver)`);
 
     if (typeof mostrarToast === 'function') {
         mostrarToast(`✅ Excel gerado: ${itensRequisitar.length} requisitar + ${itensDevolver.length} devolver`, 'success');
+    }
+}
+
+// ============================================
+// 🆕 EXPORTAR EXCEL — GERAL (3 abas)
+// ============================================
+
+function exportarExcelGeral() {
+    if (typeof XLSX === 'undefined') {
+        alert('❌ Biblioteca de Excel não carregada. Recarregue a página.');
+        return;
+    }
+
+    if (!pendenciasConsolidadas || pendenciasConsolidadas.length === 0) {
+        alert('⚠️ Nenhum dado carregado ainda. Aguarde o carregamento.');
+        return;
+    }
+
+    const hoje = new Date();
+    const dataStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+
+    // Aba REQUISITAR — todas as obras
+    const itensRequisitar = pendenciasConsolidadas
+        .filter(p => p.status === 'REQUISITAR')
+        .sort((a, b) => {
+            const cmp = String(a.obra).localeCompare(String(b.obra));
+            if (cmp !== 0) return cmp;
+            return String(a.codigo).localeCompare(String(b.codigo));
+        });
+
+    const dadosRequisitar = itensRequisitar.map(p => ({
+        'OBRA': p.obra,
+        'CÓDIGO': p.codigo,
+        'DESCRIÇÃO': p.descricao || '',
+        'UND': p.unidade || 'UN',
+        'QTD': Number(p.falta.toFixed(2))
+    }));
+
+    // Aba DEVOLVER — todas as obras
+    const itensDevolver = pendenciasConsolidadas
+        .filter(p => p.status === 'DEVOLVER')
+        .sort((a, b) => {
+            const cmp = String(a.obra).localeCompare(String(b.obra));
+            if (cmp !== 0) return cmp;
+            return String(a.codigo).localeCompare(String(b.codigo));
+        });
+
+    const dadosDevolver = itensDevolver.map(p => ({
+        'OBRA': p.obra,
+        'CÓDIGO': p.codigo,
+        'DESCRIÇÃO': p.descricao || '',
+        'UND': p.unidade || 'UN',
+        'QTD': Number(p.sobra.toFixed(2))
+    }));
+
+    // Aba OBRAS — só número único
+    const obrasUnicas = [...new Set(pendenciasConsolidadas.map(p => p.obra))]
+        .filter(Boolean)
+        .sort();
+
+    const dadosObras = obrasUnicas.map(obra => ({ 'OBRA': obra }));
+
+    // Cria workbook
+    const wb = XLSX.utils.book_new();
+
+    // Aba REQUISITAR
+    if (dadosRequisitar.length > 0) {
+        const ws = XLSX.utils.json_to_sheet(dadosRequisitar);
+        ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'REQUISITAR');
+    } else {
+        const ws = XLSX.utils.json_to_sheet([{ 'OBRA': '—', 'CÓDIGO': '—', 'DESCRIÇÃO': 'Nenhum item a requisitar', 'UND': '—', 'QTD': 0 }]);
+        ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'REQUISITAR');
+    }
+
+    // Aba DEVOLVER
+    if (dadosDevolver.length > 0) {
+        const ws = XLSX.utils.json_to_sheet(dadosDevolver);
+        ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'DEVOLVER');
+    } else {
+        const ws = XLSX.utils.json_to_sheet([{ 'OBRA': '—', 'CÓDIGO': '—', 'DESCRIÇÃO': 'Nenhum item a devolver', 'UND': '—', 'QTD': 0 }]);
+        ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'DEVOLVER');
+    }
+
+    // Aba OBRAS
+    if (dadosObras.length > 0) {
+        const ws = XLSX.utils.json_to_sheet(dadosObras);
+        ws['!cols'] = [{ wch: 14 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'OBRAS');
+    } else {
+        const ws = XLSX.utils.json_to_sheet([{ 'OBRA': '—' }]);
+        ws['!cols'] = [{ wch: 14 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'OBRAS');
+    }
+
+    const nomeArquivo = `correcao-geral-${dataStr}.xlsx`;
+
+    XLSX.writeFile(wb, nomeArquivo);
+
+    console.log(`✅ Excel GERAL gerado: ${nomeArquivo}`);
+    console.log(`   • REQUISITAR: ${itensRequisitar.length} itens`);
+    console.log(`   • DEVOLVER: ${itensDevolver.length} itens`);
+    console.log(`   • OBRAS: ${obrasUnicas.length} obras únicas`);
+
+    if (typeof mostrarToast === 'function') {
+        mostrarToast(`✅ Excel geral: ${itensRequisitar.length} requisitar + ${itensDevolver.length} devolver + ${obrasUnicas.length} obras`, 'success');
     }
 }
 
@@ -1371,7 +1478,7 @@ function trocarAbaPrincipal(aba) {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('📋 DOM carregado, iniciando dashboard (v10)...');
+    console.log('📋 DOM carregado, iniciando dashboard (v11)...');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const dashboardContent = document.getElementById('dashboardContent');
     if (!loadingOverlay || !dashboardContent) return;
@@ -1413,5 +1520,6 @@ window.renderizarDashboardMGM = renderizarDashboardMGM;
 window.aplicarFiltroStatusMGM = aplicarFiltroStatusMGM;
 window.aplicarFiltroEtapas = aplicarFiltroEtapas;
 window.exportarExcelObra = exportarExcelObra;
+window.exportarExcelGeral = exportarExcelGeral;
 
-console.log('✅ dashboards-pendencia-requisicao.js inicializado! (v10)');
+console.log('✅ dashboards-pendencia-requisicao.js inicializado! (v11)');

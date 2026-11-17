@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Pendência de Requisição</title>
-    
+
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/design-system.css">
     <link rel="stylesheet" href="../css/dashboards-common.css">
@@ -69,7 +69,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="dashboard-card">
                     <h3>📋 Detalhes</h3>
                     <div id="itemDetails" class="item-details-panel">
@@ -128,6 +128,13 @@
                 </div>
                 <button class="btn-filtrar" onclick="aplicarFiltrosMGM()">🔍 Filtrar</button>
                 <button class="btn-limpar-filtros" onclick="limparFiltrosMGM()">🧹 Limpar</button>
+
+                <!-- 🔥 NOVO: Exportar Excel Geral (todas as obras) -->
+                <button class="btn-filtrar btn-exportar-geral" onclick="exportarExcelGeral()"
+                        title="Exportar todas as obras em um único Excel (3 abas)">
+                    📥 Exportar Excel (Geral)
+                </button>
+
                 <span class="total-registros" id="totalRegistrosMGM">0 pendências</span>
             </div>
 
@@ -152,7 +159,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="dashboard-card">
                     <h3>📋 Detalhes da Obra</h3>
                     <div id="itemDetailsMGM" class="item-details-panel">
@@ -175,7 +182,7 @@
                 </div>
 
                 <div class="dashboard-card">
-                    <h3>🏗️ Situação das Obras</h3>
+                    <h3>💰 Valores a Movimentar</h3>
                     <div id="valorChartMGM" class="chart-container">
                         <div class="loading-dashboard" style="min-height: 100px;">
                             <div class="spinner"></div>
