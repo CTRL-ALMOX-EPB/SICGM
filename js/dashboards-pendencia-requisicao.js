@@ -1,5 +1,10 @@
 // ============================================
-// DASHBOARD PENDÊNCIA DE REQUISIÇÃO - v11
+// DASHBOARD PENDÊNCIA DE REQUISIÇÃO - v13
+// + FILTRO POR dsc_status (programacao_siago.txt): obras com status bloqueado
+//   são REMOVIDAS do sistema inteiro (KPIs, lista, gráficos, detalhes, Excel).
+//   Lista de obras bloqueadas é logada no console.
+// + NOVA FONTE: MGM_online (D1 controles, rota /api/mgm-online-completo) combinada com devolucao_compilada
+//   (obra|data|código|qtd_aplicada; mesma obra+mesma data nas 2 fontes = aviso no console)
 // + Exportar Excel (Geral) — todas as obras
 // + valorUnitario vem da POSIÇÃO DE ESTOQUE (vlrult_cot)
 // + Gráfico "Valores a Movimentar" (R$) com "Consumo previsto"
@@ -8,16 +13,36 @@
 // + Exportação Excel por obra (2 abas) — mantida
 // ============================================
 
-console.log('🚀 dashboards-pendencia-requisicao.js carregado! (v11)');
+console.log('🚀 dashboards-pendencia-requisicao.js carregado! (v13)');
 
 const ARQUIVOS_R2 = {
     movimentosSiago:    `${API_URL}/proxy/movimentos-siago`,
     programacaoSiago:   `${API_URL}/proxy/programacao-siago`,
     previstoRealizado:  `${API_URL}/proxy/previsto-realizado`,
-    devolucaoCompilada: `${API_URL}/proxy/devolucao-compilada`
+    devolucaoCompilada: `${API_URL}/proxy/devolucao-compilada`,
+    mgmOnline:          `${API_URL}/mgm-online-completo`   // rota já existente no worker (D1 controles): MGMs + itens
 };
 
+// Se a MESMA obra + MESMA data aparecer nas 2 fontes (não deveria acontecer),
+// qual fonte vale? 'devolucao_compilada' ou 'mgm_online'. Só uma das duas entra (não soma).
+const PRIORIDADE_CONFLITO = 'devolucao_compilada';
+
 const URL_POSICAO_ESTOQUE = 'https://sicgm-sita.alefe-gomes-72f.workers.dev/api/proxy/posicao-estoque';
+
+// ============================================
+// 🚫 STATUS BLOQUEADOS (coluna dsc_status do programacao_siago.txt)
+// Obras com QUALQUER linha contendo um destes dsc_status são REMOVIDAS do sistema.
+// Comparação: MATCH EXATO (após .trim()), case-sensitive.
+// ============================================
+const STATUS_BLOQUEADOS = [
+    '17-ENCERRAMENTO:ENCERRAMENTO TÉCNICO',
+    '43-ENCERRAMENTO:FISCALIZAÇÃO APROVADA',
+    '999-INDEFERIDA',
+    '39-ORÇAMENTO:ENVIADO P/CLIENTE',
+    '19-ORÇAMENTO:APROVADO PELO CLIENTE',
+    '14-ORÇAMENTO:APROVADO INTERNAMENTE',
+    '28-PLANEJAMENTO:TOMADA DE PREÇO FINALIZADA'
+];
 
 // ============================================
 // ESTADO GLOBAL
@@ -39,6 +64,10 @@ const TOLERANCIA_QTD = 0.01;
 
 let obrasPermitidas = null;
 const __cacheInicioObra = {};
+
+// 🆕 Obras bloqueadas por dsc_status (preenchido no parse do programacao_siago)
+let obrasBloqueadasPorStatus = new Set();
+let _detalhesObrasBloqueadas = [];
 
 // ============================================
 // HELPERS BÁSICOS
@@ -314,6 +343,136 @@ function parsearDevolucaoCompilada(texto) {
     return { mgmMap, etapasPorObra };
 }
 
+// ============================================
+// COMBINAR FONTES: devolucao_compilada (R2) + MGM_online (D1)
+// ============================================
+
+function indicesCabecalhoDevolucao(cabecalho) {
+    return {
+        obra:        cabecalho.findIndex(h => /^OBRA$/i.test(h)),
+        data:        cabecalho.findIndex(h => /^DATA$/i.test(h)),
+        codigo:      cabecalho.findIndex(h => /C[ÓO]DIGO/i.test(h)),
+        descricao:   cabecalho.findIndex(h => /DESCRI[ÇC][ÃA]O/i.test(h)),
+        qtdAplicada: cabecalho.findIndex(h => /QTD\.?\s*APLICADA/i.test(h)),
+        qtdDmaNovo:  cabecalho.findIndex(h => /QTD\.?\s*DMA/i.test(h)),
+        arquivo:     cabecalho.findIndex(h => /^ARQUIVO$/i.test(h))
+    };
+}
+
+function combinarFontesDevolucao(textoDev, textoMgm) {
+    const linhasDev = (textoDev || '').split(/\r?\n/).filter(l => l.trim());
+    const linhasMgm = (textoMgm || '').split(/\r?\n/).filter(l => l.trim());
+
+    if (linhasMgm.length < 2) {
+        console.warn('⚠️ MGM_online sem dados (ou indisponível) — usando somente devolucao_compilada');
+        return textoDev || '';
+    }
+    if (linhasDev.length < 2) {
+        console.warn('⚠️ devolucao_compilada vazia — usando somente MGM_online');
+        return textoMgm;
+    }
+
+    const cabDev = linhasDev[0].split('\t').map(h => h.trim());
+    const cabMgm = linhasMgm[0].split('\t').map(h => h.trim());
+    const iD = indicesCabecalhoDevolucao(cabDev);
+    const iM = indicesCabecalhoDevolucao(cabMgm);
+
+    const invalido = (i) => i.obra < 0 || i.data < 0 || i.codigo < 0 || i.qtdAplicada < 0;
+    if (invalido(iM)) {
+        console.error('❌ Cabeçalho inesperado no MGM_online:', cabMgm, '— usando somente devolucao_compilada');
+        return textoDev;
+    }
+    if (invalido(iD)) {
+        console.error('❌ Cabeçalho inesperado na devolucao_compilada:', cabDev);
+        return textoDev;
+    }
+
+    const chaveObraData = (c, i) => {
+        const obra = normalizarObra(c[i.obra] || '');
+        const dataISO = parseDataGenerica((c[i.data] || '').trim());
+        if (!obra || !dataISO) return null;
+        return { obra, dataISO, chave: `${obra}|${dataISO}` };
+    };
+
+    const chavesDev = new Set();
+    for (let k = 1; k < linhasDev.length; k++) {
+        const c = linhasDev[k].split('\t');
+        if (parseNumeroBR(c[iD.qtdAplicada]) <= 0) continue;
+        const ch = chaveObraData(c, iD);
+        if (ch) chavesDev.add(ch.chave);
+    }
+
+    const chavesMgm = new Map();
+    for (let k = 1; k < linhasMgm.length; k++) {
+        const c = linhasMgm[k].split('\t');
+        if (parseNumeroBR(c[iM.qtdAplicada]) <= 0) continue;
+        const ch = chaveObraData(c, iM);
+        if (!ch) continue;
+        if (!chavesMgm.has(ch.chave)) chavesMgm.set(ch.chave, { obra: ch.obra, dataISO: ch.dataISO, origens: new Set() });
+        chavesMgm.get(ch.chave).origens.add(iM.arquivo >= 0 ? (c[iM.arquivo] || '').trim() : '');
+    }
+
+    const conflitos = [...chavesMgm.keys()].filter(k => chavesDev.has(k));
+    const mantemDev = PRIORIDADE_CONFLITO !== 'mgm_online';
+    const setConflitos = new Set(conflitos);
+
+    if (conflitos.length) {
+        console.groupCollapsed(`⚠️ ${conflitos.length} obra(s) com a MESMA data de saída nas 2 fontes (devolucao_compilada + MGM_online)`);
+        conflitos.forEach(k => {
+            const { obra, dataISO } = chavesMgm.get(k);
+            const [a, m, d] = dataISO.split('-');
+            console.warn(`⚠️ Obra ${obra} — saída ${d}.${m}.${a} existe nas 2 fontes. ` +
+                `Mantida: ${mantemDev ? 'devolucao_compilada' : 'MGM_online'} | Ignorada: ${mantemDev ? 'MGM_online' : 'devolucao_compilada'} (não soma)`);
+        });
+        console.groupEnd();
+    }
+    const dupInternas = [...chavesMgm.entries()].filter(([, v]) => v.origens.size > 1);
+    if (dupInternas.length) {
+        console.groupCollapsed(`⚠️ ${dupInternas.length} obra(s) com a mesma data em mais de uma programação do MGM_online`);
+        dupInternas.forEach(([, v]) => {
+            const [a, m, d] = v.dataISO.split('-');
+            console.warn(`⚠️ Obra ${v.obra} — ${d}.${m}.${a}: ${[...v.origens].join(' + ')} (somadas)`);
+        });
+        console.groupEnd();
+    }
+
+    const saida = [linhasDev[0]];
+    let linhasDevUsadas = 0, linhasMgmUsadas = 0, linhasMgmIgnoradas = 0, linhasDevIgnoradas = 0;
+
+    for (let k = 1; k < linhasDev.length; k++) {
+        if (!mantemDev && setConflitos.size) {
+            const c = linhasDev[k].split('\t');
+            const ch = chaveObraData(c, iD);
+            if (ch && setConflitos.has(ch.chave)) { linhasDevIgnoradas++; continue; }
+        }
+        saida.push(linhasDev[k]);
+        linhasDevUsadas++;
+    }
+
+    for (let k = 1; k < linhasMgm.length; k++) {
+        const c = linhasMgm[k].split('\t');
+        const ch = chaveObraData(c, iM);
+        if (mantemDev && ch && setConflitos.has(ch.chave)) { linhasMgmIgnoradas++; continue; }
+
+        const nova = new Array(cabDev.length).fill('');
+        nova[iD.obra]        = c[iM.obra] || '';
+        nova[iD.data]        = c[iM.data] || '';
+        nova[iD.codigo]      = c[iM.codigo] || '';
+        if (iD.descricao  >= 0 && iM.descricao  >= 0) nova[iD.descricao]  = c[iM.descricao] || '';
+        nova[iD.qtdAplicada] = c[iM.qtdAplicada] || '';
+        if (iD.qtdDmaNovo >= 0 && iM.qtdDmaNovo >= 0) nova[iD.qtdDmaNovo] = c[iM.qtdDmaNovo] || '';
+        if (iD.arquivo    >= 0 && iM.arquivo    >= 0) nova[iD.arquivo]    = c[iM.arquivo] || 'MGM_online';
+        saida.push(nova.join('\t'));
+        linhasMgmUsadas++;
+    }
+
+    console.log(`✅ Fontes combinadas: devolucao_compilada ${linhasDevUsadas} linhas` +
+        `${linhasDevIgnoradas ? ` (${linhasDevIgnoradas} ignoradas por conflito)` : ''} + ` +
+        `MGM_online ${linhasMgmUsadas} linhas${linhasMgmIgnoradas ? ` (${linhasMgmIgnoradas} ignoradas por conflito)` : ''}`);
+
+    return saida.join('\n');
+}
+
 function parsearPrevistoRealizado(texto) {
     console.log('🔄 Parseando previsto_realizado.txt...');
     const linhas = texto.split(/\r?\n/);
@@ -425,9 +584,23 @@ function parsearProgramacaoSiago(texto) {
         dsc_situacao_programacao_obra: cabecalho.indexOf('dsc_situacao_programacao_obra'),
         cod_situacao_programacao_obra: cabecalho.indexOf('cod_situacao_programacao_obra'),
         dsc_etapa: cabecalho.indexOf('dsc_etapa'),
-        idt_programacao_obra: cabecalho.indexOf('idt_programacao_obra')
+        idt_programacao_obra: cabecalho.indexOf('idt_programacao_obra'),
+        // 🆕 coluna usada para bloquear obras
+        dsc_status: cabecalho.indexOf('dsc_status')
     };
+
+    if (idx.dsc_status < 0) {
+        console.warn('⚠️ Coluna "dsc_status" não encontrada no cabeçalho — filtro de status bloqueado NÃO será aplicado');
+    }
+
     const etapasPorObra = {};
+    // 🆕 mapa temporário: obra -> Set de dsc_status encontrados
+    const statusPorObra = {};
+    // 🆕 detalhes para o log
+    const detalhesBloqueio = [];
+    // 🆕 Set de valores bloqueados (match exato, após trim)
+    const setBloqueados = new Set(STATUS_BLOQUEADOS);
+
     for (let i = 1; i < linhas.length; i++) {
         const linha = linhas[i];
         if (!linha.trim()) continue;
@@ -435,6 +608,7 @@ function parsearProgramacaoSiago(texto) {
         const numObra = (partes[idx.num_obra] || '').trim();
         if (!numObra) continue;
         const obraNorm = normalizarObra(numObra);
+
         if (!etapasPorObra[obraNorm]) {
             etapasPorObra[obraNorm] = {
                 obra: obraNorm, etapas_raw: [], etapas: [],
@@ -442,6 +616,7 @@ function parsearProgramacaoSiago(texto) {
                 etapas_validas: 0, etapas_reprovadas: 0
             };
         }
+
         const etapaNum = parseInt(partes[idx.etapa] || '0');
         const dth = (partes[idx.dth_programacao_inicial] || '').trim();
         const situacao = (partes[idx.dsc_situacao_programacao_obra] || '').trim();
@@ -460,7 +635,27 @@ function parsearProgramacaoSiago(texto) {
         etapasPorObra[obraNorm].etapas_raw.push(registro);
         etapasPorObra[obraNorm].etapas.push(etapaNum);
         etapasPorObra[obraNorm].etapas_detalhes[String(etapaNum)] = registro;
+
+        // 🆕 Captura o dsc_status desta linha e verifica bloqueio (MATCH EXATO)
+        if (idx.dsc_status >= 0) {
+            const dscStatusLinha = (partes[idx.dsc_status] || '').trim();
+            if (dscStatusLinha) {
+                if (!statusPorObra[obraNorm]) statusPorObra[obraNorm] = new Set();
+                statusPorObra[obraNorm].add(dscStatusLinha);
+
+                if (setBloqueados.has(dscStatusLinha)) {
+                    detalhesBloqueio.push({
+                        obra: obraNorm,
+                        obraFormatada: formatarObra(obraNorm),
+                        etapa: etapaNum,
+                        dsc_status: dscStatusLinha,
+                        dth_programacao_inicial: dth
+                    });
+                }
+            }
+        }
     }
+
     Object.keys(etapasPorObra).forEach(obraNorm => {
         const info = etapasPorObra[obraNorm];
         const etapasUnicas = [...new Set(info.etapas)].sort((a, b) => a - b);
@@ -477,7 +672,59 @@ function parsearProgramacaoSiago(texto) {
         info.etapas_validas = validas;
         info.etapas_reprovadas = reprovadas;
     });
-    console.log(`✅ ${Object.keys(etapasPorObra).length} obras com programação Siago`);
+
+    // 🆕 Constrói o Set global de obras bloqueadas (basta UMA linha com status bloqueado)
+    obrasBloqueadasPorStatus = new Set(
+        Object.keys(statusPorObra).filter(obra =>
+            [...statusPorObra[obra]].some(s => setBloqueados.has(s))
+        )
+    );
+    _detalhesObrasBloqueadas = detalhesBloqueio;
+
+    // 🆕 Log no console — lista das obras bloqueadas
+    if (obrasBloqueadasPorStatus.size > 0) {
+        console.group(`🚫 ${obrasBloqueadasPorStatus.size} obra(s) BLOQUEADA(S) por dsc_status indesejado`);
+        console.warn('Status bloqueados (match exato):');
+        STATUS_BLOQUEADOS.forEach(s => console.warn(`   • "${s}"`));
+        console.log('Obras removidas do sistema:', [...obrasBloqueadasPorStatus].map(formatarObra));
+
+        // Agrupa por obra para o resumo
+        const resumoPorObra = {};
+        detalhesBloqueio.forEach(d => {
+            if (!resumoPorObra[d.obra]) {
+                resumoPorObra[d.obra] = {
+                    obra: d.obraFormatada,
+                    status: new Set(),
+                    etapas: []
+                };
+            }
+            resumoPorObra[d.obra].status.add(d.dsc_status);
+            resumoPorObra[d.obra].etapas.push(d.etapa);
+        });
+
+        console.table(Object.values(resumoPorObra).map(r => ({
+            'OBRA': r.obra,
+            'DSC_STATUS': [...r.status].join(' | '),
+            'ETAPAS': r.etapas.join(', ')
+        })));
+
+        // Detalhamento linha a linha
+        console.groupCollapsed(`📋 Detalhamento (${detalhesBloqueio.length} linha(s))`);
+        console.table(detalhesBloqueio.map(d => ({
+            'OBRA': d.obraFormatada,
+            'ETAPA': d.etapa,
+            'DSC_STATUS': d.dsc_status,
+            'DTH_PROG_INICIAL': d.dth_programacao_inicial
+        })));
+        console.groupEnd();
+        console.groupEnd();
+    } else {
+        console.log('✅ Nenhuma obra com dsc_status bloqueado encontrada');
+    }
+
+    console.log(`✅ ${Object.keys(etapasPorObra).length} obras com programação Siago` +
+        (obrasBloqueadasPorStatus.size > 0 ? ` (${obrasBloqueadasPorStatus.size} bloqueada(s) por dsc_status)` : ''));
+
     return etapasPorObra;
 }
 
@@ -539,6 +786,8 @@ function construirObrasPermitidas() {
     const permitidas = new Set();
     todasObras.forEach(obraNorm => {
         if (!obraNorm) return;
+        // 🆕 Exclui obras com dsc_status bloqueado
+        if (obrasBloqueadasPorStatus.has(obraNorm)) return;
         const cls = classificarObra(obraNorm);
         if (cls.status === 'valida') permitidas.add(obraNorm);
     });
@@ -546,13 +795,22 @@ function construirObrasPermitidas() {
 }
 
 function aplicarFiltroInicioObraFrontEnd() {
-    obrasPermitidas = construirObrasPermitidas();
     const antes = pendenciasConsolidadas.length;
+
+    // 🆕 Conta quantas pendências caem por causa de dsc_status bloqueado
+    const removidasPorStatus = pendenciasConsolidadas.filter(p =>
+        obrasBloqueadasPorStatus.has(normalizarObra(p.obra))
+    ).length;
+
+    obrasPermitidas = construirObrasPermitidas();
     pendenciasConsolidadas = pendenciasConsolidadas.filter(p =>
         obrasPermitidas.has(normalizarObra(p.obra))
     );
-    console.log(`🚫 ${antes - pendenciasConsolidadas.length} pendências removidas pelo corte de data`);
     dadosFiltradosMGM = [...pendenciasConsolidadas];
+
+    const removidasTotal = antes - pendenciasConsolidadas.length;
+    console.log(`🚫 ${removidasTotal} pendência(s) removida(s) pelo filtro de obras permitidas` +
+        (removidasPorStatus > 0 ? ` — sendo ${removidasPorStatus} por dsc_status bloqueado` : ''));
 }
 
 // ============================================
@@ -602,6 +860,52 @@ async function carregarArquivoR2(url, nomeArquivo) {
     }
 }
 
+async function carregarMgmOnlineD1(url) {
+    console.log('📥 Carregando MGM_online (D1)...');
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    const registros = Array.isArray(json) ? json : (json.data || []);
+    const texto = converterMgmOnlineParaTexto(registros);
+    console.log(`✅ MGM_online (D1): ${registros.length} MGMs → ${Math.max(0, texto.split('\n').length - 1)} linhas de item (qtd_aplicada > 0)`);
+    return texto;
+}
+
+function converterMgmOnlineParaTexto(registros) {
+    const limpo = (v) => String(v ?? '').replace(/[\t\r\n]+/g, ' ').trim();
+    const numBR = (n) => String(Number(n) || 0).replace('.', ',');
+    const dataBR = (iso) => {
+        const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? `${m[3]}.${m[2]}.${m[1]}` : '';
+    };
+
+    const linhas = ['OBRA\tDATA\tCÓDIGO\tDESCRIÇÃO\tQTD. APLICADA\tQTD. DMA NOVO\tARQUIVO'];
+    registros.forEach(mgm => {
+        if (mgm.excluido === 1 || mgm.excluido === true) return;
+        const obra = normalizarObra(mgm.obra || '');
+        const data = dataBR(mgm.data_programacao) || dataBR(mgm.data_separacao);
+        if (!obra || !data) return;
+
+        (mgm.itens || []).forEach(it => {
+            if (it.excluido === 1 || it.excluido === true) return;
+            const qtdAplicada = Number(it.qtd_aplicada) || 0;
+            if (qtdAplicada <= 0) return;
+            const codigo = limpo(it.codigo);
+            if (!codigo) return;
+            linhas.push([
+                obra,
+                data,
+                codigo,
+                limpo(it.descricao),
+                numBR(qtdAplicada),
+                numBR(it.qtd_dma),
+                `MGM_online #${mgm.numero ?? mgm.id}`
+            ].join('\t'));
+        });
+    });
+    return linhas.join('\n');
+}
+
 async function carregarDadosMGM() {
     console.log('🚀 Iniciando carregamento...');
     try {
@@ -610,10 +914,14 @@ async function carregarDadosMGM() {
             return true;
         }
 
-        const [textoProgramacao, textoPrevisto, textoDevolucao] = await Promise.all([
+        const [textoProgramacao, textoPrevisto, textoDevolucao, textoMgmOnline] = await Promise.all([
             carregarArquivoR2(ARQUIVOS_R2.programacaoSiago, 'programacao_siago.txt').catch(() => ''),
             carregarArquivoR2(ARQUIVOS_R2.previstoRealizado, 'previsto_realizado.txt'),
             carregarArquivoR2(ARQUIVOS_R2.devolucaoCompilada, 'devolucao_compilada.txt'),
+            carregarMgmOnlineD1(ARQUIVOS_R2.mgmOnline).catch(e => {
+                console.warn('⚠️ Não foi possível carregar MGM_online (D1) — seguindo só com devolucao_compilada:', e.message);
+                return '';
+            }),
             carregarPosicaoEstoque()
         ]);
 
@@ -621,9 +929,12 @@ async function carregarDadosMGM() {
             window.__etapasPorObra = parsearProgramacaoSiago(textoProgramacao);
         } else {
             window.__etapasPorObra = {};
+            obrasBloqueadasPorStatus = new Set();
+            _detalhesObrasBloqueadas = [];
         }
 
-        const { mgmMap, etapasPorObra: etapasMGM } = parsearDevolucaoCompilada(textoDevolucao);
+        const textoDevolucaoCombinado = combinarFontesDevolucao(textoDevolucao, textoMgmOnline);
+        const { mgmMap, etapasPorObra: etapasMGM } = parsearDevolucaoCompilada(textoDevolucaoCombinado);
         const previstoMap = parsearPrevistoRealizado(textoPrevisto);
         const { pendencias } = consolidarPorObra(mgmMap, previstoMap);
 
@@ -1349,7 +1660,7 @@ function exportarExcelObra() {
 }
 
 // ============================================
-// 🆕 EXPORTAR EXCEL — GERAL (3 abas)
+// EXPORTAR EXCEL — GERAL (3 abas)
 // ============================================
 
 function exportarExcelGeral() {
@@ -1366,7 +1677,6 @@ function exportarExcelGeral() {
     const hoje = new Date();
     const dataStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
 
-    // Aba REQUISITAR — todas as obras
     const itensRequisitar = pendenciasConsolidadas
         .filter(p => p.status === 'REQUISITAR')
         .sort((a, b) => {
@@ -1383,7 +1693,6 @@ function exportarExcelGeral() {
         'QTD': Number(p.falta.toFixed(2))
     }));
 
-    // Aba DEVOLVER — todas as obras
     const itensDevolver = pendenciasConsolidadas
         .filter(p => p.status === 'DEVOLVER')
         .sort((a, b) => {
@@ -1400,17 +1709,14 @@ function exportarExcelGeral() {
         'QTD': Number(p.sobra.toFixed(2))
     }));
 
-    // Aba OBRAS — só número único
     const obrasUnicas = [...new Set(pendenciasConsolidadas.map(p => p.obra))]
         .filter(Boolean)
         .sort();
 
     const dadosObras = obrasUnicas.map(obra => ({ 'OBRA': obra }));
 
-    // Cria workbook
     const wb = XLSX.utils.book_new();
 
-    // Aba REQUISITAR
     if (dadosRequisitar.length > 0) {
         const ws = XLSX.utils.json_to_sheet(dadosRequisitar);
         ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
@@ -1421,7 +1727,6 @@ function exportarExcelGeral() {
         XLSX.utils.book_append_sheet(wb, ws, 'REQUISITAR');
     }
 
-    // Aba DEVOLVER
     if (dadosDevolver.length > 0) {
         const ws = XLSX.utils.json_to_sheet(dadosDevolver);
         ws['!cols'] = [{ wch: 14 }, { wch: 14 }, { wch: 50 }, { wch: 8 }, { wch: 10 }];
@@ -1432,7 +1737,6 @@ function exportarExcelGeral() {
         XLSX.utils.book_append_sheet(wb, ws, 'DEVOLVER');
     }
 
-    // Aba OBRAS
     if (dadosObras.length > 0) {
         const ws = XLSX.utils.json_to_sheet(dadosObras);
         ws['!cols'] = [{ wch: 14 }];
@@ -1478,7 +1782,7 @@ function trocarAbaPrincipal(aba) {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('📋 DOM carregado, iniciando dashboard (v11)...');
+    console.log('📋 DOM carregado, iniciando dashboard (v13)...');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const dashboardContent = document.getElementById('dashboardContent');
     if (!loadingOverlay || !dashboardContent) return;
@@ -1522,4 +1826,4 @@ window.aplicarFiltroEtapas = aplicarFiltroEtapas;
 window.exportarExcelObra = exportarExcelObra;
 window.exportarExcelGeral = exportarExcelGeral;
 
-console.log('✅ dashboards-pendencia-requisicao.js inicializado! (v11)');
+console.log('✅ dashboards-pendencia-requisicao.js inicializado! (v13)');
