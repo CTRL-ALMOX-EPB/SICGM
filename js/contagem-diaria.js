@@ -5,6 +5,7 @@
 // + GUARDS DEFENSIVOS: nunca quebra se elementos do form não existirem
 // + INICIALIZAÇÃO EM DOMContentLoaded: garante #nome/#matricula/#data no DOM
 // + CORREÇÃO: buscarQuantidadeAnterior usa getDataBrasil() sob demanda
+// + NOVO: FILTRO EM TEMPO REAL (sem botão de pesquisar), ignora acentos/maiúsculas
 // ============================================
 
 // Verificar se estamos na página de contagem diária
@@ -694,6 +695,9 @@ if (document.getElementById('contagemForm')) {
         }
         
         if (loading) loading.style.display = 'none';
+        
+        // 🔧 FILTRO: reaplica o filtro após redesenhar as abas
+        setTimeout(aplicarFiltro, 300);
     }
     
     // ============================================
@@ -4121,7 +4125,10 @@ if (document.getElementById('contagemForm')) {
             } else if (categoria === 'bobinas_internas') {
                 atualizarContadorBobinasInternas();
             }
-        }, 200);
+            
+            // 🔧 FILTRO: reaplica o filtro após redesenhar a aba
+            aplicarFiltro();
+        }, 300);
     }
     
     // ============================================
@@ -4282,8 +4289,6 @@ if (document.getElementById('contagemForm')) {
         }
         
         try {
-            // 🔧 CORREÇÃO: getDataBrasil() sob demanda (a variável dataFormatada
-            // não existe mais neste escopo após a refatoração do DOMContentLoaded)
             const dataAtual = getDataBrasil();
 
             const body = { 
@@ -4373,15 +4378,24 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÕES DE FILTRO (com guards)
+    // FUNÇÕES DE FILTRO (EM TEMPO REAL, com guards)
     // ============================================
+    
+    // Remove acentos e deixa minúsculo: "Cabo Concreto" == "cábo concrèto"
+    function normalizarTextoFiltro(s) {
+        return (s || '').toString()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
+    }
     
     function aplicarFiltro() {
         const elTexto = document.getElementById('filtro-texto');
         const elTipo = document.getElementById('filtro-tipo');
         const elContagem = document.getElementById('filtro-contagem');
         
-        const texto = elTexto ? elTexto.value.toLowerCase().trim() : '';
+        const texto = elTexto ? normalizarTextoFiltro(elTexto.value) : '';
         const tipo = elTipo ? elTipo.value : 'todos';
         
         const subdivisaoAtiva = document.querySelector('.tab-principal-content.active');
@@ -4396,6 +4410,7 @@ if (document.getElementById('contagemForm')) {
         if (!texto) {
             items.forEach(item => {
                 item.classList.remove('filtro-oculto');
+                item.style.display = '';
                 visiveis++;
             });
             if (elContagem) elContagem.textContent = `Mostrando ${visiveis} itens`;
@@ -4404,32 +4419,41 @@ if (document.getElementById('contagemForm')) {
         
         items.forEach(item => {
             let textoBusca = '';
-            const codigo = item.dataset.codigo || '';
+            
+            // Código: pega do data-codigo OU do input de código (itens novos digitados na hora)
+            const inputCodigo = item.querySelector('input[id*="codigo"]') || item.querySelector('.input-readonly');
+            const codigo = normalizarTextoFiltro(item.dataset.codigo || (inputCodigo ? inputCodigo.value : ''));
+            
             const descricaoInput = item.querySelector('.input-descricao');
-            const descricao = descricaoInput ? descricaoInput.value.toLowerCase() : '';
-            const tombamento = item.dataset.tombamento || '';
+            const descricao = normalizarTextoFiltro(descricaoInput ? descricaoInput.value : '');
+            
+            const inputTomb = item.querySelector('input[id*="tombamento"]');
+            const tombamento = normalizarTextoFiltro(item.dataset.tombamento || (inputTomb ? inputTomb.value : ''));
             
             switch(tipo) {
                 case 'codigo':
-                    textoBusca = codigo.toLowerCase();
+                    textoBusca = codigo;
                     break;
                 case 'descricao':
-                    textoBusca = descricao.toLowerCase();
+                    textoBusca = descricao;
                     break;
                 case 'tombamento':
-                    textoBusca = tombamento.toLowerCase();
+                    textoBusca = tombamento;
                     break;
                 case 'todos':
                 default:
-                    textoBusca = `${codigo} ${descricao} ${tombamento}`.toLowerCase();
+                    textoBusca = `${codigo} ${descricao} ${tombamento}`;
                     break;
             }
             
             if (textoBusca.includes(texto)) {
                 item.classList.remove('filtro-oculto');
+                item.style.display = '';
                 visiveis++;
             } else {
                 item.classList.add('filtro-oculto');
+                // Garante o efeito mesmo se o CSS de .filtro-oculto não existir
+                item.style.display = 'none';
             }
         });
         
@@ -4443,7 +4467,26 @@ if (document.getElementById('contagemForm')) {
         if (elTipo) elTipo.value = 'todos';
         aplicarFiltro();
         if (elTexto) elTexto.focus();
-    }   
+    }
+    
+    // Liga o filtro ao digitar (sem botão de pesquisar)
+    function ligarFiltroTempoReal() {
+        // Delegação no document: funciona mesmo se os campos forem recriados
+        document.addEventListener('input', (e) => {
+            if (e.target && e.target.id === 'filtro-texto') aplicarFiltro();
+        });
+        
+        document.addEventListener('change', (e) => {
+            if (e.target && e.target.id === 'filtro-tipo') aplicarFiltro();
+        });
+        
+        // Enter na barra de busca NÃO pode enviar o formulário
+        document.addEventListener('keydown', (e) => {
+            if (e.target && e.target.id === 'filtro-texto' && e.key === 'Enter') {
+                e.preventDefault();
+            }
+        });
+    }
     
     // ============================================
     // FUNÇÕES DE NAVEGAÇÃO
@@ -5602,6 +5645,9 @@ if (document.getElementById('contagemForm')) {
                     tabBobinasInternas.innerHTML = renderizarBobinasInternas(bobinasInternasManuais);
                     atualizarContadorBobinasInternas();
                 }
+                
+                // 🔧 FILTRO: reaplica após redesenhar
+                setTimeout(aplicarFiltro, 300);
             }, 500);
             
         } catch (error) {
@@ -5730,6 +5776,9 @@ if (document.getElementById('contagemForm')) {
     
     function iniciarContagemDiaria() {
         console.log('🚀 Iniciando Contagem Diária (DOM completo)...');
+        
+        // 0) Liga o filtro em tempo real (digitou, filtrou)
+        ligarFiltroTempoReal();
         
         // 1) Carrega dados do usuário (agora #nome existe no DOM)
         carregarDadosUsuarioSessao();
