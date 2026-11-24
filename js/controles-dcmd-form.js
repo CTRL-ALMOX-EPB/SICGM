@@ -1,3 +1,4 @@
+
 // ============================================
 // CONTROLES DCMD - FORMULÁRIO UNIFICADO
 // Inclui MGM Online + Importação Excel
@@ -559,7 +560,7 @@ function isCampoEditavel(elemento) {
 }
 
 function getElementosEditaveis(container) {
-    const elementos = container.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+    const elementos = container.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([readonly]):not([disabled])');
     return Array.from(elementos).filter(el => el.offsetParent !== null);
 }
 
@@ -663,10 +664,24 @@ function normalizarDataExcel(valor) {
 
 function parseNumeroExcel(valor) {
     if (valor === undefined || valor === null || valor === '') return 0;
-    if (typeof valor === 'number') return valor;
-    const s = String(valor).trim().replace(',', '.').replace(/[^\d.-]/g, '');
-    const n = parseFloat(s);
-    return isNaN(n) ? 0 : n;
+    if (typeof valor === 'number') return Number.isFinite(valor) ? valor : 0;
+
+    let s = String(valor).trim().replace(/\s/g, '').replace(/[^\d,.-]/g, '');
+    if (!s) return 0;
+
+    // Aceita padrão brasileiro (1.234,56) e internacional (1,234.56).
+    if (s.includes(',') && s.includes('.')) {
+        if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+            s = s.replace(/\./g, '').replace(',', '.');
+        } else {
+            s = s.replace(/,/g, '');
+        }
+    } else if (s.includes(',')) {
+        s = s.replace(',', '.');
+    }
+
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
 }
 
 function normalizarCabecalho(txt) {
@@ -1289,7 +1304,7 @@ function configurarPopupDescricao() {
 // ============================================
 
 function configurarNavegacaoTeclado() {
-    const elementos = document.querySelectorAll('#controleForm input:not([readonly]):not([disabled]), #controleForm select:not([disabled]), #controleForm textarea:not([disabled])');
+    const elementos = document.querySelectorAll('#controleForm input:not([readonly]):not([disabled]), #controleForm select:not([disabled]), #controleForm textarea:not([readonly]):not([disabled])');
     elementos.forEach(function(el) {
         el.removeEventListener('keydown', handleTeclado);
         el.addEventListener('keydown', handleTeclado);
@@ -1382,7 +1397,7 @@ function navegarParaProximoCampoAbaixo(element) {
     const nextRow = rows[idx + 1];
     const nextCells = nextRow.querySelectorAll('td');
     if (targetCellIdx >= nextCells.length) return null;
-    const target = nextCells[targetCellIdx].querySelector('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+    const target = nextCells[targetCellIdx].querySelector('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([readonly]):not([disabled])');
     if (target && isCampoEditavel(target)) { target.focus(); if (target.type === 'text') target.select(); return target; }
     return null;
 }
@@ -1422,13 +1437,13 @@ function navegarVerticalTabela(element, direcao) {
         if (Array.from(cell.querySelectorAll('input, select, textarea')).includes(element)) cellIdx = i;
     });
     if (cellIdx === -1) {
-        const first = targetRow.querySelector('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+        const first = targetRow.querySelector('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([readonly]):not([disabled])');
         if (first && isCampoEditavel(first)) first.focus();
         return;
     }
     const targetCells = targetRow.querySelectorAll('td');
     if (cellIdx >= targetCells.length) return;
-    const target = targetCells[cellIdx].querySelector('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+    const target = targetCells[cellIdx].querySelector('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([readonly]):not([disabled])');
     if (target && isCampoEditavel(target)) { target.focus(); if (target.type === 'text') target.select(); }
 }
 
@@ -1438,7 +1453,7 @@ function navegarHorizontalTabela(element, direcao) {
     const celulasEditaveis = [];
     const cells = Array.from(row.querySelectorAll('td'));
     cells.forEach((cell) => {
-        const inputs = cell.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+        const inputs = cell.querySelectorAll('input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([readonly]):not([disabled])');
         inputs.forEach(inp => {
             if (isCampoEditavel(inp)) celulasEditaveis.push(inp);
         });
@@ -1487,9 +1502,45 @@ function handlePasteEmMassa(e) {
     processarPasteEmMassa(linhas, target);
 }
 
+// Na MGM, QTD (Base) e QTD RMA são a mesma informação.
+// O único campo persistido no D1 para esse valor é qtd_rma.
+function sincronizarQtdRmaMGM(campoOrigem) {
+    if (tipoAtual !== 'mgm' || !campoOrigem) return;
+
+    const linha = campoOrigem.closest('tr');
+    if (!linha) return;
+
+    const campoBase = linha.querySelector('.item-quantidade');
+    const campoRma = linha.querySelector('.item-rma');
+    if (!campoBase || !campoRma) return;
+
+    const valor = campoOrigem.value;
+    if (campoBase !== campoOrigem) campoBase.value = valor;
+    if (campoRma !== campoOrigem) campoRma.value = valor;
+}
+
+function configurarSincronizacaoQtdRmaMGM() {
+    const tbody = document.getElementById('itemsBody');
+    if (!tbody || tbody._sincronizacaoQtdRmaMGMConfigurada) return;
+
+    const handler = (e) => {
+        const campo = e.target;
+        if (!campo || !campo.classList) return;
+        if (campo.classList.contains('item-quantidade') || campo.classList.contains('item-rma')) {
+            sincronizarQtdRmaMGM(campo);
+        }
+    };
+
+    // input cobre digitação; change cobre colagem e alterações via scripts.
+    tbody.addEventListener('input', handler);
+    tbody.addEventListener('change', handler);
+    tbody._sincronizacaoQtdRmaMGMConfigurada = true;
+}
+
 function processarPasteEmMassa(linhas, elementoAlvo) {
     const isCodigoColumn = elementoAlvo.classList.contains('item-codigo');
     const isAditivoSistemico = tipoAtual === 'aditivo';
+    const isMGM = tipoAtual === 'mgm';
     
     if (isCodigoColumn && !isAditivoSistemico) {
         const duplicados = validarDuplicadosNoPaste(linhas, elementoAlvo);
@@ -1503,7 +1554,7 @@ function processarPasteEmMassa(linhas, elementoAlvo) {
     let classeAlvo = '';
     const mapeamento = {
         'item-codigo': 'codigo',
-        'item-quantidade': 'quantidade',
+        'item-quantidade': isMGM ? 'qtd_rma' : 'quantidade',
         'item-motivo': 'motivo',
         'item-observacao-item': 'observacao_item',
         'item-baixado': 'baixado',
@@ -2041,15 +2092,9 @@ function carregarItens(itens) {
     itens.forEach(item => {
         const tr = document.createElement('tr');
 
-        // [FIX MGM 2026-11-24] A API antiga não devolvia `quantidade` (QTD Base),
-        // porque o worker não gravava esse campo. Resultado: ao recarregar, a
-        // coluna "QTD (Base)" voltava vazia e parecia que a quantidade tinha
-        // sumido. Enquanto o worker novo não está publicado (ele passa a
-        // devolver `quantidade`), usamos `qtd_rma` como fallback — a mesma
-        // regra que a importação de Excel já usava (Base = RMA).
-        const qtdBase = (item.quantidade === undefined || item.quantidade === null || item.quantidade === '')
-            ? (isMGM ? (item.qtd_rma ?? '') : '')
-            : item.quantidade;
+        // Na MGM, QTD (Base) é representada exclusivamente por qtd_rma.
+        // Nos demais controles, continua sendo utilizado item.quantidade.
+        const qtdBase = isMGM ? (item.qtd_rma || '') : (item.quantidade ?? '');
 
         let html = `
             <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" value="${item.codigo || ''}" placeholder="Código" ${isFinalizado ? 'disabled' : ''}></td>
@@ -2188,15 +2233,13 @@ function getItensFormulario() {
         const codigo = codigoInput.value.trim();
         const descricao = descricaoInput ? descricaoInput.value.trim() : '';
         const unidade = unidadeInput ? unidadeInput.value.trim() : '';
-        const quantidade = parseFloat(quantidadeInput.value) || 0;
+        const quantidadeCampoBase = parseFloat(quantidadeInput.value) || 0;
         
-        if (codigo && (quantidade > 0 || isMGM)) {
-            // [FIX MGM 2026-11-24] Envia a ordem do item (1..N).
-            // O worker usava `parseInt(item.item) || 1`, então sem este campo
-            // TODOS os itens eram gravados com item=1. A contagem não mudava,
-            // mas a numeração exibida ficava errada. O worker agora também
-            // tem fallback pela posição, mas mandar daqui é o correto.
-            const item = { codigo, descricao, unidade, quantidade, item: items.length + 1 };
+        if (codigo && (quantidadeCampoBase > 0 || isMGM)) {
+            // A MGM persiste a quantidade-base no campo qtd_rma; não envia
+            // uma propriedade `quantidade` separada para o Worker.
+            const item = { codigo, descricao, unidade, item: items.length + 1 };
+            if (!isMGM) item.quantidade = quantidadeCampoBase;
             
             if (isAditivo) {
                 const statusSelect = row.querySelector('.item-status-aditivo');
@@ -2247,9 +2290,16 @@ function getItensFormulario() {
                 const aplicadaMGM = row.querySelector('.item-aplicada-mgm');
                 const dma = row.querySelector('.item-dma');
                 const pendente = row.querySelector('.item-pendente');
+
+                // qtd_rma é a fonte única da QTD da MGM. Usa o campo RMA
+                // como prioritário e o campo Base apenas como fallback.
+                const valorQtdRma = (rma && rma.value !== '')
+                    ? rma.value
+                    : quantidadeInput.value;
+                item.qtd_rma = parseFloat(valorQtdRma) || 0;
+
                 item.qtd_aditivo_saida = parseFloat(aditivoSaida?.value) || 0;
                 item.qtd_aditivo_campo = parseFloat(aditivoCampo?.value) || 0;
-                item.qtd_rma = parseFloat(rma?.value) || 0;
                 item.qtd_separada = parseFloat(separada?.value) || 0;
                 item.qtd_aplicada = parseFloat(aplicadaMGM?.value) || 0;
                 item.qtd_dma = parseFloat(dma?.value) || 0;
@@ -2274,6 +2324,7 @@ async function carregarControleFormulario() {
         const tipo = params.get('tipo') || 'pendencia';
         
         tipoAtual = tipo;
+        configurarSincronizacaoQtdRmaMGM();
         
         if (!numero) {
             mostrarToast('⚠️ Controle não encontrado', 'erro');
@@ -2704,8 +2755,8 @@ function focarCampoObra() {
 //   2) O worker substitui os itens com soft delete + INSERT em loop, sem
 //      transação. Se algo falhasse no meio, já tinha apagado os antigos e
 //      podia gravar menos itens — e o front não conferia nada.
-//   3) A coluna "QTD (Base)" usa o campo `quantidade`, que o worker não
-//      persistia (a coluna nem existia no INSERT). Ao recarregar, ficava vazia.
+//   3) Na MGM, QTD (Base) e QTD RMA usam a coluna existente `qtd_rma`.
+//      A coluna `quantidade` não existe e não deve ser utilizada nessa tabela.
 //
 // O QUE ESTE BLOCO FAZ:
 //   - conferirItensPersistidos(): relê o controle e compara a quantidade
