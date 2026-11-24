@@ -951,6 +951,10 @@ function handleSelectNumeroTeclado(e) {
 
 function atualizarNavegacaoSelects() {
     setTimeout(() => configurarNavegacaoSelectPorNumero(), 100);
+
+    // [FIX MGM] Chamado após adicionar/remover/colar linhas, então é o ponto
+    // mais confiável para manter o contador "📋 Itens da MGM (N itens)" vivo.
+    atualizarContadorItensMGM();
 }
 
 // ============================================
@@ -1961,6 +1965,9 @@ function adicionarLinhaItem() {
     setTimeout(adicionarBotoesAcoesMassa, 100);
     setTimeout(configurarValidacaoDuplicados, 150);
     setTimeout(atualizarNavegacaoSelects, 150);
+
+    // [FIX MGM] Nova linha entra vazia; o contador só conta linhas com código.
+    atualizarContadorItensMGM();
 }
 
 window.adicionarLinhaItem = adicionarLinhaItem;
@@ -2003,6 +2010,9 @@ function removerItem(btn) {
     setTimeout(configurarValidacaoDuplicados, 100);
     setTimeout(verificarECorrigirDuplicados, 150);
     setTimeout(atualizarNavegacaoSelects, 150);
+
+    // [FIX MGM] Atualiza o contador do título após remover a linha.
+    atualizarContadorItensMGM();
 }
 
 window.removerItem = removerItem;
@@ -2030,12 +2040,22 @@ function carregarItens(itens) {
     
     itens.forEach(item => {
         const tr = document.createElement('tr');
-        
+
+        // [FIX MGM 2026-11-24] A API antiga não devolvia `quantidade` (QTD Base),
+        // porque o worker não gravava esse campo. Resultado: ao recarregar, a
+        // coluna "QTD (Base)" voltava vazia e parecia que a quantidade tinha
+        // sumido. Enquanto o worker novo não está publicado (ele passa a
+        // devolver `quantidade`), usamos `qtd_rma` como fallback — a mesma
+        // regra que a importação de Excel já usava (Base = RMA).
+        const qtdBase = (item.quantidade === undefined || item.quantidade === null || item.quantidade === '')
+            ? (isMGM ? (item.qtd_rma ?? '') : '')
+            : item.quantidade;
+
         let html = `
             <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" value="${item.codigo || ''}" placeholder="Código" ${isFinalizado ? 'disabled' : ''}></td>
             <td><input type="text" class="item-descricao input-descricao" readonly value="${(item.descricao || '').replace(/"/g, '&quot;')}" placeholder="Descrição"></td>
             <td><input type="text" class="item-unidade" readonly value="${item.unidade || ''}" placeholder="Unid."></td>
-            <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" step="any" value="${item.quantidade || ''}" ${isFinalizado ? 'disabled' : ''}></td>
+            <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" step="any" value="${qtdBase}" ${isFinalizado ? 'disabled' : ''}></td>
         `;
         
         if (isMGM) {
@@ -2140,6 +2160,9 @@ function carregarItens(itens) {
     setTimeout(atualizarNavegacaoSelects, 150);
     
     document.querySelectorAll('.item-encarregado').forEach(sel => atualizarBadgeEncarregado(sel));
+
+    // [FIX MGM] Atualiza o contador do título após renderizar os itens.
+    atualizarContadorItensMGM();
 }
 
 // ============================================
@@ -2168,7 +2191,12 @@ function getItensFormulario() {
         const quantidade = parseFloat(quantidadeInput.value) || 0;
         
         if (codigo && (quantidade > 0 || isMGM)) {
-            const item = { codigo, descricao, unidade, quantidade };
+            // [FIX MGM 2026-11-24] Envia a ordem do item (1..N).
+            // O worker usava `parseInt(item.item) || 1`, então sem este campo
+            // TODOS os itens eram gravados com item=1. A contagem não mudava,
+            // mas a numeração exibida ficava errada. O worker agora também
+            // tem fallback pela posição, mas mandar daqui é o correto.
+            const item = { codigo, descricao, unidade, quantidade, item: items.length + 1 };
             
             if (isAditivo) {
                 const statusSelect = row.querySelector('.item-status-aditivo');
@@ -2663,10 +2691,96 @@ function focarCampoObra() {
 }
 
 // ============================================
+// [FIX 2026-11-24] INTEGRIDADE DE ITENS — MGM ONLINE
+// ============================================
+// PROBLEMA RELATADO:
+//   "Preencho N itens na MGM, salvo/finalizo e o painel mostra menos itens
+//    (às vezes menos da metade)."
+//
+// CAUSAS ENCONTRADAS (revisão do form + worker):
+//   1) finalizarControle() NÃO salvava o formulário antes de chamar
+//      POST /mgm-online/{numero}/finalizar. O worker só muda o status; os
+//      itens exibidos no painel eram os da ÚLTIMA gravação, não os da tela.
+//   2) O worker substitui os itens com soft delete + INSERT em loop, sem
+//      transação. Se algo falhasse no meio, já tinha apagado os antigos e
+//      podia gravar menos itens — e o front não conferia nada.
+//   3) A coluna "QTD (Base)" usa o campo `quantidade`, que o worker não
+//      persistia (a coluna nem existia no INSERT). Ao recarregar, ficava vazia.
+//
+// O QUE ESTE BLOCO FAZ:
+//   - conferirItensPersistidos(): relê o controle e compara a quantidade
+//     REALMENTE gravada com a quantidade ENVIADA (fonte da verdade);
+//   - atualizarContadorItensMGM(): mostra "📋 Itens da MGM (N itens)" no
+//     título, para o operador comparar tela x painel antes de finalizar;
+//   - mgmDebug(): logs padronizados "[MGM-FIX]" para rastrear cada etapa.
+//
+// COMO DEPURAR SE ALGO FALHAR:
+//   Abra o DevTools (F12) → Console e filtre por "[MGM-FIX]". Cada gravação
+//   mostra enviados/gravados; divergência cancela a finalização e aparece
+//   no toast. A mensagem de erro indica exatamente o ponto (salvar,
+//   conferir, finalizar).
+// ============================================
+
+// Log padronizado do fluxo de integridade da MGM.
+function mgmDebug(etapa, dados) {
+    try {
+        console.log(`[MGM-FIX] ${etapa}`, dados === undefined ? '' : dados);
+    } catch (_) { /* console indisponível: nunca deve quebrar o fluxo */ }
+}
+
+// Relê o controle no servidor e devolve quantos itens ficaram gravados.
+// Retorno: { ok: boolean, gravado: number|null, erro?: string }
+async function conferirItensPersistidos(endpoint, numero, esperado) {
+    const url = `${API_URL}${endpoint}/${numero}?t=${Date.now()}`; // cache-buster
+    mgmDebug('Conferindo itens no servidor', { url, esperado });
+
+    try {
+        const resp = await fetch(url, { cache: 'no-store' });
+        if (!resp.ok) {
+            mgmDebug('Falha ao reler controle', { status: resp.status });
+            return { ok: false, gravado: null, erro: `HTTP ${resp.status}` };
+        }
+
+        const dados = await resp.json();
+        if (!dados || !Array.isArray(dados.itens)) {
+            mgmDebug('Resposta sem lista de itens', dados);
+            return { ok: false, gravado: null, erro: 'Resposta sem lista de itens' };
+        }
+
+        const gravado = dados.itens.length;
+        const resultado = { ok: gravado === esperado, gravado };
+
+        mgmDebug('Resultado da conferência', {
+            esperado,
+            gravado,
+            diferenca: gravado - esperado,
+            ok: resultado.ok
+        });
+
+        return resultado;
+    } catch (e) {
+        mgmDebug('Erro ao conferir itens', { erro: e.message });
+        return { ok: false, gravado: null, erro: e.message };
+    }
+}
+
+// Mostra no título da seção quantos itens válidos existem na tela.
+// "Itens válidos" = linhas com código preenchido (as mesmas que serão salvas).
+function atualizarContadorItensMGM() {
+    if (tipoAtual !== 'mgm') return;
+
+    const titulo = document.getElementById('tituloItens');
+    if (!titulo) return;
+
+    const total = getItensFormulario().length;
+    titulo.textContent = `📋 Itens da MGM (${total} ${total === 1 ? 'item' : 'itens'})`;
+}
+
+// ============================================
 // SALVAR CONTROLE
 // ============================================
 
-async function salvarControle() {
+async function _salvarControleInterno() {
     if (!controleAtual) {
         mostrarToast('⚠️ Nenhum controle carregado', 'erro');
         return;
@@ -2895,22 +3009,95 @@ async function salvarControle() {
     
     const url = `${API_URL}${tipoInfo.endpoint}/${controleAtual.numero}`;
     
+    const totalEnviado = temItens ? itens.length : 0;
+
+    // [FIX] Log de diagnóstico: mostra exatamente o que será enviado.
+    mgmDebug('salvarControle: enviando', {
+        endpoint: tipoInfo.endpoint,
+        numero: controleAtual.numero,
+        totalEnviado,
+        temItens
+    });
+
     try {
         mostrarToast('⏳ Salvando...', 'info');
         const response = await fetch(url, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                // [FIX] Identifica quem salvou (o worker gravava "desconhecido").
+                'X-User-Email': dadosSessao?.matricula || 'desconhecido',
+                'X-User-Perfil': dadosSessao?.perfil || 'desconhecido'
+            },
             body: JSON.stringify(data)
         });
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({}));
             throw new Error(error.error || 'Erro ao salvar');
         }
-        mostrarToast('✅ Salvo com sucesso!', 'sucesso');
+
+        // [FIX] Fonte da verdade: o que o SERVIDOR gravou, não o que a tela mostra.
+        // Se o worker gravar menos itens do que enviamos (ex.: falha parcial no
+        // soft delete + insert), cancelamos o fluxo em vez de seguir em silêncio.
+        if (temItens) {
+            const conferencia = await conferirItensPersistidos(
+                tipoInfo.endpoint,
+                controleAtual.numero,
+                totalEnviado
+            );
+
+            if (!conferencia.ok) {
+                const detalhe = conferencia.gravado === null
+                    ? `não foi possível reler o controle (${conferencia.erro || 'sem detalhe'})`
+                    : `${conferencia.gravado} gravado(s)`;
+
+                console.error('[MGM-FIX] Salvamento incompleto', {
+                    enviados: totalEnviado,
+                    gravados: conferencia.gravado,
+                    erro: conferencia.erro
+                });
+
+                mostrarToast(
+                    `❌ Salvamento incompleto: ${totalEnviado} enviados, ${detalhe}. ` +
+                    `NÃO finalize — salve novamente. (detalhes no console: [MGM-FIX])`,
+                    'erro'
+                );
+
+                // Mantém a tabela na tela (sem recarregar) para o usuário conferir/reenviar.
+                return false;
+            }
+
+            mostrarToast(`✅ Salvo com sucesso! (${totalEnviado} itens conferidos)`, 'sucesso');
+        } else {
+            mostrarToast('✅ Salvo com sucesso!', 'sucesso');
+        }
+
         await carregarControleFormulario();
+        return true;
     } catch (error) {
         console.error('❌ Erro ao salvar:', error);
         mostrarToast('❌ ' + error.message, 'erro');
+        return false;
+    }
+}
+
+// [FIX] Trava contra duplo clique / duplo Enter.
+// Duas requisições PUT concorrentes intercalam o soft delete + INSERT do worker
+// e podem duplicar ou perder itens. Enquanto uma gravação acontece, a segunda
+// é ignorada e retorna false (a finalização também é cancelada).
+let salvandoControle = false;
+
+async function salvarControle() {
+    if (salvandoControle) {
+        console.warn('[MGM-FIX] salvarControle ignorado: já existe um salvamento em andamento.');
+        return false;
+    }
+
+    salvandoControle = true;
+    try {
+        return await _salvarControleInterno();
+    } finally {
+        salvandoControle = false;
     }
 }
 
@@ -2920,7 +3107,7 @@ window.salvarControle = salvarControle;
 // FINALIZAR CONTROLE
 // ============================================
 
-async function finalizarControle() {
+async function _finalizarControleInterno() {
     if (!controleAtual) {
         mostrarToast('⚠️ Nenhum controle carregado', 'erro');
         return;
@@ -2983,21 +3170,164 @@ async function finalizarControle() {
         return;
     }
     
-    if (!confirm(`⚠️ Finalizar o controle #${String(controleAtual.numero).padStart(4, '0')}?`)) return;
-    
+    // ============================================
+    // [FIX 2026-11-24] SALVAR ANTES DE FINALIZAR
+    // ============================================
+    // Este é o ponto central da correção. Antes, a finalização só fazia
+    // POST /finalizar: o worker apenas trocava o status e o painel passava a
+    // mostrar o último conjunto salvo — que podia ter poucos itens (ou zero)
+    // em relação ao que estava na tela. Agora:
+    //   1) contamos os itens da tela;
+    //   2) salvamos (mesmo PUT do botão Salvar) e conferimos no servidor;
+    //   3) só então finalizamos;
+    //   4) conferimos de novo após finalizar (se o worker alterar itens, avisa).
+    const temItens = TIPOS[tipoAtual]?.temItens;
+    let totalNaTela = 0;
+
+    if (temItens) {
+        totalNaTela = getItensFormulario().length;
+        if (totalNaTela === 0) {
+            mostrarToast('⚠️ Adicione ao menos 1 item antes de finalizar', 'aviso');
+            return;
+        }
+    }
+
+    mgmDebug('finalizarControle: início', {
+        tipo: tipoAtual,
+        numero: controleAtual.numero,
+        temItens,
+        totalNaTela
+    });
+
+    const mensagemConfirmacao =
+        `⚠️ Finalizar o controle #${String(controleAtual.numero).padStart(4, '0')}?` +
+        (temItens
+            ? `\n\n📦 ${totalNaTela} ${totalNaTela === 1 ? 'item será salvo' : 'itens serão salvos'} antes de finalizar.`
+            : '') +
+        '\n\nApós finalizar, o controle não poderá mais ser editado.';
+
+    if (!confirm(mensagemConfirmacao)) {
+        mgmDebug('finalizarControle: cancelado pelo usuário', { totalNaTela });
+        return;
+    }
+
     const tipoInfo = TIPOS[tipoAtual];
     try {
+        // PASSO 1 — salvar o estado atual da tela
+        if (temItens) {
+            mostrarToast('⏳ Salvando itens antes de finalizar...', 'info');
+            mgmDebug('finalizarControle: salvando antes de finalizar', { totalNaTela });
+
+            const salvou = await salvarControle();
+            if (salvou !== true) {
+                console.error('[MGM-FIX] Finalização cancelada: salvamento não confirmado.');
+                mostrarToast(
+                    '❌ Finalização cancelada: os itens não foram salvos por completo. ' +
+                    'Revise a tabela e salve novamente. (console: [MGM-FIX])',
+                    'erro'
+                );
+                return;
+            }
+
+            // PASSO 2 — conferir a contagem já persistida (proteção extra)
+            const conferencia = await conferirItensPersistidos(
+                tipoInfo.endpoint,
+                controleAtual.numero,
+                totalNaTela
+            );
+
+            if (!conferencia.ok) {
+                console.error('[MGM-FIX] Divergência antes de finalizar', {
+                    tela: totalNaTela,
+                    servidor: conferencia.gravado,
+                    erro: conferencia.erro
+                });
+                mostrarToast(
+                    `❌ Finalização cancelada: ${totalNaTela} item(ns) na tela, ` +
+                    `${conferencia.gravado ?? '?'} no servidor. (console: [MGM-FIX])`,
+                    'erro'
+                );
+                return;
+            }
+
+            mgmDebug('finalizarControle: contagem conferida, finalizando', {
+                totalNaTela,
+                gravado: conferencia.gravado
+            });
+        }
+
+        // PASSO 3 — finalizar
         mostrarToast('⏳ Finalizando...', 'info');
         const resp = await fetch(`${API_URL}${tipoInfo.endpoint}/${controleAtual.numero}/finalizar`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: {
+                'Content-Type': 'application/json',
+                'X-User-Email': dadosSessao?.matricula || 'desconhecido',
+                'X-User-Perfil': dadosSessao?.perfil || 'desconhecido'
+            }
         });
-        if (!resp.ok) { const e = await resp.json(); throw new Error(e.error || 'Erro'); }
-        mostrarToast('✅ Finalizado!', 'sucesso');
-        setTimeout(() => voltarParaPainel(), 1500);
+        if (!resp.ok) {
+            const e = await resp.json().catch(() => ({}));
+            throw new Error(e.error || 'Erro ao finalizar');
+        }
+
+        // PASSO 4 — conferir a contagem DEPOIS de finalizar.
+        // O worker de hoje não mexe em itens no /finalizar, mas se isso mudar
+        // (ou se houver concorrência), o operador é avisado na hora.
+        let avisoContagem = '';
+        if (temItens) {
+            const depois = await conferirItensPersistidos(
+                tipoInfo.endpoint,
+                controleAtual.numero,
+                totalNaTela
+            );
+
+            if (!depois.ok) {
+                avisoContagem =
+                    `⚠️ ATENÇÃO: antes de finalizar havia ${totalNaTela} item(ns), ` +
+                    `mas o servidor agora registra ${depois.gravado ?? '?'}.`;
+
+                console.error('[MGM-FIX] Contagem mudou após finalizar', {
+                    antes: totalNaTela,
+                    depois: depois.gravado,
+                    erro: depois.erro
+                });
+
+                alert(`${avisoContagem}\n\nAnote o número do controle e comunique o suporte imediatamente.`);
+            } else {
+                mgmDebug('finalizarControle: contagem pós-finalização OK', {
+                    totalNaTela,
+                    gravado: depois.gravado
+                });
+            }
+        }
+
+        mostrarToast(
+            avisoContagem ? '⚠️ Finalizado com divergência de itens' : '✅ Finalizado!',
+            avisoContagem ? 'aviso' : 'sucesso'
+        );
+        setTimeout(() => voltarParaPainel(), avisoContagem ? 5000 : 1500);
     } catch (error) {
-        console.error('❌ Erro:', error);
+        console.error('❌ Erro ao finalizar:', error);
         mostrarToast('❌ ' + error.message, 'erro');
+    }
+}
+
+// [FIX] Trava contra duplo clique em Finalizar (evita dois POST /finalizar
+// e dois fluxos de salvamento sobrepostos).
+let finalizandoControle = false;
+
+async function finalizarControle() {
+    if (finalizandoControle) {
+        console.warn('[MGM-FIX] finalizarControle ignorado: já existe uma finalização em andamento.');
+        return;
+    }
+
+    finalizandoControle = true;
+    try {
+        return await _finalizarControleInterno();
+    } finally {
+        finalizandoControle = false;
     }
 }
 
@@ -3290,6 +3620,10 @@ async function handleArquivoExcel(event) {
             configurarValidacaoDuplicados();
             verificarECorrigirDuplicados();
             adicionarBotoesAcoesMassa();
+
+            // [FIX MGM] Importação substitui a tabela inteira; atualiza o contador.
+            atualizarContadorItensMGM();
+            mgmDebug('handleArquivoExcel: itens importados', { total: itens.length });
         }, 300);
         
         mostrarToast(`✅ ${itens.length} itens importados! Revise e clique em Salvar.`, 'sucesso');

@@ -52,7 +52,16 @@ const TIPOS = {
     }
 };
 
-const PERFIS_COM_EXCLUSAO = ['GESTAO', 'OPERACIONAL'];
+// ============================================
+// [FIX 2026-11-24] EXCLUSÃO LIBERADA PARA TODOS OS PERFIS
+// ============================================
+// Antes existia `PERFIS_COM_EXCLUSAO = ['GESTAO', 'OPERACIONAL']`.
+// Com o novo login surgiram os perfis TECNICA e VISUALIZACAO, que ficaram
+// de fora da lista — por isso o botão 🗑️ simplesmente não era renderizado.
+// Regra nova: qualquer usuário autenticado pode DESATIVAR um controle.
+// A exclusão continua sendo SOFT DELETE (auditada no worker), então nada é
+// apagado do banco: o registro fica preservado para auditoria.
+const EXCLUSAO_LIBERADA_PARA_TODOS = true;
 
 // ============================================
 // LISTA DE ENCARREGADOS PARA FILTRO
@@ -711,7 +720,9 @@ function renderizarControles(controles) {
     }
     
     const tipoInfo = TIPOS[tipoAtual];
-    const podeExcluir = PERFIS_COM_EXCLUSAO.includes(dadosSessao?.perfil);
+    // [FIX 2026-11-24] Antes: PERFIS_COM_EXCLUSAO.includes(dadosSessao?.perfil)
+    // → usuários TECNICA/VISUALIZACAO não viam o botão. Agora todos veem.
+    const podeExcluir = EXCLUSAO_LIBERADA_PARA_TODOS;
     
     let html = '';
     controles.forEach((controle, index) => {
@@ -822,8 +833,10 @@ window.abrirControle = abrirControle;
 // ============================================
 
 async function excluirControle(numero) {
-    if (!PERFIS_COM_EXCLUSAO.includes(dadosSessao?.perfil)) {
-        mostrarToast('🔒 Seu perfil não tem permissão para excluir registros.', 'aviso');
+    // [FIX 2026-11-24] Sem restrição de perfil: qualquer sessão válida pode
+    // desativar. Mantemos apenas a checagem de sessão para evitar clique sem login.
+    if (!dadosSessao) {
+        mostrarToast('🔒 Sessão não carregada. Recarregue a página e tente novamente.', 'aviso');
         return;
     }
     
